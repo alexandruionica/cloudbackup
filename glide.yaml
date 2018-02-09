@@ -1,0 +1,8 @@
+package: cloudbackup
+import:
+- package: github.com/jessevdk/go-flags
+  version: v1.3.0
+- package: github.com/mattn/go-sqlite3
+  version: v1.6.0
+- package: github.com/sirupsen/logrus
+  version: v1.0.4
