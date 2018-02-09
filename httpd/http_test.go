@@ -46,7 +46,7 @@ func TestStartAndClose(t *testing.T) {
 	}
 }
 
-func TestpageRoot(t *testing.T) {
+func TestPageRoot(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(pageRoot))
 	defer ts.Close()
 
