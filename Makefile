@@ -5,7 +5,6 @@ GLIDECMD=glide
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
-GLIDE=$(GOCMD) get
 BINARY_NAME=cloudbackup
 COVERAGE_FILE=coverage.out
 
@@ -27,4 +26,4 @@ run:
 	./$(BINARY_NAME)
 
 deps: 
-	$(GLIDE) install
+	$(GLIDECMD) install
