@@ -9,6 +9,7 @@ ERRCHKCMD=$(GOPATH)/bin/errcheck
 ALIGNCHECKCMD=$(GOPATH)/bin/aligncheck
 STRUCTCHECKCMD=$(GOPATH)/bin/structcheck
 VARCHECKCMD=$(GOPATH)/bin/varcheck
+GOASTCMD=$(GOPATH)/bin/gas
 BINARY_NAME=cloudbackup
 COVERAGE_FILE=coverage.out
 
@@ -27,6 +28,8 @@ test:
 	$(STRUCTCHECKCMD) ./...
 	@echo "############ Running: varcheck - checking for unused global variables and constants ############"
 	$(VARCHECKCMD) ./...
+	@echo "############ Running: gas - inspects source code for security problems by scanning the Go AST ############"
+	$(GOASTCMD) ./...
 	@echo "############ Running: go test - running unit tests ############"
 	$(GOCMD) test -cover ./...
 
