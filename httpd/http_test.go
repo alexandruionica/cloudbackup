@@ -59,14 +59,14 @@ func TestPageRoot(t *testing.T) {
 	}
 
 	// test if response body for / is what we expect
-	expected_response := "Http server is running\n"
-	defer res.Body.Close()
+	expectedResponse := "Http server is running\n"
+	defer func() {_ = res.Body.Close()}()
 	contents, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
-	if string(contents) != expected_response {
-		t.Fatalf("Response body was '%+v' while we were expecting '%+v'", string(contents), expected_response)
+	if string(contents) != expectedResponse {
+		t.Fatalf("Response body was '%+v' while we were expecting '%+v'", string(contents), expectedResponse)
 	}
 }
 

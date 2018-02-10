@@ -5,6 +5,10 @@ GLIDECMD=glide
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
+ERRCHKCMD=$(GOPATH)/bin/errcheck
+ALIGNCHECKCMD=$(GOPATH)/bin/aligncheck
+STRUCTCHECKCMD=$(GOPATH)/bin/structcheck
+VARCHECKCMD=$(GOPATH)/bin/varcheck
 BINARY_NAME=cloudbackup
 COVERAGE_FILE=coverage.out
 
@@ -13,7 +17,17 @@ all: test build
 build: 
 	$(GOCMD) build -v
 test:
+	@echo "############ Running: go vet - checking for suspicious constructs ############"
 	$(GOCMD) vet ./...
+	@echo "############ Running: errcheck - checking unhandled errors ############"
+	$(ERRCHKCMD) -verbose -abspath ./...
+	@echo "############ Running: aligncheck - checking for inefficiently packed structs ############"
+	$(ALIGNCHECKCMD) ./...
+	@echo "############ Running: structcheck - checking for unused struct fields ############"
+	$(STRUCTCHECKCMD) ./...
+	@echo "############ Running: varcheck - checking for unused global variables and constants ############"
+	$(VARCHECKCMD) ./...
+	@echo "############ Running: go test - running unit tests ############"
 	$(GOCMD) test -cover ./...
 
 cover: 
