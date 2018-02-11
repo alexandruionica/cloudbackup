@@ -25,10 +25,6 @@ go install github.com/opennota/check/cmd/varcheck
 go get github.com/GoASTScanner/gas/cmd/gas/...
 go install github.com/GoASTScanner/gas/cmd/gas
 ```
-
-- aligncheck / structcheck / varcheck
-
-
 - SafeSQL (for later, see go get github.com/stripe/safesql ) - looks for SQL injections
 - Clone repo, install dependencies, build
 ```
