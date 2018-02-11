@@ -6,3 +6,4 @@ import:
   version: v1.6.0
 - package: github.com/sirupsen/logrus
   version: v1.0.4
+- package: github.com/jinzhu/configor
