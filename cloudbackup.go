@@ -27,7 +27,10 @@ func main() {
 	// we use this to get notified by the HTTP server that it changed the global config
 	rcvCfgChangeFromHttpd := make(chan bool)
 	// pointer to the main configuration object shared across go routines. We use this to read and change configuration
-	configuration := config.Load("/etc/just/a/config.file")
+	configuration, err := config.Load(args.ConfigFile, args.Debug)
+	if err != nil {
+		os.Exit(1)
+	}
 
 	httpServer := httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,8080, "localhost")
 	httpServer.Start()

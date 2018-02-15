@@ -3,10 +3,12 @@ package httpd
 import (
 	"testing"
 	"cloudbackup/config"
+	"cloudbackup/testutils"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"io/ioutil"
+	"os"
 )
 
 const host = "localhost"
@@ -14,7 +16,15 @@ const port = 8080
 
 func TestNew(t *testing.T) {
 	var compare = &SrvData{}
-	result := New(make(chan bool), make(chan bool), config.Load("/etc/just/a/config.file"), port, host)
+	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_httpd_test_", t)
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	cfgResult, _ := config.Load(path, false)
+	result := New(make(chan bool), make(chan bool), cfgResult, port, host)
 	// we just ensure that we have the same type in the result as what we expect
 	if compare == result {
 	}
@@ -28,8 +38,15 @@ func TestNew(t *testing.T) {
 }
 
 func TestStartAndClose(t *testing.T) {
-
-	srv := New(make(chan bool), make(chan bool), config.Load("/etc/just/a/config.file"), port, host)
+	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_httpd_test_", t)
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	cfgResult, _ := config.Load(path, false)
+	srv := New(make(chan bool), make(chan bool), cfgResult, port, host)
 	srv.Start()
 	_, err := http.Get("http://" + host + ":" + strconv.Itoa(port) + "/")
 	if err != nil {
