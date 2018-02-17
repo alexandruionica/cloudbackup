@@ -8,8 +8,8 @@ To do initial setup:
     * aligncheck (used to find inefficiently packed structs)
     * structcheck (used to check for unused struct fields)
     * varcheck (used to check for unused global variables and constants)
-    * GoASTScanner (Inspects source code for security problems by scanning the Go AST) 
-```
+    * GoASTScanner (Inspects source code for security problems by scanning the Go AST)  
+ ```
 cd $GOPATH
 mkdir -p src
 go get github.com/kisielk/errcheck
@@ -22,10 +22,10 @@ go get github.com/opennota/check/cmd/varcheck
 go install github.com/opennota/check/cmd/varcheck
 go get github.com/GoASTScanner/gas/cmd/gas/...
 go install github.com/GoASTScanner/gas/cmd/gas
-```
+ ```
 * SafeSQL (for later, see go get github.com/stripe/safesql ) - looks for SQL injections
 * Clone repo, install dependencies, build, build dependencies and install (make future compile times shorter)
-```
+ ```
 cd $GOPATH
 mkdir -p src
 cd src
@@ -34,4 +34,4 @@ cd cloudbackup
 make deps
 make
 go install
-```
+ ```
