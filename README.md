@@ -1,14 +1,14 @@
 # README #
 To do initial setup:
 
-* install Glide - fetch binary from https://glide.sh/
-* install Make
-* install:
-  * errcheck (used to test for unhandled errors)
-  * aligncheck (used to find inefficiently packed structs)
-  * structcheck (used to check for unused struct fields)
-  * varcheck (used to check for unused global variables and constants)
-  * GoASTScanner (Inspects source code for security problems by scanning the Go AST) 
+*  install Glide - fetch binary from https://glide.sh/
+*  install Make
+*  install:
+    * errcheck (used to test for unhandled errors)
+    * aligncheck (used to find inefficiently packed structs)
+    * structcheck (used to check for unused struct fields)
+    * varcheck (used to check for unused global variables and constants)
+    * GoASTScanner (Inspects source code for security problems by scanning the Go AST) 
 ```
 cd $GOPATH
 mkdir -p src
