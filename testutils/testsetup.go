@@ -9,9 +9,6 @@ var MockYaml = []byte(`---
 # global settings affect all backups and can't be specified per backup with different values
 # section specific settings are repetitive and can't be overridden by globals
 # clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable
-
-logformat: json
-loglevel: info
 backup:
   - name: first_backup
     paths:
