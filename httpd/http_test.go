@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"io/ioutil"
 	"os"
+	"sync"
 )
 
 const host = "localhost"
@@ -23,7 +24,7 @@ func TestNew(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	cfgResult, _ := config.Load(path, false)
+	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
 	result := New(make(chan bool), make(chan bool), cfgResult, port, host)
 	// we just ensure that we have the same type in the result as what we expect
 	if compare == result {
@@ -45,7 +46,7 @@ func TestStartAndClose(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	cfgResult, _ := config.Load(path, false)
+	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
 	srv := New(make(chan bool), make(chan bool), cfgResult, port, host)
 	srv.Start()
 	_, err := http.Get("http://" + host + ":" + strconv.Itoa(port) + "/")

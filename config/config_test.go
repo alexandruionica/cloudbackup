@@ -5,6 +5,7 @@ import (
 	"cloudbackup/testutils"
 	"os"
 	"reflect"
+	"sync"
 )
 
 // test loading config file with regular reporting from configor library
@@ -19,7 +20,7 @@ func TestLoad1(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, false)
+	result, err := Load(path, false, &sync.Mutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -42,7 +43,7 @@ func TestLoad2(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, true)
+	result, err := Load(path, true, &sync.Mutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -55,7 +56,7 @@ func TestLoad2(t *testing.T) {
 
 // test loading missing config file
 func TestLoad3(t *testing.T) {
-	_, err := Load("a/file/which/does/not/exist", true)
+	_, err := Load("a/file/which/does/not/exist", true, &sync.Mutex{})
 	if err == nil {
 		t.Fatal("Configuration file load should have failed due to missing file but instead succeeded")
 	}
@@ -64,9 +65,9 @@ func TestLoad3(t *testing.T) {
 // test loading valid yaml but invalid config file
 func TestLoad4(t *testing.T) {
 	var compare = &Configuration{}
-	var invalid_config = []byte(`---
+	var invalidConfig = []byte(`---
 some: value`)
-	var path = testutils.SetupFakeFile(invalid_config, "unittest_global_test_", t)
+	var path = testutils.SetupFakeFile(invalidConfig, "unittest_global_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -75,11 +76,34 @@ some: value`)
 		}
 	}()
 
-	result, err := Load(path, true)
+	result, err := Load(path, true, &sync.Mutex{})
 	if err == nil {
 		t.Fatal("Invalid yaml config file should have caused an eror but didn't")
 	}
 	// we just ensure that we have the same type in the result as what we expect
 	if compare == result {
+	}
+}
+
+func TestConfiguration_GetWithLock(t *testing.T) {
+	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_global_test_", t)
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result, err := Load(path, false, &sync.Mutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.GetWithLock()
+	expectedString := "first_backup"
+	// we just ensure that we have the same string in the result as what we expect
+	if result.GetWithLock().Backup[0].Name != expectedString {
+		t.Fatalf("The result should have been '%s' but is '%s' ", expectedString,
+			result.GetWithLock().Backup[0].Name )
 	}
 }

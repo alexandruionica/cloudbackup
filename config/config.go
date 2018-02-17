@@ -13,9 +13,7 @@ var logger = log.WithFields(log.Fields{
 	"context": "config",
 	})
 
-type Template = struct {
-	Logformat string `default:"json"`
-	Loglevel string `default:"warn"`
+type CfgTemplate = struct {
 	Backup []struct {
 		Name     string `required:"true"`
 		Paths     []string `required:"true"`
@@ -39,18 +37,32 @@ type Template = struct {
 }
 
 type Configuration struct {
-	// lock this before reading or writing the config
-	mutex *sync.Mutex
-	path string
-	Config Template
+	// lock this before reading or writing the config file or reading / writing the loaded config variables
+	Mutex *sync.Mutex
+	// path to config file
+	Path string
+	// actual config file
+	Config CfgTemplate
+}
+
+// return a copy of the config struct. A lock while reading the struct
+func (cfg *Configuration) GetWithLock() CfgTemplate {
+	logger.Debug("Acquiring lock before copying config struct")
+	cfg.Mutex.Lock()
+	defer func() {
+		cfg.Mutex.Unlock()
+		logger.Debug("Lock released after copying config struct")
+	}()
+	cfgCopy := cfg.Config
+	return cfgCopy
 }
 
 // load configuration from yaml file at "path" and if boolean "debug" is set then also enable debugging in the yaml
 // config parser library
-func Load(path string, debug bool) (*Configuration, error) {
+func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
 	logger.Info(fmt.Sprintf("Loading config file %s", path))
 	const envPrefix = "CLOUDBACKUP"
-	var Config = Template{}
+	var Config = CfgTemplate{}
 	var err error
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -59,6 +71,12 @@ func Load(path string, debug bool) (*Configuration, error) {
 		return &Configuration{}, errors.New(msg)
 	}
 
+	logger.Debug("Acquiring lock before reading config file")
+	mutex.Lock()
+	defer func() {
+		mutex.Unlock()
+		logger.Debug("Lock released after reading config file")
+		}()
 	// if debug then also adjust logging level of configor library (set library to Verbose not Debug as
 	// Verbose is actually what we expect when using  "debug")
 	if debug {
@@ -74,9 +92,8 @@ func Load(path string, debug bool) (*Configuration, error) {
 		return &Configuration{}, errors.New(msg)
 	}
 
-	fmt.Printf("%+v", Config)
-	return &Configuration{mutex: &sync.Mutex{},
-					      path: path,
+	return &Configuration{Mutex: mutex,
+					      Path: path,
 					      Config: Config,
 	}, err
 }
