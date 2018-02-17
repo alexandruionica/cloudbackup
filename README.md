@@ -3,7 +3,7 @@ To do initial setup:
 
 * install Glide - fetch binary from https://glide.sh/
 * install Make
-+ install:
+* install:
   * errcheck (used to test for unhandled errors)
   * aligncheck (used to find inefficiently packed structs)
   * structcheck (used to check for unused struct fields)
@@ -23,7 +23,7 @@ go install github.com/opennota/check/cmd/varcheck
 go get github.com/GoASTScanner/gas/cmd/gas/...
 go install github.com/GoASTScanner/gas/cmd/gas
 ```
-- SafeSQL (for later, see go get github.com/stripe/safesql ) - looks for SQL injections
+* SafeSQL (for later, see go get github.com/stripe/safesql ) - looks for SQL injections
 * Clone repo, install dependencies, build, build dependencies and install (make future compile times shorter)
 ```
 cd $GOPATH
