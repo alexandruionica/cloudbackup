@@ -10,7 +10,7 @@ To do initial setup:
     * varcheck (used to check for unused global variables and constants)
     * GoASTScanner (Inspects source code for security problems by scanning the Go AST) 
     
-```
+ ```
 cd $GOPATH
 mkdir -p src
 go get github.com/kisielk/errcheck
