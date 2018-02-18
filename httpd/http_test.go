@@ -6,14 +6,15 @@ import (
 	"cloudbackup/testutils"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"io/ioutil"
 	"os"
 	"sync"
+	"reflect"
+	//"crypto/tls"
 )
 
-const host = "localhost"
-const port = 8080
+const addr = "localhost:8080"
+const addrSsl = "localhost:8443"
 
 func TestNew(t *testing.T) {
 	var compare = &SrvData{}
@@ -25,9 +26,10 @@ func TestNew(t *testing.T) {
 		}
 	}()
 	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
-	result := New(make(chan bool), make(chan bool), cfgResult, port, host)
+	result := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 	// we just ensure that we have the same type in the result as what we expect
-	if compare == result {
+	if reflect.ValueOf(compare).Kind() != reflect.ValueOf(result).Kind() {
+		t.Errorf("Variable type returned by New()")
 	}
 	if result.serverExiting {
 		t.Errorf("Expected serverExiting to be 'false' but it was '%+v'", result.serverExiting)
@@ -38,7 +40,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestStartAndClose(t *testing.T) {
+func TestStartAndCloseHttp(t *testing.T) {
 	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_httpd_test_", t)
 	defer func() {
 		err := os.Remove(path)
@@ -47,9 +49,9 @@ func TestStartAndClose(t *testing.T) {
 		}
 	}()
 	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
-	srv := New(make(chan bool), make(chan bool), cfgResult, port, host)
+	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 	srv.Start()
-	_, err := http.Get("http://" + host + ":" + strconv.Itoa(port) + "/")
+	_, err := http.Get("http://" + addr + "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,15 +59,58 @@ func TestStartAndClose(t *testing.T) {
 	//srv.serverExiting = true
 	//srv.httpsrv.Close()
 	srv.Stop()
-	_, err = http.Get("http://" + host + ":" + strconv.Itoa(port) + "/")
+	_, err = http.Get("http://" + addr + "/")
 	if err == nil {
 		t.Fatalf("After stopping the webserver we attempted to fetch a url and this should have produced an " +
 			"error but instead it succeeded which means the server did not stop")
 	}
 }
 
-func TestPageRoot(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(pageRoot))
+//func TestStartAndCloseHttps(t *testing.T) {
+//	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_httpd_test_", t)
+//	var sslCert, sslKey = testutils.SetupSslCertAndKey("unittest_httpd_test_", t)
+//	defer func() {
+//		err := os.Remove(path)
+//		if err != nil {
+//			t.Fatal(err)
+//		}
+//		err = os.Remove(sslCert)
+//		if err != nil {
+//			t.Fatal(err)
+//		}
+//		err = os.Remove(sslKey)
+//		if err != nil {
+//			t.Fatal(err)
+//		}
+//	}()
+//	http.DefaultServeMux = http.NewServeMux()
+//	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
+//	srv := New(make(chan bool), make(chan bool), cfgResult, addrSsl, true, sslCert, sslKey)
+//	srv.Start()
+//
+//	// disable SSL cert verification as we're using a self signed cert
+//	tr := &http.Transport{
+//		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+//	}
+//	client := &http.Client{Transport: tr}
+//	_, err := client.Get("https://" + addrSsl + "/")
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	// "manual" cleanup
+//	//srv.serverExiting = true
+//	//srv.httpsrv.Close()
+//	srv.Stop()
+//	_, err = client.Get("https://" + addrSsl + "/")
+//	if err == nil {
+//		t.Fatalf("After stopping the webserver we attempted to fetch a url and this should have produced an " +
+//			"error but instead it succeeded which means the server did not stop")
+//	}
+//}
+
+func TestPageRootHttp(t *testing.T) {
+	fakeSrvData := SrvData{httpsEnabled: false}
+	ts := httptest.NewServer(http.HandlerFunc(fakeSrvData.pageRoot))
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
@@ -77,7 +122,7 @@ func TestPageRoot(t *testing.T) {
 	}
 
 	// test if response body for / is what we expect
-	expectedResponse := "Http server is running\n"
+	expectedResponse := "HTTP server is running\n"
 	defer func() {_ = res.Body.Close()}()
 	contents, err := ioutil.ReadAll(res.Body)
 	if err != nil {

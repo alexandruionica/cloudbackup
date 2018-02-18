@@ -14,6 +14,15 @@ var logger = log.WithFields(log.Fields{
 	})
 
 type CfgTemplate = struct {
+	Http struct {
+		BindAddress string `default:"127.0.0.1:8080" yaml:"bind_address"`
+	}
+	Https struct {
+		Enabled bool `default:"false"`
+		BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address"`
+		SslCertPath string `yaml:"ssl_cert_path"`
+		SslKeyPath string `yaml:"ssl_key_path"`
+	}
 	Backup []struct {
 		Name     string `required:"true"`
 		Paths     []string `required:"true"`
@@ -29,10 +38,10 @@ type CfgTemplate = struct {
 		}
 		Schedule []string `required:"true"`
 		Encrypt bool `default:"false"`
-		EncryptPass string `secret:"true" dependsOn:"Encrypt" yaml:"encrypt_pass"`
+		EncryptPass string `secret:"true" yaml:"encrypt_pass"`
 		Versioning bool `default:"false"`
-		VersionsMaxNum uint `dependsOn:"Versioning" yaml:"versions_max_num"`
-		VersionsMaxAge string `dependsOn:"Versioning" yaml:"versions_max_age"`
+		VersionsMaxNum uint `yaml:"versions_max_num"`
+		VersionsMaxAge string `yaml:"versions_max_age"`
 	} `required:"true"`
 }
 
@@ -92,8 +101,48 @@ func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
 		return &Configuration{}, errors.New(msg)
 	}
 
+	err = Validate(Config)
+	if err != nil {
+		return &Configuration{}, err
+	}
+
 	return &Configuration{Mutex: mutex,
 					      Path: path,
 					      Config: Config,
-	}, err
+	}, nil
+}
+
+// validate several config options which depends on other options having certain values. Trying to do this with
+// reflection ends up being harder to understand and still requires application logic in the validator
+func Validate(config CfgTemplate) error {
+	i:=0
+	for _, backup := range config.Backup {
+		if backup.Encrypt && backup.EncryptPass == ""{
+			msg := fmt.Sprintf("backup[%d]: encrypt=true but backup[%d]: encrypt_pass is not set. Set a password" +
+				" or disable encryption", i, i)
+			logger.Error(msg)
+			return errors.New(msg)
+		}
+		if backup.Versioning == false && backup.VersionsMaxNum > 0 {
+			msg := fmt.Sprintf("backup[%d]: versioning=false but backup[%d]: versions_max_num is %d . Enable " +
+				"versioning or remove the 'versions_max_num' setting", i, i, backup.VersionsMaxNum)
+			logger.Error(msg)
+			return errors.New(msg)
+		}
+		if backup.Versioning == false && backup.VersionsMaxAge != "" {
+			msg := fmt.Sprintf("backup[%d]: versioning=false but backup[%d]: versions_max_age is %s . Enable " +
+				"versioning or remove the 'versions_max_age' setting", i, i, backup.VersionsMaxAge)
+			logger.Error(msg)
+			return errors.New(msg)
+		}
+		if backup.Versioning == true && backup.VersionsMaxAge == "" && backup.VersionsMaxNum == 0 {
+			msg := fmt.Sprintf("backup[%d]: versioning=true but backup[%d]: versions_max_num is 0 or unset and" +
+				" backup[%d]: versions_max_age is unset. Disable versioning or set 'versions_max_num' > 0 or set " +
+					"'versions_max_age'", i, i, i)
+			logger.Error(msg)
+			return errors.New(msg)
+		}
+	i+=1
+	}
+	return nil
 }
