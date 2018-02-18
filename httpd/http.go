@@ -79,8 +79,7 @@ func (srv *SrvData) Start() {
 		var extraMsg string
 		if srv.httpsEnabled {
 			extraMsg = "HTTPS"
-			err = srv.httpsrv.ListenAndServeTLS(srv.globalcfg.GetWithLock(loggingContext).Https.SslCertPath,
-				srv.globalcfg.GetWithLock(loggingContext).Https.SslKeyPath)
+			err = srv.httpsrv.ListenAndServeTLS(srv.SslCertPath, srv.SslKeyPath)
 		} else {
 			extraMsg = "HTTP"
 			err = srv.httpsrv.ListenAndServe()

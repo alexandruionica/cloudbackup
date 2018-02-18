@@ -10,11 +10,11 @@ import (
 	"os"
 	"sync"
 	"reflect"
-	//"crypto/tls"
+	"crypto/tls"
 )
 
 const addr = "localhost:8080"
-// const addrSsl = "localhost:8443"
+const addrSsl = "localhost:8443"
 
 func TestNew(t *testing.T) {
 	var compare = &SrvData{}
@@ -66,47 +66,44 @@ func TestStartAndCloseHttp(t *testing.T) {
 	}
 }
 
-//func TestStartAndCloseHttps(t *testing.T) {
-//	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_httpd_test_", t)
-//	var sslCert, sslKey = testutils.SetupSslCertAndKey("unittest_httpd_test_", t)
-//	defer func() {
-//		err := os.Remove(path)
-//		if err != nil {
-//			t.Fatal(err)
-//		}
-//		err = os.Remove(sslCert)
-//		if err != nil {
-//			t.Fatal(err)
-//		}
-//		err = os.Remove(sslKey)
-//		if err != nil {
-//			t.Fatal(err)
-//		}
-//	}()
-//	http.DefaultServeMux = http.NewServeMux()
-//	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
-//	srv := New(make(chan bool), make(chan bool), cfgResult, addrSsl, true, sslCert, sslKey)
-//	srv.Start()
-//
-//	// disable SSL cert verification as we're using a self signed cert
-//	tr := &http.Transport{
-//		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-//	}
-//	client := &http.Client{Transport: tr}
-//	_, err := client.Get("https://" + addrSsl + "/")
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	// "manual" cleanup
-//	//srv.serverExiting = true
-//	//srv.httpsrv.Close()
-//	srv.Stop()
-//	_, err = client.Get("https://" + addrSsl + "/")
-//	if err == nil {
-//		t.Fatalf("After stopping the webserver we attempted to fetch a url and this should have produced an " +
-//			"error but instead it succeeded which means the server did not stop")
-//	}
-//}
+func TestStartAndCloseHttps(t *testing.T) {
+	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_httpd_test_", t)
+	var sslCert, sslKey = testutils.SetupSslCertAndKey("unittest_httpd_test_", t)
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = os.Remove(sslCert)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = os.Remove(sslKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	http.DefaultServeMux = http.NewServeMux()
+	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
+	srv := New(make(chan bool), make(chan bool), cfgResult, addrSsl, true, sslCert, sslKey)
+	srv.Start()
+
+	// disable SSL cert verification as we're using a self signed cert
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	_, err := client.Get("https://" + addrSsl + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv.Stop()
+	_, err = client.Get("https://" + addrSsl + "/")
+	if err == nil {
+		t.Fatalf("After stopping the webserver we attempted to fetch a url and this should have produced an " +
+			"error but instead it succeeded which means the server did not stop")
+	}
+}
 
 func TestPageRootHttp(t *testing.T) {
 	fakeSrvData := SrvData{httpsEnabled: false}
@@ -136,10 +133,18 @@ func TestPageRootHttp(t *testing.T) {
 //func TestStop(t *testing.T) {
 //	// the default server Mux remains initialised from previous tests so we need to clean it up first
 //	http.DefaultServeMux = http.NewServeMux()
-//	srv := New(make(chan bool), make(chan bool), config.Load("/etc/just/a/config.file"), port, host)
+//	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_httpd_test_", t)
+//	defer func() {
+//		err := os.Remove(path)
+//		if err != nil {
+//			t.Fatal(err)
+//		}
+//	}()
+//	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
+//	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 //	srv.Start()
 //	srv.Stop()
-//	_, err := http.Get("http://" + host + ":" + strconv.Itoa(port) + "/")
+//	_, err := http.Get("http://" + addr + "/")
 //	if err == nil {
 //		t.Fatalf("After stopping the webserver we attempted to fetch a url and this should have produced an " +
 //			"error but instead it succeeded which means the server did not stop")
