@@ -1,11 +1,11 @@
 package config
 
 import (
+	"cloudbackup/utils"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"sync"
 	"github.com/jinzhu/configor"
-	"os"
 	"errors"
 )
 
@@ -76,10 +76,9 @@ func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
 	var Config = CfgTemplate{}
 	var err error
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		msg := fmt.Sprintf("File %s does not exist", path)
-		logger.Error(msg)
-		return &Configuration{}, errors.New(msg)
+	if err := utils.FileExists(path); err != nil {
+		logger.Error(err)
+		return &Configuration{}, err
 	}
 
 	logger.Debug("Acquiring lock before reading config file")
@@ -117,6 +116,33 @@ func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
 // validate several config options which depends on other options having certain values. Trying to do this with
 // reflection ends up being harder to understand and still requires application logic in the validator
 func Validate(config CfgTemplate) error {
+	// validate HTTPS parameters from the yaml
+	if config.Https.Enabled == true {
+		if config.Https.SslCertPath == "" {
+			msg := fmt.Sprintf("https: enabled=true  but https: ssl_cert_path  is not set")
+			logger.Error(msg)
+			return errors.New(msg)
+		}
+		if config.Https.SslKeyPath == "" {
+			msg := fmt.Sprintf("https: enabled=true  but https: ssl_key_path  is not set")
+			logger.Error(msg)
+			return errors.New(msg)
+		}
+		if err := utils.FileExists(config.Https.SslCertPath); err != nil {
+			msg := fmt.Sprintf("https: enabled=true  and https: ssl_cert_path=%s but when evaluating " +
+				"the latter the following error ocurred: %s", config.Https.SslCertPath, err)
+			logger.Error(msg)
+			return err
+		}
+		if err := utils.FileExists(config.Https.SslKeyPath); err != nil {
+			msg := fmt.Sprintf("https: enabled=true  and https: ssl_key_path=%s but when evaluating " +
+				"the latter the following error ocurred: %s", config.Https.SslKeyPath, err)
+			logger.Error(msg)
+			return err
+		}
+	}
+
+	// validate "Backup" section parameters
 	i:=0
 	for _, backup := range config.Backup {
 		if backup.Encrypt && backup.EncryptPass == ""{

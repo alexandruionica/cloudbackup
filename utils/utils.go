@@ -2,8 +2,10 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"os"
 )
 
 const loggingContext = "utils"
@@ -19,4 +21,19 @@ func Pp(input interface{}){
 	} else {
 		fmt.Println(string(output))
 	}
+}
+
+// check if file exists
+func FileExists(path string) error {
+	stat, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		msg := fmt.Sprintf("File %s does not exist", path)
+		return errors.New(msg)
+	}
+	if stat.Mode().IsRegular() != true{
+		msg := fmt.Sprintf("%s is not a regular file", path)
+		return errors.New(msg)
+	}
+	return nil
+
 }
