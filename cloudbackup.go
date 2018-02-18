@@ -12,8 +12,9 @@ import (
 	"cloudbackup/utils"
 	"sync"
 )
+const loggingContext = "main"
 var logger = log.WithFields(log.Fields{
-	"context": "main",
+	"context": loggingContext,
 })
 
 var args misc.Args
@@ -36,16 +37,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	utils.Pp(configuration.GetWithLock())
+	utils.Pp(configuration.GetWithLock(loggingContext))
 
 	var httpServer *httpd.SrvData
-	if configuration.GetWithLock().Https.Enabled{
+	if configuration.GetWithLock(loggingContext).Https.Enabled{
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
-			configuration.GetWithLock().Https.BindAddress, true,
-				configuration.GetWithLock().Https.SslCertPath, configuration.GetWithLock().Https.SslKeyPath)
+			configuration.GetWithLock(loggingContext).Https.BindAddress, true,
+				configuration.GetWithLock(loggingContext).Https.SslCertPath,
+					configuration.GetWithLock(loggingContext).Https.SslKeyPath)
 	}else {
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
-			configuration.GetWithLock().Http.BindAddress, false, "", "")
+			configuration.GetWithLock(loggingContext).Http.BindAddress, false, "", "")
 	}
 
 	httpServer.Start()

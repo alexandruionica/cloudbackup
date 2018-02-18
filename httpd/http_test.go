@@ -14,7 +14,7 @@ import (
 )
 
 const addr = "localhost:8080"
-const addrSsl = "localhost:8443"
+// const addrSsl = "localhost:8443"
 
 func TestNew(t *testing.T) {
 	var compare = &SrvData{}

@@ -9,8 +9,9 @@ import (
 	"errors"
 )
 
+const loggingContext = "config"
 var logger = log.WithFields(log.Fields{
-	"context": "config",
+	"context": loggingContext,
 	})
 
 type CfgTemplate = struct {
@@ -54,13 +55,14 @@ type Configuration struct {
 	Config CfgTemplate
 }
 
-// return a copy of the config struct. A lock while reading the struct
-func (cfg *Configuration) GetWithLock() CfgTemplate {
-	logger.Debug("Acquiring lock before copying config struct")
+// return a copy of the config struct. Lock while reading the struct. logContext is used for passing the caller's
+// logging context as to make it clear where the call is coming from
+func (cfg *Configuration) GetWithLock(logContext string) CfgTemplate {
+	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring lock before copying config struct")
 	cfg.Mutex.Lock()
 	defer func() {
 		cfg.Mutex.Unlock()
-		logger.Debug("Lock released after copying config struct")
+		log.WithFields(log.Fields{"context": logContext}).Debug("Lock released after copying config struct")
 	}()
 	cfgCopy := cfg.Config
 	return cfgCopy

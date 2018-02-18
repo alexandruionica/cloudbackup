@@ -8,10 +8,11 @@ import (
 	"net/http"
 	"time"
 )
-
+const loggingContext = "httpd"
 var logger = log.WithFields(log.Fields{
-	"context": "httpd",
+	"context": loggingContext,
 })
+
 
 //type SrvData interface {
 //	New(chan bool, int, string)
@@ -78,8 +79,8 @@ func (srv *SrvData) Start() {
 		var extraMsg string
 		if srv.httpsEnabled {
 			extraMsg = "HTTPS"
-			err = srv.httpsrv.ListenAndServeTLS(srv.globalcfg.GetWithLock().Https.SslCertPath,
-				srv.globalcfg.GetWithLock().Https.SslKeyPath)
+			err = srv.httpsrv.ListenAndServeTLS(srv.globalcfg.GetWithLock(loggingContext).Https.SslCertPath,
+				srv.globalcfg.GetWithLock(loggingContext).Https.SslKeyPath)
 		} else {
 			extraMsg = "HTTP"
 			err = srv.httpsrv.ListenAndServe()

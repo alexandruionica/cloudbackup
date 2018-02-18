@@ -116,12 +116,12 @@ func TestConfiguration_GetWithLock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.GetWithLock()
+	result.GetWithLock(loggingContext)
 	expectedString := "first_backup"
 	// we just ensure that we have the same string in the result as what we expect
-	if result.GetWithLock().Backup[0].Name != expectedString {
+	if result.GetWithLock(loggingContext).Backup[0].Name != expectedString {
 		t.Fatalf("The result should have been '%s' but is '%s' ", expectedString,
-			result.GetWithLock().Backup[0].Name )
+			result.GetWithLock(loggingContext).Backup[0].Name )
 	}
 }
 
