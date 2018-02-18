@@ -6,8 +6,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const loggingContext = "utils"
 var logger = log.WithFields(log.Fields{
-	"context": "utils",
+	"context": loggingContext,
 })
 
 // pretty print

@@ -11,8 +11,9 @@ import (
 )
 
 
+const loggingContext = "misc"
 var logger = log.WithFields(log.Fields{
-	"context": "misc",
+	"context": loggingContext,
 })
 
 type Args struct {
