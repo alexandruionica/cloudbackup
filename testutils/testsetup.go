@@ -55,6 +55,110 @@ backup:
     versions_max_num: 10
     versions_max_age: 6w`)
 
+// missing encryption password
+var MockYamlInvalidConfig1 = []byte(`---
+# global settings affect all backups and can't be specified per backup with different values
+# section specific settings are repetitive and can't be overridden by globals
+# clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable
+backup:
+  - name: first_backup
+    paths:
+      - /something
+      - /var/lib
+    exclusions:
+      - /something/else
+      - /var/lib/mysql
+    targets:
+      - name: aws_1
+        type: aws_s3
+        user: BLABLA
+        pass: zzzz
+        bucket: myawesome-backup
+        prefix: backup/backups-for-server-51
+        storage_class: standard
+    schedule:
+      - 05 01 * * *
+    encrypt: true
+  - name: second_backup
+    paths:
+      - /var/log
+      - /var/www/html/data/
+    targets:
+      - name: aws_2
+        type: aws_s3
+        user: JOHNDOE
+        pass: qwqe
+        bucket: some-stuff-goes-here
+        prefix: backup/backups-for-server-51
+        storage_class: infrequent-access
+      - name: google_1
+        type: google_cloud_storage
+        user: JANEDOE
+        pass: 34324fd
+        bucket: my-google-bucket
+        prefix: backup/backups-for-server-51
+        storage_class: standard
+    encrypt: true
+    encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
+    schedule:
+      - 00 08 01 * *
+      - 00 08 06 * *
+    versioning: true
+    versions_max_num: 10
+    versions_max_age: 6w`)
+
+// valid until Feb 16 03:28:17 2028 GMT
+var SelfSignedSslCert = []byte(`-----BEGIN CERTIFICATE-----
+MIIDhTCCAm2gAwIBAgIJAIIc4rd6tIASMA0GCSqGSIb3DQEBCwUAMFkxCzAJBgNV
+BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+aWRnaXRzIFB0eSBMdGQxEjAQBgNVBAMMCTEyNy4wLjAuMTAeFw0xODAyMTgwMzI4
+MTdaFw0yODAyMTYwMzI4MTdaMFkxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21l
+LVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQxEjAQBgNV
+BAMMCTEyNy4wLjAuMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKI4
+La8Iskibkejz9t2lF45kAgEcjksaPDAPm8U0bEocbBcExK7gUK7p84abSEwggAed
+WMIZh3ivxhukcxnVlvHqLqosgPwM6lVTJrVBrmp9PX/TNA9N14C4Q/EI5u1LaBHc
+b5h6HfjSUIMKEPOoF1tIH7p00OSEhhU4uBLOC72251GaW6MfsFGbLaOADKbjto1i
+s3/icOwxR6Ud9jQ5Op/MDOAPc5SheFb35RrduQ/SakhK6jAZNMn7zJUNi2A4oKeq
+1mpavvstbYF2gaDsUeSTRSGY+tosKASXfPYFGS7IilMGPHemIb2zYiXEr6j0hzew
+fe+PU6JlarOoVLxteEUCAwEAAaNQME4wHQYDVR0OBBYEFFoH2exmJ67S9uRQsN35
+TgU8F/v9MB8GA1UdIwQYMBaAFFoH2exmJ67S9uRQsN35TgU8F/v9MAwGA1UdEwQF
+MAMBAf8wDQYJKoZIhvcNAQELBQADggEBABGRnGVva2iljgfZkjNvwHJRs0LSSNtt
+UaTuyMM8zKImMpEf+NZIQdmnhsn/rDsO4RoLODP9Qcn7f0QtNpUmLmmJQlT6vGM0
+xmRoSZNEWF+7UiDA3TtJCYxGkrqEVMeMpTubqmMtPzc3c8/tnBTHc2nAqtz/Czzy
+Ne/+pecF1wUEbgdRoNxhJh1qOsJ+17qs4CiLOVOebG0e5Z8A2ilkZ9Tq+zbsM/Cf
+e6UHmrHTh0yoIkJOOyF8Ngv7CySr+q2f7NuujpPIjYRGb0xJOebuTg2d1LAopAw/
+bS3Yyp95a+jmmKp9bD1UmMTYiMNUsoOxH6X9lcZivDI+9YWrRpz+/DY=
+-----END CERTIFICATE-----`)
+
+// valid until Feb 16 03:28:17 2028 GMT
+var SelfSignedSslKey = []byte(`-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCiOC2vCLJIm5Ho
+8/bdpReOZAIBHI5LGjwwD5vFNGxKHGwXBMSu4FCu6fOGm0hMIIAHnVjCGYd4r8Yb
+pHMZ1Zbx6i6qLID8DOpVUya1Qa5qfT1/0zQPTdeAuEPxCObtS2gR3G+Yeh340lCD
+ChDzqBdbSB+6dNDkhIYVOLgSzgu9tudRmlujH7BRmy2jgAym47aNYrN/4nDsMUel
+HfY0OTqfzAzgD3OUoXhW9+Ua3bkP0mpISuowGTTJ+8yVDYtgOKCnqtZqWr77LW2B
+doGg7FHkk0UhmPraLCgEl3z2BRkuyIpTBjx3piG9s2IlxK+o9Ic3sH3vj1OiZWqz
+qFS8bXhFAgMBAAECggEAIIgxqTOORX9lcJlUfbi5E6Y8vKpUYv1c6qqGq7LKsMYo
+aylapFN5+soSO4Fyq0mtQ1mrzik+gNaHXU3Kg3jRL6yuNRR9vY59hCUL0zfb2aFK
+LxNVEmii+j556aHGZfpEYaiafLKoxhivasgfBC5GmNjK/CKnLdzh4umgCK1nr2Do
+Fxh9PQ9gVqFb7GWtG+iDZWDo3Y75vCRzrkQ6XY/JAedvojcrnWNl5BNvTK/24SMU
+aDpNv2vkl9UTPUMKGr/7lly5eYE0KIFI26kFPAM4yQ0sJlwJazhQXJE+l8jmT/+P
+BsqofFSKcCApkyAGEPXHSI0R9AlWYVZ6OLkOaBzfdQKBgQDR9a2npPZNY0qMffa3
+oNjx7qCTPRMCwaJ0/qKdWbNkevTnd4DTnEDDvavSjXEXEY39udPcmRvuGbVMuJ3Z
+ccq50nUOXvn2MndUHIqMAOBjK0+38T6YrQlVaFWRNhE+TV2JqyCIuMUjMHsulKNs
+8Gh12MqfpFHyQqFam4Zj8pxCdwKBgQDFyox0nroKyujl6KzjoWgF5Ki4zc8I+bkJ
+BN/NdAu8rDRHmWR1TWst4SA4VmTKpFaCMMz9n4caPrmODdPEIMJGJtYlurnJPNmt
+s3+f5tIqIFysnbf61xtP9DVktTrjub5jOjj3I9BJZI6hobuozj+rkm4RieAhfg6Y
+LvmUXJkuIwKBgQCgEMd6FlY7+2V7JBDyP2sFTmIWvin/IPYkcXgxs5ADG4YX7NBH
+A0mQsMoMdA5ygsyYUZJGDGfxpqHEQr78ZjciYWMiOKAh5Kl6c2Pghk6K7BsTZZTO
+OqTx+t+5G9obgEm+Sbs84HhScoSGp4TL6aAJr+QRvulGYyu18vmKuwwL0wKBgQCW
+FFr/InGIPu75hNOq5Y5I6ngbwg6WgOYmMcyf2K4PO5tvuLTBTT1GUsxf8y4HlSsP
+Hnhs+d9Jys6BO3y0FSdUk6NqfYT7bXC+nLT6X+qYjHXFhOdVLmNLB8J76AgHQ6lz
+IXqYDFS/W83eVxpNvDITvchHBpdK0pvAXeSC7sBMgQKBgBm8U9XOeI5suj7+s114
+qW9MEP5/jMKOXqg/9n3iSjfs5TmceU//OD9kSPibO6avxXX9eDxAtACwbfDkDODK
+gY+aeR8l9EsQPSwpE1BfPhdBwxMEmTKymOtQaDLXAiJjaGEaFrP3kMtRgQ/klvfz
+029tv/IKycdHt3Grv4rUs4IA
+-----END PRIVATE KEY-----`)
 // create a file in the tmpdir and populate it with whatever content was provided. The user must delete the file
 // afterwards. Returns a string with is the full path of the file
 func SetupFakeFile(content []byte, prefix string, t *testing.T) string {
@@ -70,4 +174,11 @@ func SetupFakeFile(content []byte, prefix string, t *testing.T) string {
 		t.Fatal(err)
 	}
 	return tmpfile.Name()
+}
+
+// sets up a self signed ssl certificate and key
+func SetupSslCertAndKey(prefix string, t *testing.T) (string, string) {
+	sslCert := SetupFakeFile(SelfSignedSslCert, prefix, t)
+	sslKey := SetupFakeFile(SelfSignedSslKey, prefix, t)
+	return sslCert, sslKey
 }

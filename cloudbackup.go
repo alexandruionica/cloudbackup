@@ -1,5 +1,6 @@
 package main
 
+//noinspection GoRedundantImportAlias
 import (
 	flags "github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
@@ -34,9 +35,19 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
+
 	utils.Pp(configuration.GetWithLock())
 
-	httpServer := httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,8080, "localhost")
+	var httpServer *httpd.SrvData
+	if configuration.GetWithLock().Https.Enabled{
+		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
+			configuration.GetWithLock().Https.BindAddress, true,
+				configuration.GetWithLock().Https.SslCertPath, configuration.GetWithLock().Https.SslKeyPath)
+	}else {
+		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
+			configuration.GetWithLock().Http.BindAddress, false, "", "")
+	}
+
 	httpServer.Start()
 
 	// sleep until a SIGnal is received
