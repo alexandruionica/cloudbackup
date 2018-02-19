@@ -3,27 +3,24 @@ package misc
 import (
 	log "github.com/sirupsen/logrus"
 	"os"
-//	"cloudbackup/config"
 	"cloudbackup/httpd"
 	"os/signal"
 	"syscall"
 	"fmt"
 )
 
-
 const loggingContext = "misc"
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-type Args struct {
-	Verbose bool `short:"v" long:"verbose" description:"Set logging to verbose"`
-	Debug bool `short:"d" long:"debug" description:"Set logging to debug"`
-	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
-	ConfigFile string `short:"c" long:"configfile" description:"Configuration file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
+type LoggingArgs struct {
+	Verbose bool
+	Debug bool
+	TextLog bool
 }
 
-func SetupLogging(args *Args){
+func SetupLogging(args LoggingArgs){
 	log.SetOutput(os.Stdout)
 	if args.TextLog {
 		log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
