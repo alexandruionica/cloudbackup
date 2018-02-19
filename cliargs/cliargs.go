@@ -22,6 +22,7 @@ type Args struct {
 type ArgsCommandConfig struct {
 	Validate ArgsCommandConfigCommandValidate `command:"validate" description:"validate provided yaml configuration file"`
 	Dump ArgsCommandConfigCommandDump `command:"dump" description:"dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
+	Example ArgsCommandConfigCommandExample `command:"example" description:"show an example .yaml config file with all possible statements"`
 }
 
 type ArgsCommandConfigCommandValidate struct {
@@ -42,6 +43,8 @@ type ArgsCommandStart struct {
 	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
 	ConfigFile string `short:"c" long:"configfile" description:"Configuration file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 }
+
+type ArgsCommandConfigCommandExample struct {}
 
 func (command *ArgsCommandConfigCommandValidate) Execute(args []string) error {
 	if command.Debug {
@@ -85,5 +88,11 @@ func (command *ArgsCommandStart) Execute(args []string) error {
 	}
 	misc.SetupLogging(loggingArgs)
 	daemon.Start(command.ConfigFile, command.Debug)
+	return nil
+}
+
+func (command *ArgsCommandConfigCommandExample) Execute(args []string) error {
+	fmt.Println("Example config file goes here")
+	os.Exit(0)
 	return nil
 }
