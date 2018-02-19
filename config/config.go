@@ -76,7 +76,7 @@ func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
 	var Config = CfgTemplate{}
 	var err error
 
-	if err := utils.FileExists(path); err != nil {
+	if _, err := utils.FileExists(path, true); err != nil {
 		logger.Error(err)
 		return &Configuration{}, err
 	}
@@ -128,13 +128,13 @@ func Validate(config CfgTemplate) error {
 			logger.Error(msg)
 			return errors.New(msg)
 		}
-		if err := utils.FileExists(config.Https.SslCertPath); err != nil {
+		if _, err := utils.FileExists(config.Https.SslCertPath, true); err != nil {
 			msg := fmt.Sprintf("https: enabled=true  and https: ssl_cert_path=%s but when evaluating " +
 				"the latter the following error ocurred: %s", config.Https.SslCertPath, err)
 			logger.Error(msg)
 			return err
 		}
-		if err := utils.FileExists(config.Https.SslKeyPath); err != nil {
+		if _, err := utils.FileExists(config.Https.SslKeyPath, true); err != nil {
 			msg := fmt.Sprintf("https: enabled=true  and https: ssl_key_path=%s but when evaluating " +
 				"the latter the following error ocurred: %s", config.Https.SslKeyPath, err)
 			logger.Error(msg)
