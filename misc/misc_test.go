@@ -8,7 +8,7 @@ import (
 
 func TestSetupLogging(t *testing.T) {
 	hook := test.NewGlobal()
-	args := &Args{}
+	args := LoggingArgs{}
 
 	SetupLogging(args)
 
@@ -21,7 +21,7 @@ func TestSetupLogging(t *testing.T) {
 
 func TestSetupLoggingTextmode(t *testing.T) {
 	hook := test.NewGlobal()
-	args := &Args{TextLog: true}
+	args := LoggingArgs{TextLog: true}
 
 	SetupLogging(args)
 
@@ -34,7 +34,7 @@ func TestSetupLoggingTextmode(t *testing.T) {
 
 func TestSetupLoggingVerbose(t *testing.T) {
 	hook := test.NewGlobal()
-	args := &Args{Verbose: true}
+	args := LoggingArgs{Verbose: true}
 
 	SetupLogging(args)
 
@@ -51,7 +51,7 @@ func TestSetupLoggingVerbose(t *testing.T) {
 
 func TestSetupLoggingDebug(t *testing.T) {
 	hook := test.NewGlobal()
-	args := &Args{Debug: true}
+	args := LoggingArgs{Debug: true}
 
 	SetupLogging(args)
 

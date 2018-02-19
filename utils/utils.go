@@ -23,17 +23,23 @@ func Pp(input interface{}){
 	}
 }
 
-// check if file exists
-func FileExists(path string) error {
-	stat, err := os.Stat(path)
+// check if file exists; parameters are path to file (String) and if to dereference symlinks (bool)
+func FileExists(path string, dereference bool) (os.FileInfo, error) {
+	var err error
+	var stat os.FileInfo
+	if dereference {
+		stat, err = os.Stat(path)
+	} else {
+		stat, err = os.Lstat(path)
+	}
 	if os.IsNotExist(err) {
 		msg := fmt.Sprintf("File %s does not exist", path)
-		return errors.New(msg)
+		return stat, errors.New(msg)
 	}
 	if stat.Mode().IsRegular() != true{
 		msg := fmt.Sprintf("%s is not a regular file", path)
-		return errors.New(msg)
+		return stat, errors.New(msg)
 	}
-	return nil
+	return stat, nil
 
 }
