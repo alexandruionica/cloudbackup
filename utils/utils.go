@@ -23,7 +23,8 @@ func Pp(input interface{}){
 	}
 }
 
-// check if file exists; parameters are path to file (String) and if to dereference symlinks (bool)
+// check if file exists; parameters are path to file (String) and if to dereference symlinks (bool). Works only with
+// regular files and symlinks
 func FileExists(path string, dereference bool) (os.FileInfo, error) {
 	var err error
 	var stat os.FileInfo
@@ -33,12 +34,23 @@ func FileExists(path string, dereference bool) (os.FileInfo, error) {
 		stat, err = os.Lstat(path)
 	}
 	if os.IsNotExist(err) {
-		msg := fmt.Sprintf("File %s does not exist", path)
-		return stat, errors.New(msg)
+		return stat, errors.New("File does not exist")
 	}
-	if stat.Mode().IsRegular() != true{
-		msg := fmt.Sprintf("%s is not a regular file", path)
-		return stat, errors.New(msg)
+
+	if dereference {
+		if stat.Mode().IsRegular() != true {
+			return stat, errors.New("File is not a regular file")
+		}
+	} else {
+		if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
+			// This is a symlink and we're ok with that
+			return stat, nil
+		} else {
+			// Not a symlink
+			if stat.Mode().IsRegular() != true {
+				return stat, errors.New("File is not a regular file")
+			}
+		}
 	}
 	return stat, nil
 

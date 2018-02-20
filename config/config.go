@@ -16,34 +16,34 @@ var logger = log.WithFields(log.Fields{
 
 type CfgTemplate = struct {
 	Http struct {
-		BindAddress string `default:"127.0.0.1:8080" yaml:"bind_address"`
-	}
+		BindAddress string `default:"127.0.0.1:8080" yaml:"bind_address" json:"bind_address"`
+	} `yaml:"http" json:"http"`
 	Https struct {
-		Enabled bool `default:"false"`
-		BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address"`
-		SslCertPath string `yaml:"ssl_cert_path"`
-		SslKeyPath string `yaml:"ssl_key_path"`
-	}
+		Enabled bool `default:"false" yaml:"enabled" json:"enabled"`
+		BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address" json:"bind_address"`
+		SslCertPath string `yaml:"ssl_cert_path" json:"ssl_cert_path"`
+		SslKeyPath string `yaml:"ssl_key_path" json:"ssl_key_path"`
+	} `yaml:"https" json:"https"`
 	Backup []struct {
-		Name     string `required:"true"`
-		Paths     []string `required:"true"`
-		Exclusions []string
+		Name     string `required:"true" yaml:"name" json:"name"`
+		Paths     []string `required:"true" yaml:"paths" json:"paths"`
+		Exclusions []string `yaml:"exclusions" json:"exclusions"`
 		Targets []struct {
-			Name  string `required:"true"`
-			Type string `required:"true"`
-			User string
-			Pass string `secret:"true"`
-			Bucket string `required:"true"`
-			Prefix string `required:"true"`
-			StorageClass string `yaml:"storage_class"`
-		}
-		Schedule []string `required:"true"`
-		Encrypt bool `default:"false"`
-		EncryptPass string `secret:"true" yaml:"encrypt_pass"`
-		Versioning bool `default:"false"`
-		VersionsMaxNum uint `yaml:"versions_max_num"`
-		VersionsMaxAge string `yaml:"versions_max_age"`
-	} `required:"true"`
+			Name  string `required:"true" yaml:"name" json:"name"`
+			Type string `required:"true" yaml:"type" json:"type"`
+			User string `yaml:"user" json:"user"`
+			Pass string `secret:"true" yaml:"pass" json:"pass"`
+			Bucket string `required:"true" yaml:"bucket" json:"bucket"`
+			Prefix string `required:"true" yaml:"prefix" json:"prefix"`
+			StorageClass string `yaml:"storage_class" json:"storage_class"`
+		} `yaml:"targets" json:"targets"`
+		Schedule []string `required:"true" yaml:"schedule" json:"schedule"`
+		Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
+		EncryptPass string `secret:"true" yaml:"encrypt_pass" json:"encrypt_pass"`
+		Versioning bool `default:"false" yaml:"versioning" json:"versioning"`
+		VersionsMaxNum uint `yaml:"versions_max_num" json:"versions_max_num"`
+		VersionsMaxAge string `yaml:"versions_max_age" json:"versions_max_age"`
+	} `required:"true" yaml:"backup" json:"backup"`
 }
 
 type Configuration struct {

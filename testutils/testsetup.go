@@ -161,7 +161,7 @@ gY+aeR8l9EsQPSwpE1BfPhdBwxMEmTKymOtQaDLXAiJjaGEaFrP3kMtRgQ/klvfz
 -----END PRIVATE KEY-----`)
 // create a file in the tmpdir and populate it with whatever content was provided. The user must delete the file
 // afterwards. Returns a string with is the full path of the file
-func SetupFakeFile(content []byte, prefix string, t *testing.T) string {
+func SetupTmpFileWithContent(content []byte, prefix string, t *testing.T) string {
 	tmpfile, err := ioutil.TempFile("", prefix)
 	if err != nil {
 		t.Fatal(err)
@@ -176,9 +176,19 @@ func SetupFakeFile(content []byte, prefix string, t *testing.T) string {
 	return tmpfile.Name()
 }
 
+// create a directory in the tmpdir. The user must delete the file
+// afterwards. Returns a string with is the full path of the directory
+func SetupTmpDir(prefix string, t *testing.T) string {
+	tmpdir, err := ioutil.TempDir("", prefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tmpdir
+}
+
 // sets up a self signed ssl certificate and key
 func SetupSslCertAndKey(prefix string, t *testing.T) (string, string) {
-	sslCert := SetupFakeFile(SelfSignedSslCert, prefix, t)
-	sslKey := SetupFakeFile(SelfSignedSslKey, prefix, t)
+	sslCert := SetupTmpFileWithContent(SelfSignedSslCert, prefix, t)
+	sslKey := SetupTmpFileWithContent(SelfSignedSslKey, prefix, t)
 	return sslCert, sslKey
 }

@@ -11,7 +11,7 @@ import (
 // test loading config file with regular reporting from configor library
 func TestLoad1(t *testing.T) {
 	var compare = &Configuration{}
-	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -34,7 +34,7 @@ func TestLoad1(t *testing.T) {
 // test loading config file with DEBUG(actually called Verbose) reporting from configor library
 func TestLoad2(t *testing.T) {
 	var compare = &Configuration{}
-	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -67,7 +67,7 @@ func TestLoad4(t *testing.T) {
 	var compare = &Configuration{}
 	var invalidConfig = []byte(`---
 some: value`)
-	var path = testutils.SetupFakeFile(invalidConfig, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(invalidConfig, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -87,7 +87,7 @@ some: value`)
 
 // test loading config file with missing encryption password
 func TestLoad5(t *testing.T) {
-	var path = testutils.SetupFakeFile(testutils.MockYamlInvalidConfig1, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYamlInvalidConfig1, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -103,7 +103,7 @@ func TestLoad5(t *testing.T) {
 }
 
 func TestConfiguration_GetWithLock(t *testing.T) {
-	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -126,7 +126,7 @@ func TestConfiguration_GetWithLock(t *testing.T) {
 }
 
 func TestValidate1(t *testing.T) {
-	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -148,7 +148,7 @@ func TestValidate1(t *testing.T) {
 }
 
 func TestValidate2(t *testing.T) {
-	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -171,7 +171,7 @@ func TestValidate2(t *testing.T) {
 }
 
 func TestValidate3(t *testing.T) {
-	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -194,7 +194,7 @@ func TestValidate3(t *testing.T) {
 }
 
 func TestValidate4(t *testing.T) {
-	var path = testutils.SetupFakeFile(testutils.MockYaml, "unittest_config_test_", t)
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
