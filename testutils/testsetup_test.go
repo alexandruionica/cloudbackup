@@ -9,7 +9,7 @@ import (
 // test that we can create a fake file and that it's contents match what we wrote to it
 func TestSetupFakeFile(t *testing.T){
 	var fileContent = "some sample text"
-	var path = SetupFakeFile([]byte(fileContent), "unittest_testutils_test_", t)
+	var path = SetupTmpFileWithContent([]byte(fileContent), "unittest_testutils_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
