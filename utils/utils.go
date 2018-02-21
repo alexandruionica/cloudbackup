@@ -9,6 +9,9 @@ import (
 )
 
 const loggingContext = "utils"
+var ErrNoSuchFile = errors.New("File does not exist")
+var ErrNotRegularFile = errors.New("File is not a regular file")
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -34,12 +37,12 @@ func FileExists(path string, dereference bool) (os.FileInfo, error) {
 		stat, err = os.Lstat(path)
 	}
 	if os.IsNotExist(err) {
-		return stat, errors.New("File does not exist")
+		return stat, ErrNoSuchFile
 	}
 
 	if dereference {
 		if stat.Mode().IsRegular() != true {
-			return stat, errors.New("File is not a regular file")
+			return stat, ErrNotRegularFile
 		}
 	} else {
 		if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
@@ -48,7 +51,7 @@ func FileExists(path string, dereference bool) (os.FileInfo, error) {
 		} else {
 			// Not a symlink
 			if stat.Mode().IsRegular() != true {
-				return stat, errors.New("File is not a regular file")
+				return stat, ErrNotRegularFile
 			}
 		}
 	}
