@@ -14,7 +14,7 @@ var logger = log.WithFields(log.Fields{
 
 func main() {
 	var args cliargs.Args
-	// the logic of the program flow is actually in the "cloudbackup/misc" package the the below flags.Parse() is what
+	// the program flow is actually in the "cloudbackup/cliargs" package and the below flags.Parse() is what
 	//  starts it all
 	_, err := flags.Parse(&args)
 	if err != nil {

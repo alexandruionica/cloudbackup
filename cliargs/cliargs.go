@@ -79,6 +79,7 @@ func (command *ArgsCommandConfigCommandDump) Execute(args []string) error {
 	return nil
 }
 
+// this is where the main stuff actually starts
 func (command *ArgsCommandStart) Execute(args []string) error {
 	loggingArgs := misc.LoggingArgs{
 		Verbose: command.Verbose,
@@ -91,7 +92,7 @@ func (command *ArgsCommandStart) Execute(args []string) error {
 }
 
 func (command *ArgsCommandConfigCommandExample) Execute(args []string) error {
-	fmt.Println("Example config file goes here")
+	fmt.Println(misc.SampleYamlConfig)
 	os.Exit(0)
 	return nil
 }

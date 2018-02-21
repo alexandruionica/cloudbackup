@@ -38,6 +38,9 @@ func TestFileExists3(t *testing.T) {
 	if err == nil {
 		t.Fatalf("File %s should not exist but it is reported to exist", path)
 	}
+	if err != ErrNoSuchFile {
+		t.Fatalf("Expected error:\"%s\" but got:\"%s\"", ErrNoSuchFile, err)
+	}
 }
 
 // plain file exists - this time don't derefence
@@ -68,6 +71,9 @@ func TestFileExists5(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Path %s should be a folder but it is reported to exist as a regular file", path)
 	}
+	if err != ErrNotRegularFile {
+		t.Fatalf("Expected error:\"%s\" but got:\"%s\"", ErrNoSuchFile, err)
+	}
 }
 
 // symlink to plain file which exists - do dereference
@@ -94,7 +100,7 @@ func TestFileExists6(t *testing.T) {
 	}
 }
 
-// symlink to plain file which exists - do NOT dereference
+// symlink to plain file which exists - do NOT dereference - should not error
 func TestFileExists7(t *testing.T) {
 	var path = testutils.SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
 	defer func() {
@@ -151,5 +157,8 @@ func TestFileExists9(t *testing.T) {
 	_, err = FileExists(path, true)
 	if err == nil {
 		t.Fatal("Should have errored out because symlink should be pointing to inexistent file")
+	}
+	if err != ErrNoSuchFile {
+		t.Fatalf("Expected error:\"%s\" but got:\"%s\"", ErrNoSuchFile, err)
 	}
 }

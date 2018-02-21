@@ -20,6 +20,61 @@ type LoggingArgs struct {
 	TextLog bool
 }
 
+const SampleYamlConfig = `# host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled. 
+# By default HTTP server is enabled and HTTPS is disabled
+#http:
+#  bind_address: "127.0.0.1:8080"
+https:
+  enabled: true
+  bind_address: "127.0.0.1:8443"
+  ssl_cert_path: /etc/ssl/cert.crt
+  ssl_key_path: /etc/ssl/cert.key
+backup:
+  - name: first_backup
+    paths:
+      - /something
+      - /var/lib
+    exclusions:
+      - /something/else
+      - /var/lib/mysql
+    targets:
+      - name: aws_1
+        type: aws_s3
+        user: BLABLA
+        pass: zzzz
+        bucket: 'myawesome-backup'
+        prefix: 'backup/backups-for-server-51'
+        storage_class: standard
+    schedule:
+      - '05 01 * * *'
+  - name: second_backup
+    paths:
+      - /var/log
+      - /var/www/html/data/
+    targets:
+      - name: aws_2
+        type: aws_s3
+        user: JOHNDOE
+        pass: qwqe
+        bucket: 'some-stuff-goes-here'
+        prefix: 'backup/backups-for-server-51'
+        storage_class: 'infrequent-access'
+      - name: google_1
+        type: google_cloud_storage
+        user: JANEDOE
+        pass: 34324fd
+        bucket: 'my-google-bucket'
+        prefix: 'backup/backups-for-server-51'
+        storage_class: standard
+    encrypt: true
+    encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
+    schedule:
+      - '00 08 01 * *'
+      - '00 08 06 * *'
+    versioning: true
+    versions_max_num: 10
+    versions_max_age: 6w`
+
 func SetupLogging(args LoggingArgs){
 	log.SetOutput(os.Stdout)
 	if args.TextLog {
