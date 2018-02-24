@@ -7,6 +7,8 @@ import (
 	"sync"
 	"github.com/jinzhu/configor"
 	"errors"
+	"os"
+	"path/filepath"
 )
 
 const loggingContext = "config"
@@ -56,6 +58,7 @@ type Https struct {
 // this is the "master" struct which keeps all of the config settings (as specified in the config file + env vars)
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type CfgTemplate = struct {
+	DataDir string `required:"true" yaml:"data_dir" json:"data_dir"`
 	Http Http `yaml:"http" json:"http"`
 	Https Https `yaml:"https" json:"https"`
 	Backup []Backup `yaml:"backup" json:"backup"`
@@ -63,7 +66,7 @@ type CfgTemplate = struct {
 
 
 // this struct contains the above "master" config struct and also some runtime related parameters and settings
-type Configuration struct {
+type RuntimeConfig struct {
 	// lock this before reading or writing the config file or reading / writing the loaded config variables
 	Mutex *sync.Mutex
 	// path to config file
@@ -74,7 +77,7 @@ type Configuration struct {
 
 // return a copy of the config struct. Lock while reading the struct. logContext is used for passing the caller's
 // logging context as to make it clear where the call is coming from
-func (cfg *Configuration) GetWithLock(logContext string) CfgTemplate {
+func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
 	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring lock before copying config struct")
 	cfg.Mutex.Lock()
 	defer func() {
@@ -87,7 +90,7 @@ func (cfg *Configuration) GetWithLock(logContext string) CfgTemplate {
 
 // load configuration from yaml file at "path" and if boolean "debug" is set then also enable debugging in the yaml
 // config parser library
-func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
+func Load(path string, debug bool, mutex *sync.Mutex) (*RuntimeConfig, error) {
 	logger.Info(fmt.Sprintf("Loading config file %s", path))
 	const envPrefix = "CLOUDBACKUP"
 	var Config = CfgTemplate{}
@@ -95,7 +98,7 @@ func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
 
 	if _, err := utils.FileExists(path, true); err != nil {
 		logger.Error(err)
-		return &Configuration{}, err
+		return &RuntimeConfig{}, err
 	}
 
 	logger.Debug("Acquiring lock before reading config file")
@@ -116,15 +119,15 @@ func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
 		msg := fmt.Sprintf("When parsing the configuration file %s the following error was encountered: %s",
 			path, err)
 		logger.Error(msg)
-		return &Configuration{}, errors.New(msg)
+		return &RuntimeConfig{}, errors.New(msg)
 	}
 
 	err = Validate(Config)
 	if err != nil {
-		return &Configuration{}, err
+		return &RuntimeConfig{}, err
 	}
 
-	return &Configuration{Mutex: mutex,
+	return &RuntimeConfig{Mutex: mutex,
 					      Path: path,
 					      Config: Config,
 	}, nil
@@ -133,61 +136,135 @@ func Load(path string, debug bool, mutex *sync.Mutex) (*Configuration, error) {
 // validate several config options which depends on other options having certain values. Trying to do this with
 // reflection ends up being harder to understand and still requires application logic in the validator
 func Validate(config CfgTemplate) error {
-	// validate HTTPS parameters from the yaml
-	if config.Https.Enabled == true {
-		if config.Https.SslCertPath == "" {
-			msg := fmt.Sprintf("https: enabled=true  but https: ssl_cert_path  is not set")
-			logger.Error(msg)
-			return errors.New(msg)
-		}
-		if config.Https.SslKeyPath == "" {
-			msg := fmt.Sprintf("https: enabled=true  but https: ssl_key_path  is not set")
-			logger.Error(msg)
-			return errors.New(msg)
-		}
-		if _, err := utils.FileExists(config.Https.SslCertPath, true); err != nil {
-			msg := fmt.Sprintf("https: enabled=true  and https: ssl_cert_path=%s but when evaluating " +
-				"the latter the following error ocurred: %s", config.Https.SslCertPath, err)
-			logger.Error(msg)
-			return err
-		}
-		if _, err := utils.FileExists(config.Https.SslKeyPath, true); err != nil {
-			msg := fmt.Sprintf("https: enabled=true  and https: ssl_key_path=%s but when evaluating " +
-				"the latter the following error ocurred: %s", config.Https.SslKeyPath, err)
-			logger.Error(msg)
-			return err
-		}
+	// check if "data_dir" exists
+	if err := ValidateTopLevelDataDir(config, true); err != nil {
+		return err
 	}
+	// validate HTTPS section of the config
+	if err := ValidateHttps(config, true); err != nil {
+		return err
+	}
+	// validate "Backup" section of the config
+	if err := ValidateBackup(config, true); err != nil {
+		return err
+	}
+	return nil
+}
 
-	// validate "Backup" section parameters
+// validate "Backup" section of the config
+func ValidateBackup(config CfgTemplate, logError bool) error {
 	i:=0
 	for _, backup := range config.Backup {
 		if backup.Encrypt && backup.EncryptPass == ""{
 			msg := fmt.Sprintf("backup[%d]: encrypt=true but backup[%d]: encrypt_pass is not set. Set a password" +
 				" or disable encryption", i, i)
-			logger.Error(msg)
+			if logError{
+				logger.Error(msg)
+			}
 			return errors.New(msg)
 		}
 		if backup.Versioning == false && backup.VersionsMaxNum > 0 {
 			msg := fmt.Sprintf("backup[%d]: versioning=false but backup[%d]: versions_max_num is %d . Enable " +
 				"versioning or remove the 'versions_max_num' setting", i, i, backup.VersionsMaxNum)
-			logger.Error(msg)
+			if logError{
+				logger.Error(msg)
+			}
 			return errors.New(msg)
 		}
 		if backup.Versioning == false && backup.VersionsMaxAge != "" {
 			msg := fmt.Sprintf("backup[%d]: versioning=false but backup[%d]: versions_max_age is %s . Enable " +
 				"versioning or remove the 'versions_max_age' setting", i, i, backup.VersionsMaxAge)
-			logger.Error(msg)
+			if logError{
+				logger.Error(msg)
+			}
 			return errors.New(msg)
 		}
 		if backup.Versioning == true && backup.VersionsMaxAge == "" && backup.VersionsMaxNum == 0 {
 			msg := fmt.Sprintf("backup[%d]: versioning=true but backup[%d]: versions_max_num is 0 or unset and" +
 				" backup[%d]: versions_max_age is unset. Disable versioning or set 'versions_max_num' > 0 or set " +
-					"'versions_max_age'", i, i, i)
-			logger.Error(msg)
+				"'versions_max_age'", i, i, i)
+			if logError{
+				logger.Error(msg)
+			}
 			return errors.New(msg)
 		}
-	i+=1
+		i+=1
 	}
 	return nil
+}
+
+// validate HTTPS section of the config
+func ValidateHttps(config CfgTemplate, logError bool) error {
+	if config.Https.Enabled == true {
+		if config.Https.SslCertPath == "" {
+			msg := fmt.Sprintf("https: enabled=true  but https: ssl_cert_path  is not set")
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+		if config.Https.SslKeyPath == "" {
+			msg := fmt.Sprintf("https: enabled=true  but https: ssl_key_path  is not set")
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+		if _, err := utils.FileExists(config.Https.SslCertPath, true); err != nil {
+			msg := fmt.Sprintf("https: enabled=true  and https: ssl_cert_path=%s but when evaluating " +
+				"the latter the following error ocurred: %s", config.Https.SslCertPath, err)
+			if logError{
+				logger.Error(msg)
+			}
+			return err
+		}
+		if _, err := utils.FileExists(config.Https.SslKeyPath, true); err != nil {
+			msg := fmt.Sprintf("https: enabled=true  and https: ssl_key_path=%s but when evaluating " +
+				"the latter the following error ocurred: %s", config.Https.SslKeyPath, err)
+			if logError{
+				logger.Error(msg)
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
+	stat, err := os.Stat(config.DataDir)
+	if err != nil{
+		msg := ""
+		if filepath.IsAbs(config.DataDir){
+			msg = fmt.Sprintf("Path %s supplied for 'data_dir' parameter does not exist or can not be accessed",
+				config.DataDir )
+		} else {
+			path, err := filepath.Abs(config.DataDir)
+			if err != nil{
+				msg = fmt.Sprintf("Path %s supplied for 'data_dir' parameter can not be used",
+					config.DataDir)
+			} else {
+				msg = fmt.Sprintf("Path %s supplied for 'data_dir' parameter does not exist or can not be " +
+					"accessed. The absolute is: %s", config.DataDir, path )
+				if logError{
+					logger.Error(msg)
+				}
+				return errors.New(msg)
+			}
+		}
+		if logError{
+			logger.Error(msg)
+		}
+		return err
+	}
+
+	if stat.IsDir() {
+		return nil
+	} else {
+		msg := fmt.Sprintf("Path %s supplied for 'data_dir' parameter exists but it is not a directory",
+			config.DataDir)
+		if logError{
+			logger.Error(msg)
+		}
+		return errors.New(msg)
+	}
 }

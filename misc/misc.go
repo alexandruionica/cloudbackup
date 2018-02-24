@@ -20,7 +20,9 @@ type LoggingArgs struct {
 	TextLog bool
 }
 
-const SampleYamlConfig = `# host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled. 
+const SampleYamlConfig = `# where are the internal SQL databases to be kept
+data_dir: /var/lib/cloudbackup
+# host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled. 
 # By default HTTP server is enabled and HTTPS is disabled
 #http:
 #  bind_address: "127.0.0.1:8080"
