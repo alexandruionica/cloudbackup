@@ -3,6 +3,8 @@
 # section specific settings are repetitive and can't be overridden by globals
 # clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable
 #
+#
+data_dir: ./tmp/
 # host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled.
 # By default HTTP server is enabled and HTTPS is disabled
 #http:

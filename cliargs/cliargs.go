@@ -26,18 +26,18 @@ type ArgsCommandConfig struct {
 }
 
 type ArgsCommandConfigCommandValidate struct {
-	ConfigFile string `short:"c" long:"configfile" description:"Configuration file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
+	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration"`
 }
 
 type ArgsCommandConfigCommandDump struct {
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration"`
-	ConfigFile string `short:"c" long:"configfile" description:"Configuration file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
+	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 }
 
 // arguments for an actual Daemon start
 type ArgsCommandStart struct {
-	ConfigFile string `short:"c" long:"configfile" description:"Configuration file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
+	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 	Verbose bool `short:"v" long:"verbose" description:"Set logging to verbose"`
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug"`
 	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`

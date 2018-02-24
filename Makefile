@@ -18,6 +18,7 @@ all: test build
 build: 
 	$(GOCMD) build -v
 test:
+	mkdir -p tmp config/tmp
 	@echo "############ Running: go vet - checking for suspicious constructs ############"
 	$(GOCMD) vet ./...
 	@echo "############ Running: errcheck - checking unhandled errors ############"

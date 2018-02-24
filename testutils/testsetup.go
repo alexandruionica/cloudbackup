@@ -6,6 +6,7 @@ import (
 )
 
 var MockYaml = []byte(`---
+data_dir: /tmp
 # global settings affect all backups and can't be specified per backup with different values
 # section specific settings are repetitive and can't be overridden by globals
 # clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable

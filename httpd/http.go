@@ -30,11 +30,11 @@ type SrvData struct {
 	// when true then the web server is already being shutdown and cleanup is in progress
 	serverExiting bool
 	// pointer to the main configuration object shared across go routines. We use this to read and change configuration
-	globalcfg *config.Configuration
+	globalcfg *config.RuntimeConfig
 }
 
 // pseudo constructor to setup a new http server
-func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.Configuration, addr string,
+func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.RuntimeConfig, addr string,
 	httpsEnabled bool, SslCertPath string, SslKeyPath string ) (*SrvData) {
 
 	return &SrvData{rcvCfgChange: rcvCfgChange,
