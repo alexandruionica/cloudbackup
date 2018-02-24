@@ -30,7 +30,7 @@ https:
   ssl_cert_path: /etc/ssl/cert.crt
   ssl_key_path: /etc/ssl/cert.key
 backup:
-  - name: first_backup
+  - name: generic
     paths:
       - /something
       - /var/lib
@@ -39,18 +39,18 @@ backup:
       - /var/lib/mysql
     targets:
       - name: aws_1
-        type: aws_s3
-        user: BLABLA
-        pass: zzzz
-        bucket: 'myawesome-backup'
+        type: s3
+        user: AWS_ACCESS_KEY_ID
+        pass: AWS_SECRET_ACCESS_KEY
+        bucket: 'example-com-us-servers'
         prefix: 'backup/backups-for-server-51'
         storage_class: standard
     schedule:
       - '05 01 * * *'
-  - name: second_backup
+  - name: http_logs
     paths:
       - /var/log
-      - /var/www/html/data/
+      - /var/www/html/data/log/
     targets:
       - name: aws_2
         type: aws_s3

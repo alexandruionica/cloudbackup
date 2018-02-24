@@ -65,7 +65,7 @@ func TestLoad3(t *testing.T) {
 // test loading valid yaml but invalid config file
 func TestLoad4(t *testing.T) {
 	var compare = &Configuration{}
-	var invalidConfig = []byte(`---
+	var invalidConfig = []byte(`zzzzzz
 some: value`)
 	var path = testutils.SetupTmpFileWithContent(invalidConfig, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
