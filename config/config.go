@@ -14,38 +14,55 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 	})
 
-type CfgTemplate = struct {
-	Http struct {
-		BindAddress string `default:"127.0.0.1:8080" yaml:"bind_address" json:"bind_address"`
-	} `yaml:"http" json:"http"`
-	Https struct {
-		Enabled bool `default:"false" yaml:"enabled" json:"enabled"`
-		BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address" json:"bind_address"`
-		SslCertPath string `yaml:"ssl_cert_path" json:"ssl_cert_path"`
-		SslKeyPath string `yaml:"ssl_key_path" json:"ssl_key_path"`
-	} `yaml:"https" json:"https"`
-	Backup []struct {
-		Name     string `required:"true" yaml:"name" json:"name"`
-		Paths     []string `required:"true" yaml:"paths" json:"paths"`
-		Exclusions []string `yaml:"exclusions" json:"exclusions"`
-		Targets []struct {
-			Name  string `required:"true" yaml:"name" json:"name"`
-			Type string `required:"true" yaml:"type" json:"type"`
-			User string `yaml:"user" json:"user"`
-			Pass string `secret:"true" yaml:"pass" json:"pass"`
-			Bucket string `required:"true" yaml:"bucket" json:"bucket"`
-			Prefix string `required:"true" yaml:"prefix" json:"prefix"`
-			StorageClass string `yaml:"storage_class" json:"storage_class"`
-		} `yaml:"targets" json:"targets"`
-		Schedule []string `required:"true" yaml:"schedule" json:"schedule"`
-		Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
-		EncryptPass string `secret:"true" yaml:"encrypt_pass" json:"encrypt_pass"`
-		Versioning bool `default:"false" yaml:"versioning" json:"versioning"`
-		VersionsMaxNum uint `yaml:"versions_max_num" json:"versions_max_num"`
-		VersionsMaxAge string `yaml:"versions_max_age" json:"versions_max_age"`
-	} `required:"true" yaml:"backup" json:"backup"`
+
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+type Backup struct {
+	Name     string `required:"true" yaml:"name" json:"name"`
+	Paths     []string `required:"true" yaml:"paths" json:"paths"`
+	Exclusions []string `yaml:"exclusions" json:"exclusions"`
+	Targets []Targets `required:"true" yaml:"targets" json:"targets"`
+	Schedule []string `yaml:"schedule" json:"schedule"`
+	Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
+	EncryptPass string `secret:"true" yaml:"encrypt_pass" json:"encrypt_pass"`
+	Versioning bool `default:"false" yaml:"versioning" json:"versioning"`
+	VersionsMaxNum uint `yaml:"versions_max_num" json:"versions_max_num"`
+	VersionsMaxAge string `yaml:"versions_max_age" json:"versions_max_age"`
 }
 
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+type Targets struct {
+	Name  string `required:"true" yaml:"name" json:"name"`
+	Type string `required:"true" yaml:"type" json:"type"`
+	User string `yaml:"user" json:"user"`
+	Pass string `secret:"true" yaml:"pass" json:"pass"`
+	Bucket string `required:"true" yaml:"bucket" json:"bucket"`
+	Prefix string `required:"true" yaml:"prefix" json:"prefix"`
+	StorageClass string `yaml:"storage_class" json:"storage_class"`
+}
+
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+type Http struct {
+	BindAddress string `default:"127.0.0.1:8080" yaml:"bind_address" json:"bind_address"`
+}
+
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+type Https struct {
+	Enabled bool `default:"false" yaml:"enabled" json:"enabled"`
+	BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address" json:"bind_address"`
+	SslCertPath string `yaml:"ssl_cert_path" json:"ssl_cert_path"`
+	SslKeyPath string `yaml:"ssl_key_path" json:"ssl_key_path"`
+}
+
+// this is the "master" struct which keeps all of the config settings (as specified in the config file + env vars)
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+type CfgTemplate = struct {
+	Http Http `yaml:"http" json:"http"`
+	Https Https `yaml:"https" json:"https"`
+	Backup []Backup `yaml:"backup" json:"backup"`
+}
+
+
+// this struct contains the above "master" config struct and also some runtime related parameters and settings
 type Configuration struct {
 	// lock this before reading or writing the config file or reading / writing the loaded config variables
 	Mutex *sync.Mutex
