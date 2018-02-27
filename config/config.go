@@ -36,7 +36,7 @@ type Targets struct {
 	Name  string `required:"true" yaml:"name" json:"name"`
 	Type string `required:"true" yaml:"type" json:"type"`
 	User string `yaml:"user" json:"user"`
-	Pass string `secret:"true" yaml:"pass" json:"pass"`
+	Pass string `secret:"true" yaml:"pass" json:"-"`
 	Bucket string `required:"true" yaml:"bucket" json:"bucket"`
 	Prefix string `required:"true" yaml:"prefix" json:"prefix"`
 	StorageClass string `yaml:"storage_class" json:"storage_class"`
