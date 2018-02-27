@@ -1,0 +1,344 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "This is the API which allows to configure, start, stop backups and view reporta",
+    "version": "1.0.0",
+    "title": "Cloudbackup API"
+  },
+  "basePath": "/api/v1",
+  "tags": [
+    {
+      "name": "config",
+      "description": "Configuration of the server and backups it does"
+    },
+    {
+      "name": "backup",
+      "description": "Start, stop and see the status backups"
+    },
+    {
+      "name": "restore",
+      "description": "Start, stop and see the status restore operations"
+    },
+    {
+      "name": "report",
+      "description": "Reports about previous backups and restores"
+    }
+  ],
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "paths": {
+    "/config": {
+      "post": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Add or update a top level configuration entry",
+        "description": "",
+        "operationId": "addTopLevelCfg",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "daemon configuration",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TopLevelCfg"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        },
+        "security": []
+      },
+      "delete": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Delete an existing top level configuration entry",
+        "description": "",
+        "operationId": "deleteTopLevelCfg",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "Pet object that needs to be added to the store",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TopLevelCfg"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "404": {
+            "description": "Config item not found",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        },
+        "security": []
+      },
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Get the whole config",
+        "description": "",
+        "operationId": "getAllCfg",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/FullConfig"
+            }
+          }
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "backup_auth": {
+      "type": "basic",
+      "description": "Use Basic Authentication"
+    }
+  },
+  "definitions": {
+    "TopLevelCfg": {
+      "type": "object",
+      "properties": {
+        "data_dir": {
+          "$ref": "#/definitions/DataDir"
+        }
+      }
+    },
+    "FullConfig": {
+      "type": "object",
+      "properties": {
+        "data_dir": {
+          "$ref": "#/definitions/DataDir"
+        },
+        "http": {
+          "$ref": "#/definitions/Http"
+        },
+        "https": {
+          "$ref": "#/definitions/Https"
+        },
+        "backup": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Backup"
+          }
+        }
+      }
+    },
+    "DataDir": {
+      "type": "string",
+      "example": "/var/lib/cloudbackup"
+    },
+    "Http": {
+      "type": "object",
+      "properties": {
+        "bind_address": {
+          "type": "string",
+          "default": "127.0.0.1:8080",
+          "example": "127.0.0.1:8080"
+        }
+      }
+    },
+    "Https": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "bind_address": {
+          "type": "string",
+          "default": "127.0.0.1:8443",
+          "example": "127.0.0.1:8443"
+        },
+        "ssl_cert_path": {
+          "type": "string",
+          "example": "/etc/ssl/cert.crt"
+        },
+        "ssl_key_path": {
+          "type": "string",
+          "example": "/etc/ssl/cert.key"
+        }
+      },
+      "required": [
+        "enabled",
+        "ssl_cert_path",
+        "ssl_key_path"
+      ]
+    },
+    "Backup": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server"
+        },
+        "paths": {
+          "type": "array",
+          "items": [
+            {
+              "type": "string"
+            }
+          ],
+          "example": [
+            "/var/lib/backups",
+            "/mnt/data",
+            "/etc"
+          ]
+        },
+        "exclusions": {
+          "type": "array",
+          "items": [
+            {
+              "type": "string"
+            }
+          ],
+          "example": [
+            "/etc/shadow"
+          ]
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BackupTarget"
+          }
+        },
+        "schedule": {
+          "type": "array",
+          "items": [
+            {
+              "type": "string"
+            }
+          ],
+          "example": [
+            "05 01 * * *"
+          ]
+        },
+        "encrypt": {
+          "type": "boolean",
+          "default": false
+        },
+        "encrypt_pass": {
+          "type": "string"
+        },
+        "versioning": {
+          "type": "boolean",
+          "default": false
+        },
+        "versions_max_num": {
+          "type": "integer"
+        },
+        "versions_max_age": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "paths",
+        "targets"
+      ]
+    },
+    "BackupTarget": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "aws_1"
+        },
+        "type": {
+          "type": "string",
+          "example": "s3"
+        },
+        "user": {
+          "type": "string",
+          "example": "AWS_ACCESS_KEY_ID"
+        },
+        "pass": {
+          "type": "string",
+          "example": "AWS_SECRET_ACCESS_KEY"
+        },
+        "bucket": {
+          "type": "string",
+          "example": "example-com-us-servers"
+        },
+        "prefix": {
+          "type": "string",
+          "example": "backup/backups-for-server-51"
+        },
+        "storage_class": {
+          "type": "string",
+          "example": "standard"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "bucket",
+        "prefix"
+      ]
+    },
+    "ApiResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Find out more about Swagger",
+    "url": "http://swagger.io"
+  }
+}
