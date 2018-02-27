@@ -1,5 +1,5 @@
 hash: 55b5409b7368ee4171708b1dc421ce725527c058a5c6f08b3de00aa229afb17d
-updated: 2018-02-11T18:24:21.872749+11:00
+updated: 2018-02-27T22:06:47.747523+11:00
 imports:
 - name: github.com/BurntSushi/toml
   version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
@@ -7,6 +7,8 @@ imports:
   version: 96dc06278ce32a0e9d957d590bb987c81ee66407
 - name: github.com/jinzhu/configor
   version: 6ecfe629230f24c2e92c7894c6ab21b83b757a39
+- name: github.com/julienschmidt/httprouter
+  version: d1898390779332322e6b5ca5011da4bf249bb056
 - name: github.com/mattn/go-sqlite3
   version: 6c771bb9887719704b210e87e934f08be014bdb1
 - name: github.com/sirupsen/logrus

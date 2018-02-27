@@ -4,9 +4,12 @@ import (
 	"cloudbackup/config"
 	"context"
 	log "github.com/sirupsen/logrus"
+	"github.com/julienschmidt/httprouter"
 	"fmt"
 	"net/http"
 	"time"
+	"sync"
+	"encoding/json"
 )
 const loggingContext = "httpd"
 var logger = log.WithFields(log.Fields{
@@ -31,6 +34,21 @@ type SrvData struct {
 	serverExiting bool
 	// pointer to the main configuration object shared across go routines. We use this to read and change configuration
 	globalcfg *config.RuntimeConfig
+	// lock this before reading or writing the loaded config variables
+	Mutex *sync.RWMutex
+}
+
+func (srv *SrvData) GetWithLock(logContext string) SrvData {
+	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying HTTPD config " +
+		"struct")
+	srv.Mutex.RLock()
+	defer func() {
+		srv.Mutex.RUnlock()
+		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying HTTPD " +
+			"config struct")
+	}()
+	cfgCopy := *srv
+	return cfgCopy
 }
 
 // pseudo constructor to setup a new http server
@@ -48,17 +66,36 @@ func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.Runti
 		SslCertPath: SslCertPath,
 		SslKeyPath: SslKeyPath,
 		httpsEnabled: httpsEnabled,
+		Mutex: &sync.RWMutex{},
 	}
 }
 
-// server / and logger.Debug requester
-func (srv SrvData) pageRoot(res http.ResponseWriter, req *http.Request){
+// serve / and logger.Info requester
+func (srvSrc SrvData) handlerRoot(res http.ResponseWriter, req *http.Request, _ httprouter.Params){
+	srv := srvSrc.GetWithLock(loggingContext + ".handlerRoot")
 	if srv.httpsEnabled{
-		fmt.Fprint(res, "HTTPS server is running\n")
+		res.Write([]byte("HTTPS server is running\n"))
 	} else {
-		fmt.Fprint(res, "HTTP server is running\n")
+		res.Write([]byte("HTTP server is running\n"))
 	}
-	logger.Debug(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", req.RequestURI, req.RemoteAddr))
+	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", req.RequestURI, req.RemoteAddr))
+}
+
+// serve $api_prefix/config and logger.Info requester
+func (srvSrc SrvData) handlerGetConfig(res http.ResponseWriter, req *http.Request, _ httprouter.Params){
+	srv := srvSrc.GetWithLock(loggingContext + "_pageRoot")
+	runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".handlerGetConfig")
+
+	js, err := json.Marshal(runtimeCfg)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.Write(js)
+
+	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", req.RequestURI, req.RemoteAddr))
 }
 
 // start http server
@@ -72,7 +109,14 @@ func (srv *SrvData) Start() {
 		protocol = "http://"
 	}
 	logger.Infof("Starting web server to listen on %s%s%s", protocol, srv.httpsrv.Addr, msg)
-	http.HandleFunc("/", srv.pageRoot)
+	apiPrefix := "/api/v1"
+	router := httprouter.New()
+	router.GET("/", srv.handlerRoot)
+	router.GET(apiPrefix + "/config", srv.handlerGetConfig)
+	// put a write lock and update the router - by this point all routes should have been added
+	srv.Mutex.Lock()
+	srv.httpsrv.Handler = router
+	srv.Mutex.Unlock()
 	logger.Debug(fmt.Sprintf("%+v", srv))
 	go func() {
 		var err error
@@ -84,7 +128,8 @@ func (srv *SrvData) Start() {
 			extraMsg = "HTTP"
 			err = srv.httpsrv.ListenAndServe()
 		}
-		if err != nil && srv.serverExiting == false {
+		srvCopy := srv.GetWithLock(loggingContext)
+		if err != nil && srvCopy.serverExiting == false {
 			logger.Errorf("%s server could not be started or encountered an error during it's operation",
 				extraMsg)
 			logger.Error(err)
@@ -95,7 +140,9 @@ func (srv *SrvData) Start() {
 // shutdown gracefully the http server using 30 sec timeout
 func (srv *SrvData) Stop(){
 	logger.Info("Shutting down the http server...")
+	srv.Mutex.Lock()
 	srv.serverExiting = true
+	srv.Mutex.Unlock()
 
 	// preparation to exit with grace period of 30 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

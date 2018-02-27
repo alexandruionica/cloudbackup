@@ -11,6 +11,7 @@ import (
 	"sync"
 	"reflect"
 	"crypto/tls"
+	"github.com/julienschmidt/httprouter"
 )
 
 const addr = "localhost:8080"
@@ -106,8 +107,11 @@ func TestStartAndCloseHttps(t *testing.T) {
 }
 
 func TestPageRootHttp(t *testing.T) {
-	fakeSrvData := SrvData{httpsEnabled: false}
-	ts := httptest.NewServer(http.HandlerFunc(fakeSrvData.pageRoot))
+	fakeSrvData := SrvData{httpsEnabled: false,
+							Mutex: &sync.RWMutex{},}
+	router := httprouter.New()
+	router.GET("/", fakeSrvData.handlerRoot)
+	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL)
