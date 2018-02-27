@@ -51,7 +51,7 @@ func (command *ArgsCommandConfigCommandValidate) Execute(args []string) error {
 	} else {
 		log.SetLevel(log.WarnLevel)
 	}
-	_, err := config.Load(command.ConfigFile, command.Debug, &sync.Mutex{})
+	_, err := config.Load(command.ConfigFile, command.Debug, &sync.RWMutex{})
 	if err != nil{
 		fmt.Printf("Config file %s did not pass validation\n", command.ConfigFile)
 		os.Exit(1)
@@ -68,7 +68,7 @@ func (command *ArgsCommandConfigCommandDump) Execute(args []string) error {
 	} else {
 		log.SetLevel(log.WarnLevel)
 	}
-	configuration, err := config.Load(command.ConfigFile, command.Debug, &sync.Mutex{})
+	configuration, err := config.Load(command.ConfigFile, command.Debug, &sync.RWMutex{})
 	if err == nil {
 		utils.Pp(configuration.GetWithLock(loggingContext))
 		os.Exit(0)
