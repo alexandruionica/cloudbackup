@@ -20,7 +20,7 @@ func TestLoad1(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, false, &sync.Mutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -43,7 +43,7 @@ func TestLoad2(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, true, &sync.Mutex{})
+	result, err := Load(path, true, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -56,7 +56,7 @@ func TestLoad2(t *testing.T) {
 
 // test loading missing config file
 func TestLoad3(t *testing.T) {
-	_, err := Load("a/file/which/does/not/exist", true, &sync.Mutex{})
+	_, err := Load("a/file/which/does/not/exist", true, &sync.RWMutex{})
 	if err == nil {
 		t.Fatal("RuntimeConfig file load should have failed due to missing file but instead succeeded")
 	}
@@ -76,7 +76,7 @@ some: value`)
 		}
 	}()
 
-	result, err := Load(path, true, &sync.Mutex{})
+	result, err := Load(path, true, &sync.RWMutex{})
 	if err == nil {
 		t.Fatal("Invalid yaml config file should have caused an eror but didn't")
 	}
@@ -96,7 +96,7 @@ func TestLoad5(t *testing.T) {
 		}
 	}()
 
-	_, err := Load(path, false, &sync.Mutex{})
+	_, err := Load(path, false, &sync.RWMutex{})
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to missing encyption password")
 	}
@@ -112,7 +112,7 @@ func TestConfiguration_GetWithLock(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, false, &sync.Mutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -136,7 +136,7 @@ func TestValidate1(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -163,7 +163,7 @@ func TestValidate2(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -191,7 +191,7 @@ func TestValidate3(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -219,7 +219,7 @@ func TestValidate4(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -248,7 +248,7 @@ func TestValidate5(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -277,7 +277,7 @@ func TestValidate6(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -306,7 +306,7 @@ func TestValidate7(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -335,7 +335,7 @@ func TestValidate8(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -365,7 +365,7 @@ func TestValidate9(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -396,7 +396,7 @@ func TestValidate10(t *testing.T) {
 		}
 	}()
 
-	result , err := Load(path, false, &sync.Mutex{})
+	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}

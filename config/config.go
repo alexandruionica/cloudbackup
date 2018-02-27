@@ -68,7 +68,7 @@ type CfgTemplate = struct {
 // this struct contains the above "master" config struct and also some runtime related parameters and settings
 type RuntimeConfig struct {
 	// lock this before reading or writing the config file or reading / writing the loaded config variables
-	Mutex *sync.Mutex
+	Mutex *sync.RWMutex
 	// path to config file
 	Path string
 	// actual config file
@@ -78,11 +78,11 @@ type RuntimeConfig struct {
 // return a copy of the config struct. Lock while reading the struct. logContext is used for passing the caller's
 // logging context as to make it clear where the call is coming from
 func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
-	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring lock before copying config struct")
-	cfg.Mutex.Lock()
+	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying config struct")
+	cfg.Mutex.RLock()
 	defer func() {
-		cfg.Mutex.Unlock()
-		log.WithFields(log.Fields{"context": logContext}).Debug("Lock released after copying config struct")
+		cfg.Mutex.RUnlock()
+		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying config struct")
 	}()
 	cfgCopy := cfg.Config
 	return cfgCopy
@@ -90,7 +90,7 @@ func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
 
 // load configuration from yaml file at "path" and if boolean "debug" is set then also enable debugging in the yaml
 // config parser library
-func Load(path string, debug bool, mutex *sync.Mutex) (*RuntimeConfig, error) {
+func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) {
 	logger.Info(fmt.Sprintf("Loading config file %s", path))
 	const envPrefix = "CLOUDBACKUP"
 	var Config = CfgTemplate{}
@@ -102,9 +102,9 @@ func Load(path string, debug bool, mutex *sync.Mutex) (*RuntimeConfig, error) {
 	}
 
 	logger.Debug("Acquiring lock before reading config file")
-	mutex.Lock()
+	mutex.RLock()
 	defer func() {
-		mutex.Unlock()
+		mutex.RUnlock()
 		logger.Debug("Lock released after reading config file")
 		}()
 	// if debug then also adjust logging level of configor library (set library to Verbose not Debug as

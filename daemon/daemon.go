@@ -19,7 +19,7 @@ func Start(configFile string, debug bool) {
 	sndCfgChangeToHttpd := make(chan bool)
 	// we use this to get notified by the HTTP server that it changed the global config
 	rcvCfgChangeFromHttpd := make(chan bool)
-	configMutex := &sync.Mutex{}
+	configMutex := &sync.RWMutex{}
 	// pointer to the main configuration object shared across go routines. We use this to read and change configuration
 	configuration, err := config.Load(configFile, debug, configMutex)
 	if err != nil {

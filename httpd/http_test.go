@@ -25,7 +25,7 @@ func TestNew(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
+	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	result := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.ValueOf(compare).Kind() != reflect.ValueOf(result).Kind() {
@@ -48,7 +48,7 @@ func TestStartAndCloseHttp(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
+	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 	srv.Start()
 	_, err := http.Get("http://" + addr + "/")
@@ -84,7 +84,7 @@ func TestStartAndCloseHttps(t *testing.T) {
 		}
 	}()
 	http.DefaultServeMux = http.NewServeMux()
-	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
+	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	srv := New(make(chan bool), make(chan bool), cfgResult, addrSsl, true, sslCert, sslKey)
 	srv.Start()
 
@@ -140,7 +140,7 @@ func TestPageRootHttp(t *testing.T) {
 //			t.Fatal(err)
 //		}
 //	}()
-//	cfgResult, _ := config.Load(path, false, &sync.Mutex{})
+//	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 //	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 //	srv.Start()
 //	srv.Stop()
