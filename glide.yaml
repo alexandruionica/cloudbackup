@@ -7,3 +7,7 @@ import:
 - package: github.com/sirupsen/logrus
   version: v1.0.4
 - package: github.com/jinzhu/configor
+- package: golang.org/x/crypto
+  subpackages:
+  - bcrypt
+- package: github.com/howeyc/gopass

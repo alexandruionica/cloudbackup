@@ -5,6 +5,7 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/daemon"
 	"cloudbackup/misc"
+	"cloudbackup/user"
 	"cloudbackup/utils"
 	"sync"
 	"fmt"
@@ -17,6 +18,7 @@ const loggingContext = "cliargs"
 type Args struct {
 	Config ArgsCommandConfig `command:"config" description:"configuration file related options"`
 	Start ArgsCommandStart `command:"start" description:"Start the backup daemon"`
+	HashPassword ArgsCommandHash `command:"hash-password" description:"Hash a password using bcrypt. This is a convenience function so you can easily hash passwords before adding them to the yaml config file."`
 }
 
 type ArgsCommandConfig struct {
@@ -33,6 +35,9 @@ type ArgsCommandConfigCommandValidate struct {
 type ArgsCommandConfigCommandDump struct {
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration"`
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
+}
+
+type ArgsCommandHash struct {
 }
 
 // arguments for an actual Daemon start
@@ -93,6 +98,16 @@ func (command *ArgsCommandStart) Execute(args []string) error {
 
 func (command *ArgsCommandConfigCommandExample) Execute(args []string) error {
 	fmt.Println(misc.SampleYamlConfig)
+	os.Exit(0)
+	return nil
+}
+
+func (command *ArgsCommandHash) Execute(args []string) error {
+	hash, err := user.ReadPassFromCli()
+	if err != nil {
+		os.Exit(1)
+	}
+	fmt.Printf("The hashed password is: %s \n", hash)
 	os.Exit(0)
 	return nil
 }

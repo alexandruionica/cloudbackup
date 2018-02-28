@@ -1,8 +1,10 @@
-hash: 55b5409b7368ee4171708b1dc421ce725527c058a5c6f08b3de00aa229afb17d
-updated: 2018-02-27T22:06:47.747523+11:00
+hash: aa3c6a5424ee6f008b2eb8159d01b5b67b4c1386ddea607daf461fd145344c46
+updated: 2018-02-28T22:41:51.343961+11:00
 imports:
 - name: github.com/BurntSushi/toml
   version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
+- name: github.com/howeyc/gopass
+  version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
 - name: github.com/jessevdk/go-flags
   version: 96dc06278ce32a0e9d957d590bb987c81ee66407
 - name: github.com/jinzhu/configor
@@ -18,6 +20,8 @@ imports:
 - name: golang.org/x/crypto
   version: 5119cf507ed5294cc409c092980c7497ee5d6fd2
   subpackages:
+  - bcrypt
+  - blowfish
   - ssh/terminal
 - name: golang.org/x/sys
   version: 37707fdb30a5b38865cfb95e5aab41707daec7fd
