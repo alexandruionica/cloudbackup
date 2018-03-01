@@ -84,8 +84,6 @@ paths:
       summary: Get the whole config
       description: ''
       operationId: getAllCfg
-      consumes:
-        - application/json
       produces:
         - application/json
       security: []
@@ -109,6 +107,10 @@ definitions:
     properties:
       data_dir:
         $ref: '#/definitions/DataDir'
+      user:
+        type: array
+        items:
+          $ref: '#/definitions/User'
       http:
         $ref: '#/definitions/Http'
       https:
@@ -120,6 +122,15 @@ definitions:
   DataDir:
     type: string
     example: /var/lib/cloudbackup
+  User:
+    type: object
+    properties:
+      name:
+        type: string
+        example: john
+      pass:
+        type: string
+        example: HV}H/y?<9$]Z5N4N
   Http:
     type: object
     properties:
@@ -167,7 +178,7 @@ definitions:
           - type: string
         example:
           - /etc/shadow
-      targets:
+      target:
         type: array
         items:
           $ref: '#/definitions/BackupTarget'

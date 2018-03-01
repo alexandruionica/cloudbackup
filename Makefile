@@ -33,7 +33,8 @@ test:
 	$(GOASTCMD) ./...
 	@echo "############ Running: go test - running unit tests ############"
 	$(GOCMD) test -cover ./...
-
+	@echo "############ Running: go test - running unit tests with race detection enabled ############"
+	$(GOCMD) test -race -cover ./...
 cover: 
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
 

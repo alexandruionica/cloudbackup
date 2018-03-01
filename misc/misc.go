@@ -53,7 +53,7 @@ backup:
     paths:
       - /var/log
       - /var/www/html/data/log/
-    targets:
+    target:
       - name: aws_2
         type: aws_s3
         user: JOHNDOE

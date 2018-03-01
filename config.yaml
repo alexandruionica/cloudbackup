@@ -5,6 +5,10 @@
 #
 #
 data_dir: ./tmp/
+user:
+  - name: testuser1
+    # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup hash-password to hash passwords
+    pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
 # host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled.
 # By default HTTP server is enabled and HTTPS is disabled
 #http:
@@ -22,7 +26,7 @@ backup:
     exclusions:
       - /something/else
       - /var/lib/mysql
-    targets:
+    target:
       - name: aws_1
         type: aws_s3
         user: BLABLA
@@ -36,7 +40,7 @@ backup:
     paths:
       - /var/log
       - /var/www/html/data/
-    targets:
+    target:
       - name: aws_2
         type: aws_s3
         user: JOHNDOE

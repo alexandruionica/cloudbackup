@@ -18,7 +18,7 @@ backup:
     exclusions:
       - /something/else
       - /var/lib/mysql
-    targets:
+    target:
       - name: aws_1
         type: aws_s3
         user: BLABLA
@@ -32,7 +32,7 @@ backup:
     paths:
       - /var/log
       - /var/www/html/data/
-    targets:
+    target:
       - name: aws_2
         type: aws_s3
         user: JOHNDOE
@@ -69,7 +69,7 @@ backup:
     exclusions:
       - /something/else
       - /var/lib/mysql
-    targets:
+    target:
       - name: aws_1
         type: aws_s3
         user: BLABLA
@@ -84,7 +84,7 @@ backup:
     paths:
       - /var/log
       - /var/www/html/data/
-    targets:
+    target:
       - name: aws_2
         type: aws_s3
         user: JOHNDOE
