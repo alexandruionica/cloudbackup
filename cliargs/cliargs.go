@@ -5,7 +5,7 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/daemon"
 	"cloudbackup/misc"
-	"cloudbackup/user"
+	"cloudbackup/password"
 	"cloudbackup/utils"
 	"sync"
 	"fmt"
@@ -103,7 +103,7 @@ func (command *ArgsCommandConfigCommandExample) Execute(args []string) error {
 }
 
 func (command *ArgsCommandHash) Execute(args []string) error {
-	hash, err := user.ReadPassFromCli()
+	hash, err := password.ReadPassFromCli()
 	if err != nil {
 		os.Exit(1)
 	}

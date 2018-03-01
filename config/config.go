@@ -19,10 +19,10 @@ var logger = log.WithFields(log.Fields{
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type Backup struct {
-	Name     string `required:"true" yaml:"name" json:"name"`
-	Paths     []string `required:"true" yaml:"paths" json:"paths"`
+	Name string `required:"true" yaml:"name" json:"name"`
+	Paths []string `required:"true" yaml:"paths" json:"paths"`
 	Exclusions []string `yaml:"exclusions" json:"exclusions"`
-	Targets []Targets `required:"true" yaml:"targets" json:"targets"`
+	Target []Target `required:"true" yaml:"target" json:"target"`
 	Schedule []string `yaml:"schedule" json:"schedule"`
 	Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
 	EncryptPass string `secret:"true" yaml:"encrypt_pass" json:"encrypt_pass"`
@@ -32,14 +32,20 @@ type Backup struct {
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type Targets struct {
-	Name  string `required:"true" yaml:"name" json:"name"`
+type Target struct {
+	Name string `required:"true" yaml:"name" json:"name"`
 	Type string `required:"true" yaml:"type" json:"type"`
 	User string `yaml:"user" json:"user"`
-	Pass string `secret:"true" yaml:"pass" json:"-"`
+	Pass string `secret:"true" yaml:"pass" json:"pass"`
 	Bucket string `required:"true" yaml:"bucket" json:"bucket"`
 	Prefix string `required:"true" yaml:"prefix" json:"prefix"`
 	StorageClass string `yaml:"storage_class" json:"storage_class"`
+}
+
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+type User struct {
+	Name string `required:"true" yaml:"name" json:"name"`
+	Pass string `secret:"true" yaml:"pass" json:"pass"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
@@ -59,6 +65,7 @@ type Https struct {
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type CfgTemplate = struct {
 	DataDir string `required:"true" yaml:"data_dir" json:"data_dir"`
+	User []User `yaml:"user" json:"user"`
 	Http Http `yaml:"http" json:"http"`
 	Https Https `yaml:"https" json:"https"`
 	Backup []Backup `yaml:"backup" json:"backup"`

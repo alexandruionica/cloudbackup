@@ -74,9 +74,15 @@ func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.Runti
 func (srvSrc SrvData) handlerRoot(res http.ResponseWriter, req *http.Request, _ httprouter.Params){
 	srv := srvSrc.GetWithLock(loggingContext + ".handlerRoot")
 	if srv.httpsEnabled{
-		res.Write([]byte("HTTPS server is running\n"))
+		_, err := res.Write([]byte("HTTPS server is running\n"))
+		if err != nil {
+			logger.Debug("handlerRoot() - could not write response back to client ")
+		}
 	} else {
-		res.Write([]byte("HTTP server is running\n"))
+		_, err := res.Write([]byte("HTTP server is running\n"))
+		if err != nil {
+			logger.Debug("handlerRoot() - could not write response back to client ")
+		}
 	}
 	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", req.RequestURI, req.RemoteAddr))
 }
@@ -93,7 +99,10 @@ func (srvSrc SrvData) handlerGetConfig(res http.ResponseWriter, req *http.Reques
 	}
 
 	res.Header().Set("Content-Type", "application/json")
-	res.Write(js)
+	_, err = res.Write(js)
+	if err != nil {
+		logger.Debug("handlerGetConfig() - could not write response back to client ")
+	}
 
 	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", req.RequestURI, req.RemoteAddr))
 }

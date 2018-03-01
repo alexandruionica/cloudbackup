@@ -123,9 +123,6 @@
         "summary": "Get the whole config",
         "description": "",
         "operationId": "getAllCfg",
-        "consumes": [
-          "application/json"
-        ],
         "produces": [
           "application/json"
         ],
@@ -162,6 +159,12 @@
         "data_dir": {
           "$ref": "#/definitions/DataDir"
         },
+        "user": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/User"
+          }
+        },
         "http": {
           "$ref": "#/definitions/Http"
         },
@@ -179,6 +182,19 @@
     "DataDir": {
       "type": "string",
       "example": "/var/lib/cloudbackup"
+    },
+    "User": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "john"
+        },
+        "pass": {
+          "type": "string",
+          "example": "HV}H/y?<9$]Z5N4N"
+        }
+      }
     },
     "Http": {
       "type": "object",
@@ -248,7 +264,7 @@
             "/etc/shadow"
           ]
         },
-        "targets": {
+        "target": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/BackupTarget"
