@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const loggingContext = "config"
@@ -45,7 +46,7 @@ type Target struct {
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type User struct {
 	Name string `required:"true" yaml:"name" json:"name"`
-	Pass string `secret:"true" yaml:"pass" json:"pass"`
+	Pass string `required:"true" yaml:"pass" json:"pass" secret:"true"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
@@ -155,6 +156,10 @@ func Validate(config CfgTemplate) error {
 	if err := ValidateBackup(config, true); err != nil {
 		return err
 	}
+	// validate "User" section of the config
+	if err := ValidateUser(config, true); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -162,6 +167,7 @@ func Validate(config CfgTemplate) error {
 func ValidateBackup(config CfgTemplate, logError bool) error {
 	i:=0
 	for _, backup := range config.Backup {
+		// TODO - check uniqueness of backup name
 		if backup.Encrypt && backup.EncryptPass == ""{
 			msg := fmt.Sprintf("backup[%d]: encrypt=true but backup[%d]: encrypt_pass is not set. Set a password" +
 				" or disable encryption", i, i)
@@ -237,6 +243,9 @@ func ValidateHttps(config CfgTemplate, logError bool) error {
 	return nil
 }
 
+// TODO - check uniqueness of backup Target name
+
+// Validate DataDir top level config entry
 func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
 	stat, err := os.Stat(config.DataDir)
 	if err != nil{
@@ -274,4 +283,22 @@ func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
 		}
 		return errors.New(msg)
 	}
+}
+
+// validate User section - checks that password has is bcrypt
+func ValidateUser(config CfgTemplate, logError bool) error {
+	if len(config.User) > 0 {
+		for _, user := range config.User {
+			// brcypt hashes should start with $2
+			if strings.Index(user.Pass, "$2") != 0 {
+				msg := fmt.Sprintf("The password hash of user %s should start with $2 but it doesn't . Bcrypt " +
+					"password hashes start with $2", user.Name)
+				if logError{
+					logger.Error(msg)
+				}
+				return errors.New(msg)
+			}
+		}
+	}
+	return nil
 }
