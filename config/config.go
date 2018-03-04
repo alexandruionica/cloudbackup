@@ -165,41 +165,59 @@ func Validate(config CfgTemplate) error {
 
 // validate "Backup" section of the config
 func ValidateBackup(config CfgTemplate, logError bool) error {
+	names := make([]string, 0)
 	i:=0
 	for _, backup := range config.Backup {
-		// TODO - check uniqueness of backup name
+		// have this as the first check as subsequent ones use the Backup name in error output in order to indicate
+		// where did things go wrong
+		if utils.StringInSlice(backup.Name, names){
+			msg := fmt.Sprintf("more than one Backups have the same 'name=%s' . Backup 'name' values must" +
+				" be unique", backup.Name)
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		} else {
+			names = append(names, backup.Name)
+		}
 		if backup.Encrypt && backup.EncryptPass == ""{
-			msg := fmt.Sprintf("backup[%d]: encrypt=true but backup[%d]: encrypt_pass is not set. Set a password" +
-				" or disable encryption", i, i)
+			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'encrypt=true' but 'encrypt_pass' is not" +
+				" set. Set a password or disable encryption", i, backup.Name)
 			if logError{
 				logger.Error(msg)
 			}
 			return errors.New(msg)
 		}
 		if backup.Versioning == false && backup.VersionsMaxNum > 0 {
-			msg := fmt.Sprintf("backup[%d]: versioning=false but backup[%d]: versions_max_num is %d . Enable " +
-				"versioning or remove the 'versions_max_num' setting", i, i, backup.VersionsMaxNum)
+			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +
+				"'versions_max_num=%d' . Enable versioning or remove the 'versions_max_num' setting",
+					i, backup.Name, backup.VersionsMaxNum)
 			if logError{
 				logger.Error(msg)
 			}
 			return errors.New(msg)
 		}
 		if backup.Versioning == false && backup.VersionsMaxAge != "" {
-			msg := fmt.Sprintf("backup[%d]: versioning=false but backup[%d]: versions_max_age is %s . Enable " +
-				"versioning or remove the 'versions_max_age' setting", i, i, backup.VersionsMaxAge)
+			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +
+				"'versions_max_age=%s' . Enable versioning or remove the 'versions_max_age' setting", i, backup.Name,
+					backup.VersionsMaxAge)
 			if logError{
 				logger.Error(msg)
 			}
 			return errors.New(msg)
 		}
 		if backup.Versioning == true && backup.VersionsMaxAge == "" && backup.VersionsMaxNum == 0 {
-			msg := fmt.Sprintf("backup[%d]: versioning=true but backup[%d]: versions_max_num is 0 or unset and" +
-				" backup[%d]: versions_max_age is unset. Disable versioning or set 'versions_max_num' > 0 or set " +
-				"'versions_max_age'", i, i, i)
+			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=true' but " +
+				"'versions_max_num=0' or is unset and 'versions_max_age' is unset. Disable versioning or set " +
+					"'versions_max_num' > 0 or set 'versions_max_age'", i, backup.Name)
 			if logError{
 				logger.Error(msg)
 			}
 			return errors.New(msg)
+		}
+		err := ValidateBackupTarget(backup.Target, logError, backup.Name)
+		if err != nil {
+			return err
 		}
 		i+=1
 	}
@@ -243,7 +261,28 @@ func ValidateHttps(config CfgTemplate, logError bool) error {
 	return nil
 }
 
-// TODO - check uniqueness of backup Target name
+// validate "Backup/Target" section of the config
+func ValidateBackupTarget(targets []Target, logError bool, BackupName string) error {
+	names := make([]string, 0)
+	for _, target := range targets {
+		// have this as the first check as subsequent ones use the Target name in error output in order to indicate
+		// where did things go wrong
+
+		// check uniqueness of backup Target name
+		if utils.StringInSlice(target.Name, names){
+			msg := fmt.Sprintf("more than one 'target' of the same 'backup' (belonging to backup section having" +
+				" 'name=%s') have the same 'name=%s' . Target 'name' values must be unique within a 'backup'" +
+					" section", BackupName, target.Name)
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		} else {
+			names = append(names, target.Name)
+		}
+	}
+	return nil
+}
 
 // Validate DataDir top level config entry
 func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
@@ -288,7 +327,18 @@ func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
 // validate User section - checks that password has is bcrypt
 func ValidateUser(config CfgTemplate, logError bool) error {
 	if len(config.User) > 0 {
+		names := make([]string, 0)
 		for _, user := range config.User {
+			if utils.StringInSlice(user.Name, names){
+				msg := fmt.Sprintf("more than one users have the same 'name=%s' . User 'name' values must" +
+					" be unique", user.Name)
+				if logError{
+					logger.Error(msg)
+				}
+				return errors.New(msg)
+			} else {
+				names = append(names, user.Name)
+			}
 			// brcypt hashes should start with $2
 			if strings.Index(user.Pass, "$2") != 0 {
 				msg := fmt.Sprintf("The password hash of user %s should start with $2 but it doesn't . Bcrypt " +
