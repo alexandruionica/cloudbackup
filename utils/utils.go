@@ -56,5 +56,15 @@ func FileExists(path string, dereference bool) (os.FileInfo, error) {
 		}
 	}
 	return stat, nil
+}
 
+
+// check if string is an element of slice
+func StringInSlice(str string, list []string) bool {
+	for _, val := range list {
+		if val == str {
+			return true
+		}
+	}
+	return false
 }
