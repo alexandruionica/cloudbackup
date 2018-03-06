@@ -127,3 +127,43 @@ func TestReadPassFromCli3(t *testing.T) {
 		t.Error("ReadPassFromCli succeed but it should have failed")
 	}
 }
+
+// ReadPassFromCli succeeds and resulted hash is usable
+func TestReadPassFromCli4(t *testing.T) {
+	content := []byte("testpassword\n")
+	// we will use a file as a mock stdin
+	tmpfile, err := ioutil.TempFile("", "unittest_password_user_test_")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer func() {
+		_ = tmpfile.Close()
+		err := os.Remove(tmpfile.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	if _, err := tmpfile.Write(content); err != nil {
+		log.Fatal(err)
+	}
+	// file needs to be set to position 0 for the read
+	if _, err := tmpfile.Seek(0, 0); err != nil {
+		log.Fatal(err)
+	}
+
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }() // Restore original Stdin
+
+	os.Stdin = tmpfile
+	hashedPass, err := ReadPassFromCli()
+	if err != nil {
+		t.Errorf("ReadPassFromCli failed with: '%v' but it was expected to succeed", err)
+	}
+
+	result := CheckPasswordHash("testpassword", hashedPass)
+	if result == false {
+		t.Fatal("Could not validate a known hash and it's plaintext source")
+	}
+}
