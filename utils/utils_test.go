@@ -162,3 +162,21 @@ func TestFileExists9(t *testing.T) {
 		t.Fatalf("Expected error:\"%s\" but got:\"%s\"", ErrNoSuchFile, err)
 	}
 }
+
+// should find string in slice
+func TestStringInSlice1(t *testing.T) {
+	source := make([]string, 0)
+	source = append(source, "abc", "def")
+	if StringInSlice("abc", source) == false {
+		t.Fatal("Failed to find expected string in slice")
+	}
+}
+
+// should not find string in slice
+func TestStringInSlice2(t *testing.T) {
+	source := make([]string, 0)
+	source = append(source, "abc", "def")
+	if StringInSlice("zyx", source) {
+		t.Fatal("Found string in slice but it should have failed as searched string doesn't exist in slice")
+	}
+}
