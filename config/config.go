@@ -324,7 +324,7 @@ func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
 	}
 }
 
-// validate User section - checks that password has is bcrypt
+// validate User section
 func ValidateUser(config CfgTemplate, logError bool) error {
 	if len(config.User) > 0 {
 		names := make([]string, 0)

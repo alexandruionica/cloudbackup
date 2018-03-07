@@ -7,6 +7,10 @@ import (
 
 var MockYaml = []byte(`---
 data_dir: /tmp
+user:
+  - name: testuser1
+    # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup hash-password to hash passwords
+    pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
 # global settings affect all backups and can't be specified per backup with different values
 # section specific settings are repetitive and can't be overridden by globals
 # clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable
@@ -80,6 +84,62 @@ backup:
     schedule:
       - 05 01 * * *
     encrypt: true
+  - name: second_backup
+    paths:
+      - /var/log
+      - /var/www/html/data/
+    target:
+      - name: aws_2
+        type: aws_s3
+        user: JOHNDOE
+        pass: qwqe
+        bucket: some-stuff-goes-here
+        prefix: backup/backups-for-server-51
+        storage_class: infrequent-access
+      - name: google_1
+        type: google_cloud_storage
+        user: JANEDOE
+        pass: 34324fd
+        bucket: my-google-bucket
+        prefix: backup/backups-for-server-51
+        storage_class: standard
+    encrypt: true
+    encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
+    schedule:
+      - 00 08 01 * *
+      - 00 08 06 * *
+    versioning: true
+    versions_max_num: 10
+    versions_max_age: 6w`)
+
+// invalid password hash for testuser1
+var MockYamlInvalidConfig2 = []byte(`---
+data_dir: /tmp
+user:
+  - name: testuser1
+    # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup hash-password to hash passwords
+    pass: blabla
+# global settings affect all backups and can't be specified per backup with different values
+# section specific settings are repetitive and can't be overridden by globals
+# clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable
+backup:
+  - name: first_backup
+    paths:
+      - /something
+      - /var/lib
+    exclusions:
+      - /something/else
+      - /var/lib/mysql
+    target:
+      - name: aws_1
+        type: aws_s3
+        user: BLABLA
+        pass: zzzz
+        bucket: myawesome-backup
+        prefix: backup/backups-for-server-51
+        storage_class: standard
+    schedule:
+      - 05 01 * * *
   - name: second_backup
     paths:
       - /var/log
