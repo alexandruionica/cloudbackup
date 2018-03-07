@@ -26,7 +26,7 @@ type Backup struct {
 	Target []Target `required:"true" yaml:"target" json:"target"`
 	Schedule []string `yaml:"schedule" json:"schedule"`
 	Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
-	EncryptPass string `secret:"true" yaml:"encrypt_pass" json:"encrypt_pass"`
+	EncryptPass string `yaml:"encrypt_pass" json:"-"`
 	Versioning bool `default:"false" yaml:"versioning" json:"versioning"`
 	VersionsMaxNum uint `yaml:"versions_max_num" json:"versions_max_num"`
 	VersionsMaxAge string `yaml:"versions_max_age" json:"versions_max_age"`
@@ -37,7 +37,7 @@ type Target struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Type string `required:"true" yaml:"type" json:"type"`
 	User string `yaml:"user" json:"user"`
-	Pass string `secret:"true" yaml:"pass" json:"pass"`
+	Pass string `yaml:"pass" json:"-"`
 	Bucket string `required:"true" yaml:"bucket" json:"bucket"`
 	Prefix string `required:"true" yaml:"prefix" json:"prefix"`
 	StorageClass string `yaml:"storage_class" json:"storage_class"`
@@ -46,7 +46,7 @@ type Target struct {
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type User struct {
 	Name string `required:"true" yaml:"name" json:"name"`
-	Pass string `required:"true" yaml:"pass" json:"pass" secret:"true"`
+	Pass string `required:"true" yaml:"pass" json:"-"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
