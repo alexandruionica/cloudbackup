@@ -102,6 +102,24 @@ func TestLoad5(t *testing.T) {
 	}
 }
 
+// test loading config file with invalid user password hash. This should trigger a different kind of validation failure
+func TestLoad6(t *testing.T) {
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYamlInvalidConfig2, "unittest_config_test_", t)
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	_, err := Load(path, false, &sync.RWMutex{})
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have failed due to a user having an invalid password" +
+			" hash")
+	}
+}
+
 func TestConfiguration_GetWithLock(t *testing.T) {
 	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -414,5 +432,131 @@ func TestValidate10(t *testing.T) {
 	if err == nil {
 		t.Fatal("Config struct validates but should have failed due to HTTPS being enabled due to " +
 			"inexistent file specified as value of ssl_key_path")
+	}
+}
+
+// two users with the same name
+func TestValidate11(t *testing.T) {
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.User) == 0 {
+		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
+	}
+	result.Config.User = append(result.Config.User, result.Config.User[0])
+	err = Validate(result.Config)
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have failed due to two users having the same name")
+	}
+	// validate also individual function
+	err = ValidateUser(result.Config, true)
+	if err == nil {
+		t.Fatal("Config struct validated but should have failed due to two users having the same name")
+	}
+}
+
+// user with invalid password hash
+func TestValidate12(t *testing.T) {
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.User) == 0 {
+		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
+	}
+	result.Config.User[0].Pass = "blabla"
+	err = Validate(result.Config)
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have failed due to invalid password hash")
+	}
+	// validate also individual function
+	err = ValidateUser(result.Config, true)
+	if err == nil {
+		t.Fatal("Config struct validated but should have failed due to invalid password hash")
+	}
+}
+
+// two backups with the same name
+func TestValidate13(t *testing.T) {
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	result.Config.Backup = append(result.Config.Backup, result.Config.Backup[0])
+	err = Validate(result.Config)
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have failed due to two backups having the same name")
+	}
+	// validate also individual function
+	err = ValidateBackup(result.Config, true)
+	if err == nil {
+		t.Fatal("Config struct validated but should have failed due to two backups having the same name")
+	}
+}
+
+// two backups targets the same name belonging to one backup
+func TestValidate14(t *testing.T) {
+	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	result.Config.Backup[0].Target = append(result.Config.Backup[0].Target, result.Config.Backup[0].Target[0])
+	err = Validate(result.Config)
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have failed due to two backups targets the same " +
+			"name belonging to one backup")
+	}
+	// validate also individual function
+	err = ValidateBackup(result.Config, true)
+	if err == nil {
+		t.Fatal("Config struct validated but should have failed due to two backups targets the same name " +
+			"belonging to one backup")
 	}
 }
