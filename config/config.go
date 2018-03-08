@@ -19,6 +19,8 @@ var logger = log.WithFields(log.Fields{
 
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
+//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 type Backup struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Paths []string `required:"true" yaml:"paths" json:"paths"`
@@ -26,27 +28,31 @@ type Backup struct {
 	Target []Target `required:"true" yaml:"target" json:"target"`
 	Schedule []string `yaml:"schedule" json:"schedule"`
 	Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
-	EncryptPass string `yaml:"encrypt_pass" json:"-"`
+	EncryptPass string `yaml:"encrypt_pass" json:"encrypt_pass"`
 	Versioning bool `default:"false" yaml:"versioning" json:"versioning"`
 	VersionsMaxNum uint `yaml:"versions_max_num" json:"versions_max_num"`
 	VersionsMaxAge string `yaml:"versions_max_age" json:"versions_max_age"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
+//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 type Target struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Type string `required:"true" yaml:"type" json:"type"`
 	User string `yaml:"user" json:"user"`
-	Pass string `yaml:"pass" json:"-"`
+	Pass string `yaml:"pass" json:"pass"`
 	Bucket string `required:"true" yaml:"bucket" json:"bucket"`
 	Prefix string `required:"true" yaml:"prefix" json:"prefix"`
 	StorageClass string `yaml:"storage_class" json:"storage_class"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
+//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 type User struct {
 	Name string `required:"true" yaml:"name" json:"name"`
-	Pass string `required:"true" yaml:"pass" json:"-"`
+	Pass string `required:"true" yaml:"pass" json:"pass"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
@@ -351,4 +357,29 @@ func ValidateUser(config CfgTemplate, logError bool) error {
 		}
 	}
 	return nil
+}
+
+// replace passwords or secrets with **************** within an instance of CfgTemplate type
+// Unfortunately this function doesn't have any smarts so whenever the config struct is changed then also an update to
+// the function is needed
+func SanitizeCfgTemplate (config CfgTemplate) CfgTemplate {
+	const SecretReplace = "****************"
+	// overwrite User.Pass
+	for i := 0; i < len(config.User); i++ {
+		if config.User[i].Pass != "" {
+			config.User[i].Pass = SecretReplace
+		}
+	}
+	// overwrite Backup.EncryptPass and Backup.Target.Pass
+	for i := 0; i < len(config.Backup); i++ {
+		if config.Backup[i].EncryptPass != "" {
+			config.Backup[i].EncryptPass = SecretReplace
+		}
+		for j := 0; j < len(config.Backup[i].Target); j++ {
+			if config.Backup[i].Target[j].Pass != "" {
+				config.Backup[i].Target[j].Pass = SecretReplace
+			}
+		}
+	}
+	return config
 }
