@@ -92,7 +92,9 @@ func (srvSrc SrvData) handlerGetConfig(res http.ResponseWriter, req *http.Reques
 	srv := srvSrc.GetWithLock(loggingContext + "_pageRoot")
 	runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".handlerGetConfig")
 
-	js, err := json.Marshal(runtimeCfg)
+	// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
+	//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+	js, err := json.Marshal(config.SanitizeCfgTemplate(runtimeCfg))
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusInternalServerError)
 		return
