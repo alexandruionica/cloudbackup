@@ -99,6 +99,27 @@ func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
 		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying config struct")
 	}()
 	cfgCopy := cfg.Config
+
+	// we need to manually copy slices because by default a pointer to the slice is copied
+	cfgCopy.User = make([]User, len(cfg.Config.User))
+	copy(cfgCopy.User, cfg.Config.User)
+	cfgCopy.Backup = make([]Backup, len(cfg.Config.Backup))
+	copy(cfgCopy.Backup, cfg.Config.Backup)
+	// deepcopy various slices part of the Backup{} struct
+	for i := 0; i < len(cfg.Config.Backup); i++ {
+		// deepcopy the []Target slice
+		cfgCopy.Backup[i].Target = make([]Target, len(cfg.Config.Backup[i].Target))
+		copy(cfgCopy.Backup[i].Target, cfg.Config.Backup[i].Target)
+		// deepcopy the []Path slice
+		cfgCopy.Backup[i].Paths = make([]string, len(cfg.Config.Backup[i].Paths))
+		copy(cfgCopy.Backup[i].Paths, cfg.Config.Backup[i].Paths)
+		// deepcopy the []Exclusions slice
+		cfgCopy.Backup[i].Exclusions = make([]string, len(cfg.Config.Backup[i].Exclusions))
+		copy(cfgCopy.Backup[i].Exclusions, cfg.Config.Backup[i].Exclusions)
+		// deepcopy the []Schedule slice
+		cfgCopy.Backup[i].Schedule = make([]string, len(cfg.Config.Backup[i].Schedule))
+		copy(cfgCopy.Backup[i].Schedule, cfg.Config.Backup[i].Schedule)
+	}
 	return cfgCopy
 }
 

@@ -2,6 +2,7 @@ package httpd
 
 import (
 	"cloudbackup/config"
+	"cloudbackup/password"
 	"context"
 	log "github.com/sirupsen/logrus"
 	"github.com/julienschmidt/httprouter"
@@ -123,7 +124,7 @@ func (srv *SrvData) Start() {
 	apiPrefix := "/api/v1"
 	router := httprouter.New()
 	router.GET("/", srv.handlerRoot)
-	router.GET(apiPrefix + "/config", srv.handlerGetConfig)
+	router.GET(apiPrefix + "/config", srv.BasicAuth(srv.handlerGetConfig))
 	// put a write lock and update the router - by this point all routes should have been added
 	srv.Mutex.Lock()
 	srv.httpsrv.Handler = router
@@ -164,4 +165,52 @@ func (srv *SrvData) Stop(){
 		logger.Error(err)
 	}
 
+}
+
+// provides basic Authentication agains username + password hashes stored in the config
+// returns a httprouter.Handle function
+func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
+	return func(res http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+		// Get the Basic Authentication credentials
+		httpUser, httpPassword, hasAuth := req.BasicAuth()
+		srv := srvSrc.GetWithLock(loggingContext + ".BasicAuth")
+		runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".BasicAuth")
+		isAuthenticated := false
+
+		if hasAuth {
+			logger.Debugf("Checking if user: '%s' provided via HTTP(S) matches any username + password hash " +
+				"from the config", httpUser)
+			if len(runtimeCfg.User) == 0 {
+				logger.Debug("The configuration doesn't have a 'User' section defined so http(s) authentication " +
+					"will fail ")
+			} else {
+				// check if a matching username + pass exists
+				for _, user := range runtimeCfg.User {
+					if user.Name == httpUser {
+						logger.Debugf("Username '%s' matches an entry from the config, checking if password" +
+							" matches the stored hash", httpUser)
+						if password.CheckPasswordHash(httpPassword, user.Pass) {
+							logger.Debugf("Password provided for username '%s' matches stored password hash",
+								httpUser)
+							isAuthenticated = true
+							break
+						}
+					}
+				}
+			}
+
+			if isAuthenticated == false {
+				logger.Debug("Could not find any matching username + password(hash) in the config")
+			}
+		}
+
+		if isAuthenticated {
+			// Delegate request to the given handle
+			handle(res, req, ps)
+		} else {
+			// Request Basic Authentication otherwise
+			res.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
+			http.Error(res, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		}
+	}
 }
