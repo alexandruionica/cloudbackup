@@ -11,8 +11,16 @@ import (
 	"time"
 	"sync"
 	"encoding/json"
+	"io/ioutil"
+	"cloudbackup/utils"
 )
 const loggingContext = "httpd"
+// various "code" messages the API can return
+const (
+	HttpErrBadContentType = "bad content type"
+	HttpErrUnauthorized = "Unauthorized"
+	HttpErrInternalServerError = "Internal Server Error"
+)
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -37,6 +45,12 @@ type SrvData struct {
 	globalcfg *config.RuntimeConfig
 	// lock this before reading or writing the loaded config variables
 	Mutex *sync.RWMutex
+}
+
+type HttpStatusReply struct {
+	HTTPCode int `json:"-"`
+	Code string `json:"code"`
+	Message  string `json:"message"`
 }
 
 func (srv *SrvData) GetWithLock(logContext string) SrvData {
@@ -72,42 +86,119 @@ func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.Runti
 }
 
 // serve / and logger.Info requester
-func (srvSrc SrvData) handlerRoot(res http.ResponseWriter, req *http.Request, _ httprouter.Params){
+func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
 	srv := srvSrc.GetWithLock(loggingContext + ".handlerRoot")
 	if srv.httpsEnabled{
-		_, err := res.Write([]byte("HTTPS server is running\n"))
+		_, err := w.Write([]byte("HTTPS server is running\n"))
 		if err != nil {
 			logger.Debug("handlerRoot() - could not write response back to client ")
 		}
 	} else {
-		_, err := res.Write([]byte("HTTP server is running\n"))
+		_, err := w.Write([]byte("HTTP server is running\n"))
 		if err != nil {
 			logger.Debug("handlerRoot() - could not write response back to client ")
 		}
 	}
-	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", req.RequestURI, req.RemoteAddr))
+	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", r.RequestURI, r.RemoteAddr))
 }
 
 // serve $api_prefix/config and logger.Info requester
-func (srvSrc SrvData) handlerGetConfig(res http.ResponseWriter, req *http.Request, _ httprouter.Params){
+func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
 	srv := srvSrc.GetWithLock(loggingContext + "_pageRoot")
 	runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".handlerGetConfig")
 
 	// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 	//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
-	js, err := json.Marshal(config.SanitizeCfgTemplate(runtimeCfg))
+	sanitizedcfg := config.SanitizeCfgTemplate(runtimeCfg)
+	status := HttpStatusReply{
+		HTTPCode: 200,
+		Code: "success",
+		Message: "successfully retrieved server configuration",
+	}
+	result := struct {
+		HttpStatusReply
+		Result config.CfgTemplate `json:"result"`
+	} {status,
+	sanitizedcfg}
+	js, err := json.Marshal(result)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res.Header().Set("Content-Type", "application/json")
-	_, err = res.Write(js)
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(js)
 	if err != nil {
 		logger.Debug("handlerGetConfig() - could not write response back to client ")
 	}
 
-	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", req.RequestURI, req.RemoteAddr))
+	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", r.RequestURI, r.RemoteAddr))
+}
+
+func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		JSONError(w, http.StatusBadRequest, HttpErrBadContentType, fmt.Sprintf("%s 'Content-Type' is not of type 'application/json'", r.Method))
+		return
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError,"Error reading request body")
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+	}
+	utils.Pp(string(body))
+	fmt.Printf("%v", r)
+
+}
+
+// provides basic Authentication agains username + password hashes stored in the config
+// returns a httprouter.Handle function
+func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		// Get the Basic Authentication credentials
+		httpUser, httpPassword, hasAuth := r.BasicAuth()
+		srv := srvSrc.GetWithLock(loggingContext + ".BasicAuth")
+		runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".BasicAuth")
+		isAuthenticated := false
+		errmsg := "Basic authentication is required. Please provide an username and password"
+
+		if hasAuth {
+			errmsg = "Invalid username or password"
+			logger.Debugf("Checking if user: '%s' provided via HTTP(S) matches any username + password hash " +
+				"from the config", httpUser)
+			if len(runtimeCfg.User) == 0 {
+				errmsg = "The server configuration doesn't have a 'User' section defined so http(s) authentication " +
+					"will fail"
+				logger.Debug(errmsg)
+			} else {
+				// check if a matching username + pass exists
+				for _, user := range runtimeCfg.User {
+					if user.Name == httpUser {
+						logger.Debugf("Username '%s' matches an entry from the config, checking if password" +
+							" matches the stored hash", httpUser)
+						if password.CheckPasswordHash(httpPassword, user.Pass) {
+							logger.Debugf("Password provided for username '%s' matches stored password hash",
+								httpUser)
+							isAuthenticated = true
+							break
+						}
+					}
+				}
+			}
+
+			if isAuthenticated == false {
+				logger.Debug("Could not find any matching username + password(hash) in the config")
+			}
+		}
+
+		if isAuthenticated {
+			// Delegate request to the given handle
+			handle(w, r, ps)
+		} else {
+			// Request Basic Authentication otherwise
+			w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
+			JSONError(w, http.StatusUnauthorized, HttpErrUnauthorized, errmsg)
+		}
+	}
 }
 
 // start http server
@@ -125,6 +216,9 @@ func (srv *SrvData) Start() {
 	router := httprouter.New()
 	router.GET("/", srv.handlerRoot)
 	router.GET(apiPrefix + "/config", srv.BasicAuth(srv.handlerGetConfig))
+	// handlerPutConfig
+	router.POST(apiPrefix + "/config", srv.BasicAuth(srv.handlerPutConfig))
+
 	// put a write lock and update the router - by this point all routes should have been added
 	srv.Mutex.Lock()
 	srv.httpsrv.Handler = router
@@ -167,50 +261,18 @@ func (srv *SrvData) Stop(){
 
 }
 
-// provides basic Authentication agains username + password hashes stored in the config
-// returns a httprouter.Handle function
-func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
-	return func(res http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-		// Get the Basic Authentication credentials
-		httpUser, httpPassword, hasAuth := req.BasicAuth()
-		srv := srvSrc.GetWithLock(loggingContext + ".BasicAuth")
-		runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".BasicAuth")
-		isAuthenticated := false
-
-		if hasAuth {
-			logger.Debugf("Checking if user: '%s' provided via HTTP(S) matches any username + password hash " +
-				"from the config", httpUser)
-			if len(runtimeCfg.User) == 0 {
-				logger.Debug("The configuration doesn't have a 'User' section defined so http(s) authentication " +
-					"will fail ")
-			} else {
-				// check if a matching username + pass exists
-				for _, user := range runtimeCfg.User {
-					if user.Name == httpUser {
-						logger.Debugf("Username '%s' matches an entry from the config, checking if password" +
-							" matches the stored hash", httpUser)
-						if password.CheckPasswordHash(httpPassword, user.Pass) {
-							logger.Debugf("Password provided for username '%s' matches stored password hash",
-								httpUser)
-							isAuthenticated = true
-							break
-						}
-					}
-				}
-			}
-
-			if isAuthenticated == false {
-				logger.Debug("Could not find any matching username + password(hash) in the config")
-			}
-		}
-
-		if isAuthenticated {
-			// Delegate request to the given handle
-			handle(res, req, ps)
-		} else {
-			// Request Basic Authentication otherwise
-			res.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
-			http.Error(res, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-		}
+func JSONError(w http.ResponseWriter, httpcode int, code string, message string) {
+	e := HttpStatusReply{
+		HTTPCode: httpcode,
+		Code: code,
+		Message: message,
 	}
+	b, err := json.Marshal(e)
+	if err != nil {
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(e.HTTPCode)
+	fmt.Fprint(w, string(b))
 }

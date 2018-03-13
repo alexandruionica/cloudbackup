@@ -4,6 +4,7 @@ import (
 	"testing"
 	"cloudbackup/config"
 	"cloudbackup/testutils"
+	"cloudbackup/utils"
 	"net/http"
 	"net/http/httptest"
 	"io/ioutil"
@@ -19,7 +20,7 @@ const addrSsl = "localhost:8443"
 
 func TestNew(t *testing.T) {
 	var compare = &SrvData{}
-	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
+	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -42,7 +43,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestStartAndCloseHttp(t *testing.T) {
-	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
+	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -68,7 +69,7 @@ func TestStartAndCloseHttp(t *testing.T) {
 }
 
 func TestStartAndCloseHttps(t *testing.T) {
-	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
+	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
 	var sslCert, sslKey = testutils.SetupSslCertAndKey("unittest_httpd_test_", t)
 	defer func() {
 		err := os.Remove(path)
@@ -137,7 +138,7 @@ func TestPageRootHttp(t *testing.T) {
 //func TestStop(t *testing.T) {
 //	// the default server Mux remains initialised from previous tests so we need to clean it up first
 //	http.DefaultServeMux = http.NewServeMux()
-//	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
+//	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
 //	defer func() {
 //		err := os.Remove(path)
 //		if err != nil {

@@ -34,9 +34,9 @@
         "tags": [
           "config"
         ],
-        "summary": "Add or update a top level configuration entry",
+        "summary": "Overwrite whole configuration",
         "description": "",
-        "operationId": "addTopLevelCfg",
+        "operationId": "writeAllCfg",
         "consumes": [
           "application/json"
         ],
@@ -66,49 +66,9 @@
             "schema": {
               "$ref": "#/definitions/ApiResponse"
             }
-          }
-        },
-        "security": []
-      },
-      "delete": {
-        "tags": [
-          "config"
-        ],
-        "summary": "Delete an existing top level configuration entry",
-        "description": "",
-        "operationId": "deleteTopLevelCfg",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "body",
-            "name": "body",
-            "description": "Pet object that needs to be added to the store",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/TopLevelCfg"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "schema": {
-              "$ref": "#/definitions/ApiResponse"
-            }
           },
-          "400": {
-            "description": "Invalid input",
-            "schema": {
-              "$ref": "#/definitions/ApiResponse"
-            }
-          },
-          "404": {
-            "description": "Config item not found",
+          "401": {
+            "description": "Basic authentication required",
             "schema": {
               "$ref": "#/definitions/ApiResponse"
             }
@@ -131,7 +91,13 @@
           "200": {
             "description": "successful operation",
             "schema": {
-              "$ref": "#/definitions/FullConfig"
+              "$ref": "#/definitions/ApiResponseGetConfig"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
             }
           }
         }
@@ -145,19 +111,12 @@
     }
   },
   "definitions": {
-    "TopLevelCfg": {
-      "type": "object",
-      "properties": {
-        "data_dir": {
-          "$ref": "#/definitions/DataDir"
-        }
-      }
-    },
     "FullConfig": {
       "type": "object",
       "properties": {
         "data_dir": {
-          "$ref": "#/definitions/DataDir"
+          "type": "string",
+          "example": "/var/lib/cloudbackup"
         },
         "user": {
           "type": "array",
@@ -178,10 +137,6 @@
           }
         }
       }
-    },
-    "DataDir": {
-      "type": "string",
-      "example": "/var/lib/cloudbackup"
     },
     "User": {
       "type": "object",
@@ -347,8 +302,25 @@
     "ApiResponse": {
       "type": "object",
       "properties": {
+        "code": {
+          "type": "string"
+        },
         "message": {
           "type": "string"
+        }
+      }
+    },
+    "ApiResponseGetConfig": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/definitions/FullConfig"
         }
       }
     }

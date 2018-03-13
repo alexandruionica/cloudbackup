@@ -2,7 +2,7 @@ package testutils
 
 import (
 	"testing"
-	"io/ioutil"
+	"cloudbackup/utils"
 )
 
 var MockYaml = []byte(`---
@@ -220,36 +220,10 @@ qW9MEP5/jMKOXqg/9n3iSjfs5TmceU//OD9kSPibO6avxXX9eDxAtACwbfDkDODK
 gY+aeR8l9EsQPSwpE1BfPhdBwxMEmTKymOtQaDLXAiJjaGEaFrP3kMtRgQ/klvfz
 029tv/IKycdHt3Grv4rUs4IA
 -----END PRIVATE KEY-----`)
-// create a file in the tmpdir and populate it with whatever content was provided. The user must delete the file
-// afterwards. Returns a string with is the full path of the file
-func SetupTmpFileWithContent(content []byte, prefix string, t *testing.T) string {
-	tmpfile, err := ioutil.TempFile("", prefix)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := tmpfile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return tmpfile.Name()
-}
-
-// create a directory in the tmpdir. The user must delete the file
-// afterwards. Returns a string with is the full path of the directory
-func SetupTmpDir(prefix string, t *testing.T) string {
-	tmpdir, err := ioutil.TempDir("", prefix)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return tmpdir
-}
 
 // sets up a self signed ssl certificate and key
 func SetupSslCertAndKey(prefix string, t *testing.T) (string, string) {
-	sslCert := SetupTmpFileWithContent(SelfSignedSslCert, prefix, t)
-	sslKey := SetupTmpFileWithContent(SelfSignedSslKey, prefix, t)
+	sslCert := utils.SetupTmpFileWithContent(SelfSignedSslCert, prefix, t)
+	sslKey := utils.SetupTmpFileWithContent(SelfSignedSslKey, prefix, t)
 	return sslCert, sslKey
 }

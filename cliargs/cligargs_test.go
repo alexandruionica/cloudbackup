@@ -3,13 +3,14 @@ package cliargs
 import (
 	"testing"
 	"cloudbackup/testutils"
+	"cloudbackup/utils"
 	"os"
 	"os/exec"
 )
 
 
 func TestExecute1OfArgsCommandConfigCommandValidate(t *testing.T){
-	var path = testutils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
+	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
