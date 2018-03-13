@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"cloudbackup/testutils"
 	"testing"
 	"os"
 	"path/filepath"
@@ -9,7 +8,7 @@ import (
 
 // plain file exists
 func TestFileExists1(t *testing.T) {
-	var path = testutils.SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
+	var path = SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -45,7 +44,7 @@ func TestFileExists3(t *testing.T) {
 
 // plain file exists - this time don't derefence
 func TestFileExists4(t *testing.T) {
-	var path = testutils.SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
+	var path = SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -60,7 +59,7 @@ func TestFileExists4(t *testing.T) {
 
 // directory instead of file
 func TestFileExists5(t *testing.T) {
-	var path = testutils.SetupTmpDir("unittest_utils_test_", t)
+	var path = SetupTmpDir("unittest_utils_test_", t)
 	defer func() {
 		err := os.RemoveAll(path)
 		if err != nil {
@@ -78,7 +77,7 @@ func TestFileExists5(t *testing.T) {
 
 // symlink to plain file which exists - do dereference
 func TestFileExists6(t *testing.T) {
-	var path = testutils.SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
+	var path = SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -102,7 +101,7 @@ func TestFileExists6(t *testing.T) {
 
 // symlink to plain file which exists - do NOT dereference - should not error
 func TestFileExists7(t *testing.T) {
-	var path = testutils.SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
+	var path = SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {

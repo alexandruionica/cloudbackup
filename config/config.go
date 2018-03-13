@@ -13,6 +13,8 @@ import (
 )
 
 const loggingContext = "config"
+// used for looking up environment variables holding configuration data
+const EnvPrefix = "CLOUDBACKUP"
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 	})
@@ -127,7 +129,7 @@ func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
 // config parser library
 func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) {
 	logger.Info(fmt.Sprintf("Loading config file %s", path))
-	const envPrefix = "CLOUDBACKUP"
+
 	var Config = CfgTemplate{}
 	var err error
 
@@ -145,9 +147,9 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 	// if debug then also adjust logging level of configor library (set library to Verbose not Debug as
 	// Verbose is actually what we expect when using  "debug")
 	if debug {
-		err = configor.New(&configor.Config{ENVPrefix: envPrefix, Verbose: true}).Load(&Config, path)
+		err = configor.New(&configor.Config{ENVPrefix: EnvPrefix, Verbose: true}).Load(&Config, path)
 	} else {
-		err = configor.New(&configor.Config{ENVPrefix: envPrefix}).Load(&Config, path)
+		err = configor.New(&configor.Config{ENVPrefix: EnvPrefix}).Load(&Config, path)
 	}
 
 	if err != nil {
