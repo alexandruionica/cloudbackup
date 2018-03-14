@@ -370,7 +370,7 @@ func ValidateUser(config CfgTemplate, logError bool) error {
 			}
 			// brcypt hashes should start with $2
 			if strings.Index(user.Pass, "$2") != 0 {
-				msg := fmt.Sprintf("The password hash of user %s should start with $2 but it doesn't . Bcrypt " +
+				msg := fmt.Sprintf("The password hash of user %s should start with $2 but it doesn't. Bcrypt " +
 					"password hashes start with $2", user.Name)
 				if logError{
 					logger.Error(msg)

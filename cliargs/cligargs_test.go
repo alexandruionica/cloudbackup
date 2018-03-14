@@ -10,7 +10,10 @@ import (
 
 
 func TestExecute1OfArgsCommandConfigCommandValidate(t *testing.T){
-	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_", t)
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)
@@ -31,7 +34,7 @@ func TestExecute1OfArgsCommandConfigCommandValidate(t *testing.T){
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=TestExecute1OfArgsCommandConfigCommandValidate")
 	cmd.Env = append(os.Environ(), "TEST_RUNNING=1")
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		t.Fatalf("process ran with err %v, want exit status 0", err)
 	}

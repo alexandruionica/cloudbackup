@@ -20,7 +20,10 @@ const addrSsl = "localhost:8443"
 
 func TestNew(t *testing.T) {
 	var compare = &SrvData{}
-	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -43,7 +46,10 @@ func TestNew(t *testing.T) {
 }
 
 func TestStartAndCloseHttp(t *testing.T) {
-	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -53,7 +59,7 @@ func TestStartAndCloseHttp(t *testing.T) {
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 	srv.Start()
-	_, err := http.Get("http://" + addr + "/")
+	_, err = http.Get("http://" + addr + "/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +75,10 @@ func TestStartAndCloseHttp(t *testing.T) {
 }
 
 func TestStartAndCloseHttps(t *testing.T) {
-	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	var sslCert, sslKey = testutils.SetupSslCertAndKey("unittest_httpd_test_", t)
 	defer func() {
 		err := os.Remove(path)
@@ -95,7 +104,7 @@ func TestStartAndCloseHttps(t *testing.T) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
-	_, err := client.Get("https://" + addrSsl + "/")
+	_, err = client.Get("https://" + addrSsl + "/")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,10 @@ import (
 // test that we can create a fake file and that it's contents match what we wrote to it
 func TestSetupFakeFile(t *testing.T){
 	var fileContent = "some sample text"
-	var path = utils.SetupTmpFileWithContent([]byte(fileContent), "unittest_testutils_test_", t)
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "unittest_testutils_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		err := os.Remove(path)

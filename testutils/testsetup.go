@@ -223,7 +223,13 @@ gY+aeR8l9EsQPSwpE1BfPhdBwxMEmTKymOtQaDLXAiJjaGEaFrP3kMtRgQ/klvfz
 
 // sets up a self signed ssl certificate and key
 func SetupSslCertAndKey(prefix string, t *testing.T) (string, string) {
-	sslCert := utils.SetupTmpFileWithContent(SelfSignedSslCert, prefix, t)
-	sslKey := utils.SetupTmpFileWithContent(SelfSignedSslKey, prefix, t)
+	sslCert, err := utils.SetupTmpFileWithContent(SelfSignedSslCert, prefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sslKey, err := utils.SetupTmpFileWithContent(SelfSignedSslKey, prefix)
+	if err != nil {
+		t.Fatal(err)
+	}
 	return sslCert, sslKey
 }
