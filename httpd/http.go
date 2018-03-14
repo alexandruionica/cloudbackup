@@ -13,11 +13,16 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"cloudbackup/utils"
+	"os"
+	"github.com/jinzhu/configor"
+	"errors"
 )
 const loggingContext = "httpd"
 // various "code" messages the API can return
 const (
 	HttpErrBadContentType = "bad content type"
+	HttpErrInvalidJson = "invalid json"
+	HttpErrInvalidConfig = "invalid config"
 	HttpErrUnauthorized = "Unauthorized"
 	HttpErrInternalServerError = "Internal Server Error"
 )
@@ -135,22 +140,66 @@ func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _
 	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", r.RequestURI, r.RemoteAddr))
 }
 
+// process POST for $api_prefix/config . If susccessful then it updates the whole daemon config
 func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		JSONError(w, http.StatusBadRequest, HttpErrBadContentType, fmt.Sprintf("%s 'Content-Type' is not of type 'application/json'", r.Method))
+	bodyBytes , err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
 		return
 	}
-	body, err := ioutil.ReadAll(r.Body)
+
+	tmpFilePath, err := utils.SetupTmpFileWithContent(bodyBytes, "new_config_")
 	if err != nil {
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError,"Error reading request body")
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		msg := fmt.Sprintf("Error writing temporary file to hold the new configuration. The encountered" +
+			" error was: %s", err)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		logger.Error(msg)
+		return
 	}
-	utils.Pp(string(body))
-	fmt.Printf("%v", r)
+	// remove tmpfile which holds the new config as it has been parsed and loaded. The context will be kept so despite
+	// renaming tmpFilePath (later below) the correct file will be deleted
+	defer func() {
+		err := os.Remove(tmpFilePath)
+		if err != nil {
+			logger.Errorf("Encountered error: '%s' when trying to delete temporary file %s", err, tmpFilePath)
+		}
+	}()
+
+	// rename file so it has .json extension . Otherwise the "configor" library needs to guess if it's a YAML or JSON
+	// file
+	err = os.Rename(tmpFilePath, tmpFilePath + ".json")
+	if err != nil {
+		logger.Errorf("Encountered error: '%s' when trying to rename temporary file %s to  %s", err,
+			tmpFilePath, tmpFilePath + ".json")
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+			"manipulating new configuration file")
+		return
+	}
+	tmpFilePath = tmpFilePath + ".json"
+	var NewConfig = config.CfgTemplate{}
+
+	// load config file and perform basic validation
+	err = configor.New(&configor.Config{ENVPrefix: config.EnvPrefix}).Load(&NewConfig, tmpFilePath)
+	if err != nil {
+		msg := fmt.Sprintf("When validating the new configuration the following error was encountered: %s", err)
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, msg)
+		logger.Debug(msg)
+		return
+	}
+
+	// perform advanced validation of the already loaded (in a struct) config
+	err = config.Validate(NewConfig)
+	if err != nil {
+		msg := fmt.Sprintf("When validating the new configuration the following error was encountered: %s", err)
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, msg)
+		logger.Debug(msg)
+		return
+	}
+	utils.Pp(NewConfig)
 
 }
 
-// provides basic Authentication agains username + password hashes stored in the config
+// provides basic Authentication against username + password hashes stored in the config
 // returns a httprouter.Handle function
 func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -261,6 +310,8 @@ func (srv *SrvData) Stop(){
 
 }
 
+// send HTTP error back to user in JSON format; httpcode is code to reply with, "code" is a short message to show,
+// "message" is a detailed explanation of what when wrong
 func JSONError(w http.ResponseWriter, httpcode int, code string, message string) {
 	e := HttpStatusReply{
 		HTTPCode: httpcode,
@@ -275,4 +326,33 @@ func JSONError(w http.ResponseWriter, httpcode int, code string, message string)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(e.HTTPCode)
 	fmt.Fprint(w, string(b))
+}
+
+// validate HTTP input of type JSON. We Buffer the request body so we can process it multiple times. This is bad if
+// someone sends a very large payload as they could cause a DOS by crashing the daemon so
+// ONLY AUTHENTICATED SESSIONS SHOULD USE THIS FUNCTION
+func ValidateJsonHTTPInput (w http.ResponseWriter, r *http.Request) (bodyBytes []byte, err error) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		msg := fmt.Sprintf("%s 'Content-Type' is not of type 'application/json'", r.Method)
+		JSONError(w, http.StatusBadRequest, HttpErrBadContentType, msg)
+		return bodyBytes, errors.New(msg)
+	}
+	// Buffer the request body so we can process it multiple times.
+	bodyBytes , err = ioutil.ReadAll(r.Body)
+	if err != nil {
+		msg := fmt.Sprintf("Error reading request body with containing new config. The encountered error" +
+			" was: %s", err)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		logger.Warn(msg)
+		return bodyBytes, err
+	}
+	var decodedJson interface{}
+	// err = json.NewDecoder(bodyBytes).Decode(&decodedJson)
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprintf("Request body is not valid JSON. " +
+			"While attempting to decode the JSON payload the following error was encountered: %s", err))
+		return bodyBytes, err
+	}
+	return bodyBytes, nil
 }

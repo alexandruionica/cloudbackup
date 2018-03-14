@@ -8,14 +8,17 @@ import (
 
 // plain file exists
 func TestFileExists1(t *testing.T) {
-	var path = SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
+	path, err := SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}()
-	_, err := FileExists(path, true)
+	_, err = FileExists(path, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,14 +47,17 @@ func TestFileExists3(t *testing.T) {
 
 // plain file exists - this time don't derefence
 func TestFileExists4(t *testing.T) {
-	var path = SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
+	path, err := SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}()
-	_, err := FileExists(path, false)
+	_, err = FileExists(path, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +83,10 @@ func TestFileExists5(t *testing.T) {
 
 // symlink to plain file which exists - do dereference
 func TestFileExists6(t *testing.T) {
-	var path = SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
+	path, err := SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -85,7 +94,7 @@ func TestFileExists6(t *testing.T) {
 		}
 	}()
 
-	err := os.Symlink(path, path + "_symlink")
+	err = os.Symlink(path, path + "_symlink")
 	defer func() {
 		err := os.Remove(path + "_symlink")
 		if err != nil {
@@ -101,7 +110,10 @@ func TestFileExists6(t *testing.T) {
 
 // symlink to plain file which exists - do NOT dereference - should not error
 func TestFileExists7(t *testing.T) {
-	var path = SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_", t)
+	path, err := SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -109,7 +121,7 @@ func TestFileExists7(t *testing.T) {
 		}
 	}()
 
-	err := os.Symlink(path, path + "_symlink")
+	err = os.Symlink(path, path + "_symlink")
 	defer func() {
 		err := os.Remove(path + "_symlink")
 		if err != nil {

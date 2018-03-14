@@ -11,8 +11,8 @@ import (
 )
 
 const loggingContext = "utils"
-var ErrNoSuchFile = errors.New("File does not exist")
-var ErrNotRegularFile = errors.New("File is not a regular file")
+var ErrNoSuchFile = errors.New("file does not exist")
+var ErrNotRegularFile = errors.New("file is not a regular file")
 
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
@@ -73,19 +73,20 @@ func StringInSlice(str string, list []string) bool {
 
 // create a file in the tmpdir and populate it with whatever content was provided. The user must delete the file
 // afterwards. Returns a string with is the full path of the file
-func SetupTmpFileWithContent(content []byte, prefix string, t *testing.T) string {
+func SetupTmpFileWithContent(content []byte, prefix string) (string, error) {
 	tmpfile, err := ioutil.TempFile("", prefix)
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 
 	if _, err := tmpfile.Write(content); err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
+		return "", err
 	}
-	return tmpfile.Name()
+	logger.Debugf("Created tmp file %s and successfully wrote content to it.", tmpfile.Name())
+	return tmpfile.Name(), nil
 }
 
 
