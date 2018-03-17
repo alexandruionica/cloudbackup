@@ -182,7 +182,7 @@ func TestValidate1(t *testing.T) {
 	}
 
 	result.Config.Backup[0].Encrypt = true
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to missing encyption password")
 	}
@@ -212,7 +212,7 @@ func TestValidate2(t *testing.T) {
 	}
 
 	result.Config.Backup[0].Versioning = true
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to versioning being enabled but not" +
 			" versions_max_age or versions_max_num are having default values")
@@ -243,7 +243,7 @@ func TestValidate3(t *testing.T) {
 	}
 
 	result.Config.Backup[0].VersionsMaxAge = "10w"
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to versions_max_age being set and" +
 			" versioning being disabled ")
@@ -274,7 +274,7 @@ func TestValidate4(t *testing.T) {
 	}
 
 	result.Config.Backup[0].VersionsMaxNum = 5
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to VersionsMaxNum > 0  and" +
 			" versioning being disabled ")
@@ -306,7 +306,7 @@ func TestValidate5(t *testing.T) {
 	}
 
 	result.Config.DataDir = "/a/missing/folder/which/should/not/exist"
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to data_dir using absolute path which " +
 			"does not exist")
@@ -338,7 +338,7 @@ func TestValidate6(t *testing.T) {
 	}
 
 	result.Config.DataDir = "relative_path_which_does_not_exist"
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to data_dir using a relative path " +
 			"which does not exist")
@@ -370,7 +370,7 @@ func TestValidate7(t *testing.T) {
 	}
 
 	result.Config.Https.Enabled = true
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to HTTPS being enabled but " +
 			"ssl_cert_path not being specified")
@@ -403,7 +403,7 @@ func TestValidate8(t *testing.T) {
 
 	result.Config.Https.Enabled = true
 	result.Config.Https.SslCertPath = "/a/missing/file"
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to HTTPS being enabled but " +
 			"ssl_key_path not being specified")
@@ -437,7 +437,7 @@ func TestValidate9(t *testing.T) {
 	result.Config.Https.Enabled = true
 	result.Config.Https.SslCertPath = "/a/missing/file"
 	result.Config.Https.SslKeyPath = "/another/missing/file"
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to HTTPS being enabled due to " +
 			"inexistent file specified as value of ssl_cert_path")
@@ -471,7 +471,7 @@ func TestValidate10(t *testing.T) {
 	result.Config.Https.Enabled = true
 	result.Config.Https.SslCertPath = "/etc/services"
 	result.Config.Https.SslKeyPath = "/another/missing/file"
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to HTTPS being enabled due to " +
 			"inexistent file specified as value of ssl_key_path")
@@ -507,12 +507,12 @@ func TestValidate11(t *testing.T) {
 		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
 	}
 	result.Config.User = append(result.Config.User, result.Config.User[0])
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to two users having the same name")
 	}
 	// validate also individual function
-	err = ValidateUser(result.Config, true)
+	err = ValidateUser(result.Config, true, false)
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to two users having the same name")
 	}
@@ -541,12 +541,12 @@ func TestValidate12(t *testing.T) {
 		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
 	}
 	result.Config.User[0].Pass = "blabla"
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to invalid password hash")
 	}
 	// validate also individual function
-	err = ValidateUser(result.Config, true)
+	err = ValidateUser(result.Config, true, false)
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to invalid password hash")
 	}
@@ -575,7 +575,7 @@ func TestValidate13(t *testing.T) {
 		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
 	}
 	result.Config.Backup = append(result.Config.Backup, result.Config.Backup[0])
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to two backups having the same name")
 	}
@@ -609,7 +609,7 @@ func TestValidate14(t *testing.T) {
 		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
 	}
 	result.Config.Backup[0].Target = append(result.Config.Backup[0].Target, result.Config.Backup[0].Target[0])
-	err = Validate(result.Config)
+	err = Validate(result.Config, false)
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to two backups targets the same " +
 			"name belonging to one backup")
@@ -619,5 +619,442 @@ func TestValidate14(t *testing.T) {
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to two backups targets the same name " +
 			"belonging to one backup")
+	}
+}
+
+// users with password hash set to "******"
+func TestValidate15(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.User) == 0 {
+		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
+	}
+	result.Config.User[0].Pass = "***************"
+	err = Validate(result.Config, true)
+	if err != nil {
+		t.Fatal("Config file did not load successfully but should have when a users passsowrd is set to '******'" +
+			" and Validate is called with hiddenPass=true")
+	}
+	// validate also individual function
+	err = ValidateUser(result.Config, true, true)
+	if err != nil {
+		t.Fatal("Config struct did not load successfully but should have when a users passsowrd is set to '******'" +
+			" and ValidateUser is called with hiddenPass=true")
+	}
+}
+
+// users with password hash set to "******BLA"
+func TestValidate16(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.User) == 0 {
+		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
+	}
+	result.Config.User[0].Pass = "******BLA"
+	err = Validate(result.Config, true)
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have not when a users passsowrd is set to '******BLA'" +
+			" and Validate is called with hiddenPass=true")
+	}
+	// validate also individual function
+	err = ValidateUser(result.Config, true, true)
+	if err == nil {
+		t.Fatal("Config struct loaded successfully but should have not when a users passsowrd is set to '******BLA'" +
+			" and ValidateUser is called with hiddenPass=true")
+	}
+}
+
+func TestCheckStringIsOnly(t *testing.T) {
+	if CheckStringIsOnly("************", "*") != true {
+		t.Fatal("CheckStringIsOnly() did not return a match as expected")
+	}
+}
+
+func TestCheckStringIsOnly2(t *testing.T) {
+	if CheckStringIsOnly("*******ERWER", "*"){
+		t.Fatal("CheckStringIsOnly() did return a match but this should not happened")
+	}
+}
+
+func TestCheckStringIsOnly3(t *testing.T) {
+	if CheckStringIsOnly("", "*"){
+		t.Fatal("CheckStringIsOnly() did return a match but this should not happened as we passed in an empty " +
+			"string to check")
+	}
+}
+
+// check that for fully populated configs (actual hash in the password field) we don't get an error
+func TestCopyPasswordsFromOldConfig(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.User) == 0 {
+		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have Backup section but we're trying to validate Backup related code")
+	}
+
+	oldConfig := result.Config
+	NewConfig := result2.Config
+
+	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err != nil {
+		t.Fatalf("Old config and new config both have password hashes for various entries but " +
+			"CopyPasswordsFromOldConfig() returned error: %s", err)
+	}
+}
+
+// check that "****" password actually get replaced with hashes
+func TestCopyPasswordsFromOldConfig2(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.User) == 0 {
+		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
+	}
+	if len(result.Config.Backup) == 0 {
+		t.Fatal( "Config file doesn't have 'Backup' section but we're trying to validate Backup related code")
+	}
+	if len(result.Config.Backup[0].Target) == 0 {
+		t.Fatal("Config file doesn't have 'Backup[0].Target' section but we're trying to validate Backup.Target" +
+			" related code")
+	}
+
+	oldConfig := result.Config
+	NewConfig := result2.Config
+	NewConfig.User[0].Pass = SecretReplace
+	NewConfig.Backup[1].EncryptPass = SecretReplace
+	NewConfig.Backup[0].Target[0].Pass = SecretReplace
+
+	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err != nil {
+		t.Fatalf("CopyPasswordsFromOldConfig() returned error: %s", err)
+	}
+	if NewConfig.User[0].Pass == SecretReplace {
+		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's User[0].Pass (this is user " +
+			"having name: '%s') from '%s' to an actual hash but did not do so", NewConfig.User[0].Name, SecretReplace)
+	}
+
+	if NewConfig.Backup[1].EncryptPass == SecretReplace {
+		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's Backup[1].EncryptPass (this is backup " +
+			"having name: '%s') from '%s' to an actual password but did not do so", NewConfig.Backup[1].Name, SecretReplace)
+	}
+
+	if NewConfig.Backup[0].Target[0].Pass == SecretReplace {
+		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's Backup[0].Target[0].Pass " +
+			"(this is backup having name: '%s' and target name '%s') from '%s' to an actual password but did not do so",
+				NewConfig.Backup[0].Name, NewConfig.Backup[0].Target[0].Name, SecretReplace)
+	}
+}
+
+// check that for a user with pass=*** that we get an error if the user doesn't exist in the old config
+func TestCopyPasswordsFromOldConfig3(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.User) == 0 {
+		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
+	}
+
+	oldConfig := result.Config
+	NewConfig := result2.Config
+	NewConfig.User[0].Name = "bla5345345BlaUser"
+	NewConfig.User[0].Pass = SecretReplace
+
+	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err == nil {
+		t.Fatal("CopyPasswordsFromOldConfig() did not return error but one was expected")
+	}
+}
+
+// check that for a Backup with EncryptPass=*** that we get an error if the Backup doesn't exist in the old config
+func TestCopyPasswordsFromOldConfig4(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have 'Backup' section but we're trying to validate Backup related code")
+	}
+
+	oldConfig := result.Config
+	NewConfig := result2.Config
+	NewConfig.Backup[1].Name = "bla4353424Backup"
+	NewConfig.Backup[1].EncryptPass = SecretReplace
+
+	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err == nil {
+		t.Fatal("CopyPasswordsFromOldConfig() did not return error but one was expected")
+	}
+}
+
+// check that for a Backup with EncryptPass=*** that we get an error if the Backup doesn't have a password in the
+// old config
+func TestCopyPasswordsFromOldConfig5(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have 'Backup' section but we're trying to validate Backup related code")
+	}
+
+	oldConfig := result.Config
+	NewConfig := result2.Config
+	oldConfig.Backup[1].EncryptPass = ""
+	NewConfig.Backup[1].EncryptPass = SecretReplace
+
+	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err == nil {
+		t.Fatal("CopyPasswordsFromOldConfig() did not return error but one was expected")
+	}
+}
+
+// check that for a Backup.Target with Pass=*** that we get an error if the Target doesn't exist in the old config
+func TestCopyPasswordsFromOldConfig6(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have 'Backup' section but we're trying to validate Backup related code")
+	}
+	if len(result.Config.Backup[0].Target) == 0 {
+		t.Fatal("Config file doesn't have 'Backup[0].Target' section but we're trying to validate Backup.Target" +
+			" related code")
+	}
+
+	oldConfig := result.Config
+	NewConfig := result2.Config
+	NewConfig.Backup[0].Target[0].Name = "bla4832094Target"
+	NewConfig.Backup[0].Target[0].Pass = SecretReplace
+
+	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err == nil {
+		t.Fatal("CopyPasswordsFromOldConfig() did not return error but one was expected")
+	}
+}
+
+// check that for a Backup.Target with Pass=*** that we get an error if the Backup with that name doesn't exist in the
+// old config
+func TestCopyPasswordsFromOldConfig7(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have 'Backup' section but we're trying to validate Backup related code")
+	}
+	if len(result.Config.Backup[0].Target) == 0 {
+		t.Fatal("Config file doesn't have 'Backup[0].Target' section but we're trying to validate Backup.Target" +
+			" related code")
+	}
+
+	oldConfig := result.Config
+	NewConfig := result2.Config
+	NewConfig.Backup[0].Name = "bla32847234blaBackup"
+	NewConfig.Backup[0].Target[0].Pass = SecretReplace
+
+	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err == nil {
+		t.Fatal("CopyPasswordsFromOldConfig() did not return error but one was expected")
+	}
+}
+
+// check that for a Backup.Target with Pass=*** that we get an error if the Target doesn't have a password in the
+// old config
+func TestCopyPasswordsFromOldConfig8(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have 'Backup' section but we're trying to validate Backup related code")
+	}
+	if len(result.Config.Backup[0].Target) == 0 {
+		t.Fatal("Config file doesn't have 'Backup[0].Target' section but we're trying to validate Backup.Target" +
+			" related code")
+	}
+
+	oldConfig := result.Config
+	NewConfig := result2.Config
+	NewConfig.Backup[0].Target[0].Pass = SecretReplace
+	oldConfig.Backup[0].Target[0].Pass = ""
+
+
+	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err == nil {
+		t.Fatal("CopyPasswordsFromOldConfig() did not return error but one was expected")
 	}
 }
