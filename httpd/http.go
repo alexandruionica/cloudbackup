@@ -178,7 +178,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 	tmpFilePath = tmpFilePath + ".json"
 	var NewConfig = config.CfgTemplate{}
 
-	// load config file and perform basic validation
+	// load new config from tmp file and perform basic validation
 	err = configor.New(&configor.Config{ENVPrefix: config.EnvPrefix}).Load(&NewConfig, tmpFilePath)
 	if err != nil {
 		msg := fmt.Sprintf("When validating the new configuration the following error was encountered: %s", err)
@@ -187,16 +187,25 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 		return
 	}
 
-	// perform advanced validation of the already loaded (in a struct) config
-	err = config.Validate(NewConfig)
+	// perform advanced validation of the above loaded (in a struct) config
+	err = config.Validate(NewConfig, true)
 	if err != nil {
 		msg := fmt.Sprintf("When validating the new configuration the following error was encountered: %s", err)
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, msg)
 		logger.Debug(msg)
 		return
 	}
-	utils.Pp(NewConfig)
 
+	oldConfig := srvSrc.globalcfg.GetWithLock(loggingContext + ".handlerPutConfig")
+
+	err = config.CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, err.Error())
+		logger.Debug(err.Error())
+		return
+	}
+	// TODO - add code to copy the new values over the old config structure or better just write the file and tell the
+	// daemon to reload config
 }
 
 // provides basic Authentication against username + password hashes stored in the config
@@ -310,7 +319,7 @@ func (srv *SrvData) Stop(){
 
 }
 
-// send HTTP error back to user in JSON format; httpcode is code to reply with, "code" is a short message to show,
+// send HTTP error back to user in JSON format; "httpcode" is HTTP status code to reply with, "code" is a short message to show,
 // "message" is a detailed explanation of what when wrong
 func JSONError(w http.ResponseWriter, httpcode int, code string, message string) {
 	e := HttpStatusReply{

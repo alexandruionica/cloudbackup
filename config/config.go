@@ -10,9 +10,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+    "unicode/utf8"
 )
 
 const loggingContext = "config"
+const SecretReplace = "****************"
 // used for looking up environment variables holding configuration data
 const EnvPrefix = "CLOUDBACKUP"
 var logger = log.WithFields(log.Fields{
@@ -23,6 +25,8 @@ var logger = log.WithFields(log.Fields{
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+// CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
+// also config.CopyPasswordsFromOldConfig needs updating
 type Backup struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Paths []string `required:"true" yaml:"paths" json:"paths"`
@@ -39,6 +43,8 @@ type Backup struct {
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+// CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
+// also config.CopyPasswordsFromOldConfig needs updating
 type Target struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Type string `required:"true" yaml:"type" json:"type"`
@@ -52,6 +58,8 @@ type Target struct {
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+// CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
+// also config.CopyPasswordsFromOldConfig needs updating
 type User struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Pass string `required:"true" yaml:"pass" json:"pass"`
@@ -159,7 +167,7 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 		return &RuntimeConfig{}, errors.New(msg)
 	}
 
-	err = Validate(Config)
+	err = Validate(Config, false)
 	if err != nil {
 		return &RuntimeConfig{}, err
 	}
@@ -172,7 +180,8 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 
 // validate several config options which depends on other options having certain values. Trying to do this with
 // reflection ends up being harder to understand and still requires application logic in the validator
-func Validate(config CfgTemplate) error {
+// params: config struct to validate; hiddenPass is if to allow obfuscated passwords (meaning strings with value *****)
+func Validate(config CfgTemplate, hiddenPass bool) error {
 	// check if "data_dir" exists
 	if err := ValidateTopLevelDataDir(config, true); err != nil {
 		return err
@@ -186,7 +195,7 @@ func Validate(config CfgTemplate) error {
 		return err
 	}
 	// validate "User" section of the config
-	if err := ValidateUser(config, true); err != nil {
+	if err := ValidateUser(config, true, hiddenPass); err != nil {
 		return err
 	}
 	return nil
@@ -354,7 +363,9 @@ func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
 }
 
 // validate User section
-func ValidateUser(config CfgTemplate, logError bool) error {
+// params: config struct to validate; logError is if to log errors or not; hiddenPass is if to allow obfuscated
+// passwords (meaning strings with value *****)
+func ValidateUser(config CfgTemplate, logError bool, hiddenPass bool) error {
 	if len(config.User) > 0 {
 		names := make([]string, 0)
 		for _, user := range config.User {
@@ -370,12 +381,17 @@ func ValidateUser(config CfgTemplate, logError bool) error {
 			}
 			// brcypt hashes should start with $2
 			if strings.Index(user.Pass, "$2") != 0 {
-				msg := fmt.Sprintf("The password hash of user %s should start with $2 but it doesn't. Bcrypt " +
-					"password hashes start with $2", user.Name)
-				if logError{
-					logger.Error(msg)
+				// if hiddenPass then we allow the password to be like *****
+				if hiddenPass && CheckStringIsOnly(user.Pass, "*") {
+					// do nothing
+				} else {
+					msg := fmt.Sprintf("The password hash of user %s should start with $2 but it doesn't. Bcrypt "+
+						"password hashes start with $2", user.Name)
+					if logError {
+						logger.Error(msg)
+					}
+					return errors.New(msg)
 				}
-				return errors.New(msg)
 			}
 		}
 	}
@@ -386,7 +402,6 @@ func ValidateUser(config CfgTemplate, logError bool) error {
 // Unfortunately this function doesn't have any smarts so whenever the config struct is changed then also an update to
 // the function is needed
 func SanitizeCfgTemplate (config CfgTemplate) CfgTemplate {
-	const SecretReplace = "****************"
 	// overwrite User.Pass
 	for i := 0; i < len(config.User); i++ {
 		if config.User[i].Pass != "" {
@@ -405,4 +420,118 @@ func SanitizeCfgTemplate (config CfgTemplate) CfgTemplate {
 		}
 	}
 	return config
+}
+
+// checks if a string is made up only of a given character (or substring)
+func CheckStringIsOnly(val string, chars string) bool {
+	if utf8.RuneCountInString(val) > 0 && val == strings.Repeat(chars, utf8.RuneCountInString(val)) {
+		return true
+	} else {
+		return false
+	}
+}
+
+// reads passwords from the old config. If the new config has an entry which matches (meaning both have the same name)
+// one from the old config and in the new config this entry has a password of "*****" (more or less stars) then copy
+// Returns an error if one or more **** based passwords don't have a counterpart in the old config so the old password
+// can't be extracted
+func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) error {
+	// compare User.Password entries
+	for i := 0; i < len(newConfig.User); i++ {
+		if CheckStringIsOnly(newConfig.User[i].Pass, "*") {
+			foundMatch := false
+			// search for a match in the old(active) config
+			for j := 0; j < len(oldConfig.User); j++ {
+				if oldConfig.User[j].Name == newConfig.User[i].Name {
+					foundMatch = true
+					newConfig.User[i].Pass = oldConfig.User[j].Pass
+					break
+				}
+			}
+			if foundMatch != true {
+				return errors.New(fmt.Sprintf("Username '%s' has a password of '%s' which implies the password " +
+					"should be copied from the current(active) configuration but no such username was found in " +
+						"the current configuration", newConfig.User[i].Name, newConfig.User[i].Pass))
+			}
+		}
+	}
+
+	// compare Backup.EncryptPass and Backup.Target.Pass entries
+	for i := 0; i < len(newConfig.Backup); i++ {
+		// compare Backup.EncryptPass
+		if CheckStringIsOnly(newConfig.Backup[i].EncryptPass, "*") {
+			foundMatch := false
+			// search for a match in the old(active) config
+			for j := 0; j < len(oldConfig.Backup); j++ {
+				if oldConfig.Backup[j].Name == newConfig.Backup[i].Name {
+					if oldConfig.Backup[j].EncryptPass != "" {
+						foundMatch = true
+						newConfig.Backup[i].EncryptPass = oldConfig.Backup[j].EncryptPass
+						break
+					} else {
+						return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' " +
+							"which implies the password should be copied from the current(active) configuration but " +
+								"in the current configuration there isn't a password set for 'encrypt_pass' so there " +
+									"is nothing to copy from", newConfig.Backup[i].Name, newConfig.Backup[i].EncryptPass))
+					}
+				}
+			}
+			if foundMatch != true {
+				return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' which implies the password " +
+					"should be copied from the current(active) configuration but no backup with the same name was found in " +
+					"the current configuration", newConfig.Backup[i].Name, newConfig.Backup[i].EncryptPass))
+			}
+		}
+
+		// compare Backup.Target.Pass entries
+		for j := 0; j < len(newConfig.Backup[i].Target); j++ {
+			if CheckStringIsOnly(newConfig.Backup[i].Target[j].Pass, "*") {
+				foundMatch := false
+				// search for a match in the old(active) config - check if we have a backup with the same name
+				for k := 0; k < len(oldConfig.Backup); k++ {
+					if oldConfig.Backup[k].Name == newConfig.Backup[i].Name {
+						foundMatch = true
+						// search for a target with the same name in the old config
+						foundTargetMatch := false
+						for l := 0; l < len(oldConfig.Backup[k].Target); l++ {
+							if oldConfig.Backup[k].Target[l].Name == newConfig.Backup[i].Target[j].Name {
+								// check if old config Target has a pass and if so copy it
+								if oldConfig.Backup[k].Target[l].Pass != "" {
+									foundTargetMatch = true
+									newConfig.Backup[i].Target[j].Pass = oldConfig.Backup[k].Target[l].Pass
+									break
+								} else {
+									return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an " +
+										"'pass' of '%s' which implies the password " +
+										"should be copied from the current(active) configuration but in the current " +
+										"configuration there isn't a password set for the same target name so there " +
+										"is nothing to copy from", newConfig.Backup[i].Name, newConfig.Backup[i].Target[j].Name,
+										newConfig.Backup[i].Target[j].Pass))
+								}
+							}
+						}
+						if foundTargetMatch != true {
+							return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an " +
+								"'pass' of '%s' which implies the password " +
+								"should be copied from the current(active) configuration but no 'target' with the " +
+								"same name was found in the current configuration for a Backup having the same" +
+								" name", newConfig.Backup[i].Name, newConfig.Backup[i].Target[j].Name,
+								newConfig.Backup[i].Target[j].Pass))
+						}
+
+					}
+				}
+				if foundMatch != true {
+					return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an " +
+						"'pass' of '%s' which implies the password " +
+						"should be copied from the current(active) configuration but no 'backup' with the " +
+						"same name was found in the current configuration", newConfig.Backup[i].Name,
+							newConfig.Backup[i].Target[j].Name, newConfig.Backup[i].Target[j].Pass))
+				}
+			}
+		}
+
+	}
+
+	return nil
 }
