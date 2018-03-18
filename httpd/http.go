@@ -274,16 +274,42 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 			"trying to compare new config with the old one in order to establish if they differ")
 		return
 	}
+	var writeErr error
 	// TODO - compare new and old config and if there is no difference then don't rewrite the config file
 	if bytes.Equal(oldConfigMarshalled, NewConfigMarshalled) {
 		logger.Debug("old and new config match")
 		JSONSuccess(w, "success", "The supplied configuration matches the existing one so no actual " +
 			"changes are going to take effect")
+		return
+	} else {
+		logger.Debug("Acquiring lock for HTTP server config before writing config file and updating in-memory " +
+			"configuration")
+		srvSrc.Mutex.Lock()
+		defer func() {
+			srvSrc.Mutex.Unlock()
+			logger.Debug("HTTP server lock released after attempting to write config file")
+		}()
+		writeErr = config.Save(srvSrc.globalcfg, NewConfig)
+		if writeErr != nil {
+			logger.Error(writeErr.Error())
+			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, writeErr.Error())
+			return
+		} else {
+			// log that a config change happened
+			httpUser, _, _ := r.BasicAuth()
+			logger.Infof("Configuration file '%s' updated with new content as requested by user '%s' from '%s' via" +
+				" '%s' to '%s%s'", srv.globalcfg.Path, httpUser, r.RemoteAddr, r.Method, r.Host, r.RequestURI)
+		}
 	}
 
+	// TODO - notify daemon(master) that a config change happened. The only reason to do so would be to notify the
+	// builtin "cron"(scheduling) daemon
 
-	// TODO - add code to copy the new values over the old config structure or better just write the file and tell the
-	// daemon to reload config
+	JSONSuccess(w, "success", "Successfully updated server configuration. Any changes to SSL " +
+		"certificates, ports and addresses to listen on and if to use http or https will require a server restart in" +
+			" order to take effect")
+	return
+
 }
 
 // provides basic Authentication against username + password hashes stored in the config
