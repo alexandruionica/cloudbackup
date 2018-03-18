@@ -43,7 +43,7 @@ type ArgsCommandHash struct {
 // arguments for an actual Daemon start
 type ArgsCommandStart struct {
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
-	Verbose bool `short:"v" long:"verbose" description:"Set logging to verbose"`
+	Quiet bool `short:"q" long:"quiet" description:"Set logging to quiet: show only Warning or above log level messages"`
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug"`
 	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
 }
@@ -89,7 +89,7 @@ func (command *ArgsCommandConfigCommandDump) Execute(args []string) error {
 // this is where the main stuff actually starts
 func (command *ArgsCommandStart) Execute(args []string) error {
 	loggingArgs := misc.LoggingArgs{
-		Verbose: command.Verbose,
+		Quiet: command.Quiet,
 		Debug: command.Debug,
 		TextLog: command.TextLog,
 	}

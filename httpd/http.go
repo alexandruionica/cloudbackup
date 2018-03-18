@@ -163,6 +163,7 @@ func (srv *SrvData) Stop(){
 
 // serve / and logger.Info requester
 func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
+	LogHttpRequest(r)
 	srv := srvSrc.GetWithLock(loggingContext + ".handlerRoot")
 	if srv.httpsEnabled{
 		_, err := w.Write([]byte("HTTPS server is running\n"))
@@ -187,11 +188,8 @@ func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _
 	//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 	sanitizedcfg := config.SanitizeCfgTemplate(runtimeCfg)
 
-
 	JSONSuccessWithResult(w, "success", "successfully retrieved server configuration", sanitizedcfg)
-
-	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", r.RequestURI, r.RemoteAddr))
-}
+	}
 
 // process POST for $api_prefix/config . If susccessful then it updates the whole daemon config
 func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -292,6 +290,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 // returns a httprouter.Handle function
 func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		LogHttpRequest(r)
 		// Get the Basic Authentication credentials
 		httpUser, httpPassword, hasAuth := r.BasicAuth()
 		srv := srvSrc.GetWithLock(loggingContext + ".BasicAuth")
@@ -483,4 +482,11 @@ func ValidateJsonHTTPInput (w http.ResponseWriter, r *http.Request) (bodyBytes [
 		return bodyBytes, err
 	}
 	return bodyBytes, nil
+}
+
+// basic logging of http requests. Does not include response code. Requests wrapped with BasicAuth() will get logged but
+// otherwise you must call this function
+func LogHttpRequest(r *http.Request){
+	log.WithFields(log.Fields{"context": loggingContext + ".access"}).Infof("%s %s %s %s", r.RemoteAddr,
+		r.Method, r.Host, r.RequestURI)
 }
