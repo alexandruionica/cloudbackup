@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
     "unicode/utf8"
+	yaml "gopkg.in/yaml.v2"
+	"io/ioutil"
 )
 
 const loggingContext = "config"
@@ -178,6 +180,28 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 					      Path: path,
 					      Config: Config,
 	}, nil
+}
+
+// saves new configuration to file
+func Save(runtimeCfg *RuntimeConfig, newConfig CfgTemplate) error {
+	logger.Debug("Acquiring lock before writing config file")
+	runtimeCfg.Mutex.Lock()
+	defer func() {
+		runtimeCfg.Mutex.Unlock()
+		logger.Debug("Lock released after attempting to write config file")
+	}()
+	toWrite, err := yaml.Marshal(newConfig)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Could not marshall YAML when preparing for write the configuration " +
+			"file. The error received was: %s", err.Error()))
+	}
+	if err := ioutil.WriteFile(runtimeCfg.Path, toWrite, 0644); err != nil {
+		return errors.New(fmt.Sprintf("Could not write to configuration file '%s' . Received error was: %s",
+			runtimeCfg.Path, err))
+	}
+	logger.Debug("Updating in-memory configuration")
+	runtimeCfg.Config = newConfig
+	return nil
 }
 
 // validate several config options which depends on other options having certain values. Trying to do this with
