@@ -15,8 +15,8 @@ var logger = log.WithFields(log.Fields{
 })
 
 type LoggingArgs struct {
-	Verbose bool
 	Debug bool
+	Quiet bool
 	TextLog bool
 }
 
@@ -95,11 +95,10 @@ func SetupLogging(args LoggingArgs){
 		log.SetLevel(log.DebugLevel)
 		logger.Debug("Debug level messages enabled")
 	} else {
-		if args.Verbose {
-			log.SetLevel(log.InfoLevel)
-			logger.Info("Verbose level messages enabled")
-		} else {
+		if args.Quiet {
 			log.SetLevel(log.WarnLevel)
+		} else {
+			log.SetLevel(log.InfoLevel)
 		}
 	}
 

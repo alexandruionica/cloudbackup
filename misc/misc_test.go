@@ -32,18 +32,14 @@ func TestSetupLoggingTextmode(t *testing.T) {
 	hook.Reset()
 }
 
-func TestSetupLoggingVerbose(t *testing.T) {
+func TestSetupLoggingQuiet(t *testing.T) {
 	hook := test.NewGlobal()
-	args := LoggingArgs{Verbose: true}
+	args := LoggingArgs{Quiet: true}
 
 	SetupLogging(args)
 
-	if len(hook.Entries) != 1 {
-		t.Fatalf("expected 1 log lines but received %+v", hook.Entries)
-	}
-	msg := "Verbose level messages enabled"
-	if hook.LastEntry().Message != msg {
-		t.Fatalf("expected log entry '%s' but got '%+v'", msg, hook.LastEntry().Message)
+	if len(hook.Entries) != 0 {
+		t.Fatalf("expected 0 log lines but received %+v", hook.Entries)
 	}
 	// cleanup
 	hook.Reset()
