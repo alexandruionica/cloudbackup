@@ -102,6 +102,65 @@ func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.Runti
 	}
 }
 
+// start http server
+func (srv *SrvData) Start() {
+	var protocol, msg string
+	if srv.httpsEnabled {
+		protocol = "https://"
+		msg = fmt.Sprintf(" using ssl certificate %s and ssl key %s", srv.SslCertPath, srv.SslKeyPath)
+	} else {
+		msg = ""
+		protocol = "http://"
+	}
+	logger.Infof("Starting web server to listen on %s%s%s", protocol, srv.httpsrv.Addr, msg)
+	router := httprouter.New()
+	router.GET("/", srv.handlerRoot)
+	router.GET(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerGetConfig)))
+	// handlerPutConfig
+	router.POST(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfig)))
+
+	// put a write lock and update the router - by this point all routes should have been added
+	srv.Mutex.Lock()
+	srv.httpsrv.Handler = router
+	srv.Mutex.Unlock()
+	logger.Debug(fmt.Sprintf("%+v", srv))
+	go func() {
+		var err error
+		var extraMsg string
+		if srv.httpsEnabled {
+			extraMsg = "HTTPS"
+			err = srv.httpsrv.ListenAndServeTLS(srv.SslCertPath, srv.SslKeyPath)
+		} else {
+			extraMsg = "HTTP"
+			err = srv.httpsrv.ListenAndServe()
+		}
+		srvCopy := srv.GetWithLock(loggingContext)
+		if err != nil && srvCopy.serverExiting == false {
+			logger.Errorf("%s server could not be started or encountered an error during it's operation",
+				extraMsg)
+			logger.Error(err)
+		}
+	}()
+}
+
+// shutdown gracefully the http server using 30 sec timeout
+func (srv *SrvData) Stop(){
+	logger.Info("Shutting down the http server...")
+	srv.Mutex.Lock()
+	srv.serverExiting = true
+	srv.Mutex.Unlock()
+
+	// preparation to exit with grace period of 30 seconds
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	err := srv.httpsrv.Shutdown(ctx)
+	if err != nil {
+		logger.Error(err)
+	}
+
+}
+
 // serve / and logger.Info requester
 func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
 	srv := srvSrc.GetWithLock(loggingContext + ".handlerRoot")
@@ -334,65 +393,6 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 		}
 
 	}
-}
-
-// start http server
-func (srv *SrvData) Start() {
-	var protocol, msg string
-	if srv.httpsEnabled {
-		protocol = "https://"
-		msg = fmt.Sprintf(" using ssl certificate %s and ssl key %s", srv.SslCertPath, srv.SslKeyPath)
-	} else {
-		msg = ""
-		protocol = "http://"
-	}
-	logger.Infof("Starting web server to listen on %s%s%s", protocol, srv.httpsrv.Addr, msg)
-	router := httprouter.New()
-	router.GET("/", srv.handlerRoot)
-	router.GET(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerGetConfig)))
-	// handlerPutConfig
-	router.POST(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfig)))
-
-	// put a write lock and update the router - by this point all routes should have been added
-	srv.Mutex.Lock()
-	srv.httpsrv.Handler = router
-	srv.Mutex.Unlock()
-	logger.Debug(fmt.Sprintf("%+v", srv))
-	go func() {
-		var err error
-		var extraMsg string
-		if srv.httpsEnabled {
-			extraMsg = "HTTPS"
-			err = srv.httpsrv.ListenAndServeTLS(srv.SslCertPath, srv.SslKeyPath)
-		} else {
-			extraMsg = "HTTP"
-			err = srv.httpsrv.ListenAndServe()
-		}
-		srvCopy := srv.GetWithLock(loggingContext)
-		if err != nil && srvCopy.serverExiting == false {
-			logger.Errorf("%s server could not be started or encountered an error during it's operation",
-				extraMsg)
-			logger.Error(err)
-		}
-	}()
-}
-
-// shutdown gracefully the http server using 30 sec timeout
-func (srv *SrvData) Stop(){
-	logger.Info("Shutting down the http server...")
-	srv.Mutex.Lock()
-	srv.serverExiting = true
-	srv.Mutex.Unlock()
-
-	// preparation to exit with grace period of 30 seconds
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	err := srv.httpsrv.Shutdown(ctx)
-	if err != nil {
-		logger.Error(err)
-	}
-
 }
 
 // send HTTP error back to user in JSON format; "httpcode" is HTTP status code to reply with, "code" is a short message to show,
