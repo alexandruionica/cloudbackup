@@ -694,6 +694,64 @@ func TestValidate16(t *testing.T) {
 	}
 }
 
+// validate User's 'access' key (allowed values should be only 'read', 'write')
+func TestValidate17(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.User) == 0 {
+		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
+	}
+	// #### invalid value
+	result.Config.User[0].Access = "bla"
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have not when a users 'access' key is set to 'bla'")
+	}
+	// validate also individual function
+	err = ValidateUser(result.Config, true, false)
+	if err == nil {
+		t.Fatal("Config struct loaded successfully but should have not when a users 'access' key is set to 'bla")
+	}
+
+	// ##### valid value 'read'
+	result.Config.User[0].Access = "read"
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatal("Config file failed to load but should have when a users 'access' key is set to 'read'")
+	}
+	// validate also individual function
+	err = ValidateUser(result.Config, true, false)
+	if err != nil {
+		t.Fatal("Config struct failed to load but should have when a users 'access' key is set to 'read'")
+	}
+	// ##### valid value 'write'
+	result.Config.User[0].Access = "write"
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatal("Config file failed to load but should have when a users 'access' key is set to 'write'")
+	}
+	// validate also individual function
+	err = ValidateUser(result.Config, true, false)
+	if err != nil {
+		t.Fatal("Config struct failed to load but should have when a users 'access' key is set to 'write'")
+	}
+}
+
 func TestCheckStringIsOnly(t *testing.T) {
 	if CheckStringIsOnly("************", "*") != true {
 		t.Fatal("CheckStringIsOnly() did not return a match as expected")
