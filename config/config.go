@@ -63,6 +63,8 @@ type Target struct {
 type User struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Pass string `required:"true" yaml:"pass" json:"pass"`
+	// allowed options are read or write (write implies read)
+	Access string `default:"read" yaml:"access" json:"access"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
@@ -392,6 +394,15 @@ func ValidateUser(config CfgTemplate, logError bool, hiddenPass bool) error {
 					}
 					return errors.New(msg)
 				}
+			}
+			// Access field has only two options allowed: "read" or "write"
+			if strings.ToLower(user.Access) != "read" && strings.ToLower(user.Access) != "write" {
+				msg := fmt.Sprintf("Username '%s' has field 'access' set to value '%s' but the only two allowed " +
+					"values are 'read' or 'write'", user.Name, user.Access)
+				if logError {
+					logger.Error(msg)
+				}
+				return errors.New(msg)
 			}
 		}
 	}

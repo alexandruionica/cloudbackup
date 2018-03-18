@@ -148,6 +148,11 @@
         "pass": {
           "type": "string",
           "example": "HV}H/y?<9$]Z5N4N"
+        },
+        "access": {
+          "type": "string",
+          "example": "write",
+          "pattern": "^(read|write)$"
         }
       }
     },

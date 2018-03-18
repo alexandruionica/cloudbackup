@@ -16,19 +16,31 @@ import (
 	"os"
 	"github.com/jinzhu/configor"
 	"errors"
+	"bytes"
+	"strings"
 )
-const loggingContext = "httpd"
+const (
+	loggingContext = "httpd"
+	ApiPrefix = "/api/v1"
+)
 // various "code" messages the API can return
 const (
 	HttpErrBadContentType = "bad content type"
 	HttpErrInvalidJson = "invalid json"
 	HttpErrInvalidConfig = "invalid config"
-	HttpErrUnauthorized = "Unauthorized"
-	HttpErrInternalServerError = "Internal Server Error"
+	HttpErrUnauthorized = "unauthorized"
+	HttpErrInternalServerError = "internal server error"
+	HttpErrForbidden = "access denied"
 )
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
+
+// used to check if a user has access to a given PATH . Path will be prefixed with $ApiPrefix in the calling function
+var ReadAccess = map[string][]string{
+	//"POST": []string{"aaa", "bbb"},
+	"GET":  {"/config"},
+}
 
 
 //type SrvData interface {
@@ -109,33 +121,15 @@ func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ http
 
 // serve $api_prefix/config and logger.Info requester
 func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
-	srv := srvSrc.GetWithLock(loggingContext + "_pageRoot")
+	srv := srvSrc.GetWithLock(loggingContext + ".pageRoot")
 	runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".handlerGetConfig")
 
 	// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 	//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 	sanitizedcfg := config.SanitizeCfgTemplate(runtimeCfg)
-	status := HttpStatusReply{
-		HTTPCode: 200,
-		Code: "success",
-		Message: "successfully retrieved server configuration",
-	}
-	result := struct {
-		HttpStatusReply
-		Result config.CfgTemplate `json:"result"`
-	} {status,
-	sanitizedcfg}
-	js, err := json.Marshal(result)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(js)
-	if err != nil {
-		logger.Debug("handlerGetConfig() - could not write response back to client ")
-	}
+
+	JSONSuccessWithResult(w, "success", "successfully retrieved server configuration", sanitizedcfg)
 
 	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", r.RequestURI, r.RemoteAddr))
 }
@@ -196,14 +190,41 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 		return
 	}
 
-	oldConfig := srvSrc.globalcfg.GetWithLock(loggingContext + ".handlerPutConfig")
+	srv := srvSrc.GetWithLock(loggingContext + ".handlerPutConfig")
+	oldConfig := srv.globalcfg.GetWithLock(loggingContext + ".handlerPutConfig")
 
+	// for password fields containing only asterisks ('*******') attempt to read the actual password from the old config
 	err = config.CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
 	if err != nil {
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, err.Error())
 		logger.Debug(err.Error())
 		return
 	}
+
+	oldConfigMarshalled, err := json.Marshal(oldConfig)
+	if err != nil {
+		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() existing config in order to " +
+			"compare it with the new config", err)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+			"trying to compare old config with the new one in order to establish if they differ")
+		return
+	}
+	NewConfigMarshalled, err := json.Marshal(NewConfig)
+	if err != nil {
+		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() new config in order to " +
+			"compare it with the old config", err)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+			"trying to compare new config with the old one in order to establish if they differ")
+		return
+	}
+	// TODO - compare new and old config and if there is no difference then don't rewrite the config file
+	if bytes.Equal(oldConfigMarshalled, NewConfigMarshalled) {
+		logger.Debug("old and new config match")
+		JSONSuccess(w, "success", "The supplied configuration matches the existing one so no actual " +
+			"changes are going to take effect")
+	}
+
+
 	// TODO - add code to copy the new values over the old config structure or better just write the file and tell the
 	// daemon to reload config
 }
@@ -219,7 +240,7 @@ func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 		isAuthenticated := false
 		errmsg := "Basic authentication is required. Please provide an username and password"
 
-		if hasAuth {
+		if hasAuth && httpUser !="" {
 			errmsg = "Invalid username or password"
 			logger.Debugf("Checking if user: '%s' provided via HTTP(S) matches any username + password hash " +
 				"from the config", httpUser)
@@ -251,11 +272,67 @@ func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 		if isAuthenticated {
 			// Delegate request to the given handle
 			handle(w, r, ps)
+			return
 		} else {
 			// Request Basic Authentication otherwise
 			w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
 			JSONError(w, http.StatusUnauthorized, HttpErrUnauthorized, errmsg)
+			return
 		}
+	}
+}
+
+// check if the user has access to the given path and method. The session MUST already be authenticated
+func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		// Get the Basic Authentication credentials
+		httpUser, _, hasAuth := r.BasicAuth()
+		if hasAuth != true {
+			msg := fmt.Sprintf("CheckAccess() called for an unauthenticated session for path '%s' and HTTP " +
+				"method '%s'. Please submit a bug report", r.URL.Path, r.Method)
+			logger.Error(msg)
+			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+			return
+		}
+
+		srv := srvSrc.GetWithLock(loggingContext + ".CheckAccess")
+		runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".CheckAccess")
+		hasAccess := false
+		for _, user := range runtimeCfg.User {
+			if user.Name == httpUser {
+				if strings.ToLower(user.Access) == "write" {
+					// "write" grants access to everything
+					hasAccess = true
+					break
+				}
+				// check we have a key with the method value in ReadAccess
+				if _, ok := ReadAccess[r.Method]; ok {
+					for _, path := range ReadAccess[r.Method] {
+						if r.URL.Path == ApiPrefix + path {
+							logger.Infof("found match for %s", r.URL.Path)
+							hasAccess = true
+							break
+						}
+					}
+					if hasAccess {
+						break
+					}
+				}
+
+			}
+		}
+		if hasAccess {
+			// Delegate request to the given handle
+			handle(w, r, ps)
+			return
+		} else {
+			msg := fmt.Sprintf("User '%s' does not have access to '%s' using http method '%s'. Request 'write'" +
+				" privileges from your Admin if access is needed", httpUser, r.URL.Path, r.Method)
+			logger.Debug(msg)
+			JSONError(w, http.StatusForbidden, HttpErrForbidden, msg)
+			return
+		}
+
 	}
 }
 
@@ -270,12 +347,11 @@ func (srv *SrvData) Start() {
 		protocol = "http://"
 	}
 	logger.Infof("Starting web server to listen on %s%s%s", protocol, srv.httpsrv.Addr, msg)
-	apiPrefix := "/api/v1"
 	router := httprouter.New()
 	router.GET("/", srv.handlerRoot)
-	router.GET(apiPrefix + "/config", srv.BasicAuth(srv.handlerGetConfig))
+	router.GET(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerGetConfig)))
 	// handlerPutConfig
-	router.POST(apiPrefix + "/config", srv.BasicAuth(srv.handlerPutConfig))
+	router.POST(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfig)))
 
 	// put a write lock and update the router - by this point all routes should have been added
 	srv.Mutex.Lock()
@@ -334,6 +410,49 @@ func JSONError(w http.ResponseWriter, httpcode int, code string, message string)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(e.HTTPCode)
+	fmt.Fprint(w, string(b))
+}
+
+// send HTTP success back to user in JSON format; "code" is a short message to show, "message" is a detailed explanation
+func JSONSuccess(w http.ResponseWriter, code string, message string) {
+	status := HttpStatusReply{
+		HTTPCode: 200,
+		Code: code,
+		Message: message,
+	}
+
+	b, err := json.Marshal(status)
+	if err != nil {
+		http.Error(w, "Internal Server Error when trying to reply that requested operation was successful",
+			500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status.HTTPCode)
+	fmt.Fprint(w, string(b))
+}
+
+// send HTTP success back to user in JSON format; "code" is a short message to show, "message" is a detailed explanation
+// result is any Struct which can be json.Marshall-ed and it contains operation specific data
+func JSONSuccessWithResult(w http.ResponseWriter, code string, message string, result interface{}) {
+	status := HttpStatusReply{
+		HTTPCode: 200,
+		Code: code,
+		Message: message,
+	}
+	response := struct {
+		HttpStatusReply
+		Result interface{} `json:"result"`
+	}{ status, result}
+
+	b, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Internal Server Error when trying to reply that requested operation was successful",
+			500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.HTTPCode)
 	fmt.Fprint(w, string(b))
 }
 
