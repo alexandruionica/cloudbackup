@@ -35,7 +35,7 @@
           "config"
         ],
         "summary": "Overwrite whole configuration",
-        "description": "",
+        "description": "If a password field is specified with value \"******\" (number of asterisks does not matter as long as it is only asterisks) then the actual password will be copied from the current running configuration. This is because when you fetch the configuration (via GET) passwords do not get printed.",
         "operationId": "writeAllCfg",
         "consumes": [
           "application/json"
@@ -50,7 +50,7 @@
             "description": "daemon configuration",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/TopLevelCfg"
+              "$ref": "#/definitions/FullConfig"
             }
           }
         ],
@@ -81,7 +81,7 @@
           "config"
         ],
         "summary": "Get the whole config",
-        "description": "",
+        "description": "Get the current active configuration. Password fields will have their values replaced with \"**************\" despite what the Swagger example shows below.",
         "operationId": "getAllCfg",
         "produces": [
           "application/json"

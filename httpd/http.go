@@ -302,8 +302,9 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 		}
 	}
 
-	// TODO - notify daemon(master) that a config change happened. The only reason to do so would be to notify the
+	// notify daemon(master) that a config change happened. The only reason to do so would be to notify the
 	// builtin "cron"(scheduling) daemon
+	srvSrc.sndCfgChange <- true
 
 	JSONSuccess(w, "success", "Successfully updated server configuration. Any changes to SSL " +
 		"certificates, ports and addresses to listen on and if to use http or https will require a server restart in" +
