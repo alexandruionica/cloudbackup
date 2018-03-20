@@ -359,16 +359,19 @@ func ValidateDir(dir string, paramName string, logError bool) error {
 	if err != nil{
 		msg := ""
 		if filepath.IsAbs(dir){
-			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed",
-				dir, paramName )
+			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed. " +
+				"In case '%s' is a default value for '%s' then you will not notice it in the configuration file.",
+				dir, paramName, dir, paramName )
 		} else {
 			path, err := filepath.Abs(dir)
 			if err != nil{
-				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter can not be used",
-					dir, paramName)
+				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter can not be used. In case '%s' is a " +
+					"default value for '%s' then you will not notice it in the configuration file.",
+					dir, paramName, dir, paramName)
 			} else {
 				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be " +
-					"accessed. The absolute is: '%s'", dir, paramName, path )
+					"accessed. The absolute is: '%s'. In case '%s' is a default value for '%s' then you will not " +
+						"notice it in the configuration file.", dir, paramName, path, dir, paramName )
 				if logError{
 					logger.Error(msg)
 				}
@@ -384,8 +387,9 @@ func ValidateDir(dir string, paramName string, logError bool) error {
 	if stat.IsDir() {
 		return nil
 	} else {
-		msg := fmt.Sprintf("Path '%s' supplied for '%s' parameter exists but it is not a directory",
-			dir, paramName)
+		msg := fmt.Sprintf("Path '%s' supplied for '%s' parameter exists but it is not a directory. In case " +
+			"'%s' is a default value for '%s' then you will not notice it in the configuration file.",
+			dir, paramName, dir, paramName)
 		if logError{
 			logger.Error(msg)
 		}
