@@ -112,11 +112,14 @@ func (srv *SrvData) Start() {
 		msg = ""
 		protocol = "http://"
 	}
+	staticHtmlDir := srv.globalcfg.GetWithLock(loggingContext).HtmlDir
 	logger.Infof("Starting web server to listen on %s%s%s", protocol, srv.httpsrv.Addr, msg)
 	router := httprouter.New()
 	router.GET("/", srv.handlerRoot)
+	// serve documentation - static files - NO AUTHENTICATION needed
+	router.ServeFiles("/docs/*filepath", http.Dir(staticHtmlDir + "/docs"))
+	// API endpoints
 	router.GET(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerGetConfig)))
-	// handlerPutConfig
 	router.POST(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfig)))
 
 	// put a write lock and update the router - by this point all routes should have been added
@@ -124,6 +127,7 @@ func (srv *SrvData) Start() {
 	srv.httpsrv.Handler = router
 	srv.Mutex.Unlock()
 	logger.Debug(fmt.Sprintf("%+v", srv))
+	// start http or https server in a separate routine
 	go func() {
 		var err error
 		var extraMsg string
