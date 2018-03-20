@@ -86,6 +86,7 @@ type Https struct {
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type CfgTemplate = struct {
 	DataDir string `required:"true" yaml:"data_dir" json:"data_dir"`
+	HtmlDir string `default:"webstatic" yaml:"html_dir" json:"html_dir"`
 	User []User `yaml:"user" json:"user"`
 	Http Http `yaml:"http" json:"http"`
 	Https Https `yaml:"https" json:"https"`
@@ -209,7 +210,11 @@ func Save(runtimeCfg *RuntimeConfig, newConfig CfgTemplate) error {
 // params: config struct to validate; hiddenPass is if to allow obfuscated passwords (meaning strings with value *****)
 func Validate(config CfgTemplate, hiddenPass bool) error {
 	// check if "data_dir" exists
-	if err := ValidateTopLevelDataDir(config, true); err != nil {
+	if err := ValidateDir(config.DataDir, "data_dir", true); err != nil {
+		return err
+	}
+	// check if "html_dir" exists
+	if err := ValidateDir(config.HtmlDir, "html_dir", true); err != nil {
 		return err
 	}
 	// validate HTTPS section of the config
@@ -349,21 +354,21 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 }
 
 // Validate DataDir top level config entry
-func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
-	stat, err := os.Stat(config.DataDir)
+func ValidateDir(dir string, paramName string, logError bool) error {
+	stat, err := os.Stat(dir)
 	if err != nil{
 		msg := ""
-		if filepath.IsAbs(config.DataDir){
-			msg = fmt.Sprintf("Path %s supplied for 'data_dir' parameter does not exist or can not be accessed",
-				config.DataDir )
+		if filepath.IsAbs(dir){
+			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed",
+				dir, paramName )
 		} else {
-			path, err := filepath.Abs(config.DataDir)
+			path, err := filepath.Abs(dir)
 			if err != nil{
-				msg = fmt.Sprintf("Path %s supplied for 'data_dir' parameter can not be used",
-					config.DataDir)
+				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter can not be used",
+					dir, paramName)
 			} else {
-				msg = fmt.Sprintf("Path %s supplied for 'data_dir' parameter does not exist or can not be " +
-					"accessed. The absolute is: %s", config.DataDir, path )
+				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be " +
+					"accessed. The absolute is: '%s'", dir, paramName, path )
 				if logError{
 					logger.Error(msg)
 				}
@@ -379,8 +384,8 @@ func ValidateTopLevelDataDir(config CfgTemplate, logError bool) error {
 	if stat.IsDir() {
 		return nil
 	} else {
-		msg := fmt.Sprintf("Path %s supplied for 'data_dir' parameter exists but it is not a directory",
-			config.DataDir)
+		msg := fmt.Sprintf("Path '%s' supplied for '%s' parameter exists but it is not a directory",
+			dir, paramName)
 		if logError{
 			logger.Error(msg)
 		}

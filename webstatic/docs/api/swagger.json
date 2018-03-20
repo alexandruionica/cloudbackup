@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "description": "This is the API which allows to configure, start, stop backups and view reporta",
+    "description": "This is the API which allows to configure, start, stop backups and view reports",
     "version": "1.0.0",
     "title": "Cloudbackup API"
   },
@@ -117,6 +117,10 @@
         "data_dir": {
           "type": "string",
           "example": "/var/lib/cloudbackup"
+        },
+        "html_dir": {
+          "type": "string",
+          "example": "/usr/share/cloudbackup/webstatic"
         },
         "user": {
           "type": "array",

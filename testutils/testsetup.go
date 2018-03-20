@@ -7,6 +7,7 @@ import (
 
 var MockYaml = []byte(`---
 data_dir: /tmp
+html_dir: /tmp
 user:
   - name: testuser1
     # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup hash-password to hash passwords

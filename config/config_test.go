@@ -286,7 +286,7 @@ func TestValidate4(t *testing.T) {
 	}
 }
 
-// validate data dir using absolute path which does not exist
+// validate data_dir using absolute path which does not exist
 func TestValidate5(t *testing.T) {
 	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
 	if err != nil {
@@ -312,7 +312,7 @@ func TestValidate5(t *testing.T) {
 			"does not exist")
 	}
 
-	err = ValidateTopLevelDataDir(result.Config, true)
+	err = ValidateDir(result.Config.DataDir, "data_dir", true)
 	if err == nil {
 		t.Fatal("data_dir validates successfully but should have failed due to using absolute path which " +
 			"does not exist")
@@ -344,7 +344,7 @@ func TestValidate6(t *testing.T) {
 			"which does not exist")
 	}
 
-	err = ValidateTopLevelDataDir(result.Config, true)
+	err = ValidateDir(result.Config.DataDir, "data_dir", true)
 	if err == nil {
 		t.Fatal("data_dir validates successfully but should have failed due to using a relative path which " +
 			"does not exist")
@@ -749,6 +749,71 @@ func TestValidate17(t *testing.T) {
 	err = ValidateUser(result.Config, true, false)
 	if err != nil {
 		t.Fatal("Config struct failed to load but should have when a users 'access' key is set to 'write'")
+	}
+}
+
+// validate html_dir and html_dir using absolute path which does not exist
+func TestValidate18(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	result.Config.HtmlDir = "/a/missing/folder/which/should/not/exist"
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have failed due to html_dir using absolute path which " +
+			"does not exist")
+	}
+
+	err = ValidateDir(result.Config.HtmlDir, "html_dir", true)
+	if err == nil {
+		t.Fatal("html_dir validates successfully but should have failed due to using absolute path which " +
+			"does not exist")
+	}
+}
+
+func TestValidate19(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	result.Config.HtmlDir = "relative_path_which_does_not_exist"
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatal("Config file loaded successfully but should have failed due to html_dir using a relative path " +
+			"which does not exist")
+	}
+
+	err = ValidateDir(result.Config.HtmlDir, "html_dir", true)
+	if err == nil {
+		t.Fatal("html_dir validates successfully but should have failed due to using a relative path which " +
+			"does not exist")
 	}
 }
 
