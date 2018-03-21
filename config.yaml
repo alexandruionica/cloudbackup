@@ -6,7 +6,7 @@
 #
 data_dir: ./tmp/
 #defaults to webstatic/ relative to where the cloudbackup binary is located
-html_dir: webstaticc
+html_dir: webstatic
 user:
   - name: testuser1
     # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup hash-password to hash passwords
