@@ -24,7 +24,7 @@ paths:
       tags:
         - config
       summary: Overwrite whole configuration
-      description: 'If a password field is specified with value "******" (number of asterisks does not matter as long as it is only asterisks) then the actual password will be copied from the current running configuration. This is because when you fetch the configuration (via GET) passwords do not get printed.'
+      description: 'If a password field is specified with value "******" (number of asterisks does not matter as long as it is only asterisks) then the actual password will be copied from the current running configuration. This is because when you fetch the configuration (via GET) passwords do not get printed. Any entries from the old configuration which are skipped or left out will be replaced with default values.'
       operationId: writeAllCfg
       consumes:
         - application/json
@@ -69,6 +69,38 @@ paths:
           description: Basic authentication required
           schema:
             $ref: '#/definitions/ApiResponse'
+  /config/backup:
+    post:
+      tags:
+        - config
+      summary: Overwrite an existing backup configuration or create a new entry
+      description: 'Each individual backup entry needs to have a unique "name" entry. If a password field is specified with value "******" (number of asterisks does not matter as long as it is only asterisks) then the actual password will be copied from the current running configuration. This is because when you fetch the configuration (via GET) passwords do not get printed. Any entries from the "backup" section of old configuration which are skipped or left out will be replaced with default values.'
+      operationId: writeBackup
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: backup section configuration
+          required: true
+          schema:
+            $ref: '#/definitions/Backup'
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/definitions/ApiResponse'
+        '400':
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/ApiResponse'
+        '401':
+          description: Basic authentication required
+          schema:
+            $ref: '#/definitions/ApiResponse'
+      security: []            
 securityDefinitions:
   backup_auth:
     type: basic

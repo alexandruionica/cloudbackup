@@ -222,7 +222,7 @@ func Validate(config CfgTemplate, hiddenPass bool) error {
 		return err
 	}
 	// validate "Backup" section of the config
-	if err := ValidateBackup(config, true); err != nil {
+	if err := ValidateBackup(config.Backup, true); err != nil {
 		return err
 	}
 	// validate "User" section of the config
@@ -233,10 +233,10 @@ func Validate(config CfgTemplate, hiddenPass bool) error {
 }
 
 // validate "Backup" section of the config
-func ValidateBackup(config CfgTemplate, logError bool) error {
+func ValidateBackup(backups []Backup, logError bool) error {
 	names := make([]string, 0)
 	i:=0
-	for _, backup := range config.Backup {
+	for _, backup := range backups {
 		// have this as the first check as subsequent ones use the Backup name in error output in order to indicate
 		// where did things go wrong
 		if utils.StringInSlice(backup.Name, names){
@@ -481,76 +481,110 @@ func CheckStringIsOnly(val string, chars string) bool {
 // can't be extracted
 func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) error {
 	// compare User.Password entries
-	for i := 0; i < len(newConfig.User); i++ {
-		if CheckStringIsOnly(newConfig.User[i].Pass, "*") {
+	err := CopyPasswordsFromOldConfigUser(newConfig.User, oldConfig.User)
+	if err != nil {
+		return err
+	}
+
+	// compare Backup.EncryptPass and Backup.Target.Pass entries
+	err = CopyPasswordsFromOldConfigBackup(newConfig.Backup, oldConfig.Backup)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// reads passwords from the old config User type entries.
+// If the new config has an entry which matches (meaning both have the same name)
+// one from the old config and in the new config this entry has a password of "*****" (more or less stars) then copy
+// Returns an error if one or more **** based passwords don't have a counterpart in the old config so the old password
+// can't be extracted
+//
+// a slice is a kind of pointer hence we don't pass in "newConfigUser" as a pointer
+func CopyPasswordsFromOldConfigUser(newConfigUser []User, oldConfigUser []User) error {
+	// compare User.Password entries
+	for i := 0; i < len(newConfigUser); i++ {
+		if CheckStringIsOnly(newConfigUser[i].Pass, "*") {
 			foundMatch := false
 			// search for a match in the old(active) config
-			for j := 0; j < len(oldConfig.User); j++ {
-				if oldConfig.User[j].Name == newConfig.User[i].Name {
+			for j := 0; j < len(oldConfigUser); j++ {
+				if oldConfigUser[j].Name == newConfigUser[i].Name {
 					foundMatch = true
-					newConfig.User[i].Pass = oldConfig.User[j].Pass
+					newConfigUser[i].Pass = oldConfigUser[j].Pass
 					break
 				}
 			}
 			if foundMatch != true {
-				return errors.New(fmt.Sprintf("Username '%s' has a password of '%s' which implies the password " +
-					"should be copied from the current(active) configuration but no such username was found in " +
-						"the current configuration", newConfig.User[i].Name, newConfig.User[i].Pass))
+				return errors.New(fmt.Sprintf("Username '%s' has a password of '%s' which implies the password "+
+					"should be copied from the current(active) configuration but no such username was found in "+
+					"the current configuration", newConfigUser[i].Name, newConfigUser[i].Pass))
 			}
 		}
 	}
+	return nil
+}
 
+
+// reads passwords from the old config Backup type entries.
+// If the new config has an entry which matches (meaning both have the same name)
+// one from the old config and in the new config this entry has a password of "*****" (more or less stars) then copy
+// Returns an error if one or more **** based passwords don't have a counterpart in the old config so the old password
+// can't be extracted
+//
+// a slice is a kind of pointer hence we don't pass in "newConfigBackup" as a pointer
+func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup []Backup) error {
 	// compare Backup.EncryptPass and Backup.Target.Pass entries
-	for i := 0; i < len(newConfig.Backup); i++ {
+	for i := 0; i < len(newConfigBackup); i++ {
 		// compare Backup.EncryptPass
-		if CheckStringIsOnly(newConfig.Backup[i].EncryptPass, "*") {
+		if CheckStringIsOnly(newConfigBackup[i].EncryptPass, "*") {
 			foundMatch := false
 			// search for a match in the old(active) config
-			for j := 0; j < len(oldConfig.Backup); j++ {
-				if oldConfig.Backup[j].Name == newConfig.Backup[i].Name {
-					if oldConfig.Backup[j].EncryptPass != "" {
+			for j := 0; j < len(oldConfigBackup); j++ {
+				if oldConfigBackup[j].Name == newConfigBackup[i].Name {
+					if oldConfigBackup[j].EncryptPass != "" {
 						foundMatch = true
-						newConfig.Backup[i].EncryptPass = oldConfig.Backup[j].EncryptPass
+						newConfigBackup[i].EncryptPass = oldConfigBackup[j].EncryptPass
 						break
 					} else {
 						return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' " +
 							"which implies the password should be copied from the current(active) configuration but " +
-								"in the current configuration there isn't a password set for 'encrypt_pass' so there " +
-									"is nothing to copy from", newConfig.Backup[i].Name, newConfig.Backup[i].EncryptPass))
+							"in the current configuration there isn't a password set for 'encrypt_pass' so there " +
+							"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].EncryptPass))
 					}
 				}
 			}
 			if foundMatch != true {
 				return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' which implies the password " +
 					"should be copied from the current(active) configuration but no backup with the same name was found in " +
-					"the current configuration", newConfig.Backup[i].Name, newConfig.Backup[i].EncryptPass))
+					"the current configuration", newConfigBackup[i].Name, newConfigBackup[i].EncryptPass))
 			}
 		}
 
 		// compare Backup.Target.Pass entries
-		for j := 0; j < len(newConfig.Backup[i].Target); j++ {
-			if CheckStringIsOnly(newConfig.Backup[i].Target[j].Pass, "*") {
+		for j := 0; j < len(newConfigBackup[i].Target); j++ {
+			if CheckStringIsOnly(newConfigBackup[i].Target[j].Pass, "*") {
 				foundMatch := false
 				// search for a match in the old(active) config - check if we have a backup with the same name
-				for k := 0; k < len(oldConfig.Backup); k++ {
-					if oldConfig.Backup[k].Name == newConfig.Backup[i].Name {
+				for k := 0; k < len(oldConfigBackup); k++ {
+					if oldConfigBackup[k].Name == newConfigBackup[i].Name {
 						foundMatch = true
 						// search for a target with the same name in the old config
 						foundTargetMatch := false
-						for l := 0; l < len(oldConfig.Backup[k].Target); l++ {
-							if oldConfig.Backup[k].Target[l].Name == newConfig.Backup[i].Target[j].Name {
+						for l := 0; l < len(oldConfigBackup[k].Target); l++ {
+							if oldConfigBackup[k].Target[l].Name == newConfigBackup[i].Target[j].Name {
 								// check if old config Target has a pass and if so copy it
-								if oldConfig.Backup[k].Target[l].Pass != "" {
+								if oldConfigBackup[k].Target[l].Pass != "" {
 									foundTargetMatch = true
-									newConfig.Backup[i].Target[j].Pass = oldConfig.Backup[k].Target[l].Pass
+									newConfigBackup[i].Target[j].Pass = oldConfigBackup[k].Target[l].Pass
 									break
 								} else {
 									return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an " +
 										"'pass' of '%s' which implies the password " +
 										"should be copied from the current(active) configuration but in the current " +
 										"configuration there isn't a password set for the same target name so there " +
-										"is nothing to copy from", newConfig.Backup[i].Name, newConfig.Backup[i].Target[j].Name,
-										newConfig.Backup[i].Target[j].Pass))
+										"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
+										newConfigBackup[i].Target[j].Pass))
 								}
 							}
 						}
@@ -559,8 +593,8 @@ func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) e
 								"'pass' of '%s' which implies the password " +
 								"should be copied from the current(active) configuration but no 'target' with the " +
 								"same name was found in the current configuration for a Backup having the same" +
-								" name", newConfig.Backup[i].Name, newConfig.Backup[i].Target[j].Name,
-								newConfig.Backup[i].Target[j].Pass))
+								" name", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
+								newConfigBackup[i].Target[j].Pass))
 						}
 
 					}
@@ -569,13 +603,11 @@ func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) e
 					return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an " +
 						"'pass' of '%s' which implies the password " +
 						"should be copied from the current(active) configuration but no 'backup' with the " +
-						"same name was found in the current configuration", newConfig.Backup[i].Name,
-							newConfig.Backup[i].Target[j].Name, newConfig.Backup[i].Target[j].Pass))
+						"same name was found in the current configuration", newConfigBackup[i].Name,
+						newConfigBackup[i].Target[j].Name, newConfigBackup[i].Target[j].Pass))
 				}
 			}
 		}
-
 	}
-
 	return nil
 }

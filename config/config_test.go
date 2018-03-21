@@ -186,7 +186,7 @@ func TestValidate1(t *testing.T) {
 	if err == nil {
 		t.Fatal("Config file loaded successfully but should have failed due to missing encyption password")
 	}
-	err = ValidateBackup(result.Config, true)
+	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to missing encyption password")
 	}
@@ -217,7 +217,7 @@ func TestValidate2(t *testing.T) {
 		t.Fatal("Config file loaded successfully but should have failed due to versioning being enabled but not" +
 			" versions_max_age or versions_max_num are having default values")
 	}
-	err = ValidateBackup(result.Config, true)
+	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to versioning being enabled but not" +
 			" versions_max_age or versions_max_num are having default values")
@@ -248,7 +248,7 @@ func TestValidate3(t *testing.T) {
 		t.Fatal("Config file loaded successfully but should have failed due to versions_max_age being set and" +
 			" versioning being disabled ")
 	}
-	err = ValidateBackup(result.Config, true)
+	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to versions_max_age being set and" +
 			" versioning being disabled ")
@@ -279,7 +279,7 @@ func TestValidate4(t *testing.T) {
 		t.Fatal("Config file loaded successfully but should have failed due to VersionsMaxNum > 0  and" +
 			" versioning being disabled ")
 	}
-	err = ValidateBackup(result.Config, true)
+	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to VersionsMaxNum > 0  and" +
 			" versioning being disabled ")
@@ -580,7 +580,7 @@ func TestValidate13(t *testing.T) {
 		t.Fatal("Config file loaded successfully but should have failed due to two backups having the same name")
 	}
 	// validate also individual function
-	err = ValidateBackup(result.Config, true)
+	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to two backups having the same name")
 	}
@@ -615,7 +615,7 @@ func TestValidate14(t *testing.T) {
 			"name belonging to one backup")
 	}
 	// validate also individual function
-	err = ValidateBackup(result.Config, true)
+	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
 		t.Fatal("Config struct validated but should have failed due to two backups targets the same name " +
 			"belonging to one backup")
