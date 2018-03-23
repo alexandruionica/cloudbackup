@@ -163,6 +163,35 @@ func TestConfiguration_GetWithLock(t *testing.T) {
 }
 
 // validate valid config yaml
+func TestValidate0(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatal("Config file did not load successfully but should have")
+	}
+	err = ValidateBackup(result.Config.Backup, true)
+	if err != nil {
+		t.Fatal("Config struct did not validat but should have")
+	}
+}
+
+// validate invalid config (yaml is valid but once loaded we change a setting to make Struct fail validation)
 func TestValidate1(t *testing.T) {
 	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
 	if err != nil {
@@ -817,6 +846,7 @@ func TestValidate19(t *testing.T) {
 	}
 }
 
+
 func TestCheckStringIsOnly(t *testing.T) {
 	if CheckStringIsOnly("************", "*") != true {
 		t.Fatal("CheckStringIsOnly() did not return a match as expected")
@@ -1179,5 +1209,54 @@ func TestCopyPasswordsFromOldConfig8(t *testing.T) {
 	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
 	if err == nil {
 		t.Fatal("CopyPasswordsFromOldConfig() did not return error but one was expected")
+	}
+}
+
+// check passwords get replaced with *****
+func TestSanitizeCfgTemplate(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatal("Config file did not load successfully but should have")
+	}
+	err = ValidateBackup(result.Config.Backup, true)
+	if err != nil {
+		t.Fatal("Config struct did not validat but should have")
+	}
+	// actual test
+	sanitizedConfig := SanitizeCfgTemplate(result.Config)
+	if sanitizedConfig.User[0].Pass != SecretReplace {
+		t.Fatalf("Expected user password to be %s but it remains %s", SecretReplace, sanitizedConfig.User[0].Pass)
+	}
+	if sanitizedConfig.Backup[0].Target[0].Pass != SecretReplace {
+		t.Fatalf("Expected target password to be %s but it remains %s", SecretReplace, sanitizedConfig.Backup[0].Target[0].Pass)
+	}
+	if sanitizedConfig.Backup[1].EncryptPass != SecretReplace {
+		t.Fatalf("Expected Encrypt password to be %s but it remains %s", SecretReplace, sanitizedConfig.Backup[1].EncryptPass)
+	}
+}
+
+// validate ValidateDir() using file instead of dir
+func TestValidateDir(t *testing.T) {
+	err := ValidateDir("/etc/services", "data_dir", true)
+	if err == nil {
+		t.Fatal("data_dir validates successfully but should have failed due to providing file path instead of" +
+			" directory path")
 	}
 }

@@ -8,11 +8,16 @@ import (
 	"os"
 	"testing"
 	"io/ioutil"
+	"path/filepath"
 )
 
 const loggingContext = "utils"
 var ErrNoSuchFile = errors.New("file does not exist")
 var ErrNotRegularFile = errors.New("file is not a regular file")
+var ErrNoSuchDir = errors.New("directory does not exist")
+var ErrNoSuchRelativeDir = errors.New("relative directory path does not exist")
+var ErrNotADir = errors.New("path is not a directory")
+var ErrUnusableDirPath = errors.New("provided directory path is unusable")
 
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
@@ -60,6 +65,43 @@ func FileExists(path string, dereference bool) (os.FileInfo, error) {
 	return stat, nil
 }
 
+// check if directory exists; parameters are path to file (String) and if to dereference symlinks (bool). Works only with
+// regular files and symlinks
+func DirExists(path string, dereference bool) (os.FileInfo, error) {
+	var err error
+	var stat os.FileInfo
+	if dereference {
+		stat, err = os.Stat(path)
+	} else {
+		stat, err = os.Lstat(path)
+	}
+
+	// provided path does not exist
+	if err != nil{
+		if filepath.IsAbs(path){
+			// for absolute path provided return error as Directory does not exist or is unaccesible
+			return stat, ErrNoSuchDir
+		} else {
+			_, err := filepath.Abs(path)
+			if err != nil{
+				// provided path string is unusable
+				return stat, ErrUnusableDirPath
+			} else {
+				// it's a relative path so then mark this in the error response. Directory does not exist or
+				// is unaccesible
+				return stat, ErrNoSuchRelativeDir
+			}
+		}
+	}
+
+	// path exists so let's see if it is a Directory
+	if stat.IsDir() {
+		return stat, nil
+	} else {
+		// path exists but it isn't a directory
+		return stat, ErrNotADir
+	}
+}
 
 // check if string is an element of slice
 func StringInSlice(str string, list []string) bool {
