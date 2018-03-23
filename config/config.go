@@ -7,7 +7,6 @@ import (
 	"sync"
 	"github.com/jinzhu/configor"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
     "unicode/utf8"
@@ -353,48 +352,44 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 	return nil
 }
 
-// Validate DataDir top level config entry
+// Validate directory path
 func ValidateDir(dir string, paramName string, logError bool) error {
-	stat, err := os.Stat(dir)
+	_, err := utils.DirExists(dir, true)
 	if err != nil{
 		msg := ""
-		if filepath.IsAbs(dir){
+		switch err {
+		case utils.ErrNoSuchDir: {
 			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed. " +
 				"In case '%s' is a default value for '%s' then you will not notice it in the configuration file.",
 				dir, paramName, dir, paramName )
-		} else {
-			path, err := filepath.Abs(dir)
-			if err != nil{
-				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter can not be used. In case '%s' is a " +
-					"default value for '%s' then you will not notice it in the configuration file.",
-					dir, paramName, dir, paramName)
-			} else {
-				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be " +
-					"accessed. The absolute is: '%s'. In case '%s' is a default value for '%s' then you will not " +
-						"notice it in the configuration file.", dir, paramName, path, dir, paramName )
-				if logError{
-					logger.Error(msg)
-				}
-				return errors.New(msg)
+			}
+		case utils.ErrUnusableDirPath: {
+			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter can not be used. In case '%s' is a " +
+				"default value for '%s' then you will not notice it in the configuration file.",
+				dir, paramName, dir, paramName)
+		}
+		case utils.ErrNoSuchRelativeDir: {
+			absPath, _ := filepath.Abs(dir) // #nosec
+			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed. " +
+				"The absolute is: '%s'. In case '%s' is a default value for '%s' then you will not notice it in the" +
+					" configuration file.", dir, paramName, absPath, dir, paramName )
+			}
+		case utils.ErrNotADir: {
+			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter exists but it is not a directory. In case " +
+				"'%s' is a default value for '%s' then you will not notice it in the configuration file.",
+				dir, paramName, dir, paramName)
 			}
 		}
-		if logError{
-			logger.Error(msg)
-		}
-		return err
-	}
 
-	if stat.IsDir() {
-		return nil
-	} else {
-		msg := fmt.Sprintf("Path '%s' supplied for '%s' parameter exists but it is not a directory. In case " +
-			"'%s' is a default value for '%s' then you will not notice it in the configuration file.",
-			dir, paramName, dir, paramName)
 		if logError{
 			logger.Error(msg)
 		}
 		return errors.New(msg)
+	} else {
+		return nil
 	}
+
+
 }
 
 // validate User section
