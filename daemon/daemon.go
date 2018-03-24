@@ -63,6 +63,7 @@ func WaitForEvent(httpServer *httpd.SrvData, rcvCfgChangeFromHttpd <-chan bool, 
 		// received a SIGnal
 		case s := <-signalChan:
 			ProcessSignal(s, httpServer)
+		// received an event
 		case _ = <- rcvCfgChangeFromHttpd:
 			logger.Debug("Notifying scheduler to reload configuration")
 			sndCfgChangeToScheduler <- true

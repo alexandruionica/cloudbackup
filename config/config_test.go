@@ -1260,3 +1260,65 @@ func TestValidateDir(t *testing.T) {
 			" directory path")
 	}
 }
+
+// save  config, load again an compare settings got saved
+func TestSave(t *testing.T) {
+	const tmpName = "cHanGedName"
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatal("Config file did not load successfully but should have")
+	}
+
+	// load again as we need a 2nd variable to hold the "new" config we're going to write
+	result2 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a 2nd time the fake config file. Error was: %s", err)
+	}
+
+	err = Validate(result2.Config, false)
+	if err != nil {
+		t.Fatal("Config file did not load successfully the 2nd time but should have")
+	}
+	// change something in the new config
+	result2.Config.Backup[0].Name = tmpName
+
+	// save
+	err = Save(result, result2.Config)
+	if err != nil {
+		t.Fatalf("Could not save the fake config file. Error was: %s", err)
+	}
+
+	// load again config from file to check changes were saved
+	result3 , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load a 3rd time the fake config file. Error was: %s", err)
+	}
+
+	err = Validate(result3.Config, false)
+	if err != nil {
+		t.Fatal("Config file did not load successfully the 3rd time but should have")
+	}
+
+	if result3.Config.Backup[0].Name != tmpName {
+		t.Fatal("The content of the saved configuration does not match expectation")
+	}
+
+
+}

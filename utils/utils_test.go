@@ -191,3 +191,132 @@ func TestStringInSlice2(t *testing.T) {
 		t.Fatal("Found string in slice but it should have failed as searched string doesn't exist in slice")
 	}
 }
+
+
+// path is directory which exists - do dereference
+func TestDirExists1(t *testing.T) {
+	var path = SetupTmpDir("unittest_utils_test_", t)
+	defer func() {
+		err := os.RemoveAll(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	_, err := DirExists(path, true)
+	if err != nil {
+		t.Fatalf("Path %s should be a folder but error: '%s' was reported", path, err.Error())
+	}
+}
+
+// path is a file which exists (instead of directory) - do dereference
+func TestDirExists2(t *testing.T) {
+	path, err := SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	_, err = DirExists(path, true)
+	if err == nil {
+		t.Fatalf("No error was reported despite one being expected")
+	}
+	if err != ErrNotADir {
+		t.Fatalf("Expected error '%s' but got error '%s'", ErrNotADir.Error(), err.Error())
+	}
+}
+
+//absolute path does not exist - do dereference
+func TestDirExists3(t *testing.T) {
+	var path = "/an/inexisting/file"
+	_, err := DirExists(path, true)
+	if err == nil {
+		t.Fatalf("Path %s does not exist and should have raised an error but didn't", path, err.Error())
+	}
+	if err != ErrNoSuchDir {
+		t.Fatalf("Expected error '%s' but got error '%s'", ErrNoSuchDir.Error(), err.Error())
+	}
+}
+
+// relative path does not exist - do dereference
+func TestDirExists4(t *testing.T) {
+	var path = "_an_inexisting_file"
+	_, err := DirExists(path, true)
+	if err == nil {
+		t.Fatalf("Path %s does not exist and should have raised an error but didn't", path, err.Error())
+	}
+	if err != ErrNoSuchRelativeDir {
+		t.Fatalf("Expected error '%s' but got error '%s'", ErrNoSuchRelativeDir.Error(), err.Error())
+	}
+}
+
+// path is symlink to a directory which exists - do NOT dereference
+func TestDirExists5(t *testing.T) {
+	var path = SetupTmpDir("unittest_utils_test_", t)
+	defer func() {
+		err := os.RemoveAll(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	var symLinkPath = filepath.Join(os.TempDir(), "unittest_utils_test_symlink_to_dir5")
+	err := os.Symlink(path, symLinkPath)
+	defer func() {
+		err := os.Remove(symLinkPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	_, err = DirExists(symLinkPath, false)
+	if err == nil {
+		t.Fatal("Path should be a symlink and generate an error but none was generated")
+	}
+}
+
+// path is symlink to a directory which exists - do dereference
+func TestDirExists6(t *testing.T) {
+	var path = SetupTmpDir("unittest_utils_test_", t)
+	defer func() {
+		err := os.RemoveAll(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	var symLinkPath = filepath.Join(os.TempDir(), "unittest_utils_test_symlink_to_dir6")
+	err := os.Symlink(path, symLinkPath)
+	defer func() {
+		err := os.Remove(symLinkPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	_, err = DirExists(symLinkPath, true)
+	if err != nil {
+		t.Fatalf("Path %s should be a folder but error: '%s' was reported", path, err.Error())
+	}
+}
+
+// path is symlink to a directory which DOESN'T exist - do dereference
+func TestDirExists7(t *testing.T) {
+	var symLinkPath = filepath.Join(os.TempDir(), "unittest_utils_test_symlink_to_dir7")
+	err := os.Symlink("a_folder_which_should_not_exist", symLinkPath)
+	defer func() {
+		err := os.Remove(symLinkPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	_, err = DirExists(symLinkPath, true)
+	if err == nil {
+		t.Fatalf("Path %s does not exist and should have raised an error but didn't", symLinkPath, err.Error())
+	}
+	if err != ErrNoSuchDir {
+		t.Fatalf("Expected error '%s' but got error '%s'", ErrNoSuchDir.Error(), err.Error())
+	}
+}
