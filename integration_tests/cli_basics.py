@@ -53,8 +53,7 @@ class TestCliBasics(unittest.TestCase):
         for line in result['result'].stdout.decode("utf-8").split('\n'):
             line_num += 1
         self.assertGreater(line_num, 88, "Expected output from {} to be at least 88 lines long. Command output object: "
-                                                         "{}".format(cmd_default, result))
-
+                                         "{}".format(cmd_default, result))
 
     # ./cloudbackup config validate -c config.yaml  returns 0 with valid config file
     def test_cmd_validate_config1(self):
@@ -78,7 +77,6 @@ class TestCliBasics(unittest.TestCase):
         self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
                                                          "{}".format(cmd_default, result))
 
-
     # ./cloudbackup config example produces valid yaml, at least 60 lines long
     def test_cmd_example_config1(self):
         result = run_shell_cmd(self.cmd + " config example")
@@ -88,10 +86,9 @@ class TestCliBasics(unittest.TestCase):
         for line in result['result'].stdout.decode("utf-8").split('\n'):
             line_num += 1
         self.assertGreater(line_num, 60, "Expected output from {} to be at least 60 lines long. Command output object: "
-                                                         "{}".format(cmd_default, result))
+                                         "{}".format(cmd_default, result))
         # if this raises and exception then we got a problem
         yaml.load(result['result'].stdout.decode("utf-8"))
-
 
 
 def get_args():
