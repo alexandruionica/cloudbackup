@@ -6,6 +6,7 @@ import re
 import sys
 import tempfile
 import unittest
+import yaml
 from common import *
 from pprint import pprint
 
@@ -53,6 +54,44 @@ class TestCliBasics(unittest.TestCase):
             line_num += 1
         self.assertGreater(line_num, 88, "Expected output from {} to be at least 88 lines long. Command output object: "
                                                          "{}".format(cmd_default, result))
+
+
+    # ./cloudbackup config validate -c config.yaml  returns 0 with valid config file
+    def test_cmd_validate_config1(self):
+        result = run_shell_cmd(self.cmd + " config validate -c " + self.config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+    # ./cloudbackup config validate -c config.yaml  returns 1 with invalid config file (valid yaml, invalid logic)
+    def test_cmd_validate_config2(self):
+        # load valid yaml data from tmp config, alter it a bit to cause validation to fail and then write it back
+        with open(self.config_file_path) as fd:
+            parsed = yaml.load(fd)
+            parsed['backup'][0]['encrypt'] = True
+            parsed['backup'][0]['encrypt_pass'] = ''
+            parsed['backup'][1]['encrypt'] = True
+            parsed['backup'][1]['encrypt_pass'] = ''
+        with open(self.config_file_path, "w") as fd:
+            fd.write(yaml.dump(parsed))
+
+        result = run_shell_cmd(self.cmd + " config validate -c " + self.config_file_path)
+        self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+
+    # ./cloudbackup config example produces valid yaml, at least 60 lines long
+    def test_cmd_example_config1(self):
+        result = run_shell_cmd(self.cmd + " config example")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        line_num = 0
+        for line in result['result'].stdout.decode("utf-8").split('\n'):
+            line_num += 1
+        self.assertGreater(line_num, 60, "Expected output from {} to be at least 60 lines long. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        # if this raises and exception then we got a problem
+        yaml.load(result['result'].stdout.decode("utf-8"))
+
 
 
 def get_args():
