@@ -35,6 +35,9 @@ test:
 	$(GOCMD) test -cover ./...
 	@echo "############ Running: go test - running unit tests with race detection enabled ############"
 	$(GOCMD) test -race -cover ./...
+inttest:
+	@echo "############ Running integration tests ############"
+	./integration_tests.sh
 cover: 
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
 
