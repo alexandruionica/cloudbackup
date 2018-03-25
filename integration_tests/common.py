@@ -1,0 +1,94 @@
+#!/usr/bin/env python
+import logging
+import subprocess
+
+cmd_default = "./cloudbackup"
+working_config_file_content = '''# global settings affect all backups and can't be specified per backup with different values
+# section specific settings are repetitive and can't be overridden by globals
+# clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable
+#
+#
+data_dir: ./tmp/
+#defaults to webstatic/ relative to where the cloudbackup binary is located
+html_dir: webstatic
+user:
+  - name: testuser1
+    # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup hash-password to hash passwords
+    pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
+    # can be either 'read' or 'write' . 'write' basically gives access to all the API while 'read' only to read-only
+    #  operations so for example it excludes things starting/stopping backups or adjusting the configuration
+    access: write
+# host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled.
+# By default HTTP server is enabled and HTTPS is disabled
+#http:
+#  bind_address: "127.0.0.1:8080"
+#https:
+#  enabled: true
+#  bind_address: "127.0.0.1:8443"
+#  ssl_cert_path: /etc/ssl/cert.crt
+#  ssl_key_path: /etc/ssl/cert.key
+backup:
+  - name: first_backup
+    paths:
+      - /something
+      - /var/lib
+    exclusions:
+      - /something/else
+      - /var/lib/mysql
+    target:
+      - name: aws_1
+        type: aws_s3
+        user: BLABLA
+        pass: zzzz
+        bucket: 'myawesome-backup'
+        prefix: 'backup/backups-for-server-51'
+        storage_class: standard
+    schedule:
+      - '05 01 * * *'
+  - name: second_backup
+    paths:
+      - /var/log
+      - /var/www/html/data/
+    target:
+      - name: aws_2
+        type: aws_s3
+        user: JOHNDOE
+        pass: qwqe
+        bucket: 'some-stuff-goes-here'
+        prefix: 'backup/backups-for-server-51'
+        storage_class: 'infrequent-access'
+      - name: google_1
+        type: google_cloud_storage
+        user: JANEDOE
+        pass: 34324fd
+        bucket: 'my-google-bucket'
+        prefix: 'backup/backups-for-server-51'
+        storage_class: standard
+    encrypt: true
+    encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
+    schedule:
+      - '00 08 01 * *'
+      - '00 08 06 * *'
+    versioning: true
+    versions_max_num: 10
+    versions_max_age: 6w
+'''
+
+
+def run_shell_cmd(cmd):
+    """
+    Simple wrapper to run shell command
+    :param cmd: command to run
+    :return: { 'result': None/subprocess.CompletedProcess,
+               'exception: None/exception ..}
+    """
+    logging.info('Running shell command: {}'.format(cmd))
+    try:
+        return {'result': subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE),
+                'exception': None,
+                }
+    except subprocess.CalledProcessError as e:
+        logging.exception(e.output)
+        return {'result': None,
+                'exception': e,
+                }

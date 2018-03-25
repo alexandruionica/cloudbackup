@@ -2,3 +2,5 @@ coverage.out
 cloudbackup
 tmp/
 .idea/
+integration_tests/.venv
+integration_tests/__pycache__
