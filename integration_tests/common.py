@@ -92,3 +92,14 @@ def run_shell_cmd(cmd):
         return {'result': None,
                 'exception': e,
                 }
+
+
+def run_interactive_shell_cmd(cmd):
+    """
+    Wrapper to start a shell command which then keeps running
+    :param cmd: command to run
+    :return: { 'result': None/subprocess.CompletedProcess,
+               'exception: None/exception ..}
+    """
+    logging.info('Running interactive shell command: {}'.format(cmd))
+    return subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
