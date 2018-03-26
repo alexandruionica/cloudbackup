@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import bcrypt
 import logging
 import os
 import re
@@ -89,6 +90,23 @@ class TestCliBasics(unittest.TestCase):
                                          "{}".format(cmd_default, result))
         # if this raises and exception then we got a problem
         yaml.load(result['result'].stdout.decode("utf-8"))
+
+    # ./cloudbackup hash-password
+    def test_cmd_hash_password(self):
+        test_password = 'ui7Ahtae\Quai5ia\W;oo"ri'
+        proc = run_interactive_shell_cmd(self.cmd + " hash-password")
+        stdout_data, stderr_data = proc.communicate(str.encode(test_password + '\n'))
+        if proc.poll() is None:
+            proc.kill()
+        self.assertEqual(proc.returncode, 0, "Return code from {} is not 0 but {}"
+                         .format(self.cmd + " hash-password", proc.returncode))
+        for line in stdout_data.decode("utf-8").split('\n'):
+            if 'The hashed password is:' in line:
+                re_result = re.search('\$2.*', line)
+                self.assertTrue(re_result)
+                bcrypthash = re_result.group(0).strip()
+                # check that generated hash matches initial password
+                self.assertTrue(bcrypt.checkpw(str.encode(test_password), str.encode(bcrypthash)))
 
 
 def get_args():
