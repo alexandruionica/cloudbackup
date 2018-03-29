@@ -195,11 +195,11 @@
       "properties": {
         "name": {
           "type": "string",
-          "example": "john"
+          "example": "testuser1"
         },
         "pass": {
           "type": "string",
-          "example": "HV}H/y?<9$]Z5N4N"
+          "example": "$2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M."
         },
         "access": {
           "type": "string",
@@ -298,7 +298,8 @@
           "default": false
         },
         "encrypt_pass": {
-          "type": "string"
+          "type": "string",
+          "default": ""
         },
         "versioning": {
           "type": "boolean",
@@ -308,13 +309,14 @@
           "type": "integer"
         },
         "versions_max_age": {
-          "type": "string"
+          "type": "string",
+          "example": "10w"
         }
       },
       "required": [
         "name",
         "paths",
-        "targets"
+        "target"
       ]
     },
     "BackupTarget": {
@@ -360,10 +362,12 @@
       "type": "object",
       "properties": {
         "code": {
-          "type": "string"
+          "type": "string",
+          "example": "success"
         },
         "message": {
-          "type": "string"
+          "type": "string",
+          "example": "success"
         }
       }
     },
@@ -371,10 +375,12 @@
       "type": "object",
       "properties": {
         "code": {
-          "type": "string"
+          "type": "string",
+          "example": "success"
         },
         "message": {
-          "type": "string"
+          "type": "string",
+          "example": "success"
         },
         "result": {
           "$ref": "#/definitions/FullConfig"

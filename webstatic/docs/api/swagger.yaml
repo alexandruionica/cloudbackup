@@ -24,7 +24,13 @@ paths:
       tags:
         - config
       summary: Overwrite whole configuration
-      description: 'If a password field is specified with value "******" (number of asterisks does not matter as long as it is only asterisks) then the actual password will be copied from the current running configuration. This is because when you fetch the configuration (via GET) passwords do not get printed. Any entries from the old configuration which are skipped or left out will be replaced with default values.'
+      description: >-
+        If a password field is specified with value "******" (number of
+        asterisks does not matter as long as it is only asterisks) then the
+        actual password will be copied from the current running configuration.
+        This is because when you fetch the configuration (via GET) passwords do
+        not get printed. Any entries from the old configuration which are
+        skipped or left out will be replaced with default values.
       operationId: writeAllCfg
       consumes:
         - application/json
@@ -55,7 +61,10 @@ paths:
       tags:
         - config
       summary: Get the whole config
-      description: 'Get the current active configuration. Password fields will have their values replaced with "**************" despite what the Swagger example shows below.'
+      description: >-
+        Get the current active configuration. Password fields will have their
+        values replaced with "**************" despite what the Swagger example
+        shows below.
       operationId: getAllCfg
       produces:
         - application/json
@@ -74,7 +83,14 @@ paths:
       tags:
         - config
       summary: Overwrite an existing backup configuration or create a new entry
-      description: 'Each individual backup entry needs to have a unique "name" entry. If a password field is specified with value "******" (number of asterisks does not matter as long as it is only asterisks) then the actual password will be copied from the current running configuration. This is because when you fetch the configuration (via GET) passwords do not get printed. Any entries from the "backup" section of old configuration which are skipped or left out will be replaced with default values.'
+      description: >-
+        Each individual backup entry needs to have a unique "name" entry. If a
+        password field is specified with value "******" (number of asterisks
+        does not matter as long as it is only asterisks) then the actual
+        password will be copied from the current running configuration. This is
+        because when you fetch the configuration (via GET) passwords do not get
+        printed. Any entries from the "backup" section of old configuration
+        which are skipped or left out will be replaced with default values.
       operationId: writeBackup
       consumes:
         - application/json
@@ -100,7 +116,7 @@ paths:
           description: Basic authentication required
           schema:
             $ref: '#/definitions/ApiResponse'
-      security: []            
+      security: []
 securityDefinitions:
   backup_auth:
     type: basic
@@ -132,14 +148,14 @@ definitions:
     properties:
       name:
         type: string
-        example: john
+        example: testuser1
       pass:
         type: string
-        example: HV}H/y?<9$]Z5N4N
+        example: '$2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.'
       access:
         type: string
         example: write
-        pattern: '^(read|write)$'
+        pattern: ^(read|write)$
   Http:
     type: object
     properties:
@@ -202,6 +218,7 @@ definitions:
         default: false
       encrypt_pass:
         type: string
+        default: ''
       versioning:
         type: boolean
         default: false
@@ -209,10 +226,11 @@ definitions:
         type: integer
       versions_max_age:
         type: string
+        example: 10w
     required:
       - name
       - paths
-      - targets
+      - target
   BackupTarget:
     type: object
     properties:
@@ -247,15 +265,19 @@ definitions:
     properties:
       code:
         type: string
+        example: "success"
       message:
         type: string
+        example: "success"
   ApiResponseGetConfig:
     type: object
     properties:
       code:
         type: string
+        example: "success"
       message:
         type: string
+        example: "success"
       result:
         $ref: '#/definitions/FullConfig'
 externalDocs:

@@ -234,7 +234,7 @@ func TestDirExists3(t *testing.T) {
 	var path = "/an/inexisting/file"
 	_, err := DirExists(path, true)
 	if err == nil {
-		t.Fatalf("Path %s does not exist and should have raised an error but didn't", path, err.Error())
+		t.Fatalf("Path %s does not exist and should have raised an error but didn't", path)
 	}
 	if err != ErrNoSuchDir {
 		t.Fatalf("Expected error '%s' but got error '%s'", ErrNoSuchDir.Error(), err.Error())
@@ -246,7 +246,7 @@ func TestDirExists4(t *testing.T) {
 	var path = "_an_inexisting_file"
 	_, err := DirExists(path, true)
 	if err == nil {
-		t.Fatalf("Path %s does not exist and should have raised an error but didn't", path, err.Error())
+		t.Fatalf("Path %s does not exist and should have raised an error but didn't", path)
 	}
 	if err != ErrNoSuchRelativeDir {
 		t.Fatalf("Expected error '%s' but got error '%s'", ErrNoSuchRelativeDir.Error(), err.Error())
@@ -314,7 +314,7 @@ func TestDirExists7(t *testing.T) {
 
 	_, err = DirExists(symLinkPath, true)
 	if err == nil {
-		t.Fatalf("Path %s does not exist and should have raised an error but didn't", symLinkPath, err.Error())
+		t.Fatalf("Path %s does not exist and should have raised an error but didn't", symLinkPath)
 	}
 	if err != ErrNoSuchDir {
 		t.Fatalf("Expected error '%s' but got error '%s'", ErrNoSuchDir.Error(), err.Error())

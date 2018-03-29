@@ -118,6 +118,10 @@ func (srv *SrvData) Start() {
 	router.GET("/", srv.handlerRoot)
 	// serve documentation - static files - NO AUTHENTICATION needed; NO REQUEST LOGGING done
 	router.ServeFiles("/docs/*filepath", http.Dir(staticHtmlDir + "/docs"))
+	// redirect /swgger.json to /docs/api/swgger.json - NO AUTHENTICATION needed; NO REQUEST LOGGING done
+	router.GET("/swagger.json", handlerGETtlSwaggerJson)
+	// redirect /swgger.yaml to /docs/api/swgger.yaml - NO AUTHENTICATION needed; NO REQUEST LOGGING done
+	router.GET("/swagger.yaml", handlerGETtlSwaggerYaml)
 	// API endpoints - MUST wrap around srv.BasicAuth(srv.CheckAccess($HANDLER_NAME))
 	router.GET(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerGetConfig)))
 	router.POST(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfig)))
@@ -566,6 +570,16 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 		}
 
 	}
+}
+
+// redirect to /docs/swagger.json
+func handlerGETtlSwaggerJson(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	http.Redirect(w, r, "/docs/api/swagger.json", 301)
+}
+
+// redirect to /docs/swagger.yaml
+func handlerGETtlSwaggerYaml(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	http.Redirect(w, r, "/docs/api/swagger.yaml", 301)
 }
 
 // send HTTP error back to user in JSON format; "httpcode" is HTTP status code to reply with, "code" is a short message to show,
