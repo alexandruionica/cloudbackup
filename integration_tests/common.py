@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 import logging
+import requests
+import socket
 import subprocess
+import time
+from pprint import pprint
 
 cmd_default = "./cloudbackup"
 working_config_file_content = '''# global settings affect all backups and can't be specified per backup with different values
@@ -103,3 +107,84 @@ def run_interactive_shell_cmd(cmd):
     """
     logging.info('Running interactive shell command: {}'.format(cmd))
     return subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+class BackupDaemon(object):
+    """
+    Start cloudbackup daemon
+    """
+    def __init__(self, config_path, base_url, cmd=cmd_default):
+        """
+        start backup daemon
+        Wrapper to start a shell command which then keeps running
+        :param cmd: command to run
+        :param base_url: where the API server will be reachable. Example "http://127.0.0.1:8080"
+        :return: { 'result': None/subprocess.CompletedProcess,
+                   'exception: None/exception ..}
+        """
+        ipaddr = base_url.split(':')[1].strip('/')
+        port = int(base_url.split(':')[2])
+        # check that there is nothing already bound on port 8080
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((ipaddr, port))
+        s.close()
+
+        full_cmd = cmd + ' start -c {}'.format(config_path)
+        logging.info('Running the backup daemon using: {}'.format(full_cmd))
+        self.proc = subprocess.Popen(full_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+        # there is a slight delay between daemon start and http becoming available so we need to ensure it is
+        #   available before tests are attempted
+        wait_for_api_server(base_url)
+
+    def kill(self):
+        """
+        kill daemon
+        :return: True on success, False if process already exited
+        """
+        if self.proc.poll() is None:
+            self.proc.kill()
+            return True
+        else:
+            return False
+
+    def stop(self):
+        """
+        stop daemon using terminate()
+        :return: True on success, False if process already exited
+        """
+        if self.proc.poll() is None:
+            self.proc.terminate()
+            return True
+        else:
+            return False
+
+    def is_running(self):
+        """
+        check if daemon still running
+        :return: True if running, False if exited
+        """
+        if self.proc.poll() is None:
+            return True
+        else:
+            return False
+
+
+def wait_for_api_server(url, max_count=20):
+    """
+    Attempt 20 times, with 0.1 seconds sleep to get / from the http server. This is to give time to start up
+    :return:
+    """
+    counter = 0
+    while counter < max_count:
+        try:
+            requests.get(url)
+        except requests.exceptions.ConnectionError:
+            time.sleep(0.1)
+            counter += 1
+            continue
+        else:
+            break
+    if counter == max_count:
+        raise requests.exceptions.ConnectionError(
+            "Could not connect to CloudBackup API server at {} after {} attempts".format(url, counter))
