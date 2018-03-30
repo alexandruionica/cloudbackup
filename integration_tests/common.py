@@ -137,24 +137,60 @@ class BackupDaemon(object):
         #   available before tests are attempted
         wait_for_api_server(base_url)
 
-    def kill(self):
+    def kill(self, max_count=20, sleep_time=0.1):
         """
         kill daemon
         :return: True on success, False if process already exited
         """
         if self.proc.poll() is None:
             self.proc.kill()
+            counter = 0
+            while counter < max_count:
+                if self.proc.poll() is None:
+                    time.sleep(sleep_time)
+                    counter += 1
+                    continue
+                else:
+                    counter = 0
+                    break
+
+            if counter == max_count:
+                raise Exception(
+                    "Attempt to kill CloudBackup process did not succeed. Checked process status {} times, at {} "
+                    "seconds interval".format(counter, sleep_time))
+            # close file descriptors for stdin/stdout/stderr
+            self.proc.stderr.close()
+            self.proc.stdout.close()
+            self.proc.stdin.close()
             return True
         else:
             return False
 
-    def stop(self):
+    def stop(self, max_count=20, sleep_time=0.1):
         """
         stop daemon using terminate()
         :return: True on success, False if process already exited
         """
         if self.proc.poll() is None:
             self.proc.terminate()
+            counter = 0
+            while counter < max_count:
+                if self.proc.poll() is None:
+                    time.sleep(sleep_time)
+                    counter += 1
+                    continue
+                else:
+                    counter = 0
+                    break
+
+            if counter == max_count:
+                raise Exception(
+                    "Attempt to stop(terminate not kill) CloudBackup process did not succeed. Checked process status"
+                    " {} times, at {} seconds interval".format(counter, sleep_time))
+            # close file descriptors for stdin/stdout/stderr
+            self.proc.stderr.close()
+            self.proc.stdout.close()
+            self.proc.stdin.close()
             return True
         else:
             return False
@@ -184,6 +220,7 @@ def wait_for_api_server(url, max_count=20):
             counter += 1
             continue
         else:
+            counter = 0
             break
     if counter == max_count:
         raise requests.exceptions.ConnectionError(

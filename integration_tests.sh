@@ -27,4 +27,4 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Running Python integration tests ..."
-${TESTSFOLDER}/.venv/bin/python -m unittest discover -s ${TESTSFOLDER}/ -p '*.py*' 
+${TESTSFOLDER}/.venv/bin/python -m unittest discover -s ${TESTSFOLDER}/ -p '*.py*' -v
