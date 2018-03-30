@@ -24,6 +24,8 @@ class TestRestAPI(unittest.TestCase):
         self.base_url = "http://127.0.0.1:8080"
         self.username = 'testuser1'
         self.password = 'HV}H/y?<9$]Z5N4N'
+        self.username2 = 'testuser2'
+        self.password2 = 'Oonaawai8Eep]eethe8eefa$'
         self.daemon = BackupDaemon(config_path=self.config_file_path, base_url=self.base_url)
         self.api_root = '/api/v1'
 
@@ -60,7 +62,7 @@ class TestRestAPI(unittest.TestCase):
                                                  "{}".format(method, self.base_url + self.api_root + path,
                                                              r.status_code))
 
-        request_api_path('/config')
+        request_api_path('/config', method='GET')
         request_api_path('/config/', method='POST')
         request_api_path('/config/backup', method='POST')
 
@@ -93,6 +95,55 @@ class TestRestAPI(unittest.TestCase):
             line_num += 1
         self.assertGreater(line_num, 90, "output from GET {} to be at least 90 lines "
                                          "long".format(self.base_url + self.api_root + '/config'))
+
+    # test different scenarios regarding updating the configuration of the daemon
+    def test_put_config(self):
+        orig_md5 = get_md5_sum(self.config_file_path)
+        r = requests.get(self.base_url + self.api_root + '/config', auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, "Expected status code 200 for GET "
+                                             "{}".format(self.base_url + self.api_root + '/config'))
+        # check if response can be JSON decoded
+        response = r.json()
+        # just send back the config we got
+        r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username, self.password),
+                          data=json.dumps(response['result']))
+        # should have failed as we did not set content-type to be JSON
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.json()['code'], "bad content type")
+
+        # repeat request but this time we use json= which does itself encoding to json and also sets content-type
+        r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username, self.password),
+                          json=response['result'])
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['message'], "The supplied configuration matches the existing one so no actual "
+                                              "changes are going to take effect")
+        # check that md5 of file on disk dit NOT change
+        current_md5 = get_md5_sum(self.config_file_path)
+        self.assertEqual(orig_md5, current_md5)
+
+        # repeat request, this time with a username + password which don't have access to update the configuratio
+        r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username2, self.password2),
+                          json=response['result'])
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json()['code'], "access denied")
+
+        # repeat request, this time we change the payload so it should succeed changing the config and we use the
+        #  correct username + password
+        payload = response['result']
+        payload['https']['bind_address'] = "127.0.0.1:8444"
+        r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username, self.password),
+                          json=payload)
+        self.assertEqual(r.status_code, 200)
+        self.assertNotEqual(r.json()['message'], "The supplied configuration matches the existing one so no actual "
+                                                 "changes are going to take effect")
+        # fetch again config to validate that the changed config is shown in responses
+        r = requests.get(self.base_url + self.api_root + '/config', auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['result']['https']['bind_address'], payload['https']['bind_address'])
+        self.assertDictEqual(r.json()['result'], payload)
+        # check that md5 of file on disk changed
+        current_md5 = get_md5_sum(self.config_file_path)
+        self.assertNotEqual(orig_md5, current_md5)
 
 
 def get_args():
