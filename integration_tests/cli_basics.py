@@ -108,6 +108,12 @@ class TestCliBasics(unittest.TestCase):
                 # check that generated hash matches initial password
                 self.assertTrue(bcrypt.checkpw(str.encode(test_password), str.encode(bcrypthash)))
 
+    # ./cloudbackup start -c /path/to/temporary/config.yaml
+    def test_cmd_start(self):
+        base_url = "http://127.0.0.1:8080"
+        daemon = BackupDaemon(config_path=self.config_file_path, base_url=base_url)
+        self.assertTrue(daemon.stop())
+
 
 def get_args():
     """ Get arguments from CLI """
