@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import hashlib
 import logging
 import requests
 import socket
@@ -22,6 +23,10 @@ user:
     # can be either 'read' or 'write' . 'write' basically gives access to all the API while 'read' only to read-only
     #  operations so for example it excludes things starting/stopping backups or adjusting the configuration
     access: write
+  - name: testuser2
+    # bcrypt hash of password  "Oonaawai8Eep]eethe8eefa$"
+    pass: $2a$05$Pgdwe14mHjOQ33C5LahmmugCY85Yfqlkj2rGvbDMGCDXKKwmhbwVC
+    access: read
 # host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled.
 # By default HTTP server is enabled and HTTPS is disabled
 #http:
@@ -225,3 +230,20 @@ def wait_for_api_server(url, max_count=20):
     if counter == max_count:
         raise requests.exceptions.ConnectionError(
             "Could not connect to CloudBackup API server at {} after {} attempts".format(url, counter))
+
+
+def get_md5_sum(filepath):
+    """
+    calculates md5 for a given file
+    :param filepath: string containing path to file
+    :return: string with md5sum
+    """
+    # read blocksize bytes at a time
+    blocksize = 65536
+    hasher = hashlib.md5()
+    with open(filepath, 'rb') as afile:
+        buf = afile.read(blocksize)
+        while len(buf) > 0:
+            hasher.update(buf)
+            buf = afile.read(blocksize)
+    return hasher.hexdigest()

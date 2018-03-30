@@ -14,6 +14,10 @@ user:
     # can be either 'read' or 'write' . 'write' basically gives access to all the API while 'read' only to read-only
     #  operations so for example it excludes things starting/stopping backups or adjusting the configuration
     access: write
+  - name: testuser2
+    # bcrypt hash of password  "Oonaawai8Eep]eethe8eefa$"
+    pass: $2a$05$Pgdwe14mHjOQ33C5LahmmugCY85Yfqlkj2rGvbDMGCDXKKwmhbwVC
+    access: read
 # host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled.
 # By default HTTP server is enabled and HTTPS is disabled
 #http:
