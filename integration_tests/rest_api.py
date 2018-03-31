@@ -96,7 +96,8 @@ class TestRestAPI(unittest.TestCase):
         self.assertGreater(line_num, 90, "output from GET {} to be at least 90 lines "
                                          "long".format(self.base_url + self.api_root + '/config'))
 
-    # test different scenarios regarding updating the configuration of the daemon
+    # test different scenarios regarding updating the configuration of the daemon using /config
+    #  this is mainly a copy of the actions of the previous test
     def test_put_config(self):
         orig_md5 = get_md5_sum(self.config_file_path)
         r = requests.get(self.base_url + self.api_root + '/config', auth=(self.username, self.password))
@@ -108,13 +109,13 @@ class TestRestAPI(unittest.TestCase):
         r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username, self.password),
                           data=json.dumps(response['result']))
         # should have failed as we did not set content-type to be JSON
-        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.status_code, 400, r.text)
         self.assertEqual(r.json()['code'], "bad content type")
 
         # repeat request but this time we use json= which does itself encoding to json and also sets content-type
         r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username, self.password),
                           json=response['result'])
-        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.status_code, 200, r.text)
         self.assertEqual(r.json()['message'], "The supplied configuration matches the existing one so no actual "
                                               "changes are going to take effect")
         # check that md5 of file on disk dit NOT change
@@ -124,7 +125,7 @@ class TestRestAPI(unittest.TestCase):
         # repeat request, this time with a username + password which don't have access to update the configuratio
         r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username2, self.password2),
                           json=response['result'])
-        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.status_code, 403, r.text)
         self.assertEqual(r.json()['code'], "access denied")
 
         # repeat request, this time we change the payload so it should succeed changing the config and we use the
@@ -133,14 +134,63 @@ class TestRestAPI(unittest.TestCase):
         payload['https']['bind_address'] = "127.0.0.1:8444"
         r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username, self.password),
                           json=payload)
-        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.status_code, 200, r.text)
         self.assertNotEqual(r.json()['message'], "The supplied configuration matches the existing one so no actual "
                                                  "changes are going to take effect")
         # fetch again config to validate that the changed config is shown in responses
         r = requests.get(self.base_url + self.api_root + '/config', auth=(self.username, self.password))
-        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.status_code, 200, r.text)
         self.assertEqual(r.json()['result']['https']['bind_address'], payload['https']['bind_address'])
         self.assertDictEqual(r.json()['result'], payload)
+        # check that md5 of file on disk changed
+        current_md5 = get_md5_sum(self.config_file_path)
+        self.assertNotEqual(orig_md5, current_md5)
+
+    # test different scenarios regarding updating the configuration of the daemon using /config/backup
+    def test_put_config_backup(self):
+        orig_md5 = get_md5_sum(self.config_file_path)
+        r = requests.get(self.base_url + self.api_root + '/config', auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, "Expected status code 200 for GET "
+                                             "{}".format(self.base_url + self.api_root + '/config'))
+        # check if response can be JSON decoded
+        response = r.json()
+        # just send back the config we got for the 1st backup
+        r = requests.post(self.base_url + self.api_root + '/config/backup', auth=(self.username, self.password),
+                          data=json.dumps(response['result']['backup'][0]))
+        # should have failed as we did not set content-type to be JSON
+        self.assertEqual(r.status_code, 400, r.text)
+        self.assertEqual(r.json()['code'], "bad content type")
+
+        # repeat request but this time we use json= which does itself encoding to json and also sets content-type
+        r = requests.post(self.base_url + self.api_root + '/config/backup', auth=(self.username, self.password),
+                          json=response['result']['backup'][0])
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()['message'], "The supplied configuration matches the existing one so no actual "
+                                              "changes are going to take effect")
+        # check that md5 of file on disk dit NOT change
+        current_md5 = get_md5_sum(self.config_file_path)
+        self.assertEqual(orig_md5, current_md5)
+
+        # repeat request, this time with a username + password which don't have access to update the configuratio
+        r = requests.post(self.base_url + self.api_root + '/config/backup', auth=(self.username2, self.password2),
+                          json=response['result'])
+        self.assertEqual(r.status_code, 403, r.text)
+        self.assertEqual(r.json()['code'], "access denied")
+
+        # repeat request, this time we change the payload so it should succeed changing the config and we use the
+        #  correct username + password
+        payload = response['result']['backup'][0]
+        payload['schedule'][0] = '06 11 * * *'
+        r = requests.post(self.base_url + self.api_root + '/config/backup', auth=(self.username, self.password),
+                          json=payload)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertNotEqual(r.json()['message'], "The supplied configuration matches the existing one so no actual "
+                                                 "changes are going to take effect")
+        # fetch again config to validate that the changed config is shown in responses
+        r = requests.get(self.base_url + self.api_root + '/config', auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()['result']['backup'][0]['schedule'][0], payload['schedule'][0])
+        self.assertDictEqual(r.json()['result']['backup'][0], payload)
         # check that md5 of file on disk changed
         current_md5 = get_md5_sum(self.config_file_path)
         self.assertNotEqual(orig_md5, current_md5)
