@@ -3,6 +3,7 @@ import hashlib
 import logging
 import requests
 import socket
+import shlex
 import subprocess
 import time
 from pprint import pprint
@@ -135,9 +136,10 @@ class BackupDaemon(object):
         s.close()
 
         full_cmd = cmd + ' start -c {}'.format(config_path)
+        cmd_with_args = shlex.split(full_cmd)
         logging.info('Running the backup daemon using: {}'.format(full_cmd))
-        self.proc = subprocess.Popen(full_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
+        self.proc = subprocess.Popen(cmd_with_args, shell=False, stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # there is a slight delay between daemon start and http becoming available so we need to ensure it is
         #   available before tests are attempted
         wait_for_api_server(base_url)
