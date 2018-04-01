@@ -40,6 +40,17 @@ inttest:
 	./integration_tests.sh
 cover: 
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
+testdeps:
+	$(GOCMD) get github.com/kisielk/errcheck
+	$(GOCMD) install github.com/kisielk/errcheck
+	$(GOCMD) get github.com/opennota/check/cmd/aligncheck
+	$(GOCMD) install github.com/opennota/check/cmd/aligncheck
+	$(GOCMD) get github.com/opennota/check/cmd/structcheck
+	$(GOCMD) install github.com/opennota/check/cmd/structcheck
+	$(GOCMD) get github.com/opennota/check/cmd/varcheck
+	$(GOCMD) install github.com/opennota/check/cmd/varcheck
+	$(GOCMD) get github.com/GoASTScanner/gas/cmd/gas/...
+	$(GOCMD) install github.com/GoASTScanner/gas/cmd/gas
 
 clean: $(GOCMD) clean
 
