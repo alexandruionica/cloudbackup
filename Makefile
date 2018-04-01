@@ -17,8 +17,9 @@ COVERAGE_FILE=coverage.out
 all: test build
 build: 
 	$(GOCMD) build -v
-test:
-	mkdir -p tmp config/tmp
+test: testcp gotest gotestrace
+# test coding practices
+testcp:
 	@echo "############ Running: go vet - checking for suspicious constructs ############"
 	$(GOCMD) vet ./...
 	@echo "############ Running: errcheck - checking unhandled errors ############"
@@ -31,8 +32,12 @@ test:
 	$(VARCHECKCMD) ./...
 	@echo "############ Running: gas - inspects source code for security problems by scanning the Go AST ############"
 	$(GOASTCMD) ./...
+gotest:
+	mkdir -p tmp config/tmp
 	@echo "############ Running: go test - running unit tests ############"
 	$(GOCMD) test -cover ./...
+gotestrace:
+	mkdir -p tmp config/tmp
 	@echo "############ Running: go test - running unit tests with race detection enabled ############"
 	$(GOCMD) test -race -cover ./...
 inttest:
