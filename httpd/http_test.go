@@ -59,6 +59,11 @@ func TestStartAndCloseHttp(t *testing.T) {
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 	srv.Start()
+	// check several times is port is being listened on
+	err = testutils.WaitForServerToStart("127.0.0.1", "8080", t)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, err = http.Get("http://" + addr + "/")
 	if err != nil {
 		t.Fatal(err)
@@ -99,6 +104,11 @@ func TestStartAndCloseHttps(t *testing.T) {
 	srv := New(make(chan bool), make(chan bool), cfgResult, addrSsl, true, sslCert, sslKey)
 	srv.Start()
 
+	// check several times is port is being listened on
+	err = testutils.WaitForServerToStart("127.0.0.1", "8443", t)
+	if err != nil {
+		t.Fatal(err)
+	}
 	// disable SSL cert verification as we're using a self signed cert
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
