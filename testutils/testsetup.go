@@ -3,6 +3,10 @@ package testutils
 import (
 	"testing"
 	"cloudbackup/utils"
+	"net"
+	"time"
+	"errors"
+	"fmt"
 )
 
 var MockYaml = []byte(`---
@@ -233,4 +237,26 @@ func SetupSslCertAndKey(prefix string, t *testing.T) (string, string) {
 		t.Fatal(err)
 	}
 	return sslCert, sslKey
+}
+
+func WaitForServerToStart(host string, port string, t *testing.T) error {
+	// check several times is port is being listened on
+	counter := 0
+	for {
+		conn, _ := net.DialTimeout("tcp", net.JoinHostPort(host, port), 100 * time.Millisecond) // #nosec
+		if conn != nil {
+			err := conn.Close()
+			if err != nil {
+				return err
+			} else {
+				return nil
+			}
+		} else {
+			if counter > 200 {
+				return errors.New(fmt.Sprintf("After 20 seconds of waiting, nothing is listening on %s:%s",
+					host, port))
+			}
+		}
+		counter += 1
+	}
 }
