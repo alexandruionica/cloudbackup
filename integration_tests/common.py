@@ -1,14 +1,19 @@
 #!/usr/bin/env python
 import hashlib
 import logging
+import platform
 import requests
+import os
 import socket
 import shlex
 import subprocess
 import time
 from pprint import pprint
 
-cmd_default = "./cloudbackup"
+if platform.system() == 'Windows':
+    cmd_default = ".\cloudbackup.exe"
+else:
+    cmd_default = "./cloudbackup"
 working_config_file_content = '''# global settings affect all backups and can't be specified per backup with different values
 # section specific settings are repetitive and can't be overridden by globals
 # clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable
@@ -135,8 +140,13 @@ class BackupDaemon(object):
         s.bind((ipaddr, port))
         s.close()
 
-        full_cmd = cmd + ' start -c {}'.format(config_path)
-        cmd_with_args = shlex.split(full_cmd)
+        if platform.system() == 'Windows':
+            # Windows needs absolute paths because we're not running the command in a shell
+            full_cmd = os.path.abspath(cmd) + ' start -c {}'.format(os.path.abspath(config_path))
+            cmd_with_args = full_cmd
+        else:
+            full_cmd = cmd + ' start -c {}'.format(config_path)
+            cmd_with_args = shlex.split(cmd + ' start -c {}'.format(config_path))
         logging.info('Running the backup daemon using: {}'.format(full_cmd))
         self.proc = subprocess.Popen(cmd_with_args, shell=False, stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
