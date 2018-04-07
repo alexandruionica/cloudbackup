@@ -58,7 +58,7 @@ inttest:
 	@echo "############ Running integration tests ############"
 ifeq ($(OS),Windows_NT)
 	@echo "Running on Windows"
-	\.integration_tests.ps1
+	powershell -noexit '& .\integration_tests.ps1'
 else
 	@echo "Running on some kind of Unix"
 	./integration_tests.sh
