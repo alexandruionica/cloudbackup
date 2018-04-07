@@ -24,8 +24,6 @@ testcp:
 	$(GOCMD) vet ./...
 	@echo "############ Running: errcheck - checking unhandled errors ############"
 	$(ERRCHKCMD) -verbose -abspath ./...
-	@echo "############ Running: aligncheck - checking for inefficiently packed structs ############"
-	find . -name "*.go" -not -path "./vendor/*" -not -name "*_test.go" -not -path "./config/config.go" -exec $(ALIGNCHECKCMD) {} \;
 	@echo "############ Running: structcheck - checking for unused struct fields ############"
 	$(STRUCTCHECKCMD) ./...
 	@echo "############ Running: varcheck - checking for unused global variables and constants ############"
@@ -33,16 +31,38 @@ testcp:
 	@echo "############ Running: gas - inspects source code for security problems by scanning the Go AST ############"
 	$(GOASTCMD) ./...
 gotest:
+ifeq ($(OS),Windows_NT)
+	@echo "Running on Windows"
+	IF NOT EXIST "c:\tmp" mkdir c:\tmp
+	IF NOT EXIST tmp mkdir tmp
+	IF NOT EXIST "config\tmp" mkdir config\tmp
+else
+	@echo "Running on some kind of Unix"
 	mkdir -p tmp config/tmp
+endif
 	@echo "############ Running: go test - running unit tests ############"
 	$(GOCMD) test -cover ./...
 gotestrace:
+ifeq ($(OS),Windows_NT)
+	@echo "Running on Windows"
+	IF NOT EXIST "c:\tmp" mkdir c:\tmp
+	IF NOT EXIST tmp mkdir tmp
+	IF NOT EXIST "config\tmp" mkdir config\tmp
+else
+	@echo "Running on some kind of Unix"
 	mkdir -p tmp config/tmp
+endif
 	@echo "############ Running: go test - running unit tests with race detection enabled ############"
 	$(GOCMD) test -race -cover ./...
 inttest:
 	@echo "############ Running integration tests ############"
+ifeq ($(OS),Windows_NT)
+	@echo "Running on Windows"
+	\.integration_tests.ps1
+else
+	@echo "Running on some kind of Unix"
 	./integration_tests.sh
+endif
 cover: 
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
 testdeps:
