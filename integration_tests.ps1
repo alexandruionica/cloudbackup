@@ -2,8 +2,8 @@ try {
 
 	$TESTSFOLDER='.\integration_tests'
 
-	if(!(Test-Path -Path "$TESTSFOLDER\.venv\Scripts\python.exee"  )){
-	   virtualenvV "$TESTSFOLDER\.venv"
+	if(!(Test-Path -Path "$TESTSFOLDER\.venv\Scripts\python.exe"  )){
+	   virtualenv "$TESTSFOLDER\.venv"
 	   if ( $LastExitCode -ne 0 ) {
 		exit $LastExitCode
 	   } 
