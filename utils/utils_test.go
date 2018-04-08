@@ -4,6 +4,7 @@ import (
 	"testing"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // plain file exists
@@ -83,10 +84,6 @@ func TestFileExists5(t *testing.T) {
 
 // symlink to plain file which exists - do dereference
 func TestFileExists6(t *testing.T) {
-	//if runtime.GOOS == "windows" {
-	//	// Skipping test on Windows as "symlinks" don't exist there
-	//	return
-	//}
 	path, err := SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -247,7 +244,13 @@ func TestDirExists2(t *testing.T) {
 
 //absolute path does not exist - do dereference
 func TestDirExists3(t *testing.T) {
-	var path = "/an/inexisting/file"
+	var path string
+	// absolute paths in Ms Windows start with the drive letter
+	if runtime.GOOS == "windows" {
+		path = "C:\\an\\inexisting\\dir"
+	} else {
+		path = "/an/inexisting/dir"
+	}
 	_, err := DirExists(path, true)
 	if err == nil {
 		t.Fatalf("Path %s does not exist and should have raised an error but didn't", path)
@@ -259,7 +262,7 @@ func TestDirExists3(t *testing.T) {
 
 // relative path does not exist - do dereference
 func TestDirExists4(t *testing.T) {
-	var path = "_an_inexisting_file"
+	var path = "_an_inexisting_dir"
 	_, err := DirExists(path, true)
 	if err == nil {
 		t.Fatalf("Path %s does not exist and should have raised an error but didn't", path)
