@@ -83,6 +83,10 @@ func TestFileExists5(t *testing.T) {
 
 // symlink to plain file which exists - do dereference
 func TestFileExists6(t *testing.T) {
+	//if runtime.GOOS == "windows" {
+	//	// Skipping test on Windows as "symlinks" don't exist there
+	//	return
+	//}
 	path, err := SetupTmpFileWithContent([]byte(`some text`), "unittest_utils_test_")
 	if err != nil {
 		t.Fatal(err)
@@ -95,6 +99,9 @@ func TestFileExists6(t *testing.T) {
 	}()
 
 	err = os.Symlink(path, path + "_symlink")
+	if err != nil {
+		t.Fatalf("Error setting up symlink: %s", err)
+	}
 	defer func() {
 		err := os.Remove(path + "_symlink")
 		if err != nil {
@@ -122,6 +129,9 @@ func TestFileExists7(t *testing.T) {
 	}()
 
 	err = os.Symlink(path, path + "_symlink")
+	if err != nil {
+		t.Fatalf("Error setting up symlink: %s", err)
+	}
 	defer func() {
 		err := os.Remove(path + "_symlink")
 		if err != nil {
@@ -140,6 +150,9 @@ func TestFileExists8(t *testing.T) {
 
 	var path = filepath.Join(os.TempDir(), "unittest_utils_test_broken_symlink")
 	err := os.Symlink("a_file_which_should_not_exist", path)
+	if err != nil {
+		t.Fatalf("Error setting up symlink: %s", err)
+	}
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -158,6 +171,9 @@ func TestFileExists9(t *testing.T) {
 
 	var path = filepath.Join(os.TempDir(), "unittest_utils_test_broken_symlink")
 	err := os.Symlink("a_file_which_should_not_exist", path)
+	if err != nil {
+		t.Fatalf("Error setting up symlink: %s", err)
+	}
 	defer func() {
 		err := os.Remove(path)
 		if err != nil {
@@ -264,6 +280,9 @@ func TestDirExists5(t *testing.T) {
 	}()
 	var symLinkPath = filepath.Join(os.TempDir(), "unittest_utils_test_symlink_to_dir5")
 	err := os.Symlink(path, symLinkPath)
+	if err != nil {
+		t.Fatalf("Error setting up symlink: %s", err)
+	}
 	defer func() {
 		err := os.Remove(symLinkPath)
 		if err != nil {
@@ -288,6 +307,9 @@ func TestDirExists6(t *testing.T) {
 	}()
 	var symLinkPath = filepath.Join(os.TempDir(), "unittest_utils_test_symlink_to_dir6")
 	err := os.Symlink(path, symLinkPath)
+	if err != nil {
+		t.Fatalf("Error setting up symlink: %s", err)
+	}
 	defer func() {
 		err := os.Remove(symLinkPath)
 		if err != nil {
@@ -305,6 +327,9 @@ func TestDirExists6(t *testing.T) {
 func TestDirExists7(t *testing.T) {
 	var symLinkPath = filepath.Join(os.TempDir(), "unittest_utils_test_symlink_to_dir7")
 	err := os.Symlink("a_folder_which_should_not_exist", symLinkPath)
+	if err != nil {
+		t.Fatalf("Error setting up symlink: %s", err)
+	}
 	defer func() {
 		err := os.Remove(symLinkPath)
 		if err != nil {
