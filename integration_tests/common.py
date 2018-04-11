@@ -219,10 +219,10 @@ class BackupDaemon(object):
             return False
 
 
-def wait_for_socket(base_url, max_count=400, sleep_seconds=0.1):
+def wait_for_socket(base_url, max_count=600, sleep_seconds=0.1):
     """
-    Attempt 400 times, with 0.1 seconds sleep to bind on the listening IP:port. This is to give time for whatever keeps
-    the port open to close it before we attempt to run the test
+    Attempt $max_count times, with $sleep_seconds seconds sleep to bind on the listening IP:port. This is to give
+    time for whatever keeps the port open to close it before we attempt to run the test
     :return:
     """
     ipaddr = base_url.split(':')[1].strip('/')
@@ -247,9 +247,10 @@ def wait_for_socket(base_url, max_count=400, sleep_seconds=0.1):
             "times for a total of {} seconds wait".format(ipaddr, port, counter, counter * sleep_seconds))
 
 
-def wait_for_api_server(url, max_count=20):
+def wait_for_api_server(url, max_count=20, sleep_seconds=0.1):
     """
-    Attempt 20 times, with 0.1 seconds sleep to get / from the http server. This is to give time to start up
+    Attempt $max_count times, with $sleep_seconds seconds sleep to get / from the http server. This is to give time
+       to start up
     :return:
     """
     counter = 0
@@ -257,7 +258,7 @@ def wait_for_api_server(url, max_count=20):
         try:
             requests.get(url)
         except requests.exceptions.ConnectionError:
-            time.sleep(0.1)
+            time.sleep(sleep_seconds)
             counter += 1
             continue
         else:
@@ -265,7 +266,8 @@ def wait_for_api_server(url, max_count=20):
             break
     if counter == max_count:
         raise requests.exceptions.ConnectionError(
-            "Could not connect to CloudBackup API server at {} after {} attempts".format(url, counter))
+            "Could not connect to CloudBackup API server at {} after {} attempts for a total of {} "
+            "seconds".format(url, counter, counter * sleep_seconds))
 
 
 def get_md5_sum(filepath):
