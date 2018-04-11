@@ -133,12 +133,8 @@ class BackupDaemon(object):
         :return: { 'result': None/subprocess.CompletedProcess,
                    'exception: None/exception ..}
         """
-        ipaddr = base_url.split(':')[1].strip('/')
-        port = int(base_url.split(':')[2])
-        # check that there is nothing already bound on port 8080
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind((ipaddr, port))
-        s.close()
+        # check ip:port is available
+        wait_for_socket(base_url)
 
         if platform.system() == 'Windows':
             # Windows needs absolute paths because we're not running the command in a shell
@@ -221,6 +217,34 @@ class BackupDaemon(object):
             return True
         else:
             return False
+
+
+def wait_for_socket(base_url, max_count=400, sleep_seconds=0.1):
+    """
+    Attempt 400 times, with 0.1 seconds sleep to bind on the listening IP:port. This is to give time for whatever keeps
+    the port open to close it before we attempt to run the test
+    :return:
+    """
+    ipaddr = base_url.split(':')[1].strip('/')
+    port = int(base_url.split(':')[2])
+    counter = 0
+    while counter < max_count:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.bind((ipaddr, port))
+        except OSError:
+            s.close()
+            time.sleep(sleep_seconds)
+            counter += 1
+            continue
+        else:
+            s.close()
+            counter = 0
+            break
+    if counter == max_count:
+        raise OSError(
+            "Something else is already bound to {}:{} . Attempted unsuccessfully to bind {} "
+            "times for a total of {} seconds wait".format(ipaddr, port, counter, counter * sleep_seconds))
 
 
 def wait_for_api_server(url, max_count=20):
