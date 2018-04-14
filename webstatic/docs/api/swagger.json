@@ -150,6 +150,130 @@
         },
         "security": []
       }
+    },
+    "/backup/list": {
+      "get": {
+        "tags": [
+          "backup"
+        ],
+        "summary": "List backup jobs and their status",
+        "description": "Get the list of configured backup jobs and their status. If state=\"running\" then the uuid field will contain the unique id of the running backup; otherwise the field is an empty string.",
+        "operationId": "BackupJobsList",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseBackupList"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/backup/start": {
+      "post": {
+        "tags": [
+          "backup"
+        ],
+        "summary": "Start a backup now.",
+        "description": "Start a backup job now. The selected backup job must not be already running. If the backup job is successfully started then the uuid field will contain the unique id of the running backup; otherwise the field is an empty string.",
+        "operationId": "BackupStart",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup to start",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BackupJobName"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseBackupStart"
+            }
+          },
+          "400": {
+            "description": "Client Error",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/backup/stop": {
+      "post": {
+        "tags": [
+          "backup"
+        ],
+        "summary": "Stop a running backup.",
+        "description": "Stop a running backup. The selected backup job must be already running. You need to specify only the name of the backup job and any matching running job will be stopped. Optionally you can also specify an uuid associated with the backup name and only if the running backup job matches both name and id will then be the backup job stopped.",
+        "operationId": "BackupStop",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup to stop and optionally the id",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BackupJobNameAndId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "400": {
+            "description": "Client Error",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        },
+        "security": []
+      }
     }
   },
   "securityDefinitions": {
@@ -358,6 +482,72 @@
         "prefix"
       ]
     },
+    "BackupJobList": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server"
+        },
+        "status": {
+          "type": "string",
+          "example": "running",
+          "pattern": "^(running|stopped)$"
+        },
+        "next_run": {
+          "type": "string",
+          "example": "2009-11-10T23:00:00Z"
+        },
+        "id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
+        }
+      }
+    },
+    "BackupJobStart": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server"
+        },
+        "id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
+        }
+      }
+    },
+    "BackupJobName": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "BackupJobNameAndId": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server"
+        },
+        "id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
     "ApiResponse": {
       "type": "object",
       "properties": {
@@ -384,6 +574,41 @@
         },
         "result": {
           "$ref": "#/definitions/FullConfig"
+        }
+      }
+    },
+    "ApiResponseBackupList": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "success"
+        },
+        "message": {
+          "type": "string",
+          "example": "success"
+        },
+        "result": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BackupJobList"
+          }
+        }
+      }
+    },
+    "ApiResponseBackupStart": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "success"
+        },
+        "message": {
+          "type": "string",
+          "example": "success"
+        },
+        "result": {
+          "$ref": "#/definitions/BackupJobStart"
         }
       }
     }

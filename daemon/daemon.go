@@ -5,6 +5,7 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/httpd"
 	"cloudbackup/scheduler"
+	"cloudbackup/shared"
 	"os"
 	"sync"
 	"os/signal"
@@ -30,6 +31,9 @@ func Start(configFile string, debug bool) {
 	if err != nil {
 		os.Exit(1)
 	}
+	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
+	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
+	commWithSchedulerForBackup.Init()
 
 	var httpServer *httpd.SrvData
 	if configuration.GetWithLock(loggingContext).Https.Enabled{
@@ -44,7 +48,7 @@ func Start(configFile string, debug bool) {
 	}
 
 	httpServer.Start()
-	scheduler.Start(sndCfgChangeToScheduler)
+	scheduler.Start(sndCfgChangeToScheduler, commWithSchedulerForBackup)
 
 	// sleep until a SIGnal or an event is received
 	WaitForEvent(httpServer, rcvCfgChangeFromHttpd, sndCfgChangeToScheduler)

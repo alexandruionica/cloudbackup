@@ -22,6 +22,9 @@ const (
 	HttpErrUnauthorized = "unauthorized"
 	HttpErrInternalServerError = "internal server error"
 	HttpErrForbidden = "access denied"
+	// HttpErrIncorrectClientData = "client supplied incorrect data"
+	HttpErrNotFound = "not found"
+
 )
 
 type HttpStatusReply struct {

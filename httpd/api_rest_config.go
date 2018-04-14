@@ -108,7 +108,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 		return
 	}
 	var writeErr error
-	// TODO - compare new and old config and if there is no difference then don't rewrite the config file
+	// compare new and old config and if there is no difference then don't rewrite the config file
 	if bytes.Equal(oldConfigMarshalled, NewConfigMarshalled) {
 		logger.Debug("old and new config match")
 		JSONSuccess(w, "success", "The supplied configuration matches the existing one so no actual " +
