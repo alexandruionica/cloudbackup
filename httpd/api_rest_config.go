@@ -251,7 +251,6 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var writeErr error
-	// TODO - compare new and old config and if there is no difference then don't rewrite the config file
 	if bytes.Equal(oldConfigMarshalled, NewConfigMarshalled) {
 		logger.Debug("old and new config match")
 		JSONSuccess(w, "success", "The supplied configuration matches the existing one so no actual " +

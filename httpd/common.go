@@ -12,6 +12,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"cloudbackup/password"
 	"strings"
+	"cloudbackup/shared"
 )
 
 // various "code" messages the API can return
@@ -24,6 +25,7 @@ const (
 	HttpErrForbidden = "access denied"
 	// HttpErrIncorrectClientData = "client supplied incorrect data"
 	HttpErrNotFound = "not found"
+	HttpErrInternalError = "internal server error"
 
 )
 
@@ -49,6 +51,8 @@ type SrvData struct {
 	globalcfg *config.RuntimeConfig
 	// lock this before reading or writing the loaded config variables
 	Mutex *sync.RWMutex
+	// used to send backup (start/stop) commands to the scheduler routine
+	commWithSchedulerForBackup *shared.CommWithSchedulerForBackup
 }
 
 func (srv *SrvData) GetWithLock(logContext string) SrvData {
@@ -60,6 +64,7 @@ func (srv *SrvData) GetWithLock(logContext string) SrvData {
 		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying HTTPD " +
 			"config struct")
 	}()
+	log.WithFields(log.Fields{"context": logContext}).Debug("Read Lock for copying HTTPD config acquired")
 	cfgCopy := *srv
 	return cfgCopy
 }

@@ -3,8 +3,12 @@ package httpd
 import (
 	"net/http"
 	"github.com/julienschmidt/httprouter"
+	log "github.com/sirupsen/logrus"
 	"encoding/json"
+	"cloudbackup/shared"
 	"fmt"
+	"github.com/satori/go.uuid"
+	"time"
 )
 
 type BackupJobName struct {
@@ -29,14 +33,16 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 			" is needed in order to know what backup job you're requesting to be started"))
 		return
 	}
-	srv := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupStart")
-	config := srv.globalcfg.GetWithLock(loggingContext + ".handlerPutConfig")
+	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupStart")
+	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerPostBackupStart")
 	found := false
-	for _, backup := range config.Backup {
+	for _, backup := range configCopy.Backup {
 		if backup.Name == decodedJson.Name {
 			found = true
 		}
 	}
+	// TODO - if this is a "stop" command then under the right scenario it is possible that a running backup no longer
+	// matches a config file entry. In this case we need to check also the state of currently running backup jobs
 	if found == false {
 		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job was found matching name:" +
 			" %s", decodedJson.Name))
@@ -45,10 +51,63 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 	// TODO -  check if a backup is already running
 	//  if yes then reply with   HttpErrIncorrectClientData and a 400 code
 	// else attempt to start backup
-	//   TODO - add code to communicate with scheduler goroutine
-	result := BackupJobStarted{
+
+	command := shared.ReceiveBackupCommand{
 		Name: decodedJson.Name,
-		Id: "UUID-TO-ADD",
+		Command: "start",
+		Id: uuid.NewV4().String(),
 	}
-	JSONSuccessWithResult(w, "success", "successfully started backup", result)
+	log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStart"}).Debug("Acquiring lock in" +
+		" order to communicate with the scheduler routine")
+	// despite srvCopy being a copy, commWithSchedulerForBackup is a pointer so the below lock should be safe and
+	// prevent others from accessing the same channels
+	srvCopy.commWithSchedulerForBackup.Mutex.Lock()
+	defer func() {
+		srvCopy.commWithSchedulerForBackup.Mutex.Unlock()
+		log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStart"}).Debug("Lock released" +
+			" after communicating with the scheduler routine")
+	}()
+	log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStart"}).Debug("Lock for scheduler " +
+		"routine acquired")
+	// send command to scheduling routine
+	srvCopy.commWithSchedulerForBackup.ReceivedCommand <- command
+	httpUser, _, _ := r.BasicAuth()
+	logger.Infof("Backup job start for job having name '%s' has been requested by '%s' from '%s'",
+		decodedJson.Name, httpUser, r.RemoteAddr)
+	var result shared.ResponseBackupCommand
+	// wait for max 60 seconds for a response from the scheduling thread
+	select {
+		case result = <-srvCopy.commWithSchedulerForBackup.SendResponse:
+			{
+			logger.Debugf("Received response %+v from scheduling component", result)
+			if result.Err == false {
+				if command.Id != result.Id {
+					logger.Errorf("Request to start backup job '%s' had id '%s' but response id is '%s'. This " +
+						"is a bug and should be reported.")
+					JSONError(w, http.StatusInternalServerError, HttpErrInternalError, "Response id does not " +
+						"match request id. This is a bug. None the less, the backup job may have started so please " +
+						"check the status of backup jobs")
+					return
+				}
+				requestResult := BackupJobStarted{
+					Name: decodedJson.Name,
+					Id: result.BackupJobId,
+				}
+				JSONSuccessWithResult(w, "success", "successfully started backup", requestResult)
+
+			}
+			}
+		case <-time.After(60 * time.Second):
+			{
+				logger.Warnf("Didn't receive in 60 seconds a response from the scheduling component. The request "+
+					"was to start a backup job for job having name '%s' and it has been requested by '%s' from '%s'",
+					decodedJson.Name, httpUser, r.RemoteAddr)
+				JSONError(w, http.StatusInternalServerError, HttpErrInternalError, fmt.Sprintf("Didn't receive in " +
+					"60 seconds a response from the scheduling component. The request was to start a backup job for" +
+					" job having name '%s'. This is abnormal unless your system is starved of CPU resources",
+					decodedJson.Name))
+				return
+			}
+
+	}
 }

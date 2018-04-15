@@ -1,5 +1,5 @@
-hash: aa3c6a5424ee6f008b2eb8159d01b5b67b4c1386ddea607daf461fd145344c46
-updated: 2018-02-28T22:41:51.343961+11:00
+hash: 625cc341dadd6c08f178de9207b199ebcadfa8e4c1ce8da73c3d4362db1280ea
+updated: 2018-04-14T21:57:12.322413+10:00
 imports:
 - name: github.com/BurntSushi/toml
   version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
@@ -13,6 +13,8 @@ imports:
   version: d1898390779332322e6b5ca5011da4bf249bb056
 - name: github.com/mattn/go-sqlite3
   version: 6c771bb9887719704b210e87e934f08be014bdb1
+- name: github.com/satori/go.uuid
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
   version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
   subpackages:

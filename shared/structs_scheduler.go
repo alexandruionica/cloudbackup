@@ -14,29 +14,29 @@ type CommWithSchedulerForBackup struct {
 
 type ReceiveBackupCommand struct {
 	// uuid of the command
-	id string
+	Id string
 	// one of "start" or "stop"
-	command string
+	Command string
 	// uuid of the backup job referenced. Makes sense only for "stop" command
-	backupJobId string
+	BackupJobId string
 	// name of the backup job as it is defined in the configuration file
-	name string
+	Name string
 }
 
 type ResponseBackupCommand struct {
 	// uuid of the command
-	id string
+	Id string
 	// what command was requested one of "start" or "stop"
-	command string
+	Command string
 	// uuid of the backup job referenced. This will be an existing uuid for responses to "stop" commands and a new
 	// uuid when this is a response of a successful "start" command.
-	backupJobId string
+	BackupJobId string
 	// name of the backup job as it is defined in the configuration file
-	name string
+	Name string
 	// true if the command did not succeed
-	err bool
+	Err bool
 	// message to send back to the user. Will matter only when err == true
-	message string
+	Message string
 }
 
 // init the CommWithSchedulerForBackup structure

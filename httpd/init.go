@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 	"sync"
+	"cloudbackup/shared"
 )
 const (
 	loggingContext = "httpd"
@@ -28,7 +29,7 @@ var ReadAccess = map[string][]string{
 
 // pseudo constructor to setup a new http server
 func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.RuntimeConfig, addr string,
-	httpsEnabled bool, SslCertPath string, SslKeyPath string ) (*SrvData) {
+	httpsEnabled bool, SslCertPath string, SslKeyPath string, commWithSchedulerForBackup *shared.CommWithSchedulerForBackup ) (*SrvData) {
 
 	return &SrvData{rcvCfgChange: rcvCfgChange,
 		sndCfgChange: sndCfgChange,
@@ -42,6 +43,7 @@ func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.Runti
 		SslKeyPath: SslKeyPath,
 		httpsEnabled: httpsEnabled,
 		Mutex: &sync.RWMutex{},
+		commWithSchedulerForBackup: commWithSchedulerForBackup,
 	}
 }
 

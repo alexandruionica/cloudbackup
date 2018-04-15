@@ -41,14 +41,15 @@ func Start(configFile string, debug bool) {
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
 			configuration.GetWithLock(loggingContext).Https.BindAddress, true,
 			configuration.GetWithLock(loggingContext).Https.SslCertPath,
-			configuration.GetWithLock(loggingContext).Https.SslKeyPath)
+			configuration.GetWithLock(loggingContext).Https.SslKeyPath, commWithSchedulerForBackup)
 	}else {
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
-			configuration.GetWithLock(loggingContext).Http.BindAddress, false, "", "")
+			configuration.GetWithLock(loggingContext).Http.BindAddress, false, "",
+			"", commWithSchedulerForBackup)
 	}
 
 	httpServer.Start()
-	scheduler.Start(sndCfgChangeToScheduler, commWithSchedulerForBackup)
+	scheduler.Start(sndCfgChangeToScheduler, commWithSchedulerForBackup, configuration)
 
 	// sleep until a SIGnal or an event is received
 	WaitForEvent(httpServer, rcvCfgChangeFromHttpd, sndCfgChangeToScheduler)

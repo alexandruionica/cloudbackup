@@ -10,6 +10,7 @@ import (
 	"sync"
 	"reflect"
 	"crypto/tls"
+	"cloudbackup/shared"
 )
 
 const addr = "localhost:8080"
@@ -28,7 +29,11 @@ func TestNew(t *testing.T) {
 		}
 	}()
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
-	result := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
+	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
+	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
+	commWithSchedulerForBackup.Init()
+	result := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "",
+		commWithSchedulerForBackup)
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.ValueOf(compare).Kind() != reflect.ValueOf(result).Kind() {
 		t.Errorf("Variable type returned by New()")
@@ -54,7 +59,10 @@ func TestStartAndCloseHttp(t *testing.T) {
 		}
 	}()
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
-	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
+	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
+	commWithSchedulerForBackup.Init()
+	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "",
+		commWithSchedulerForBackup)
 	srv.Start()
 	// check several times is port is being listened on
 	err = testutils.WaitForServerToStart("127.0.0.1", "8080", t)
@@ -98,7 +106,10 @@ func TestStartAndCloseHttps(t *testing.T) {
 	}()
 	http.DefaultServeMux = http.NewServeMux()
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
-	srv := New(make(chan bool), make(chan bool), cfgResult, addrSsl, true, sslCert, sslKey)
+	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
+	commWithSchedulerForBackup.Init()
+	srv := New(make(chan bool), make(chan bool), cfgResult, addrSsl, true, sslCert, sslKey,
+		commWithSchedulerForBackup)
 	srv.Start()
 
 	// check several times is port is being listened on
