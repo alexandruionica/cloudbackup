@@ -212,13 +212,25 @@
             }
           },
           "400": {
-            "description": "Client Error",
+            "description": "Backup already running",
             "schema": {
               "$ref": "#/definitions/ApiResponse"
             }
           },
           "401": {
             "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "404": {
+            "description": "No backup job matches the provided name",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
             "schema": {
               "$ref": "#/definitions/ApiResponse"
             }
@@ -267,6 +279,12 @@
           },
           "401": {
             "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
             "schema": {
               "$ref": "#/definitions/ApiResponse"
             }

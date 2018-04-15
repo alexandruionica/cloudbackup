@@ -106,12 +106,15 @@ type RuntimeConfig struct {
 // return a copy of the config struct. Lock while reading the struct. logContext is used for passing the caller's
 // logging context as to make it clear where the call is coming from
 func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
-	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying config struct")
+	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying server config" +
+		" struct")
 	cfg.Mutex.RLock()
 	defer func() {
 		cfg.Mutex.RUnlock()
-		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying config struct")
+		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying server " +
+			"config struct")
 	}()
+	log.WithFields(log.Fields{"context": logContext}).Debug("Read lock for copying server config acquired")
 	cfgCopy := cfg.Config
 
 	// we need to manually copy slices because by default a pointer to the slice is copied
