@@ -24,7 +24,7 @@ var logger = log.WithFields(log.Fields{
 // prefixed with $ApiPrefix in the calling function
 var ReadAccess = map[string][]string{
 	//"POST": []string{"aaa", "bbb"},
-	"GET":  {"/config"},
+	"GET": {"/config", "/backup/list"},
 }
 
 // pseudo constructor to setup a new http server
@@ -72,6 +72,8 @@ func (srv *SrvData) Start() {
 	router.POST(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfig)))
 	router.POST(ApiPrefix+ "/config/backup", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfigBackup)))
 	router.POST(ApiPrefix+ "/backup/start", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupStart)))
+	router.POST(ApiPrefix+ "/backup/stop", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupStop)))
+	router.GET(ApiPrefix+ "/backup/list", srv.BasicAuth(srv.CheckAccess(srv.handlerGetBackupList)))
 
 	// put a write lock and update the router - by this point all routes should have been added
 	srv.Mutex.Lock()

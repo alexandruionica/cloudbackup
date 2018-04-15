@@ -86,13 +86,14 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, se
 	}
 }
 
-// TODO - add actual implementation; also figure out how to deal with the SQL connection
+// TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
 func startBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate){
 	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 }
 
-// TODO - add actual implementation; also figure out how to deal with the SQL connection
+// TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
 func stopBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate){
-	// TODO - if $jobUuid is empty string then stop whatever is the current running backup for the given $name
+	// TODO - if $jobUuid is empty string then stop whatever is the current running backup for the given $name (and
+	// figure out the UUID in order to correctly log it in the below logger call
 	logger.Infof("Stopping backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 }

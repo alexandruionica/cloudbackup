@@ -153,12 +153,13 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 		return &RuntimeConfig{}, err
 	}
 
-	logger.Debug("Acquiring lock before reading config file")
+	logger.Debug("Acquiring read lock before reading config file")
 	mutex.RLock()
 	defer func() {
 		mutex.RUnlock()
-		logger.Debug("Lock released after reading config file")
+		logger.Debug("Read lock released after reading config file")
 		}()
+	logger.Debug("Acquired read lock for reading config file")
 	// if debug then also adjust logging level of configor library (set library to Verbose not Debug as
 	// Verbose is actually what we expect when using  "debug")
 	if debug {
