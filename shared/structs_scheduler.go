@@ -10,11 +10,6 @@ import (
 
 const ErrJobAlreadyRunning = "job already running"
 const ErrJobAlreadyStopped = "job already stopped"
-const loggingContext = "shared"
-
-var logger = log.WithFields(log.Fields{
-	"context": loggingContext,
-})
 
 type CommWithSchedulerForBackup struct {
 	// this needs to be locked before acquiring the channel to send messages to the scheduler goroutine or read messages
@@ -74,13 +69,13 @@ type BackupJobStatus struct {
 	// - makes sense only for $State == "running"
 	StartTime time.Time `json:"start_time,omitempty"`
 	// transmit bandwidth/second used during last 1 minute - makes sense only for $State == "running"
-	TxBandwidth1Min int64 `json:"omitempty"`
+	TxBandwidth1Min int64 `json:"TxBandwidth1Min,omitempty"`
 	// receive bandwidth/second used during last 1 minute - makes sense only for $State == "running"
-	RxBandwidth1Min int64 `json:"omitempty"`
-	TxBandwidth5Min int64 `json:"omitempty"`
-	RxBandwidth5Min int64 `json:"omitempty"`
-	TxBandwidth15Min int64 `json:"omitempty"`
-	RxBandwidth15Min int64 `json:"omitempty"`
+	RxBandwidth1Min int64 `json:"rx_bandwidth_1_min,omitempty"`
+	TxBandwidth5Min int64 `json:"tx_bandwidth_5_min,omitempty"`
+	RxBandwidth5Min int64 `json:"rx_bandwidth_5_min,omitempty"`
+	TxBandwidth15Min int64 `json:"tx_bandwidth_15_min,omitempty"`
+	RxBandwidth15Min int64 `json:"rx_bandwidth_15_min,omitempty"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
 	NextRun string `json:"next_run"`
 }
@@ -88,7 +83,7 @@ type BackupJobStatus struct {
 type BackupJobsState struct {
 	Running []BackupJobStatus
 	// used for locking during reads or writes as this struct will be shared all over the place
-	Lock sync.RWMutex
+	Lock *sync.RWMutex
 }
 
 
