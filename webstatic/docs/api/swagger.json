@@ -516,7 +516,7 @@
           "type": "string",
           "example": "2009-11-10T23:00:00Z"
         },
-        "id": {
+        "job_id": {
           "type": "string",
           "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
           "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
@@ -530,7 +530,7 @@
           "type": "string",
           "example": "generic-server"
         },
-        "id": {
+        "job_id": {
           "type": "string",
           "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
           "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
@@ -556,7 +556,7 @@
           "type": "string",
           "example": "generic-server"
         },
-        "id": {
+        "job_id": {
           "type": "string",
           "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
           "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
