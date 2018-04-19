@@ -23,7 +23,7 @@ const (
 	HttpErrUnauthorized = "unauthorized"
 	HttpErrInternalServerError = "internal server error"
 	HttpErrForbidden = "access denied"
-	// HttpErrIncorrectClientData = "client supplied incorrect data"
+	HttpErrIncorrectClientData = "client supplied incorrect data"
 	HttpErrNotFound = "not found"
 	HttpErrInternalError = "internal server error"
 
@@ -53,6 +53,8 @@ type SrvData struct {
 	Mutex *sync.RWMutex
 	// used to send backup (start/stop) commands to the scheduler routine
 	commWithSchedulerForBackup *shared.CommWithSchedulerForBackup
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState *shared.BackupJobsState
 }
 
 func (srv *SrvData) GetWithLock(logContext string) SrvData {
@@ -64,7 +66,7 @@ func (srv *SrvData) GetWithLock(logContext string) SrvData {
 		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying HTTPD " +
 			"config struct")
 	}()
-	log.WithFields(log.Fields{"context": logContext}).Debug("Read Lock for copying HTTPD config acquired")
+	log.WithFields(log.Fields{"context": logContext}).Debug("Read lock for copying HTTPD config acquired")
 	cfgCopy := *srv
 	return cfgCopy
 }

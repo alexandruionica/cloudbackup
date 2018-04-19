@@ -3,7 +3,6 @@ package httpd
 import (
 	"net/http"
 	"github.com/julienschmidt/httprouter"
-	log "github.com/sirupsen/logrus"
 	"encoding/json"
 	"cloudbackup/shared"
 	"fmt"
@@ -13,7 +12,7 @@ import (
 
 type BackupJob struct {
 	Name string `json:"name"`
-	Id string `json:"id"`
+	JobId string `json:"job_id"`
 }
 
 func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -29,7 +28,9 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 			" is needed in order to know what backup job you're requesting to be started"))
 		return
 	}
+	// while a copy, some of the data is pointers so locking is still needed
 	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupStart")
+	// while a copy, some of the data is pointers so locking is still needed
 	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerPostBackupStart")
 	found := false
 	for _, backup := range configCopy.Backup {
@@ -43,63 +44,63 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 			" %s", decodedJson.Name))
 		return
 	}
-	// TODO -  check if a backup is already running
-	//  if yes then reply with   HttpErrIncorrectClientData and a 400 code
-	// else attempt to start backup
+
+	if srvCopy.backupJobsState.IsRunning(decodedJson.Name, "" , loggingContext + ".handlerPostBackupStart"){
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Backup for job having " +
+			"name '%s' is already running.", decodedJson.Name))
+		return
+	}
 
 	command := shared.ReceiveBackupCommand{
 		Name: decodedJson.Name,
 		Command: "start",
 		Id: uuid.NewV4().String(),
 	}
-	log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStart"}).Debug("Acquiring lock in" +
-		" order to communicate with the scheduler routine")
-	// despite srvCopy being a copy, commWithSchedulerForBackup is a pointer so the below lock should be safe and
-	// prevent others from accessing the same channels
-	srvCopy.commWithSchedulerForBackup.Mutex.Lock()
-	defer func() {
-		srvCopy.commWithSchedulerForBackup.Mutex.Unlock()
-		log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStart"}).Debug("Lock released" +
-			" after communicating with the scheduler routine")
-	}()
-	log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStart"}).Debug("Lock for scheduler " +
-		"routine acquired")
-	// send command to scheduling routine
-	srvCopy.commWithSchedulerForBackup.ReceivedCommand <- command
 	httpUser, _, _ := r.BasicAuth()
+	// send command to scheduling routine - blocks until the other end reads it
+	select {
+	case srvCopy.commWithSchedulerForBackup.ReceivedCommand <- command:
+	case <-time.After(5 * time.Second): {
+		logger.Warnf("Sending a request to the scheduling component timed out after 5 seconds. The request "+
+			"was to start a backup job for job having name '%s' and it has been requested by '%s' from '%s'",
+			decodedJson.Name, httpUser, r.RemoteAddr)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalError, fmt.Sprintf("Sending a request to " +
+			"the scheduling component timed out after 5 seconds. The request was to start a backup job for" +
+			" job having name '%s'. This is abnormal unless your system is starved of CPU resources. It is possible" +
+			" that the request may have succeeded", decodedJson.Name))
+		return
+	}
+	}
+
 	logger.Infof("Backup job start for job having name '%s' has been requested by '%s' from '%s'",
 		decodedJson.Name, httpUser, r.RemoteAddr)
 	var result shared.ResponseBackupCommand
-	// wait for max 60 seconds for a response from the scheduling thread
+	// wait for max 20 seconds for a response from the scheduling thread
 	select {
 		case result = <-srvCopy.commWithSchedulerForBackup.SendResponse:
 			{
 			logger.Debugf("Received response %+v from scheduling component", result)
-			if result.Err == false {
-				if command.Id != result.Id {
-					logger.Errorf("Request to start backup job '%s' had id '%s' but response id is '%s'. This " +
-						"is a bug and should be reported.")
-					JSONError(w, http.StatusInternalServerError, HttpErrInternalError, "Response id does not " +
-						"match request id. This is a bug. None the less, the backup job may have started so please " +
-						"check the status of backup jobs")
+				if result.Err == false {
+					requestResult := BackupJob{
+						Name: decodedJson.Name,
+						JobId: result.BackupJobId,
+					}
+					JSONSuccessWithResult(w, "success", "successfully requested backup job to be started",
+						requestResult)
+					return
+				} else {
+					JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Could not start " +
+						"backup for job having name '%s'. The error is: %s", decodedJson.Name, result.Message ))
 					return
 				}
-				requestResult := BackupJob{
-					Name: decodedJson.Name,
-					Id: result.BackupJobId,
-				}
-				JSONSuccessWithResult(w, "success", "successfully requested backup job to be started",
-					requestResult)
-
 			}
-			}
-		case <-time.After(60 * time.Second):
+		case <-time.After(20 * time.Second):
 			{
-				logger.Warnf("Didn't receive in 60 seconds a response from the scheduling component. The request "+
+				logger.Warnf("Didn't receive in 20 seconds a response from the scheduling component. The request "+
 					"was to start a backup job for job having name '%s' and it has been requested by '%s' from '%s'",
 					decodedJson.Name, httpUser, r.RemoteAddr)
-				JSONError(w, http.StatusInternalServerError, HttpErrInternalError, fmt.Sprintf("Didn't receive in " +
-					"60 seconds a response from the scheduling component. The request was to start a backup job for" +
+				JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Didn't receive in " +
+					"20 seconds a response from the scheduling component. The request was to start a backup job for" +
 					" job having name '%s'. This is abnormal unless your system is starved of CPU resources",
 					decodedJson.Name))
 				return
@@ -121,68 +122,79 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 			" is needed in order to know what backup job you're requesting to be stopped"))
 		return
 	}
+	// while a copy, some of the data is pointers so locking is still needed
 	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupStop")
 
 	// TODO - Check running backups (from state) and see if we have a match for the $name and if specified also the $id
+	if srvCopy.backupJobsState.IsRunning(decodedJson.Name, decodedJson.JobId , loggingContext + ".handlerPostBackupStart") == false {
+		var errorMsg string
+		if decodedJson.JobId != "" && srvCopy.backupJobsState.IsRunning(decodedJson.Name, "", loggingContext + ".handlerPostBackupStart") {
+			errorMsg = fmt.Sprintf("Backup for job having name '%s' and a backup job id of '%s' is not " +
+				"running so it can't be stopped. There is a running backup job for the same name but with a " +
+				"different job id", decodedJson.Name, decodedJson.JobId)
+		} else {
+			errorMsg = fmt.Sprintf("Backup for job having " + "name '%s' is not running.", decodedJson.Name)
+		}
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, errorMsg)
+		return
+	}
 
 	command := shared.ReceiveBackupCommand{
 		Name: decodedJson.Name,
 		Command: "stop",
 		Id: uuid.NewV4().String(),
-		BackupJobId: decodedJson.Id,
+		BackupJobId: decodedJson.JobId,
 	}
-	log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStop"}).Debug("Acquiring lock in" +
-		" order to communicate with the scheduler routine")
-	// despite srvCopy being a copy, commWithSchedulerForBackup is a pointer so the below lock should be safe and
-	// prevent others from accessing the same channels
-	srvCopy.commWithSchedulerForBackup.Mutex.Lock()
-	defer func() {
-		srvCopy.commWithSchedulerForBackup.Mutex.Unlock()
-		log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStop"}).Debug("Lock released" +
-			" after communicating with the scheduler routine")
-	}()
-	log.WithFields(log.Fields{"context": loggingContext + ".handlerPostBackupStop"}).Debug("Lock for scheduler " +
-		"routine acquired")
-	// send command to scheduling routine
-	srvCopy.commWithSchedulerForBackup.ReceivedCommand <- command
 	httpUser, _, _ := r.BasicAuth()
-	if decodedJson.Id == "" {
+	// send command to scheduling routine
+	select {
+		case srvCopy.commWithSchedulerForBackup.ReceivedCommand <- command:
+		case <-time.After(5 * time.Second): {
+			logger.Warnf("Sending a request to the scheduling component timed out after 5 seconds. The request "+
+				"was to stop a backup job for job having name '%s' and it has been requested by '%s' from '%s'",
+				decodedJson.Name, httpUser, r.RemoteAddr)
+			JSONError(w, http.StatusInternalServerError, HttpErrInternalError, fmt.Sprintf("Sending a request to " +
+				"the scheduling component timed out after 5 seconds. The request was to stop a backup job for" +
+				" job having name '%s'. This is abnormal unless your system is starved of CPU resources. It is possible" +
+				" that the request may have succeeded", decodedJson.Name))
+			return
+		}
+	}
+
+	if decodedJson.JobId == "" {
 		logger.Infof("Backup job stop for job having name '%s' has been requested by '%s' from '%s'",
 			decodedJson.Name, httpUser, r.RemoteAddr)
 	} else {
 		logger.Infof("Backup job stop for job having name '%s' and id '%s' has been requested by '%s' " +
-			"from '%s'", decodedJson.Name, decodedJson.Id, httpUser, r.RemoteAddr)
+			"from '%s'", decodedJson.Name, decodedJson.JobId, httpUser, r.RemoteAddr)
 	}
 	var result shared.ResponseBackupCommand
-	// wait for max 60 seconds for a response from the scheduling thread
+	// wait for max 20 seconds for a response from the scheduling thread
 	select {
 	case result = <-srvCopy.commWithSchedulerForBackup.SendResponse:
 		{
 			logger.Debugf("Received response %+v from scheduling component", result)
 			if result.Err == false {
-				if command.Id != result.Id {
-					logger.Errorf("Request to stop backup job '%s' had id '%s' but response id is '%s'. This " +
-						"is a bug and should be reported.")
-					JSONError(w, http.StatusInternalServerError, HttpErrInternalError, "Response id does not " +
-						"match request id. This is a bug. None the less, the backup job may have stopped so please " +
-						"check the status of backup jobs")
-					return
-				}
 				requestResult := BackupJob{
 					Name: decodedJson.Name,
-					Id: result.BackupJobId,
+					JobId: result.BackupJobId,
 				}
 				JSONSuccessWithResult(w, "success", "successfully requested backup job to be stopped",
 					requestResult)
+				return
+			} else {
+				JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Could not stop " +
+					"backup for job having name '%s'. The error is: %s", decodedJson.Name, result.Message ))
+				return
 			}
 		}
-	case <-time.After(60 * time.Second):
+	case <-time.After(20 * time.Second):
 		{
-			logger.Warnf("Didn't receive in 60 seconds a response from the scheduling component. The request "+
+			logger.Warnf("Didn't receive in 20 seconds a response from the scheduling component. The request "+
 				"was to stop a backup job for job having name '%s' and it has been requested by '%s' from '%s'",
 				decodedJson.Name, httpUser, r.RemoteAddr)
 			JSONError(w, http.StatusInternalServerError, HttpErrInternalError, fmt.Sprintf("Didn't receive in " +
-				"60 seconds a response from the scheduling component. The request was to stop a backup job for" +
+				"20 seconds a response from the scheduling component. The request was to stop a backup job for" +
 				" job having name '%s'. This is abnormal unless your system is starved of CPU resources",
 				decodedJson.Name))
 			return
@@ -192,5 +204,10 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 
 // return a summary of backup jobs (running and stopped)
 func (srvSrc SrvData) handlerGetBackupList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-
+	// while a copy, some of the data is pointers so locking is still needed
+	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerGetBackupList")
+	// while a copy, some of the data is pointers so locking is still needed
+	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerGetBackupList")
+	JSONSuccessWithResult(w, "success", "success",
+		srvCopy.backupJobsState.Get(configCopy, loggingContext + ".handlerGetBackupList"))
 }

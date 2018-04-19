@@ -34,6 +34,8 @@ func Start(configFile string, debug bool) {
 	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{}
 
 	var httpServer *httpd.SrvData
 	if configuration.GetWithLock(loggingContext).Https.Enabled{
@@ -41,15 +43,15 @@ func Start(configFile string, debug bool) {
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
 			configuration.GetWithLock(loggingContext).Https.BindAddress, true,
 			configuration.GetWithLock(loggingContext).Https.SslCertPath,
-			configuration.GetWithLock(loggingContext).Https.SslKeyPath, commWithSchedulerForBackup)
+			configuration.GetWithLock(loggingContext).Https.SslKeyPath, commWithSchedulerForBackup, backupJobsState)
 	}else {
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
 			configuration.GetWithLock(loggingContext).Http.BindAddress, false, "",
-			"", commWithSchedulerForBackup)
+			"", commWithSchedulerForBackup, backupJobsState)
 	}
 
 	httpServer.Start()
-	scheduler.Start(sndCfgChangeToScheduler, commWithSchedulerForBackup, configuration)
+	scheduler.Start(sndCfgChangeToScheduler, commWithSchedulerForBackup, backupJobsState, configuration)
 
 	// sleep until a SIGnal or an event is received
 	WaitForEvent(httpServer, rcvCfgChangeFromHttpd, sndCfgChangeToScheduler)
