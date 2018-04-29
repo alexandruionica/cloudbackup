@@ -125,7 +125,6 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 	// while a copy, some of the data is pointers so locking is still needed
 	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupStop")
 
-	// TODO - Check running backups (from state) and see if we have a match for the $name and if specified also the $id
 	if srvCopy.backupJobsState.IsRunning(decodedJson.Name, decodedJson.JobId , loggingContext + ".handlerPostBackupStart") == false {
 		var errorMsg string
 		if decodedJson.JobId != "" && srvCopy.backupJobsState.IsRunning(decodedJson.Name, "", loggingContext + ".handlerPostBackupStart") {
@@ -136,6 +135,13 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 			errorMsg = fmt.Sprintf("Backup for job having " + "name '%s' is not running.", decodedJson.Name)
 		}
 		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, errorMsg)
+		return
+	}
+
+	// check if job already stopping
+	if srvCopy.backupJobsState.IsStopping(decodedJson.Name, decodedJson.JobId , loggingContext + ".handlerPostBackupStart") {
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Backup for job having " +
+			"name '%s' is already stopping.", decodedJson.Name))
 		return
 	}
 
