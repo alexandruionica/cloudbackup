@@ -54,7 +54,7 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 			}
 		//default:
 		//	{
-		//		// TODO - add code to launch and scheduled backups or restores; actually add a separate routine
+		//		// TODO - add code to launch any scheduled backups or restores; actually add a separate routine
 		// which communicates with this one
 		//		//logger.Debugf("Sleeping for %d seconds", SleepSec)
 		//		time.Sleep(SleepSec * time.Second)
@@ -66,8 +66,6 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 
 func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, backupJobsState *shared.BackupJobsState,
 	serverConfigCopy config.CfgTemplate) shared.ResponseBackupCommand {
-	// TODO - implement validation in order to check if another job hasn't started for the same name
-	// (there is an up to 60 sec delay between the httpd request and the scheduler). A lock for starting jobs may be useful
 	switch receivedBackupCommand.Command {
 	case "start": {
 		startJobUuid := uuid.NewV4().String()
@@ -81,7 +79,7 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 				Err: true,
 			}
 		}
-		startBackup(receivedBackupCommand.Name, startJobUuid, serverConfigCopy)
+		go startBackup(receivedBackupCommand.Name, startJobUuid, serverConfigCopy)
 		return shared.ResponseBackupCommand{
 			Name: receivedBackupCommand.Name,
 			Id: receivedBackupCommand.Id,
@@ -92,7 +90,17 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 	case "stop": {
 		if backupJobsState.IsRunning(receivedBackupCommand.Name, receivedBackupCommand.BackupJobId ,
 			loggingContext + ".processBackupCommand"){
-			stopBackup(receivedBackupCommand.Name, receivedBackupCommand.BackupJobId, serverConfigCopy)
+			err := backupJobsState.MarkStopped(receivedBackupCommand.Name, loggingContext + ".processBackupCommand",
+				receivedBackupCommand.BackupJobId, false)
+			if err != nil {
+				return shared.ResponseBackupCommand{
+					Name: receivedBackupCommand.Name,
+					Id: receivedBackupCommand.Id,
+					Message: err.Error(),
+					Err: true,
+				}
+			}
+			go stopBackup(receivedBackupCommand.Name, receivedBackupCommand.BackupJobId, serverConfigCopy)
 			return shared.ResponseBackupCommand{
 				Name: receivedBackupCommand.Name,
 				Id: receivedBackupCommand.Id,
@@ -130,4 +138,6 @@ func stopBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplat
 	// TODO - if $jobUuid is empty string then stop whatever is the current running backup for the given $name (and
 	// figure out the UUID in order to correctly log it in the below logger call
 	logger.Infof("Stopping backup job having name '%s' with allocated job id '%s'", name, jobUuid)
+	// TODO - implement stop; in the mean time sleep for 20 seconds and then mark job as stopped
+	time.Sleep(20 * time.Second)
 }

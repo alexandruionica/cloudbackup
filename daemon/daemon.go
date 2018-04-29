@@ -36,6 +36,7 @@ func Start(configFile string, debug bool) {
 	commWithSchedulerForBackup.Init()
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := &shared.BackupJobsState{}
+	backupJobsState.Lock = &sync.RWMutex{}
 
 	var httpServer *httpd.SrvData
 	if configuration.GetWithLock(loggingContext).Https.Enabled{

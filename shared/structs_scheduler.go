@@ -62,7 +62,7 @@ func (comm *CommWithSchedulerForBackup) Init () {
 type BackupJobStatus struct {
 	// name of the backup job as it was defined in the configuration file at job start (things may have changed after)
 	Name string `json:"name"`
-	// one of "running" or "stopped"
+	// one of "running" or "stopped" or "stopping"
 	State string `json:"state"`
 	// uuid of the backup job - makes sense only for $State == "running"
 	BackupJobId string `json:"job_id,omitempty"`
@@ -89,10 +89,10 @@ type BackupJobsState struct {
 
 // returns a slice with the state of both running and stopped jobs. $cfgCopy MUST be a copy and not a dereference of
 // the actual pointer to the main config (as slices are passed by reference and bad things will happen)
-func (jobs BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string) []BackupJobStatus {
+func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string) []BackupJobStatus {
 	result := make([]BackupJobStatus, 0)
 	runningList := map[string]string{}
-	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before reading running " +
+	log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Acquiring read lock before reading running " +
 		"backup jobs struct")
 	jobs.Lock.RLock()
 	defer func() {
@@ -119,8 +119,8 @@ func (jobs BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string) 
 }
 
 // checks if a given job is running. Returns true if running, false otherwise
-func (jobs BackupJobsState) IsRunning(name string, JobId string, logContext string) bool {
-	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before reading running " +
+func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext string) bool {
+	log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Acquiring read lock before reading running " +
 		"backup jobs struct")
 	jobs.Lock.RLock()
 	defer func() {
@@ -130,7 +130,7 @@ func (jobs BackupJobsState) IsRunning(name string, JobId string, logContext stri
 	}()
 	for _, job := range jobs.Running {
 		if name == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobis are required
+			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
 			if JobId == "" {
 				return true
 			} else {
@@ -165,4 +165,49 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		// TODO - add NextRun
 	})
 	return nil
+}
+
+
+// If $stopped == false then mark job as "stopping"; if $stopped == true then remove job from Running Jobs list
+func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJobId string, stopped bool) error {
+	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read/write lock before updating running " +
+		"backup jobs struct")
+	jobs.Lock.Lock()
+	defer func() {
+		jobs.Lock.Unlock()
+		log.WithFields(log.Fields{"context": logContext}).Debug("read/write lock released after updating running " +
+			"backup jobs struct")
+	}()
+	found := false
+	updatedJobsRunning := make([]BackupJobStatus, 0)
+	for _, job := range jobs.Running {
+		if name == job.Name {
+			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if BackupJobId == "" {
+				found = true
+				if stopped == false {
+					job.State = "stopping"
+					updatedJobsRunning = append(updatedJobsRunning, job)
+				}
+				continue
+			} else {
+				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+					found = true
+					if stopped == false {
+						job.State = "stopping"
+						updatedJobsRunning = append(updatedJobsRunning, job)
+					}
+					continue
+				}
+			}
+		} else {
+			updatedJobsRunning = append(updatedJobsRunning, job)
+		}
+	}
+	if found{
+		jobs.Running = updatedJobsRunning
+		return nil
+	} else {
+		return errors.New(ErrJobAlreadyStopped)
+	}
 }
