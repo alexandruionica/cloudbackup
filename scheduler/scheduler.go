@@ -90,6 +90,15 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 	case "stop": {
 		if backupJobsState.IsRunning(receivedBackupCommand.Name, receivedBackupCommand.BackupJobId ,
 			loggingContext + ".processBackupCommand"){
+			if backupJobsState.IsStopping(receivedBackupCommand.Name, receivedBackupCommand.BackupJobId ,
+				loggingContext + ".processBackupCommand") {
+				return shared.ResponseBackupCommand{
+					Name: receivedBackupCommand.Name,
+					Id: receivedBackupCommand.Id,
+					Message: shared.ErrJobAlreadyStopping,
+					Err: true,
+				}
+			}
 			err := backupJobsState.MarkStopped(receivedBackupCommand.Name, loggingContext + ".processBackupCommand",
 				receivedBackupCommand.BackupJobId, false)
 			if err != nil {
@@ -100,7 +109,7 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 					Err: true,
 				}
 			}
-			go stopBackup(receivedBackupCommand.Name, receivedBackupCommand.BackupJobId, serverConfigCopy)
+			go stopBackup(receivedBackupCommand.Name, receivedBackupCommand.BackupJobId, serverConfigCopy, backupJobsState)
 			return shared.ResponseBackupCommand{
 				Name: receivedBackupCommand.Name,
 				Id: receivedBackupCommand.Id,
@@ -134,10 +143,16 @@ func startBackup (name string, jobUuid string, serverConfigCopy config.CfgTempla
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
-func stopBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate){
+func stopBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate, backupJobsState *shared.BackupJobsState){
 	// TODO - if $jobUuid is empty string then stop whatever is the current running backup for the given $name (and
 	// figure out the UUID in order to correctly log it in the below logger call
 	logger.Infof("Stopping backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 	// TODO - implement stop; in the mean time sleep for 20 seconds and then mark job as stopped
 	time.Sleep(20 * time.Second)
+	err := backupJobsState.MarkStopped(name, loggingContext + ".stopBackup",
+		jobUuid, true)
+	if err != nil {
+		logger.Warnf("Encountered an error when trying to mark backup job '%s' having job id '%s' as 'stopped'. " +
+			"The error was: %s", name, jobUuid, err)
+	}
 }

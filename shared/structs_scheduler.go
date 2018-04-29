@@ -10,6 +10,7 @@ import (
 
 const ErrJobAlreadyRunning = "job already running"
 const ErrJobAlreadyStopped = "job already stopped"
+const ErrJobAlreadyStopping = "job already stopping"
 
 type CommWithSchedulerForBackup struct {
 	// this needs to be locked before acquiring the channel to send messages to the scheduler goroutine or read messages
@@ -97,7 +98,7 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
-		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after reading running " +
+		log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Read lock released after reading running " +
 			"backup jobs struct")
 	}()
 	// add state of running jobs
@@ -119,13 +120,14 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 }
 
 // checks if a given job is running. Returns true if running, false otherwise
+// ("stopping" state is considered running too)
 func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext string) bool {
 	log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Acquiring read lock before reading running " +
 		"backup jobs struct")
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
-		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after reading running " +
+		log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Read lock released after reading running " +
 			"backup jobs struct")
 	}()
 	for _, job := range jobs.Running {
@@ -143,7 +145,33 @@ func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext str
 	return false
 }
 
+// checks if a given job is stopping. Returns true if stopping, false otherwise
+func (jobs *BackupJobsState) IsStopping(name string, JobId string, logContext string) bool {
+	log.WithFields(log.Fields{"context": logContext + ".IsStopping"}).Debug("Acquiring read lock before reading running " +
+		"backup jobs struct")
+	jobs.Lock.RLock()
+	defer func() {
+		jobs.Lock.RUnlock()
+		log.WithFields(log.Fields{"context": logContext + ".IsStopping"}).Debug("Read lock released after reading running " +
+			"backup jobs struct")
+	}()
+	for _, job := range jobs.Running {
+		if name == job.Name {
+			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if JobId == "" && job.State == "stopping" {
+				return true
+			} else {
+				if JobId != "" && job.BackupJobId == JobId && job.State == "stopping"{
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJobId string) error {
+	log.WithFields(log.Fields{"context": logContext}).Debugf("Marking job '%s' as 'running'", name)
 	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read/write lock before updating running " +
 		"backup jobs struct")
 	jobs.Lock.Lock()
@@ -169,7 +197,17 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 
 
 // If $stopped == false then mark job as "stopping"; if $stopped == true then remove job from Running Jobs list
+// the $stopped bool parameter signifies when having value "false" the job state should be changed to "stopping" while
+// when the parameter is "true" then the job has been stopped and it should be removed from the list of running jobs
 func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJobId string, stopped bool) error {
+	var state string
+	if stopped{
+		state = "stopped"
+	} else {
+		state = "stopping"
+	}
+	log.WithFields(log.Fields{"context": logContext}).Debugf("Marking job '%s' having job id '%s' as '%s'", name,
+		BackupJobId, state)
 	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read/write lock before updating running " +
 		"backup jobs struct")
 	jobs.Lock.Lock()
