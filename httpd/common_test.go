@@ -12,6 +12,7 @@ import (
 	"cloudbackup/testutils"
 	"os"
 	"io/ioutil"
+	"encoding/json"
 )
 
 
@@ -476,8 +477,150 @@ func TestValidateJsonHTTPInput3(t *testing.T) {
 		t.Fatal("ValidateJsonHTTPInput() did not fail to validate string which was json but had incorrect value for Content-Type instead of 'application/json'")
 	}
 
-	expected_msg := "POST 'Content-Type' is not of type 'application/json'"
-	if err.Error() != expected_msg {
-		t.Fatalf("Expected error to be: '%s' but it was '%s'", expected_msg, err.Error())
+	expectedMsg := "POST 'Content-Type' is not of type 'application/json'"
+	if err.Error() != expectedMsg {
+		t.Fatalf("Expected error to be: '%s' but it was '%s'", expectedMsg, err.Error())
+	}
+}
+
+func TestJSONError1(t *testing.T) {
+	input := "[{\"Id\": 100, \"Name\": \"Go\"}, {\"Id\": 200, \"Name\": \"Java\"}]"
+	req := httptest.NewRequest("POST", "http://example.com/foo", strings.NewReader(input))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	codestring := "codestring"
+	messagestring := "messagestring"
+	JSONError(w, 300, codestring, messagestring)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != 300 {
+		t.Fatalf("calling JSONError() passing http code '300' but got as reply HTTP code '%d' and response " +
+			"body '%s'", resp.StatusCode, body)
+	}
+
+	// ValidateJsonHTTPInput() succeeding means that reply contains both 'Content-Type' = 'application/json' and also
+	// valid json
+	_, err := ValidateJsonHTTPInput(w, req)
+	if err != nil {
+		t.Fatalf("JSONError() output was not validated by ValidateJsonHTTPInput(). Received error was '%s'", err)
+	}
+
+	var bodyStruct struct {
+		Code string `json:"code"`
+		Message  string `json:"message"`
+	}
+	// no point in checking again if json correctly unMarshalls
+	_ = json.Unmarshal(body, &bodyStruct)
+	if bodyStruct.Code != codestring {
+		t.Fatalf("Response from JSONError() was expected to have code='%s' but instead it's value was: %s",
+			codestring, bodyStruct.Code)
+	}
+
+	if bodyStruct.Message != messagestring {
+		t.Fatalf("Response from JSONError() was expected to have message='%s' but instead it's value was: %s",
+			messagestring, bodyStruct.Message)
+	}
+}
+
+func TestJSONSuccess1(t *testing.T) {
+	input := "[{\"Id\": 100, \"Name\": \"Go\"}, {\"Id\": 200, \"Name\": \"Java\"}]"
+	req := httptest.NewRequest("POST", "http://example.com/foo", strings.NewReader(input))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	codestring := "codestring"
+	messagestring := "messagestring"
+	JSONSuccess(w, codestring, messagestring)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("reply from JSONSuccess() didn't have http code '200' but got as reply HTTP code '%d' and " +
+			"response body '%s'", resp.StatusCode, body)
+	}
+
+	// ValidateJsonHTTPInput() succeeding means that reply contains both 'Content-Type' = 'application/json' and also
+	// valid json
+	_, err := ValidateJsonHTTPInput(w, req)
+	if err != nil {
+		t.Fatalf("JSONSuccess() output was not validated by ValidateJsonHTTPInput(). Received error was '%s'", err)
+	}
+
+	var bodyStruct struct {
+		Code string `json:"code"`
+		Message  string `json:"message"`
+	}
+	// no point in checking again if json correctly unMarshalls
+	_ = json.Unmarshal(body, &bodyStruct)
+	if bodyStruct.Code != codestring {
+		t.Fatalf("Response from JSONSuccess() was expected to have code='%s' but instead it's value was: %s",
+			codestring, bodyStruct.Code)
+	}
+
+	if bodyStruct.Message != messagestring {
+		t.Fatalf("Response from JSONSuccess() was expected to have message='%s' but instead it's value was: %s",
+			messagestring, bodyStruct.Message)
+	}
+}
+
+func TestJSONSuccessWithResult1(t *testing.T) {
+	input := "[{\"Id\": 100, \"Name\": \"Go\"}, {\"Id\": 200, \"Name\": \"Java\"}]"
+	req := httptest.NewRequest("POST", "http://example.com/foo", strings.NewReader(input))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	codestring := "codestring"
+	messagestring := "messagestring"
+	resultStruct := struct {
+		Key1 string
+		Key2 string
+	}{
+		"somevalue1",
+		"somevalue2",
+	}
+	JSONSuccessWithResult(w, codestring, messagestring, resultStruct)
+
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("reply from JSONSuccessWithResult() didn't have http code '200' but got as reply HTTP code '%d' and " +
+			"response body '%s'", resp.StatusCode, body)
+	}
+
+	// ValidateJsonHTTPInput() succeeding means that reply contains both 'Content-Type' = 'application/json' and also
+	// valid json
+	_, err := ValidateJsonHTTPInput(w, req)
+	if err != nil {
+		t.Fatalf("JSONSuccessWithResult() output was not validated by ValidateJsonHTTPInput(). Received error was '%s'", err)
+	}
+
+	var bodyStruct struct {
+		Code string `json:"code"`
+		Message  string `json:"message"`
+		Result interface{} `json:"result"`
+	}
+	// no point in checking again if json correctly unMarshalls
+	_ = json.Unmarshal(body, &bodyStruct)
+	if bodyStruct.Code != codestring {
+		t.Fatalf("Response from JSONSuccessWithResult() was expected to have code='%s' but instead it's value was: %s",
+			codestring, bodyStruct.Code)
+	}
+
+	if bodyStruct.Message != messagestring {
+		t.Fatalf("Response from JSONSuccessWithResult() was expected to have message='%s' but instead it's value was: %s",
+			messagestring, bodyStruct.Message)
+	}
+
+	m := make(map[string]string)
+	m["Key1"]="somevalue1"
+	m["Key2"]="somevalue2"
+	if bodyStruct.Result == "" || bodyStruct.Result == nil {
+		t.Fatalf("Response from JSONSuccessWithResult() was expected to have result= non empty but instead it's value was: %+v",
+			bodyStruct.Result)
 	}
 }
