@@ -368,7 +368,7 @@ definitions:
       status: 
         type: string
         example: "running"
-        pattern: ^(running|stopped)$
+        pattern: ^(running|stopping|stopped)$
       next_run:
         type: string
         example: "2009-11-10T23:00:00Z"
