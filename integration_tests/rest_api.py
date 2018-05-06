@@ -195,6 +195,23 @@ class TestRestAPI(unittest.TestCase):
         current_md5 = get_md5_sum(self.config_file_path)
         self.assertNotEqual(orig_md5, current_md5)
 
+    # check list of backup jobs
+    def test_get_backup_jobs_list(self):
+        r = requests.get(self.base_url + self.api_root + '/backup/list', auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, "Expected status code 200 for GET "
+                                             "{}".format(self.base_url + self.api_root + '/backup/list'))
+        # check if response can be JSON decoded
+        response = r.json()
+        # check response has expected keys
+        self.assertIn("code", response, "Response is missing the 'code' key ")
+        self.assertIn("message", response, "Response is missing the 'message' key ")
+        self.assertIn("result", response, "Response is missing the 'result' key ")
+        self.assertGreaterEqual(2, len(response['result']), "'result' key should have at least 2 results contained")
+        self.assertIn("name", response['result'][0], "response['result'][0] is missing the 'name' key ")
+        self.assertIn("state", response['result'][0], "response['result'][0] is missing the 'state' key ")
+        self.assertIn("start_time", response['result'][0], "response['result'][0] is missing the 'start_time' key ")
+        self.assertIn("next_run", response['result'][0], "response['result'][0] is missing the 'next_run' key ")
+
 
 def get_args():
     """ Get arguments from CLI """

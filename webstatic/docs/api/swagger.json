@@ -510,7 +510,7 @@
         "status": {
           "type": "string",
           "example": "running",
-          "pattern": "^(running|stopped)$"
+          "pattern": "^(running|stopping|stopped)$"
         },
         "next_run": {
           "type": "string",
