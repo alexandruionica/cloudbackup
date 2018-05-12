@@ -10,6 +10,8 @@ import subprocess
 import time
 from pprint import pprint
 
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+
 if platform.system() == 'Windows':
     cmd_default = ".\cloudbackup.exe"
 else:
