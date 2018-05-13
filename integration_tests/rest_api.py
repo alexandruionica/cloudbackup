@@ -34,6 +34,25 @@ class TestRestAPI(unittest.TestCase):
             os.remove(self.config_file_path)
         self.daemon.kill()
 
+    def ValidatedAndDecodeResponse(self, r, url):
+        """
+        Checks for the standard stuff we expect in any api response. Returns json decoded response
+        :param r: object returned by requests.get()
+        :param url: url which was requested (used for error messages)
+        :return: json decoded response from requests.get()
+        """
+        self.assertIn('Content-Type', r.headers, "Response for {} is missing header 'Content-Type'".format(url))
+        self.assertEqual(r.headers['Content-Type'], 'application/json',
+                         "Response for {} is has header 'Content-Type' of value '{}' instead of "
+                         "'application/json'".format(url, r.headers['Content-Type']))
+        response = r.json()
+        self.assertIn("code", response, "Response for {} is missing the 'code' key. Response was:"
+                                        " {}".format(url, r.text))
+        self.assertIn("message", response, "Response for {} is missing the 'message' key. Response was:"
+                                           " {}".format(url, r.text))
+
+        return response
+
     # this isn't actually part of the API but it's a simple enough test
     def test_root(self):
         r = requests.get(self.base_url)
@@ -220,43 +239,39 @@ class TestRestAPI(unittest.TestCase):
     # starts a backup job and then stops it
     def test_backup_job_start_stop(self):
         # fetch list of jobs and start the first one
-        r = requests.get(self.base_url + self.api_root + '/backup/list', auth=(self.username, self.password))
-        self.assertEqual(r.status_code, 200, "Expected status code 200 for GET "
-                                             "{}".format(self.base_url + self.api_root + '/backup/list'))
-        response = r.json()
+        url = self.base_url + self.api_root + '/backup/list'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
         job_name = response['result'][0]['name']
         logging.info("Starting backup for job: {}".format(job_name))
-        req = {"name": job_name}
 
         # attempt to start backup using a user having only read-only access (should not be able to start backup)
-        r = requests.post(self.base_url + self.api_root + '/backup/start', auth=(self.username2, self.password2),
-                          json=req)
-        self.assertEqual(r.status_code, 403, r.text)
-        # check response has expected keys
-        response = r.json()
-        self.assertIn("code", response, "Response is missing the 'code' key. Response was: {}".format(r.text))
-        self.assertIn("message", response, "Response is missing the 'message' key. Response was: {}".format(r.text))
+        req = {"name": job_name}
+        url = self.base_url + self.api_root + '/backup/start'
+        r = requests.post(url=url, auth=(self.username2, self.password2), json=req)
+        self.assertEqual(r.status_code, 403, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
 
         # attempt to start backup with user having correct privileges
-        r = requests.post(self.base_url + self.api_root + '/backup/start', auth=(self.username, self.password),
-                          json=req)
-        self.assertEqual(r.status_code, 200, r.text)
-        response = r.json()
+        url = self.base_url + self.api_root + '/backup/start'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
         # check response has expected keys
-        self.assertIn("code", response, "Response is missing the 'code' key. Response was: {}".format(r.text))
-        self.assertIn("message", response, "Response is missing the 'message' key. Response was: {}".format(r.text))
-        self.assertIn("result", response, "Response is missing the 'result' key. Response was: {}".format(r.text))
-        self.assertIn("name", response['result'], "response['result'] is missing the 'name' key. Response was:"
-                                                  " {}".format(r.text))
-        self.assertIn("job_id", response['result'], "response['result'] is missing the 'job_id' key. Response was:"
-                                                    " {}".format(r.text))
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertIn("name", response['result'], "For {} response['result'] is missing the 'name' key. Response was:"
+                                                  " {}".format(url, r.text))
+        self.assertIn("job_id", response['result'], "For {} response['result'] is missing the 'job_id' key. Response "
+                                                    "was: {}".format(url, r.text))
         job_id = response['result']['job_id']
 
         # fetch again list of jobs and check that status of job is now "running"
-        r = requests.get(self.base_url + self.api_root + '/backup/list', auth=(self.username, self.password))
-        self.assertEqual(r.status_code, 200, "Expected status code 200 for GET "
-                                             "{}".format(self.base_url + self.api_root + '/backup/list'))
-        response = r.json()
+        url = self.base_url + self.api_root + '/backup/list'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
         is_running = False
         job_id_matches = False
         found_job_id = ""
@@ -273,22 +288,205 @@ class TestRestAPI(unittest.TestCase):
                                         "job id '{}' but found instead '{}'. Full response is:"
                                         " {}".format(job_name, job_id, found_job_id, r.text))
         # check response has expected keys
-        self.assertIn("code", response, "Response is missing the 'code' key. Response was: {}".format(r.text))
-        self.assertIn("message", response, "Response is missing the 'message' key. Response was: {}".format(r.text))
-        self.assertIn("result", response, "Response is missing the 'result' key. Response was: {}".format(r.text))
-        self.assertGreaterEqual(2, len(response['result']), "'result' key should have at least 2 results contained. "
-                                                            "Response was: {}".format(r.text))
-        self.assertIn("name", response['result'][0], "response['result'][0] is missing the 'name' key. Response was: "
-                                                     "{}".format(r.text))
-        self.assertIn("state", response['result'][0], "response['result'][0] is missing the 'state' key. Response was: "
-                                                      "{}".format(r.text))
-        self.assertIn("start_time", response['result'][0], "response['result'][0] is missing the 'start_time' key. "
-                                                           "Response was: {}".format(r.text))
-        self.assertIn("next_run", response['result'][0], "response['result'][0] is missing the 'next_run' key. "
-                                                         "Response was: {}".format(r.text))
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertGreaterEqual(2, len(response['result']), "for {} 'result' key should have at least 2 results "
+                                                            "contained. Response was: {}".format(url, r.text))
+        self.assertIn("name", response['result'][0], "for {} response['result'][0] is missing the 'name' key. "
+                                                     "Response was: {}".format(url, r.text))
+        self.assertIn("state", response['result'][0], "for {} response['result'][0] is missing the 'state' key. "
+                                                      "Response was: {}".format(url, r.text))
+        self.assertIn("start_time", response['result'][0], "for {} response['result'][0] is missing the 'start_time' "
+                                                           "key. Response was: {}".format(url, r.text))
+        self.assertIn("next_run", response['result'][0], "for {} response['result'][0] is missing the 'next_run' key. "
+                                                         "Response was: {}".format(url, r.text))
+
         # attempt to stop backup using user which doesn't have the right privileges
+        req = {"name": job_name}
+        url = self.base_url + self.api_root + '/backup/stop'
+        r = requests.post(url=url, auth=(self.username2, self.password2), json=req)
+        self.assertEqual(r.status_code, 403, url + " " + r.text)
+        self.assertIn("code", response, "Response for {} is missing the 'code' key. Response was:"
+                                        " {}".format(url, r.text))
+        self.assertIn("message", response, "Response for {} is missing the 'message' key. Response was:"
+                                           " {}".format(url, r.text))
 
         # attempt to stop backup using user which has the right privileges
+        req = {"name": job_name}
+        url = self.base_url + self.api_root + '/backup/stop'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertIn("name", response['result'], "For {} response['result'] is missing the 'name' key. Response was:"
+                                                  " {}".format(url, r.text))
+        self.assertIn("job_id", response['result'], "For {} response['result'] is missing the 'job_id' key. Response "
+                                                    "was: {}".format(url, r.text))
+
+        # list again jobs and check that for the stopped job state is one of "stopping" or "stopped"
+        url = self.base_url + self.api_root + '/backup/list'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = r.json()
+        is_stopping_or_stopped = False
+        for backup in response['result']:
+            if backup['name'] == job_name and (backup['state'] == 'stopping' or backup['state'] == 'stopped'):
+                is_stopping_or_stopped = True
+        self.assertTrue(is_stopping_or_stopped, "did not manage to find a backup for job having name: '{}' and state "
+                                                "one of 'stopping' or 'stopped'. Response from server "
+                                                "was: {}".format(job_name, r.text))
+
+    # starts a backup job and then stops it
+    def test_backup_job_start_stop2(self):
+        # fetch list of jobs and start the first one
+        url = self.base_url + self.api_root + '/backup/list'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        job_name = response['result'][0]['name']
+        job2_name = response['result'][1]['name']
+        logging.info("Starting backup for job: {}".format(job_name))
+
+        # attempt to start backup with user having correct privileges but using an incorrect format
+        req = {"nameASD": job_name}
+        url = self.base_url + self.api_root + '/backup/start'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 400, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertEquals("invalid json", response["code"])
+
+        # attempt to start backup with user having correct privileges but using inexisting job name
+        req = {"name": '345sdf-0213odas-323'}
+        url = self.base_url + self.api_root + '/backup/start'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 404, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertEquals("not found", response["code"])
+
+        # attempt to start backup with user having correct privileges
+        req = {"name": job_name}
+        url = self.base_url + self.api_root + '/backup/start'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        # check response has expected keys
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertIn("name", response['result'], "For {} response['result'] is missing the 'name' key. Response was:"
+                                                  " {}".format(url, r.text))
+        self.assertIn("job_id", response['result'], "For {} response['result'] is missing the 'job_id' key. Response "
+                                                    "was: {}".format(url, r.text))
+        job_id = response['result']['job_id']
+
+        # fetch again list of jobs and check that status of job is now "running"
+        url = self.base_url + self.api_root + '/backup/list'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        # check response has expected keys
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertGreaterEqual(2, len(response['result']), "for {} 'result' key should have at least 2 results "
+                                                            "contained. Response was: {}".format(url, r.text))
+        self.assertIn("name", response['result'][0], "for {} response['result'][0] is missing the 'name' key. "
+                                                     "Response was: {}".format(url, r.text))
+        self.assertIn("state", response['result'][0], "for {} response['result'][0] is missing the 'state' key. "
+                                                      "Response was: {}".format(url, r.text))
+        self.assertIn("start_time", response['result'][0], "for {} response['result'][0] is missing the 'start_time' "
+                                                           "key. Response was: {}".format(url, r.text))
+        self.assertIn("next_run", response['result'][0], "for {} response['result'][0] is missing the 'next_run' key. "
+                                                         "Response was: {}".format(url, r.text))
+        is_running = False
+        job_id_matches = False
+        found_job_id = ""
+        for backup in response['result']:
+            if backup['name'] == job_name and backup['state'] == 'running':
+                is_running = True
+                if backup['job_id'] == job_id:
+                    job_id_matches = True
+                else:
+                    found_job_id = backup['job_id']
+        self.assertTrue(is_running, "did not manage to find a running backup for job having name: '{}'. "
+                                    "Response from server was: {}".format(job_name, r.text))
+        self.assertTrue(job_id_matches, "While job named '{}' is running, the job id does not match. Expected to find"
+                                        "job id '{}' but found instead '{}'. Full response is:"
+                                        " {}".format(job_name, job_id, found_job_id, r.text))
+
+        # attempt to stop backup using user which has the right privileges but calling an inexisting job name
+        req = {"name": "asdasd23das34asdas23"}
+        url = self.base_url + self.api_root + '/backup/stop'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 400, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertEquals("client supplied incorrect data", response["code"])
+
+        # attempt to stop backup using user which has the right privileges but calling an inexisting job name and
+        # inexisting job id
+        req = {"name": "asdasd23das34asdas23",
+               "job_id": 'blabla'}
+        url = self.base_url + self.api_root + '/backup/stop'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 400, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertEquals("client supplied incorrect data", response["code"])
+
+        # attempt to stop backup using user which has the right privileges but calling an incorrect job id
+        req = {"name": job_name,
+               "job_id": 'blabla'}
+        url = self.base_url + self.api_root + '/backup/stop'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 400, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertEquals("client supplied incorrect data", response["code"])
+
+        # attempt to stop backup using user which has the right privileges but calling a job name which isn't running
+        # now
+        req = {"name": job2_name}
+        url = self.base_url + self.api_root + '/backup/stop'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 400, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertEquals("client supplied incorrect data", response["code"])
+
+        # attempt to stop backup using user which has the right privileges and using a correct job_id
+        req = {"name": job_name,
+               "job_id": job_id}
+        url = self.base_url + self.api_root + '/backup/stop'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertIn("name", response['result'], "For {} response['result'] is missing the 'name' key. Response was:"
+                                                  " {}".format(url, r.text))
+        self.assertIn("job_id", response['result'], "For {} response['result'] is missing the 'job_id' key. Response "
+                                                    "was: {}".format(url, r.text))
+        # list again jobs and check that for the stopped job state is one of "stopping" or "stopped"
+        url = self.base_url + self.api_root + '/backup/list'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        # check response has expected keys
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertGreaterEqual(2, len(response['result']), "for {} 'result' key should have at least 2 results "
+                                                            "contained. Response was: {}".format(url, r.text))
+        self.assertIn("name", response['result'][0], "for {} response['result'][0] is missing the 'name' key. "
+                                                     "Response was: {}".format(url, r.text))
+        self.assertIn("state", response['result'][0], "for {} response['result'][0] is missing the 'state' key. "
+                                                      "Response was: {}".format(url, r.text))
+        self.assertIn("start_time", response['result'][0], "for {} response['result'][0] is missing the 'start_time' "
+                                                           "key. Response was: {}".format(url, r.text))
+        self.assertIn("next_run", response['result'][0], "for {} response['result'][0] is missing the 'next_run' key. "
+                                                         "Response was: {}".format(url, r.text))
+        is_stopping_or_stopped = False
+        for backup in response['result']:
+            if backup['name'] == job_name and (backup['state'] == 'stopping' or backup['state'] == 'stopped'):
+                is_stopping_or_stopped = True
+        self.assertTrue(is_stopping_or_stopped, "did not manage to find a backup for job having name: '{}' and state "
+                                                "one of 'stopping' or 'stopped'. Response from server "
+                                                "was: {}".format(job_name, r.text))
 
 
 def get_args():
