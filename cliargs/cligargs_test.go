@@ -22,7 +22,7 @@ func TestExecute1OfArgsCommandConfigCommandValidate(t *testing.T){
 		}
 	}()
 
-	testobj := &ArgsCommandConfigCommandValidate {
+	testobj := &ArgsCommandServerConfigValidate{
 		Debug: false,
 		ConfigFile: path,
 	}
@@ -44,7 +44,7 @@ func TestExecute1OfArgsCommandConfigCommandValidate(t *testing.T){
 
 // test with missing config file
 func TestExecute2OfArgsCommandConfigCommandValidate(t *testing.T){
-	testobj := &ArgsCommandConfigCommandValidate {
+	testobj := &ArgsCommandServerConfigValidate{
 		Debug: true,
 		ConfigFile: "a/file/which/does/not/exist",
 	}

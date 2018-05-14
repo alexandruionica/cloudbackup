@@ -500,7 +500,7 @@
         "prefix"
       ]
     },
-    "BackupJobList": {
+    "ResultBackupJobList": {
       "type": "object",
       "properties": {
         "name": {
@@ -523,7 +523,7 @@
         }
       }
     },
-    "BackupJobStart": {
+    "ResultBackupJobStart": {
       "type": "object",
       "properties": {
         "name": {
@@ -609,7 +609,7 @@
         "result": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/BackupJobList"
+            "$ref": "#/definitions/ResultBackupJobList"
           }
         }
       }
@@ -626,7 +626,7 @@
           "example": "success"
         },
         "result": {
-          "$ref": "#/definitions/BackupJobStart"
+          "$ref": "#/definitions/ResultBackupJobStart"
         }
       }
     }

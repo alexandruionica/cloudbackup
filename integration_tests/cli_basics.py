@@ -30,9 +30,9 @@ class TestCliBasics(unittest.TestCase):
         self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
                                                          "{}".format(cmd_default, result))
 
-    # ./cloudbackup config dump -c config.yaml shows only obfuscated passwords
+    # ./cloudbackup server config dump -c config.yaml shows only obfuscated passwords
     def test_cmd_dump_obfuscated_passwords(self):
-        result = run_shell_cmd(self.cmd + " config dump -c " + self.config_file_path)
+        result = run_shell_cmd(self.cmd + " server config dump -c " + self.config_file_path)
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
         line_num = 0
@@ -41,13 +41,14 @@ class TestCliBasics(unittest.TestCase):
                 pass_field = line.split(':')[1]
                 password = pass_field.split('"')[1]
                 re_result = re.match('^(\*+)|()$', password)
-                self.assertTrue(re_result, "output from './cloudbackup config dump -c config.yaml' has on line {} a"
-                                           " password which doesn't seem to be obfuscated:\n{}".format(line_num, line))
+                self.assertTrue(re_result, "output from './cloudbackup server config dump -c config.yaml' has on line "
+                                           "{} a password which doesn't seem to be "
+                                           "obfuscated:\n{}".format(line_num, line))
             line_num += 1
 
-    # ./cloudbackup config dump -c config.yaml produces at least 89 lines of output
+    # ./cloudbackup server config dump -c config.yaml produces at least 89 lines of output
     def test_cmd_dump_output_length(self):
-        result = run_shell_cmd(self.cmd + " config dump -c " + self.config_file_path)
+        result = run_shell_cmd(self.cmd + " server config dump -c " + self.config_file_path)
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
         line_num = 0
@@ -56,13 +57,13 @@ class TestCliBasics(unittest.TestCase):
         self.assertGreater(line_num, 88, "Expected output from {} to be at least 88 lines long. Command output object: "
                                          "{}".format(cmd_default, result))
 
-    # ./cloudbackup config validate -c config.yaml  returns 0 with valid config file
+    # ./cloudbackup server config validate -c config.yaml  returns 0 with valid config file
     def test_cmd_validate_config1(self):
-        result = run_shell_cmd(self.cmd + " config validate -c " + self.config_file_path)
+        result = run_shell_cmd(self.cmd + " server config validate -c " + self.config_file_path)
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
 
-    # ./cloudbackup config validate -c config.yaml  returns 1 with invalid config file (valid yaml, invalid logic)
+    # ./cloudbackup server config validate -c config.yaml  returns 1 with invalid config file (valid yaml, invalid logic)
     def test_cmd_validate_config2(self):
         # load valid yaml data from tmp config, alter it a bit to cause validation to fail and then write it back
         with open(self.config_file_path) as fd:
@@ -74,13 +75,13 @@ class TestCliBasics(unittest.TestCase):
         with open(self.config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
 
-        result = run_shell_cmd(self.cmd + " config validate -c " + self.config_file_path)
+        result = run_shell_cmd(self.cmd + " server config validate -c " + self.config_file_path)
         self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
                                                          "{}".format(cmd_default, result))
 
-    # ./cloudbackup config example produces valid yaml, at least 60 lines long
+    # ./cloudbackup server config example produces valid yaml, at least 60 lines long
     def test_cmd_example_config1(self):
-        result = run_shell_cmd(self.cmd + " config example")
+        result = run_shell_cmd(self.cmd + " server config example")
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
         line_num = 0
@@ -91,10 +92,10 @@ class TestCliBasics(unittest.TestCase):
         # if this raises and exception then we got a problem
         yaml.load(result['result'].stdout.decode("utf-8"))
 
-    # ./cloudbackup hash-password
+    # ./cloudbackup misc hash-password
     def test_cmd_hash_password(self):
         test_password = 'ui7Ahtae\Quai5ia\W;oo"ri'
-        proc = run_interactive_shell_cmd(self.cmd + " hash-password")
+        proc = run_interactive_shell_cmd(self.cmd + " misc hash-password")
         stdout_data, stderr_data = proc.communicate(str.encode(test_password + '\n'))
         if proc.poll() is None:
             proc.kill()
@@ -108,7 +109,7 @@ class TestCliBasics(unittest.TestCase):
                 # check that generated hash matches initial password
                 self.assertTrue(bcrypt.checkpw(str.encode(test_password), str.encode(bcrypthash)))
 
-    # ./cloudbackup start -c /path/to/temporary/config.yaml
+    # ./cloudbackup server start -c /path/to/temporary/config.yaml
     def test_cmd_start(self):
         base_url = "http://127.0.0.1:8080"
         daemon = BackupDaemon(config_path=self.config_file_path, base_url=base_url)
