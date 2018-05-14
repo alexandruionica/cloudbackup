@@ -16,32 +16,40 @@ const loggingContext = "cliargs"
 
 // top level CLI options and arguments
 type Args struct {
-	Config ArgsCommandConfig `command:"config" description:"configuration file related options"`
-	Start ArgsCommandStart `command:"start" description:"Start the backup daemon"`
-	HashPassword ArgsCommandHash `command:"hash-password" description:"Hash a password using bcrypt. This is a convenience function so you can easily hash passwords before adding them to the yaml config file."`
+	Server ArgsCommandServer  `command:"server" description:"Backup server related commands and options"`
+	Misc   ArgsCommandMisc    `command:"misc" description:"Miscellaneous commands"`
 }
 
-type ArgsCommandConfig struct {
-	Validate ArgsCommandConfigCommandValidate `command:"validate" description:"validate provided yaml configuration file"`
-	Dump ArgsCommandConfigCommandDump `command:"dump" description:"dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
-	Example ArgsCommandConfigCommandExample `command:"example" description:"show an example .yaml config file with all possible statements"`
+type ArgsCommandServer struct {
+	Config ArgsCommandServerConfig `command:"config" description:"configuration file related options"`
+	Start  ArgsCommandServerStart  `command:"start" description:"Start the backup server"`
 }
 
-type ArgsCommandConfigCommandValidate struct {
+type ArgsCommandServerConfig struct {
+	Validate ArgsCommandServerConfigValidate `command:"validate" description:"validate provided yaml configuration file"`
+	Dump     ArgsCommandServerConfigDump     `command:"dump" description:"dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
+	Example  ArgsCommandConfigCommandExample `command:"example" description:"show an example .yaml config file with all possible statements"`
+}
+
+type ArgsCommandServerConfigValidate struct {
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration"`
 }
 
-type ArgsCommandConfigCommandDump struct {
+type ArgsCommandServerConfigDump struct {
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration"`
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 }
 
-type ArgsCommandHash struct {
+type ArgsCommandMisc struct {
+	HashPassword ArgsCommandMiscHash `command:"hash-password" description:"Hash a password using bcrypt. This is a convenience function so you can easily hash passwords before adding them to the yaml config file of the server."`
+}
+
+type ArgsCommandMiscHash struct {
 }
 
 // arguments for an actual Daemon start
-type ArgsCommandStart struct {
+type ArgsCommandServerStart struct {
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 	Quiet bool `short:"q" long:"quiet" description:"Set logging to quiet: show only Warning or above log level messages"`
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug"`
@@ -50,7 +58,7 @@ type ArgsCommandStart struct {
 
 type ArgsCommandConfigCommandExample struct {}
 
-func (command *ArgsCommandConfigCommandValidate) Execute(args []string) error {
+func (command *ArgsCommandServerConfigValidate) Execute(args []string) error {
 	if command.Debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
@@ -67,7 +75,7 @@ func (command *ArgsCommandConfigCommandValidate) Execute(args []string) error {
 	return nil
 }
 
-func (command *ArgsCommandConfigCommandDump) Execute(args []string) error {
+func (command *ArgsCommandServerConfigDump) Execute(args []string) error {
 	if command.Debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
@@ -87,7 +95,7 @@ func (command *ArgsCommandConfigCommandDump) Execute(args []string) error {
 }
 
 // this is where the main stuff actually starts
-func (command *ArgsCommandStart) Execute(args []string) error {
+func (command *ArgsCommandServerStart) Execute(args []string) error {
 	loggingArgs := misc.LoggingArgs{
 		Quiet: command.Quiet,
 		Debug: command.Debug,
@@ -104,7 +112,7 @@ func (command *ArgsCommandConfigCommandExample) Execute(args []string) error {
 	return nil
 }
 
-func (command *ArgsCommandHash) Execute(args []string) error {
+func (command *ArgsCommandMiscHash) Execute(args []string) error {
 	hash, err := password.ReadPassFromCli()
 	if err != nil {
 		os.Exit(1)

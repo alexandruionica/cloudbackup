@@ -26,7 +26,7 @@ data_dir: ./tmp/
 html_dir: webstatic
 user:
   - name: testuser1
-    # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup hash-password to hash passwords
+    # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup misc hash-password to hash passwords
     pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
     # can be either 'read' or 'write' . 'write' basically gives access to all the API while 'read' only to read-only
     #  operations so for example it excludes things starting/stopping backups or adjusting the configuration
@@ -140,11 +140,11 @@ class BackupDaemon(object):
 
         if platform.system() == 'Windows':
             # Windows needs absolute paths because we're not running the command in a shell
-            full_cmd = os.path.abspath(cmd) + ' start -c {}'.format(os.path.abspath(config_path))
+            full_cmd = os.path.abspath(cmd) + ' server start -c {}'.format(os.path.abspath(config_path))
             cmd_with_args = full_cmd
         else:
-            full_cmd = cmd + ' start -c {}'.format(config_path)
-            cmd_with_args = shlex.split(cmd + ' start -c {}'.format(config_path))
+            full_cmd = cmd + ' server start -c {}'.format(config_path)
+            cmd_with_args = shlex.split(cmd + ' server start -c {}'.format(config_path))
         logging.info('Running the backup daemon using: {}'.format(full_cmd))
         self.proc = subprocess.Popen(cmd_with_args, shell=False, stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE)
