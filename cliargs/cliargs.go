@@ -17,18 +17,19 @@ const loggingContext = "cliargs"
 // top level CLI options and arguments
 type Args struct {
 	Server ArgsCommandServer  `command:"server" description:"Backup server related commands and options"`
+	Client ArgsCommandClient  `command:"client" description:"Backup client related commands and options"`
 	Misc   ArgsCommandMisc    `command:"misc" description:"Miscellaneous commands"`
 }
 
 type ArgsCommandServer struct {
-	Config ArgsCommandServerConfig `command:"config" description:"configuration file related options"`
+	Config ArgsCommandServerConfig `command:"config" description:"Server configuration file related options"`
 	Start  ArgsCommandServerStart  `command:"start" description:"Start the backup server"`
 }
 
 type ArgsCommandServerConfig struct {
-	Validate ArgsCommandServerConfigValidate `command:"validate" description:"validate provided yaml configuration file"`
-	Dump     ArgsCommandServerConfigDump     `command:"dump" description:"dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
-	Example  ArgsCommandConfigCommandExample `command:"example" description:"show an example .yaml config file with all possible statements"`
+	Validate ArgsCommandServerConfigValidate `command:"validate" description:"Validate provided yaml configuration file"`
+	Dump     ArgsCommandServerConfigDump     `command:"dump" description:"Dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
+	Example  ArgsCommandServerExample        `command:"example" description:"Show an example .yaml config file with all possible statements"`
 }
 
 type ArgsCommandServerConfigValidate struct {
@@ -41,13 +42,6 @@ type ArgsCommandServerConfigDump struct {
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 }
 
-type ArgsCommandMisc struct {
-	HashPassword ArgsCommandMiscHash `command:"hash-password" description:"Hash a password using bcrypt. This is a convenience function so you can easily hash passwords before adding them to the yaml config file of the server."`
-}
-
-type ArgsCommandMiscHash struct {
-}
-
 // arguments for an actual Daemon start
 type ArgsCommandServerStart struct {
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
@@ -56,7 +50,40 @@ type ArgsCommandServerStart struct {
 	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
 }
 
-type ArgsCommandConfigCommandExample struct {}
+type ArgsCommandServerExample struct {}
+
+type ArgsCommandMisc struct {
+	HashPassword ArgsCommandMiscHash `command:"hash-password" description:"Hash a password using bcrypt. This is a convenience function so you can easily hash passwords before adding them to the yaml config file of the server."`
+}
+
+type ArgsCommandMiscHash struct {
+}
+
+type ArgsCommandClient struct {
+	Config ArgsCommandClientConfig `command:"config" description:"Client configuration file related options"`
+	Backup ArgsCommandClientBackup `command:"backup" description:"Interact with backup jobs (start/stop/status)"`
+}
+
+type ArgsCommandClientConfig struct {
+	Validate ArgsCommandServerConfigValidate `command:"validate" description:"Validate provided yaml configuration file"`
+	Dump     ArgsCommandServerConfigDump     `command:"dump" description:"Dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
+	Example  ArgsCommandServerExample        `command:"example" description:"Show an example .yaml config file with all possible statements"`
+}
+
+type ArgsCommandClientBackup struct {
+	Start ArgsCommandClientBackupStart `command:"start" description:"Start a backup job"`
+	Stop  ArgsCommandClientBackupStop `command:"stop" description:"Stop a running backup job"`
+	List  ArgsCommandClientBackupList `command:"list" description:"List all backup jobs and a brief status for each of them"`
+}
+
+type ArgsCommandClientBackupStart struct {
+}
+
+type ArgsCommandClientBackupStop struct {
+}
+
+type ArgsCommandClientBackupList struct {
+}
 
 func (command *ArgsCommandServerConfigValidate) Execute(args []string) error {
 	if command.Debug {
@@ -106,7 +133,7 @@ func (command *ArgsCommandServerStart) Execute(args []string) error {
 	return nil
 }
 
-func (command *ArgsCommandConfigCommandExample) Execute(args []string) error {
+func (command *ArgsCommandServerExample) Execute(args []string) error {
 	fmt.Println(misc.SampleYamlConfig)
 	os.Exit(0)
 	return nil
