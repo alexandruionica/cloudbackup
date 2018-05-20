@@ -354,7 +354,7 @@ class TestRestAPI(unittest.TestCase):
         r = requests.post(url=url, auth=(self.username, self.password), json=req)
         self.assertEqual(r.status_code, 400, url + " " + r.text)
         response = self.ValidatedAndDecodeResponse(r, url)
-        self.assertEquals("invalid json", response["code"])
+        self.assertEqual("invalid json", response["code"])
 
         # attempt to start backup with user having correct privileges but using inexisting job name
         req = {"name": '345sdf-0213odas-323'}
@@ -362,7 +362,7 @@ class TestRestAPI(unittest.TestCase):
         r = requests.post(url=url, auth=(self.username, self.password), json=req)
         self.assertEqual(r.status_code, 404, url + " " + r.text)
         response = self.ValidatedAndDecodeResponse(r, url)
-        self.assertEquals("not found", response["code"])
+        self.assertEqual("not found", response["code"])
 
         # attempt to start backup with user having correct privileges
         req = {"name": job_name}
@@ -419,7 +419,7 @@ class TestRestAPI(unittest.TestCase):
         r = requests.post(url=url, auth=(self.username, self.password), json=req)
         self.assertEqual(r.status_code, 400, url + " " + r.text)
         response = self.ValidatedAndDecodeResponse(r, url)
-        self.assertEquals("client supplied incorrect data", response["code"])
+        self.assertEqual("client supplied incorrect data", response["code"])
 
         # attempt to stop backup using user which has the right privileges but calling an inexisting job name and
         # inexisting job id
@@ -429,7 +429,7 @@ class TestRestAPI(unittest.TestCase):
         r = requests.post(url=url, auth=(self.username, self.password), json=req)
         self.assertEqual(r.status_code, 400, url + " " + r.text)
         response = self.ValidatedAndDecodeResponse(r, url)
-        self.assertEquals("client supplied incorrect data", response["code"])
+        self.assertEqual("client supplied incorrect data", response["code"])
 
         # attempt to stop backup using user which has the right privileges but calling an incorrect job id
         req = {"name": job_name,
@@ -438,7 +438,7 @@ class TestRestAPI(unittest.TestCase):
         r = requests.post(url=url, auth=(self.username, self.password), json=req)
         self.assertEqual(r.status_code, 400, url + " " + r.text)
         response = self.ValidatedAndDecodeResponse(r, url)
-        self.assertEquals("client supplied incorrect data", response["code"])
+        self.assertEqual("client supplied incorrect data", response["code"])
 
         # attempt to stop backup using user which has the right privileges but calling a job name which isn't running
         # now
@@ -447,7 +447,7 @@ class TestRestAPI(unittest.TestCase):
         r = requests.post(url=url, auth=(self.username, self.password), json=req)
         self.assertEqual(r.status_code, 400, url + " " + r.text)
         response = self.ValidatedAndDecodeResponse(r, url)
-        self.assertEquals("client supplied incorrect data", response["code"])
+        self.assertEqual("client supplied incorrect data", response["code"])
 
         # attempt to stop backup using user which has the right privileges and using a correct job_id
         req = {"name": job_name,
