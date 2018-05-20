@@ -265,3 +265,10 @@ func WaitForServerToStart(host string, port string, t *testing.T) error {
 		counter += 1
 	}
 }
+
+// client config
+var MockClientYaml = []byte(`---
+username: testuser1
+password: 'HV}H/y?<9$]Z5N4N'
+address: http://127.0.0.1:8080
+`)

@@ -2,6 +2,7 @@ package cliargs
 
 import (
 	log "github.com/sirupsen/logrus"
+	clientConfig "cloudbackup/client/config"
 	"cloudbackup/config"
 	"cloudbackup/daemon"
 	"cloudbackup/misc"
@@ -29,7 +30,7 @@ type ArgsCommandServer struct {
 type ArgsCommandServerConfig struct {
 	Validate ArgsCommandServerConfigValidate `command:"validate" description:"Validate provided yaml configuration file"`
 	Dump     ArgsCommandServerConfigDump     `command:"dump" description:"Dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
-	Example  ArgsCommandServerExample        `command:"example" description:"Show an example .yaml config file with all possible statements"`
+	Example  ArgsCommandServerConfigExample  `command:"example" description:"Show an example .yaml config file with all possible statements"`
 }
 
 type ArgsCommandServerConfigValidate struct {
@@ -44,13 +45,13 @@ type ArgsCommandServerConfigDump struct {
 
 // arguments for an actual Daemon start
 type ArgsCommandServerStart struct {
-	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
+	ConfigFile string `short:"c" long:"configfile" description:"Server configuration file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 	Quiet bool `short:"q" long:"quiet" description:"Set logging to quiet: show only Warning or above log level messages"`
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug"`
 	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
 }
 
-type ArgsCommandServerExample struct {}
+type ArgsCommandServerConfigExample struct {}
 
 type ArgsCommandMisc struct {
 	HashPassword ArgsCommandMiscHash `command:"hash-password" description:"Hash a password using bcrypt. This is a convenience function so you can easily hash passwords before adding them to the yaml config file of the server."`
@@ -65,24 +66,47 @@ type ArgsCommandClient struct {
 }
 
 type ArgsCommandClientConfig struct {
-	Validate ArgsCommandServerConfigValidate `command:"validate" description:"Validate provided yaml configuration file"`
-	Dump     ArgsCommandServerConfigDump     `command:"dump" description:"Dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
-	Example  ArgsCommandServerExample        `command:"example" description:"Show an example .yaml config file with all possible statements"`
+	Validate ArgsCommandClientConfigValidate `command:"validate" description:"Validate provided yaml configuration file"`
+	Dump     ArgsCommandClientConfigDump     `command:"dump" description:"Dumps the merged configuration. This is a merge of command line arguments, environment variables and then the supplied .yaml config file. Priority is from left to right of the given list. The result will include default values too."`
+	Example  ArgsCommandClientConfigExample  `command:"example" description:"Show an example .yaml config file with all possible statements"`
+}
+
+// this one is included in multiple structs which themselves are defined below
+type ArgsCommandClientBackupCommonOptions struct {
+	ConfigFile string `short:"c" long:"configfile" description:"Client configuration file expected to be in YAML format and have .yml or .yaml extension. If unspecified then the default is to attempt to use $HOME/.cloudbackup.yaml on Linux or Unixes and %HomeDrive%%HomePath% on Microsoft Windows" required:"false"`
+	Username   string `short:"u" long:"username" description:"Username to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_USERNAME followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
+	Password   string `short:"p" long:"password" description:"Password to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_PASSWORD followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
+	Address    string `short:"a" long:"address" description:"Address to use when connecting to the server. The format expect is one of 'https://1.2.3.4:8443' or 'http://127.0.0.1:8080'. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_ADDRESS followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
+	Debug      bool   `short:"d" long:"debug" description:"Set logging to debug"`
 }
 
 type ArgsCommandClientBackup struct {
 	Start ArgsCommandClientBackupStart `command:"start" description:"Start a backup job"`
 	Stop  ArgsCommandClientBackupStop `command:"stop" description:"Stop a running backup job"`
 	List  ArgsCommandClientBackupList `command:"list" description:"List all backup jobs and a brief status for each of them"`
+
 }
 
 type ArgsCommandClientBackupStart struct {
+	ArgsCommandClientBackupCommonOptions
 }
 
 type ArgsCommandClientBackupStop struct {
+	ArgsCommandClientBackupCommonOptions
 }
 
 type ArgsCommandClientBackupList struct {
+	ArgsCommandClientBackupCommonOptions
+}
+
+type ArgsCommandClientConfigValidate struct {
+	ArgsCommandClientBackupCommonOptions
+}
+
+type ArgsCommandClientConfigDump struct {
+}
+
+type ArgsCommandClientConfigExample struct {
 }
 
 func (command *ArgsCommandServerConfigValidate) Execute(args []string) error {
@@ -93,10 +117,10 @@ func (command *ArgsCommandServerConfigValidate) Execute(args []string) error {
 	}
 	_, err := config.Load(command.ConfigFile, command.Debug, &sync.RWMutex{})
 	if err != nil{
-		fmt.Printf("Config file %s did not pass validation\n", command.ConfigFile)
+		fmt.Printf("Server configuration file %s did not pass validation\n", command.ConfigFile)
 		os.Exit(1)
 	} else {
-		fmt.Printf("Config file %s is valid\n", command.ConfigFile)
+		fmt.Printf("Server configuration %s is valid\n", command.ConfigFile)
 		os.Exit(0)
 	}
 	return nil
@@ -133,7 +157,7 @@ func (command *ArgsCommandServerStart) Execute(args []string) error {
 	return nil
 }
 
-func (command *ArgsCommandServerExample) Execute(args []string) error {
+func (command *ArgsCommandServerConfigExample) Execute(args []string) error {
 	fmt.Println(misc.SampleYamlConfig)
 	os.Exit(0)
 	return nil
@@ -146,5 +170,32 @@ func (command *ArgsCommandMiscHash) Execute(args []string) error {
 	}
 	fmt.Printf("The hashed password is: %s \n", hash)
 	os.Exit(0)
+	return nil
+}
+
+func (command *ArgsCommandClientConfigValidate) Execute(args []string) error {
+	if command.Debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.WarnLevel)
+	}
+	if command.ConfigFile == "" {
+		var err error
+		command.ConfigFile, err = clientConfig.GetOSSpecificDefaultClientConfigFile()
+		if err != nil {
+			return err
+		}
+	}
+	_, err := clientConfig.Load(command.ConfigFile, command.Debug)
+	if err != nil{
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line " +
+			"switches did not pass validation\nThe encountered error was: %s\n",
+			command.ConfigFile, err)
+		os.Exit(1)
+	} else {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line " +
+			"switches is valid\n", command.ConfigFile)
+		os.Exit(0)
+	}
 	return nil
 }
