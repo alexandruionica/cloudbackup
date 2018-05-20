@@ -18,6 +18,7 @@ all: test build
 build: 
 	$(GOCMD) build -v
 test: testcp gotest gotestrace
+alltest: test inttest
 # test coding practices
 testcp:
 	@echo "############ Running: go vet - checking for suspicious constructs ############"
