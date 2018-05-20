@@ -83,7 +83,7 @@ type Https struct {
 
 // this is the "master" struct which keeps all of the config settings (as specified in the config file + env vars)
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type CfgTemplate = struct {
+type CfgTemplate struct {
 	DataDir string `required:"true" yaml:"data_dir" json:"data_dir"`
 	HtmlDir string `default:"webstatic" yaml:"html_dir" json:"html_dir"`
 	User []User `yaml:"user" json:"user"`
@@ -143,7 +143,7 @@ func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
 // load configuration from yaml file at "path" and if boolean "debug" is set then also enable debugging in the yaml
 // config parser library
 func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) {
-	logger.Info(fmt.Sprintf("Loading config file %s", path))
+	logger.Info(fmt.Sprintf("Loading server config file %s", path))
 
 	var Config = CfgTemplate{}
 	var err error
@@ -169,8 +169,8 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 	}
 
 	if err != nil {
-		msg := fmt.Sprintf("When parsing the configuration file %s the following error was encountered: %s",
-			path, err)
+		msg := fmt.Sprintf("When parsing the server configuration file %s the following error was encountered:" +
+			" %s", path, err)
 		logger.Error(msg)
 		return &RuntimeConfig{}, errors.New(msg)
 	}
