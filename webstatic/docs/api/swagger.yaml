@@ -299,7 +299,7 @@ definitions:
       paths:
         type: array
         items:
-          - type: string
+          type: string
         example:
           - /var/lib/backups
           - /mnt/data
@@ -307,7 +307,7 @@ definitions:
       exclusions:
         type: array
         items:
-          - type: string
+          type: string
         example:
           - /etc/shadow
       target:
@@ -317,7 +317,7 @@ definitions:
       schedule:
         type: array
         items:
-          - type: string
+          type: string
         example:
           - 05 01 * * *
       encrypt:
