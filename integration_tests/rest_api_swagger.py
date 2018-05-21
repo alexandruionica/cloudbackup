@@ -33,6 +33,7 @@ class TestRestAPISwagger(unittest.TestCase):
         swagger_test(app_url=self.base_url)
         self.assertTrue(self.daemon.stop(), "Backup daemon already stopped. Something must have gone wrong")
 
+    # # bug in swagger-parser library prevents correct parsing
     # def test_swagger_authorized(self):
     #     # the below basic auth is for user = 'testuser1' ; password = 'HV}H/y?<9$]Z5N4N' ; should be reproduced by doing
     #     #      import requests.auth
