@@ -396,11 +396,9 @@
         },
         "paths": {
           "type": "array",
-          "items": [
-            {
-              "type": "string"
-            }
-          ],
+          "items": {
+            "type": "string"
+          },
           "example": [
             "/var/lib/backups",
             "/mnt/data",
@@ -409,11 +407,9 @@
         },
         "exclusions": {
           "type": "array",
-          "items": [
-            {
-              "type": "string"
-            }
-          ],
+          "items": {
+            "type": "string"
+          },
           "example": [
             "/etc/shadow"
           ]
@@ -426,11 +422,9 @@
         },
         "schedule": {
           "type": "array",
-          "items": [
-            {
-              "type": "string"
-            }
-          ],
+          "items": {
+            "type": "string"
+          },
           "example": [
             "05 01 * * *"
           ]
