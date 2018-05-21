@@ -197,7 +197,10 @@ func JSONError(w http.ResponseWriter, httpcode int, code string, message string)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(e.HTTPCode)
-	fmt.Fprint(w, string(b))
+	_, err = fmt.Fprint(w, string(b))
+	if err != nil {
+		logger.Debugf("Encountered an error while writing reply to client: %s", err)
+	}
 }
 
 // send HTTP success back to user in JSON format; "code" is a short message to show, "message" is a detailed explanation
@@ -216,7 +219,10 @@ func JSONSuccess(w http.ResponseWriter, code string, message string) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status.HTTPCode)
-	fmt.Fprint(w, string(b))
+	_, err  = fmt.Fprint(w, string(b))
+	if err != nil {
+		logger.Debugf("Encountered an error while writing reply to client: %s", err)
+	}
 }
 
 // send HTTP success back to user in JSON format; "code" is a short message to show, "message" is a detailed explanation
@@ -240,7 +246,10 @@ func JSONSuccessWithResult(w http.ResponseWriter, code string, message string, r
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(response.HTTPCode)
-	fmt.Fprint(w, string(b))
+	_, err  = fmt.Fprint(w, string(b))
+	if err != nil {
+		logger.Debugf("Encountered an error while writing reply to client: %s", err)
+	}
 }
 
 // validate HTTP input of type JSON. We Buffer the request body so we can process it multiple times. This is bad if
