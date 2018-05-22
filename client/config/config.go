@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
-	"cloudbackup/utils"
 	"github.com/jinzhu/configor"
 	log "github.com/sirupsen/logrus"
 	"regexp"
 	"os"
 	"runtime"
+	"cloudbackup/utils"
 )
 
 const loggingContext = "client.config"
@@ -28,15 +28,33 @@ type Client struct {
 	Address string `yaml:"address" json:"address"`
 }
 
-func Load(path string, debug bool) (Client, error) {
+func Load(path string, debug bool, cliUsername string, cliPassword string, cliAddress string) (Client, error) {
+	path, err := RetrieveClientConfigFilePath(path)
+	if err != nil {
+		return Client{}, err
+	}
 	logger.Info(fmt.Sprintf("Loading client config file %s", path))
 
 	var Config = Client{}
-	var err error
+	fileCheckRequired := false
 
-	if _, err := utils.FileExists(path, true); err != nil {
-		logger.Error(err)
-		return Client{}, err
+	// if a mix of command line options + env vars supplies all needed options then don't check if the config file
+	// exists
+	if CheckIfOptionOrEnvVars(cliUsername, EnvPrefix + "_Username", EnvPrefix + "_USERNAME") == false {
+		fileCheckRequired = true
+	}
+	if CheckIfOptionOrEnvVars(cliPassword, EnvPrefix + "_Password", EnvPrefix + "_PASSWORD") == false {
+		fileCheckRequired = true
+	}
+	if CheckIfOptionOrEnvVars(cliAddress, EnvPrefix + "_Address", EnvPrefix + "_ADDRESS") == false {
+		fileCheckRequired = true
+	}
+
+	if fileCheckRequired {
+		if _, err := utils.FileExists(path, true); err != nil {
+			logger.Error(err)
+			return Client{}, err
+		}
 	}
 
 	// if debug then also adjust logging level of configor library (set library to Verbose not Debug as
@@ -52,6 +70,17 @@ func Load(path string, debug bool) (Client, error) {
 			" %s", path, err)
 		logger.Error(msg)
 		return Client{}, errors.New(msg)
+	}
+
+	// any non empty command line options override ENV variables + actual config file
+	if cliUsername != "" {
+		Config.Username = cliUsername
+	}
+	if cliPassword != "" {
+		Config.Password = cliPassword
+	}
+	if cliAddress != "" {
+		Config.Address = cliAddress
 	}
 
 	err = Validate(Config, false)
@@ -124,7 +153,11 @@ func ValidateAddress(address string) error {
 	return nil
 }
 
-func GetOSSpecificDefaultClientConfigFile() (string, error){
+// if inPath == "" then return default config file path for OS ; if inPath != "" then return inPath
+func RetrieveClientConfigFilePath(inPath string) (string, error){
+	if inPath != "" {
+		return inPath, nil
+	}
 	const defaultClientConfigFile = ".cloudbackup.yaml"
 	if runtime.GOOS == "windows" {
 		// %HomeDrive%%HomePath%
@@ -148,4 +181,22 @@ func GetOSSpecificDefaultClientConfigFile() (string, error){
 		}
 		return home + string(os.PathSeparator) + defaultClientConfigFile, nil
 	}
+}
+
+// check if an option (type string) was passed as command line or if an environment var option is set
+func CheckIfOptionOrEnvVars(cliOption string, envVar1 string, envVar2 string) bool {
+	_, envOk1 := os.LookupEnv(envVar1)
+	_, envOk2 := os.LookupEnv(envVar2)
+	if cliOption == "" && envOk1 == false && envOk2 == false {
+		return false
+	}
+	return true
+}
+
+// replace passwords or secrets with **************** within an instance of Client type
+// Unfortunately this function doesn't have any smarts so whenever the config struct is changed then also an update to
+// the function is needed
+func SanitizeClientConfig (config Client) Client {
+    config.Password = SecretReplace
+	return config
 }

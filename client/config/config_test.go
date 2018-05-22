@@ -23,7 +23,7 @@ func TestLoad1(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, false)
+	result, err := Load(path, false, "","","")
 	if err != nil {
 		t.Fatalf("Could not load fake client config file. Error was: %s", err)
 	}
@@ -49,7 +49,7 @@ func TestLoad2(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, true)
+	result, err := Load(path, true, "","","")
 	if err != nil {
 		t.Fatalf("Could not load fake client config file. Error was: %s", err)
 	}
@@ -62,7 +62,7 @@ func TestLoad2(t *testing.T) {
 
 // test loading missing config file
 func TestLoad3(t *testing.T) {
-	_, err := Load("a/file/which/does/not/exist", true)
+	_, err := Load("a/file/which/does/not/exist", true, "","","")
 	if err == nil {
 		t.Fatal("Client config file load should have failed due to missing file but instead succeeded")
 	}
@@ -85,7 +85,7 @@ some: value`)
 		}
 	}()
 
-	result, err := Load(path, true)
+	result, err := Load(path, true, "","","")
 	if err == nil {
 		t.Fatal("Invalid yaml config file should have caused an eror but didn't")
 	}
