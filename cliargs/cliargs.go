@@ -35,11 +35,11 @@ type ArgsCommandServerConfig struct {
 
 type ArgsCommandServerConfigValidate struct {
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
-	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration"`
+	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration. WARNING! Secrets and passwords will be shown when using log level debug."`
 }
 
 type ArgsCommandServerConfigDump struct {
-	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration"`
+	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration. WARNING! Secrets and passwords will be shown when using log level debug."`
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 }
 
@@ -47,7 +47,7 @@ type ArgsCommandServerConfigDump struct {
 type ArgsCommandServerStart struct {
 	ConfigFile string `short:"c" long:"configfile" description:"Server configuration file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 	Quiet bool `short:"q" long:"quiet" description:"Set logging to quiet: show only Warning or above log level messages"`
-	Debug bool `short:"d" long:"debug" description:"Set logging to debug"`
+	Debug bool `short:"d" long:"debug" description:"Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug while the configuration information is being parsed and potentially later on."`
 	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
 }
 
@@ -77,7 +77,9 @@ type ArgsCommandClientBackupCommonOptions struct {
 	Username   string `short:"u" long:"username" description:"Username to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_USERNAME followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
 	Password   string `short:"p" long:"password" description:"Password to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_PASSWORD followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
 	Address    string `short:"a" long:"address" description:"Address to use when connecting to the server. The format expect is one of 'https://1.2.3.4:8443' or 'http://127.0.0.1:8080'. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_ADDRESS followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
-	Debug      bool   `short:"d" long:"debug" description:"Set logging to debug"`
+	Debug      bool   `short:"d" long:"debug" description:"Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug."`
+	Quiet      bool   `short:"q" long:"quiet" description:"Set logging to quiet: show only Warning or above log level messages"`
+	JsonLog    bool   `short:"j" long:"jsonlog" description:"Set logging to JSON. Defaults to false which means plaintext is used"`
 }
 
 type ArgsCommandClientBackup struct {
@@ -104,6 +106,7 @@ type ArgsCommandClientConfigValidate struct {
 }
 
 type ArgsCommandClientConfigDump struct {
+	ArgsCommandClientBackupCommonOptions
 }
 
 type ArgsCommandClientConfigExample struct {
@@ -174,28 +177,48 @@ func (command *ArgsCommandMiscHash) Execute(args []string) error {
 }
 
 func (command *ArgsCommandClientConfigValidate) Execute(args []string) error {
-	if command.Debug {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.WarnLevel)
+	loggingArgs := misc.LoggingArgs{
+		Quiet: command.Quiet,
+		Debug: command.Debug,
+		TextLog: !command.JsonLog,
 	}
-	if command.ConfigFile == "" {
-		var err error
-		command.ConfigFile, err = clientConfig.GetOSSpecificDefaultClientConfigFile()
-		if err != nil {
-			return err
-		}
-	}
-	_, err := clientConfig.Load(command.ConfigFile, command.Debug)
+	misc.SetupLogging(loggingArgs)
+
+	_, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
 	if err != nil{
 		fmt.Printf("Client configuration using file %s and optional environment variables and command line " +
 			"switches did not pass validation\nThe encountered error was: %s\n",
 			command.ConfigFile, err)
 		os.Exit(1)
 	} else {
+		path, _ := clientConfig.RetrieveClientConfigFilePath(command.ConfigFile) // #nosec
 		fmt.Printf("Client configuration using file %s and optional environment variables and command line " +
-			"switches is valid\n", command.ConfigFile)
+			"switches is valid\n", path)
 		os.Exit(0)
+	}
+	return nil
+}
+
+func (command *ArgsCommandClientConfigDump) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet: command.Quiet,
+		Debug: command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	configData, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err == nil {
+		// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
+		//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+		utils.Pp(clientConfig.SanitizeClientConfig(configData))
+		os.Exit(0)
+	} else {
+		path, _ := clientConfig.RetrieveClientConfigFilePath(command.ConfigFile) // #nosec
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line " +
+			"switches did not pass validation\nThe encountered error was: %s\n",
+			path, err)
+		os.Exit(1)
 	}
 	return nil
 }
