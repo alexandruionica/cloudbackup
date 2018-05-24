@@ -17,6 +17,8 @@ const loggingContext = "client.config"
 const SecretReplace = "****************"
 // used for looking up environment variables holding configuration data
 const EnvPrefix = "CLOUDBACKUP_CLIENT"
+// default name of client configuration file . This is expected to be in the user's Homedir
+const defaultClientConfigFile = ".cloudbackup.yaml"
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -83,7 +85,7 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 		Config.Address = cliAddress
 	}
 
-	err = Validate(Config, false)
+	err = Validate(Config)
 	if err != nil {
 		return Client{}, err
 	}
@@ -91,7 +93,7 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 	return Config, nil
 }
 
-func Validate(config Client, hiddenPass bool) error {
+func Validate(config Client) error {
 	err := CheckConfigOptionNotEmpty(config.Username, "username")
 	if err != nil {
 		return err
@@ -158,7 +160,6 @@ func RetrieveClientConfigFilePath(inPath string) (string, error){
 	if inPath != "" {
 		return inPath, nil
 	}
-	const defaultClientConfigFile = ".cloudbackup.yaml"
 	if runtime.GOOS == "windows" {
 		// %HomeDrive%%HomePath%
 		homeDrive, found := os.LookupEnv("HomeDrive")
