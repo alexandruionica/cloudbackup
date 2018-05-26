@@ -96,7 +96,7 @@ func SetupLogging(args LoggingArgs){
 		logger.Debug("Debug level messages enabled")
 	} else {
 		if args.Quiet {
-			log.SetLevel(log.WarnLevel)
+			log.SetLevel(log.PanicLevel)
 		} else {
 			log.SetLevel(log.InfoLevel)
 		}
