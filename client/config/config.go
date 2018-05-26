@@ -30,10 +30,12 @@ type Client struct {
 	Address string `yaml:"address" json:"address"`
 }
 
-func Load(path string, debug bool, cliUsername string, cliPassword string, cliAddress string) (Client, error) {
+// attempt to load configuration file and/or configuration supplied via command line options
+// returns loaded config, path of loaded config file (if any) and error (if any)
+func Load(path string, debug bool, cliUsername string, cliPassword string, cliAddress string) (Client, string, error) {
 	path, err := RetrieveClientConfigFilePath(path)
 	if err != nil {
-		return Client{}, err
+		return Client{}, path, err
 	}
 	logger.Info(fmt.Sprintf("Loading client config file %s", path))
 
@@ -55,7 +57,7 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 	if fileCheckRequired {
 		if _, err := utils.FileExists(path, true); err != nil {
 			logger.Error(err)
-			return Client{}, err
+			return Client{}, path, errors.New(path + " " + err.Error())
 		}
 	}
 
@@ -71,7 +73,7 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 		msg := fmt.Sprintf("When parsing the client configuration file %s the following error was encountered:" +
 			" %s", path, err)
 		logger.Error(msg)
-		return Client{}, errors.New(msg)
+		return Client{}, path, errors.New(msg)
 	}
 
 	// any non empty command line options override ENV variables + actual config file
@@ -87,10 +89,10 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 
 	err = Validate(Config)
 	if err != nil {
-		return Client{}, err
+		return Client{}, path, err
 	}
 
-	return Config, nil
+	return Config, path, nil
 }
 
 func Validate(config Client) error {
