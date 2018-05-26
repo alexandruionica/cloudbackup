@@ -24,7 +24,7 @@ func TestLoad1(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, false, "","","")
+	result, _, err := Load(path, false, "","","")
 	if err != nil {
 		t.Fatalf("Could not load fake client config file. Error was: %s", err)
 	}
@@ -50,7 +50,7 @@ func TestLoad2(t *testing.T) {
 		}
 	}()
 
-	result, err := Load(path, true, "","","")
+	result, _, err := Load(path, true, "","","")
 	if err != nil {
 		t.Fatalf("Could not load fake client config file. Error was: %s", err)
 	}
@@ -63,7 +63,7 @@ func TestLoad2(t *testing.T) {
 
 // test loading missing config file
 func TestLoad3(t *testing.T) {
-	_, err := Load("a/file/which/does/not/exist", true, "","","")
+	_, _, err := Load("a/file/which/does/not/exist", true, "","","")
 	if err == nil {
 		t.Fatal("Client config file load should have failed due to missing file but instead succeeded")
 	}
@@ -86,7 +86,7 @@ some: value`)
 		}
 	}()
 
-	result, err := Load(path, true, "","","")
+	result, _, err := Load(path, true, "","","")
 	if err == nil {
 		t.Fatal("Invalid yaml config file should have caused an eror but didn't")
 	}
@@ -102,7 +102,7 @@ func TestLoad5(t *testing.T) {
 		Password: "somepass",
 		Address: "http://7.7.7.7:9999",
 	}
-	result, err := Load("", false, testData.Username,testData.Password,testData.Address)
+	result, _, err := Load("", false, testData.Username,testData.Password,testData.Address)
 	if err != nil {
 		t.Fatalf("Could not load fake configuration options. Error was: %s", err)
 	}
@@ -125,7 +125,7 @@ func TestLoad6(t *testing.T) {
 		Password: "somepass",
 		Address: "ftp://1.2.3.4:21",
 	}
-	result, err := Load("", false, testData.Username,testData.Password,testData.Address)
+	result, _, err := Load("", false, testData.Username,testData.Password,testData.Address)
 	if err == nil {
 		t.Fatal("Expected error for Load() when passing in an address in an incorrect format but we didn't " +
 			"get any error")
