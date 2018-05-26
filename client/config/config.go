@@ -33,13 +33,8 @@ type Client struct {
 // attempt to load configuration file and/or configuration supplied via command line options
 // returns loaded config, path of loaded config file (if any) and error (if any)
 func Load(path string, debug bool, cliUsername string, cliPassword string, cliAddress string) (Client, string, error) {
-	path, err := RetrieveClientConfigFilePath(path)
-	if err != nil {
-		return Client{}, path, err
-	}
-	logger.Info(fmt.Sprintf("Loading client config file %s", path))
-
 	var Config = Client{}
+	var err error
 	fileCheckRequired := false
 
 	// if a mix of command line options + env vars supplies all needed options then don't check if the config file
@@ -55,6 +50,13 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 	}
 
 	if fileCheckRequired {
+		// if path = "" then this gets the default config file location, based on OS
+		path, err = RetrieveClientConfigFilePath(path)
+		if err != nil {
+			return Client{}, path, err
+		}
+		logger.Info(fmt.Sprintf("Loading client config file %s", path))
+
 		if _, err := utils.FileExists(path, true); err != nil {
 			logger.Error(err)
 			return Client{}, path, errors.New(path + " " + err.Error())
