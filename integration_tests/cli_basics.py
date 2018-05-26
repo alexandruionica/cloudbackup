@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import bcrypt
+import json
 import logging
 import os
 import re
@@ -15,14 +16,22 @@ from pprint import pprint
 class TestCliBasics(unittest.TestCase):
     def setUp(self):
         self.cmd = cmd_default
-        tmphandle, self.config_file_path = tempfile.mkstemp(suffix='_integration_tests_config_file.yaml')
+        # server - config file
+        tmphandle, self.server_config_file_path = tempfile.mkstemp(suffix='_integration_tests_server_config_file.yaml')
         tmpfile = os.fdopen(tmphandle, "w")
-        tmpfile.write(working_config_file_content)
+        tmpfile.write(working_server_config_file_content)
+        tmpfile.close()
+        # client - config file
+        tmphandle, self.client_config_file_path = tempfile.mkstemp(suffix='_integration_tests_client_config_file.yaml')
+        tmpfile = os.fdopen(tmphandle, "w")
+        tmpfile.write(working_client_config_file_content)
         tmpfile.close()
 
     def tearDown(self):
-        if os.path.exists(self.config_file_path):
-            os.remove(self.config_file_path)
+        if os.path.exists(self.server_config_file_path):
+            os.remove(self.server_config_file_path)
+        if os.path.exists(self.client_config_file_path):
+            os.remove(self.client_config_file_path)
 
     # command with no arguments should return exit code 1
     def test_cmd_no_arguments(self):
@@ -31,8 +40,8 @@ class TestCliBasics(unittest.TestCase):
                                                          "{}".format(cmd_default, result))
 
     # ./cloudbackup server config dump -c config.yaml shows only obfuscated passwords
-    def test_cmd_dump_obfuscated_passwords(self):
-        result = run_shell_cmd(self.cmd + " server config dump -c " + self.config_file_path)
+    def test_cmd_server_dump_obfuscated_passwords(self):
+        result = run_shell_cmd(self.cmd + " server config dump -c " + self.server_config_file_path)
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
         line_num = 0
@@ -47,8 +56,8 @@ class TestCliBasics(unittest.TestCase):
             line_num += 1
 
     # ./cloudbackup server config dump -c config.yaml produces at least 89 lines of output
-    def test_cmd_dump_output_length(self):
-        result = run_shell_cmd(self.cmd + " server config dump -c " + self.config_file_path)
+    def test_cmd_server_dump_output_length(self):
+        result = run_shell_cmd(self.cmd + " server config dump -c " + self.server_config_file_path)
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
         line_num = 0
@@ -58,29 +67,29 @@ class TestCliBasics(unittest.TestCase):
                                          "{}".format(cmd_default, result))
 
     # ./cloudbackup server config validate -c config.yaml  returns 0 with valid config file
-    def test_cmd_validate_config1(self):
-        result = run_shell_cmd(self.cmd + " server config validate -c " + self.config_file_path)
+    def test_cmd_validate_server_config1(self):
+        result = run_shell_cmd(self.cmd + " server config validate -c " + self.server_config_file_path)
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
 
     # ./cloudbackup server config validate -c config.yaml  returns 1 with invalid config file (valid yaml, invalid logic)
-    def test_cmd_validate_config2(self):
+    def test_cmd_validate_server_config2(self):
         # load valid yaml data from tmp config, alter it a bit to cause validation to fail and then write it back
-        with open(self.config_file_path) as fd:
+        with open(self.server_config_file_path) as fd:
             parsed = yaml.load(fd)
             parsed['backup'][0]['encrypt'] = True
             parsed['backup'][0]['encrypt_pass'] = ''
             parsed['backup'][1]['encrypt'] = True
             parsed['backup'][1]['encrypt_pass'] = ''
-        with open(self.config_file_path, "w") as fd:
+        with open(self.server_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
 
-        result = run_shell_cmd(self.cmd + " server config validate -c " + self.config_file_path)
+        result = run_shell_cmd(self.cmd + " server config validate -c " + self.server_config_file_path)
         self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
                                                          "{}".format(cmd_default, result))
 
     # ./cloudbackup server config example produces valid yaml, at least 60 lines long
-    def test_cmd_example_config1(self):
+    def test_cmd_server_example_config1(self):
         result = run_shell_cmd(self.cmd + " server config example")
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
@@ -110,10 +119,168 @@ class TestCliBasics(unittest.TestCase):
                 self.assertTrue(bcrypt.checkpw(str.encode(test_password), str.encode(bcrypthash)))
 
     # ./cloudbackup server start -c /path/to/temporary/config.yaml
-    def test_cmd_start(self):
+    def test_cmd_server_start(self):
         base_url = "http://127.0.0.1:8080"
-        daemon = BackupDaemon(config_path=self.config_file_path, base_url=base_url)
+        daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=base_url)
         self.assertTrue(daemon.stop())
+
+    # ./cloudbackup server start -c /path/to/temporary/config.yaml
+    def test_cmd_server_start_logging1(self):
+        base_url = "http://127.0.0.1:8080"
+        daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=base_url)
+        output = daemon.get_output(3)
+        found_info_messages = False
+        # the last element of the below split will be "" ; for for 3 fetched lines we get 4 elements
+        for line in output.split('\n'):
+            try:
+                decoded = json.loads(line)
+                if decoded['level'] == 'info':
+                    found_info_messages = True
+            except json.decoder.JSONDecodeError:
+                continue
+        self.assertTrue(found_info_messages, "Did not manage to find any 'info' log level messages. Output from "
+                                             "daemon was: {}".format(output))
+        self.assertTrue(daemon.kill())
+
+    # ./cloudbackup server start -c /path/to/temporary/config.yaml -d
+    def test_cmd_server_start_logging2(self):
+        base_url = "http://127.0.0.1:8080"
+        daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=base_url, extra_options='-d')
+        output = daemon.get_output(3)
+        found_info_messages = False
+        found_debug_messages = False
+        # the last element of the below split will be "" ; for for 3 fetched lines we get 4 elements
+        for line in output.split('\n'):
+            try:
+                decoded = json.loads(line)
+                if decoded['level'] == 'info':
+                    found_info_messages = True
+                elif decoded['level'] == 'debug':
+                    found_debug_messages = True
+            except json.decoder.JSONDecodeError:
+                continue
+        self.assertTrue(found_info_messages, "Did not manage to find any 'info' log level messages. Output from "
+                                             "daemon was: {}".format(output))
+        self.assertTrue(found_debug_messages, "Did not manage to find any 'debug' log level messages. Output from "
+                                              "daemon was: {}".format(output))
+        self.assertTrue(daemon.kill())
+
+    # ./cloudbackup client config validate -c config.yaml  returns 0 with valid config file
+    def test_cmd_validate_client_config1(self):
+        result = run_shell_cmd(self.cmd + " client config validate -c " + self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+    # ./cloudbackup client config validate -c config.yaml  returns 1 with invalid config file (valid yaml,
+    # invalid logic)
+    def test_cmd_validate_client_config2(self):
+        # load valid yaml data from tmp config, alter it a bit to cause validation to fail and then write it back
+        with open(self.client_config_file_path) as fd:
+            parsed = yaml.load(fd)
+            parsed['address'] = 'ftp://google.com:21'
+        with open(self.client_config_file_path, "w") as fd:
+            fd.write(yaml.dump(parsed))
+
+        result = run_shell_cmd(self.cmd + " client config validate -c " + self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+    # ./cloudbackup client config validate -u testuser -p apassword -a https://127.0.0.5:5050 returns 0 with valid
+    # command line config opts
+    def test_cmd_validate_client_config3(self):
+        result = run_shell_cmd(self.cmd + " client config validate -u testuser -p apassword -a https://127.0.0.5:5050")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+    # ./cloudbackup client config validate --username testuser --password apassword --address https://127.0.0.5:5050
+    # returns 0 with valid command line config opts (long version)
+    def test_cmd_validate_client_config4(self):
+        result = run_shell_cmd(self.cmd + " client config validate --username testuser --password apassword "
+                                          "--address https://127.0.0.5:5050")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+    # ./cloudbackup client config validate -c config.yaml  returns 0 with invalid config file (valid yaml,
+    # invalid logic) as long as the invalid elements are overriden on the command line - basically test we can
+    # override stuff
+    def test_cmd_validate_client_config5(self):
+        # load valid yaml data from tmp config, alter it a bit to cause validation to fail and then write it back
+        with open(self.client_config_file_path) as fd:
+            parsed = yaml.load(fd)
+            parsed['address'] = 'ftp://google.com:21'
+        with open(self.client_config_file_path, "w") as fd:
+            fd.write(yaml.dump(parsed))
+
+        result = run_shell_cmd(self.cmd + " client config validate -c " + self.client_config_file_path +
+                               " --address https://127.0.0.5:5050")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+    # ./cloudbackup client config dump -c config.yaml shows only obfuscated passwords
+    def test_cmd_client_dump_obfuscated_passwords(self):
+        result = run_shell_cmd(self.cmd + " client config dump -c " + self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        line_num = 0
+        for line in result['result'].stdout.decode("utf-8").split('\n'):
+            if 'pass' in line.lower():
+                pass_field = line.split(':')[1]
+                password = pass_field.split('"')[1]
+                re_result = re.match('^(\*+)|()$', password)
+                self.assertTrue(re_result, "output from './cloudbackup client config dump -c config.yaml' has on line "
+                                           "{} a password which doesn't seem to be "
+                                           "obfuscated:\n{}".format(line_num, line))
+            line_num += 1
+
+    # ./cloudbackup client config dump -c config.yaml produces at least 5 lines of output
+    def test_cmd_client_dump_output_length(self):
+        result = run_shell_cmd(self.cmd + " client config dump -c " + self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        line_num = 0
+        for line in result['result'].stdout.decode("utf-8").split('\n'):
+            line_num += 1
+        self.assertGreater(line_num, 5, "Expected output from {} to be at least 5 lines long. Command output object: "
+                                        "{}".format(cmd_default, result))
+
+    # ./cloudbackup client config dump -c config.yaml --address https://127.7.8.5:4050 ends up with --address taking
+    # priority over config file value
+    def test_cmd_client_dump_output_cli_override1(self):
+        result = run_shell_cmd(self.cmd + " client config dump -c " + self.client_config_file_path +
+                               " --address https://127.7.8.5:4050")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        decoded = json.loads(result['result'].stdout)
+        self.assertEqual(decoded['address'], 'https://127.7.8.5:4050', 'Command line was supposed to override config '
+                                                                       'file but config dump shows otherwise:'
+                                                                       ' {}'.format(decoded))
+
+    # ./cloudbackup client config dump -c config.yaml --address https://127.7.8.5:4050 ends up with --address taking
+    # priority over config file value and also over environment variable value
+    def test_cmd_client_dump_output_cli_override2(self):
+        os.environ['CLOUDBACKUP_CLIENT_ADDRESS'] = 'https://127.3.3.3:3070'
+        result = run_shell_cmd(self.cmd + " client config dump -c " + self.client_config_file_path +
+                               " --address https://127.7.8.5:4050")
+        os.environ.pop('CLOUDBACKUP_CLIENT_ADDRESS')
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        decoded = json.loads(result['result'].stdout)
+        self.assertEqual(decoded['address'], 'https://127.7.8.5:4050', 'Command line was supposed to override config '
+                                                                       'file and environment variable but config dump'
+                                                                       ' shows otherwise: {}'.format(decoded))
+
+    # ./cloudbackup client config dump -c config.yaml with environment variable CLOUDBACKUP_CLIENT_ADDRESS overrideing
+    # config file option
+    def test_cmd_client_dump_output_env_override(self):
+        os.environ['CLOUDBACKUP_CLIENT_ADDRESS'] = 'https://127.7.8.5:4050'
+        result = run_shell_cmd(self.cmd + " client config dump -c " + self.client_config_file_path)
+        os.environ.pop('CLOUDBACKUP_CLIENT_ADDRESS')
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        decoded = json.loads(result['result'].stdout)
+        self.assertEqual(decoded['address'], 'https://127.7.8.5:4050', 'Command line was supposed to override config '
+                                                                       'file but config dump shows otherwise:'
+                                                                       ' {}'.format(decoded))
 
 
 def get_args():

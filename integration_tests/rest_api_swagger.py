@@ -19,7 +19,7 @@ class TestRestAPISwagger(unittest.TestCase):
         self.cmd = cmd_default
         tmphandle, self.config_file_path = tempfile.mkstemp(suffix='_integration_tests_rest_api.yaml')
         tmpfile = os.fdopen(tmphandle, "w")
-        tmpfile.write(working_config_file_content)
+        tmpfile.write(working_server_config_file_content)
         tmpfile.close()
         self.base_url = "http://127.0.0.1:8080"
         self.daemon = BackupDaemon(config_path=self.config_file_path, base_url=self.base_url)
