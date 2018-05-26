@@ -31,7 +31,8 @@ class TestRestAPISwagger(unittest.TestCase):
 
     def test_swagger_unauthorized(self):
         swagger_test(app_url=self.base_url)
-        self.assertTrue(self.daemon.stop(), "Backup daemon already stopped. Something must have gone wrong")
+        stopped, _, _ = self.daemon.stop()
+        self.assertTrue(stopped, "Backup daemon already stopped. Something must have gone wrong")
 
     # # bug in swagger-parser library prevents correct parsing
     # def test_swagger_authorized(self):
@@ -41,8 +42,8 @@ class TestRestAPISwagger(unittest.TestCase):
     #     extra_headers = {
     #         "Authorization": 'Basic dGVzdHVzZXIxOkhWfUgveT88OSRdWjVONE4='
     #     }
-    #     swagger_test(app_url=self.base_url, extra_headers=extra_headers)
-    #     self.assertTrue(self.daemon.stop(), "Backup daemon already stopped. Something must have gone wrong")
+    #     stopped, _, _ = self.daemon.stop()
+    #     self.assertTrue(stopped, "Backup daemon already stopped. Something must have gone wrong")
 
 
 def get_args():

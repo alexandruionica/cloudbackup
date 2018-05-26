@@ -5,3 +5,4 @@ tmp/
 integration_tests/.venv
 integration_tests/__pycache__
 *.pyc
+*~
