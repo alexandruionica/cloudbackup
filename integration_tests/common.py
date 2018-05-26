@@ -16,7 +16,7 @@ if platform.system() == 'Windows':
     cmd_default = ".\cloudbackup.exe"
 else:
     cmd_default = "./cloudbackup"
-working_config_file_content = '''# global settings affect all backups and can't be specified per backup with different values
+working_server_config_file_content = '''# global settings affect all backups and can't be specified per backup with different values
 # section specific settings are repetitive and can't be overridden by globals
 # clarity and safety are paramount to the design so repeating a particular key - value over and over is acceptable
 #
@@ -91,6 +91,12 @@ backup:
     versions_max_age: 6w
 '''
 
+working_client_config_file_content = '''---
+username: testuser1
+password: 'HV}H/y?<9$]Z5N4N'
+address: http://127.0.0.1:8080
+'''
+
 
 def run_shell_cmd(cmd):
     """
@@ -126,7 +132,7 @@ class BackupDaemon(object):
     """
     Start cloudbackup daemon
     """
-    def __init__(self, config_path, base_url, cmd=cmd_default):
+    def __init__(self, config_path, base_url, cmd=cmd_default, extra_options=""):
         """
         start backup daemon
         Wrapper to start a shell command which then keeps running
@@ -140,14 +146,15 @@ class BackupDaemon(object):
 
         if platform.system() == 'Windows':
             # Windows needs absolute paths because we're not running the command in a shell
-            full_cmd = os.path.abspath(cmd) + ' server start -c {}'.format(os.path.abspath(config_path))
+            full_cmd = os.path.abspath(cmd) + ' server start -c {} '\
+                .format(os.path.abspath(config_path)) + extra_options
             cmd_with_args = full_cmd
         else:
-            full_cmd = cmd + ' server start -c {}'.format(config_path)
-            cmd_with_args = shlex.split(cmd + ' server start -c {}'.format(config_path))
+            full_cmd = cmd + ' server start -c {} '.format(config_path) + extra_options
+            cmd_with_args = shlex.split(full_cmd)
         logging.info('Running the backup daemon using: {}'.format(full_cmd))
-        self.proc = subprocess.Popen(cmd_with_args, shell=False, stdin=subprocess.PIPE,
-                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.proc = subprocess.Popen(cmd_with_args, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, universal_newlines=True, bufsize=1)
         # there is a slight delay between daemon start and http becoming available so we need to ensure it is
         #   available before tests are attempted
         wait_for_api_server(base_url)
@@ -219,6 +226,27 @@ class BackupDaemon(object):
             return True
         else:
             return False
+
+    def get_output(self, num_lines=1):
+        """
+        get output from process
+        :param num_lines: how many lines of output to read. If more lines are requested then available the this will
+        block until lines are produced by the process
+        :return: string holding output
+        """
+        read_lines = 0
+        total_output = None
+        while read_lines < num_lines:
+            read_lines += 1
+            output = self.proc.stdout.readline()
+            if output:
+                if total_output:
+                    total_output = total_output + output
+                else:
+                    total_output = output
+            if self.proc.poll() is not None:
+                break
+        return total_output
 
 
 def wait_for_socket(base_url, max_count=600, sleep_seconds=0.1):
