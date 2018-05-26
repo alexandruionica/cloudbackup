@@ -250,7 +250,7 @@ class TestCliBasics(unittest.TestCase):
                                " --address https://127.7.8.5:4050")
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
-        decoded = json.loads(result['result'].stdout)
+        decoded = json.loads(result['result'].stdout.decode("utf-8"))
         self.assertEqual(decoded['address'], 'https://127.7.8.5:4050', 'Command line was supposed to override config '
                                                                        'file but config dump shows otherwise:'
                                                                        ' {}'.format(decoded))
@@ -264,7 +264,7 @@ class TestCliBasics(unittest.TestCase):
         os.environ.pop('CLOUDBACKUP_CLIENT_ADDRESS')
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
-        decoded = json.loads(result['result'].stdout)
+        decoded = json.loads(result['result'].stdout.decode("utf-8"))
         self.assertEqual(decoded['address'], 'https://127.7.8.5:4050', 'Command line was supposed to override config '
                                                                        'file and environment variable but config dump'
                                                                        ' shows otherwise: {}'.format(decoded))
@@ -277,7 +277,7 @@ class TestCliBasics(unittest.TestCase):
         os.environ.pop('CLOUDBACKUP_CLIENT_ADDRESS')
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
-        decoded = json.loads(result['result'].stdout)
+        decoded = json.loads(result['result'].stdout.decode("utf-8"))
         self.assertEqual(decoded['address'], 'https://127.7.8.5:4050', 'Command line was supposed to override config '
                                                                        'file but config dump shows otherwise:'
                                                                        ' {}'.format(decoded))
