@@ -157,7 +157,12 @@ class BackupDaemon(object):
                                      stderr=subprocess.PIPE, universal_newlines=True, bufsize=1)
         # there is a slight delay between daemon start and http becoming available so we need to ensure it is
         #   available before tests are attempted
-        wait_for_api_server(base_url)
+        if not check_api_server_ready(base_url):
+            _, stderr, stdout = self.stop(get_output=True)
+            logging.error("Could not connect to API server after starting the daemon. Daemon's stdout was: {} "
+                          "\n and stderr was: {}".format(stderr, stdout))
+            raise requests.exceptions.ConnectionError(
+                "Could not connect to CloudBackup API server at {}".format(base_url))
 
     def kill(self, max_count=20, sleep_time=0.1):
         """
@@ -188,11 +193,14 @@ class BackupDaemon(object):
         else:
             return False
 
-    def stop(self, max_count=20, sleep_time=0.1):
+    def stop(self, max_count=20, sleep_time=0.1, get_output=False):
         """
         stop daemon using terminate()
-        :return: True on success, False if process already exited
+        :return: tuple with (True on success / False if process already exited, stderr, stdout)
+                Stderr / stdout will be replaced with empty strings if get_output == False
         """
+        stderr = ""
+        stdout = ""
         if self.proc.poll() is None:
             self.proc.terminate()
             counter = 0
@@ -209,13 +217,17 @@ class BackupDaemon(object):
                 raise Exception(
                     "Attempt to stop(terminate not kill) CloudBackup process did not succeed. Checked process status"
                     " {} times, at {} seconds interval".format(counter, sleep_time))
+            if get_output:
+                stdout, stderr = self.proc.communicate()
             # close file descriptors for stdin/stdout/stderr
             self.proc.stderr.close()
             self.proc.stdout.close()
             self.proc.stdin.close()
-            return True
+            return True, stderr, stdout
         else:
-            return False
+            if get_output:
+                stdout, stderr = self.proc.communicate()
+            return False, stderr, stdout
 
     def is_running(self):
         """
@@ -277,11 +289,11 @@ def wait_for_socket(base_url, max_count=600, sleep_seconds=0.1):
             "times for a total of {} seconds wait".format(ipaddr, port, counter, counter * sleep_seconds))
 
 
-def wait_for_api_server(url, max_count=20, sleep_seconds=0.1):
+def check_api_server_ready(url, max_count=20, sleep_seconds=0.1):
     """
     Attempt $max_count times, with $sleep_seconds seconds sleep to get / from the http server. This is to give time
        to start up
-    :return:
+    :return: False if it did not start up during wait time, True if succeeded
     """
     counter = 0
     while counter < max_count:
@@ -295,9 +307,12 @@ def wait_for_api_server(url, max_count=20, sleep_seconds=0.1):
             counter = 0
             break
     if counter == max_count:
-        raise requests.exceptions.ConnectionError(
+        logging.error(
             "Could not connect to CloudBackup API server at {} after {} attempts for a total of {} "
             "seconds".format(url, counter, counter * sleep_seconds))
+        return False
+    else:
+        return True
 
 
 def get_md5_sum(filepath):
