@@ -95,7 +95,7 @@ func SetupLogging(args LoggingArgs){
 	}
 
 	if args.LogFile != "" {
-		logFile, err := os.OpenFile(args.LogFile, os.O_CREATE|os.O_WRONLY, 0640)
+		logFile, err := os.OpenFile(args.LogFile, os.O_CREATE|os.O_WRONLY, 0640) // #nosec
 		if err == nil {
 			log.SetOutput(logFile)
 		} else {
