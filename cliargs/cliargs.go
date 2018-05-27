@@ -49,6 +49,7 @@ type ArgsCommandServerStart struct {
 	Quiet bool `short:"q" long:"quiet" description:"Set logging to quiet: don't show any log messages"`
 	Debug bool `short:"d" long:"debug" description:"Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug while the configuration information is being parsed and potentially later on."`
 	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
+	LogFile string `short:"l" long:"logfile" description:"Output logging messages to this file instead of stdout. If the target file can't be created or can't be written to then it will output an error and revert back to using stdout for logging output."`
 }
 
 type ArgsCommandServerConfigExample struct {}
@@ -153,6 +154,7 @@ func (command *ArgsCommandServerStart) Execute(args []string) error {
 		Quiet: command.Quiet,
 		Debug: command.Debug,
 		TextLog: command.TextLog,
+		LogFile: command.LogFile,
 	}
 	misc.SetupLogging(loggingArgs)
 	daemon.Start(command.ConfigFile, command.Debug)
