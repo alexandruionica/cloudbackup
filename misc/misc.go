@@ -14,6 +14,7 @@ type LoggingArgs struct {
 	Debug bool
 	Quiet bool
 	TextLog bool
+	LogFile string
 }
 
 const SampleYamlConfig = `# where are the internal SQL databases to be kept
@@ -86,11 +87,23 @@ backup:
 
 func SetupLogging(args LoggingArgs){
 	log.SetOutput(os.Stdout)
+
 	if args.TextLog {
 		log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	} else {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
+
+	if args.LogFile != "" {
+		logFile, err := os.OpenFile(args.LogFile, os.O_CREATE|os.O_WRONLY, 0640)
+		if err == nil {
+			log.SetOutput(logFile)
+		} else {
+			log.Errorf("Failed to log to file %s as the following error was received: '%s'. Reverting to using " +
+				"stdout for log output.", args.LogFile, err)
+		}
+	}
+
 	if args.Debug {
 		log.SetLevel(log.DebugLevel)
 		logger.Debug("Debug level messages enabled")
