@@ -1,5 +1,5 @@
-hash: 625cc341dadd6c08f178de9207b199ebcadfa8e4c1ce8da73c3d4362db1280ea
-updated: 2018-04-14T21:57:12.322413+10:00
+hash: 59a1cff5bed758cf47f39872eece234e3f345086fc8b1328c1d0e4b9faa42f82
+updated: 2018-05-27T12:22:58.038306436+10:00
 imports:
 - name: github.com/BurntSushi/toml
   version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
@@ -8,15 +8,15 @@ imports:
 - name: github.com/jessevdk/go-flags
   version: 96dc06278ce32a0e9d957d590bb987c81ee66407
 - name: github.com/jinzhu/configor
-  version: 6ecfe629230f24c2e92c7894c6ab21b83b757a39
+  version: ec34f328956f53dfbd06e9f5306e37e6943443c3
 - name: github.com/julienschmidt/httprouter
-  version: d1898390779332322e6b5ca5011da4bf249bb056
+  version: adbc77eec0d91467376ca515bc3a14b8434d0f18
 - name: github.com/mattn/go-sqlite3
   version: 6c771bb9887719704b210e87e934f08be014bdb1
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
-  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
+  version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
   subpackages:
   - hooks/test
 - name: golang.org/x/crypto
@@ -31,5 +31,5 @@ imports:
   - unix
   - windows
 - name: gopkg.in/yaml.v2
-  version: d670f9405373e636a5a2765eea47fac0c9bc91a4
+  version: 5420a8b6744d3b0345ab293f6fcba19c978f1183
 testImports: []
