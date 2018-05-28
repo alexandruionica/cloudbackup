@@ -78,7 +78,7 @@ type BackupJobStatus struct {
 	TxBandwidth15Min int64 `json:"tx_bandwidth_15_min,omitempty"`
 	RxBandwidth15Min int64 `json:"rx_bandwidth_15_min,omitempty"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
-	NextRun string `json:"next_run"`
+	NextRun time.Time `json:"next_run"`
 }
 
 type BackupJobsState struct {
