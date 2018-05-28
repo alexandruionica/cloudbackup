@@ -3,6 +3,7 @@ package cliargs
 import (
 	log "github.com/sirupsen/logrus"
 	clientConfig "cloudbackup/client/config"
+	clientBackup "cloudbackup/client/backup"
 	"cloudbackup/config"
 	"cloudbackup/daemon"
 	"cloudbackup/misc"
@@ -218,5 +219,24 @@ func (command *ArgsCommandClientConfigDump) Execute(args []string) error {
 			path, err)
 		os.Exit(1)
 	}
+	return nil
+}
+
+
+func (command *ArgsCommandClientBackupList) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clientConfig , path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientBackup.List(clientConfig)
 	return nil
 }
