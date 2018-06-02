@@ -79,8 +79,8 @@ type ArgsCommandClientBackupCommonOptions struct {
 	Username   string `short:"u" long:"username" description:"Username to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_USERNAME followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
 	Password   string `short:"p" long:"password" description:"Password to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_PASSWORD followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
 	Address    string `short:"a" long:"address" description:"Address to use when connecting to the server. The format expect is one of 'https://1.2.3.4:8443' or 'http://127.0.0.1:8080'. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_ADDRESS followed by an attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)"`
-	Debug      bool   `short:"d" long:"debug" description:"Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug."`
-	JsonLog    bool   `short:"j" long:"jsonlog" description:"Set logging to JSON. Defaults to false which means plaintext is used"`
+	Debug      bool   `short:"d" long:"debug" description:"Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug"`
+	JsonLog    bool   `long:"jsonlog" description:"Set logging to JSON. Defaults to plaintext"`
 }
 
 type ArgsCommandClientBackup struct {
@@ -100,6 +100,7 @@ type ArgsCommandClientBackupStop struct {
 
 type ArgsCommandClientBackupList struct {
 	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"Print JSON response as received from server. If this option is not specified then the response is processed and the output is in a table like format"`
 }
 
 type ArgsCommandClientConfigValidate struct {
@@ -237,6 +238,6 @@ func (command *ArgsCommandClientBackupList) Execute(args []string) error {
 			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
 		os.Exit(1)
 	}
-	clientBackup.List(clientConfig)
+	clientBackup.List(clientConfig, command.Json)
 	return nil
 }

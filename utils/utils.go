@@ -9,6 +9,7 @@ import (
 	"testing"
 	"io/ioutil"
 	"path/filepath"
+	"bytes"
 )
 
 const loggingContext = "utils"
@@ -23,7 +24,7 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-// pretty print
+// pretty print by converting received input to JSON and then doing a fmt.println()
 func Pp(input interface{}){
 	output, err := json.MarshalIndent(input, "", "  ")
 	if err != nil{
@@ -31,6 +32,19 @@ func Pp(input interface{}){
 	} else {
 		fmt.Println(string(output))
 	}
+}
+
+// for a given []byte array containing a JSON encoded message, indent said message and print it
+func PpJson(input []byte) error{
+	var prettyJSON bytes.Buffer
+	err := json.Indent(&prettyJSON, input, "", "  ")
+	if err != nil {
+		logger.Debugf("provided message is not valid JSON. Received error was: '%s' and provided message was:" +
+			" %s ", err, string(input))
+		return errors.New(fmt.Sprintf("provided message is not valid JSON. Received error was: '%s'", err))
+	}
+	fmt.Println(string(prettyJSON.Bytes()))
+	return nil
 }
 
 // check if file exists; parameters are path to file (String) and if to dereference symlinks (bool). Works only with
