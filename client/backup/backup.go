@@ -8,11 +8,12 @@ import (
 	"cloudbackup/httpd"
 	"cloudbackup/shared"
 	log "github.com/sirupsen/logrus"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"unicode/utf8"
 	"strconv"
+	"encoding/json"
+	"cloudbackup/utils"
 )
 
 const ApiPrefix = "/api/v1"
@@ -26,7 +27,7 @@ type BackupListResponse struct {
 	Result []shared.BackupJobStatus
 }
 
-func List(config clientConfig.Client) {
+func List(config clientConfig.Client, jsonOutput bool) {
 	httpClient := &http.Client{}
 	req, err := http.NewRequest("GET", config.Address + ApiPrefix + "/backup/list", nil)
 	if err != nil {
@@ -50,10 +51,9 @@ func List(config clientConfig.Client) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.Debugf("%s %+v", err, resp)
-		fmt.Printf("Cloud not process the response body received from the server for the 'list' request. The error was: %s\n", err)
+		fmt.Printf("Cloud not process the response body received from the server. The error was: %s\n", err)
 		os.Exit(1)
 	}
-	// []BackupJobStatus
 	var decodedJson BackupListResponse
 	err = json.Unmarshal(body, &decodedJson)
 	if err != nil {
@@ -64,8 +64,16 @@ func List(config clientConfig.Client) {
 		fmt.Println(decodedJson.Message)
 		os.Exit(1)
 	}
-	printBackupList(decodedJson)
-
+	if jsonOutput {
+		err = utils.PpJson(body)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	} else {
+		printBackupList(decodedJson)
+	}
 }
 
 // formats result and prints it in a nice way
