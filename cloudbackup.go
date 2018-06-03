@@ -2,9 +2,10 @@ package main
 
 //noinspection GoRedundantImportAlias
 import (
+	"os"
+
 	flags "github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
-	"os"
 	"cloudbackup/cliargs"
 )
 const loggingContext = "main"

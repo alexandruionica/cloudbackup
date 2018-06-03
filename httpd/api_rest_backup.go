@@ -85,7 +85,7 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 						Name: decodedJson.Name,
 						JobId: result.BackupJobId,
 					}
-					JSONSuccessWithResult(w, "success", "successfully requested backup job to be started",
+					JSONSuccessWithResult(w, "success", "Successfully requested backup job to be started",
 						requestResult)
 					return
 				} else {
@@ -185,7 +185,7 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 					Name: decodedJson.Name,
 					JobId: result.BackupJobId,
 				}
-				JSONSuccessWithResult(w, "success", "successfully requested backup job to be stopped",
+				JSONSuccessWithResult(w, "success", "Successfully requested backup job to be stopped",
 					requestResult)
 				return
 			} else {

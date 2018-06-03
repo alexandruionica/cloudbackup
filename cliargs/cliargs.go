@@ -92,6 +92,10 @@ type ArgsCommandClientBackup struct {
 
 type ArgsCommandClientBackupStart struct {
 	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job struct {
+		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
 }
 
 type ArgsCommandClientBackupStop struct {
@@ -100,7 +104,7 @@ type ArgsCommandClientBackupStop struct {
 
 type ArgsCommandClientBackupList struct {
 	ArgsCommandClientBackupCommonOptions
-	Json bool `long:"json" description:"Print JSON response as received from server. If this option is not specified then the response is processed and the output is in a table like format"`
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output is in a table like format"`
 }
 
 type ArgsCommandClientConfigValidate struct {
@@ -239,5 +243,24 @@ func (command *ArgsCommandClientBackupList) Execute(args []string) error {
 		os.Exit(1)
 	}
 	clientBackup.List(clientConfig, command.Json)
+	return nil
+}
+
+
+func (command *ArgsCommandClientBackupStart) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clientConfig , path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientBackup.Start(clientConfig, command.Json, command.Job.Name)
 	return nil
 }

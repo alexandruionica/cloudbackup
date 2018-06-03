@@ -170,8 +170,9 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 			handle(w, r, ps)
 			return
 		} else {
-			msg := fmt.Sprintf("User '%s' does not have access to '%s' using http method '%s'. Request 'write'" +
-				" privileges from your Admin if access is needed", httpUser, r.URL.Path, r.Method)
+			msg := fmt.Sprintf("User '%s' does not have access to '%s' using http method '%s'. If access is " +
+				"needed then please request 'write' privileges from your systems admininistrator", httpUser,
+				r.URL.Path, r.Method)
 			logger.Debug(msg)
 			JSONError(w, http.StatusForbidden, HttpErrForbidden, msg)
 			return
