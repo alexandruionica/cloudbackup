@@ -3,17 +3,18 @@ package backup
 import (
 	"net/http"
 	"fmt"
-
-	clientConfig "cloudbackup/client/config"
-	"cloudbackup/httpd"
-	"cloudbackup/shared"
-	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	"os"
 	"unicode/utf8"
 	"strconv"
 	"encoding/json"
+	"bytes"
+
+	log "github.com/sirupsen/logrus"
+	"cloudbackup/httpd"
+	"cloudbackup/shared"
 	"cloudbackup/utils"
+	clientConfig "cloudbackup/client/config"
+	clientCommon "cloudbackup/client/common"
 )
 
 const ApiPrefix = "/api/v1"
@@ -22,9 +23,14 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-type BackupListResponse struct {
+type ListResponse struct {
 	httpd.HttpStatusReply
 	Result []shared.BackupJobStatus
+}
+
+type StartResponse struct {
+	httpd.HttpStatusReply
+	Result httpd.BackupJob
 }
 
 func List(config clientConfig.Client, jsonOutput bool) {
@@ -42,28 +48,18 @@ func List(config clientConfig.Client, jsonOutput bool) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	defer func(){
-		err := resp.Body.Close()
-		if err != nil {
-			logger.Debugf("Received error when trying to close response body. Error was: %s", err)
-		}
-	}()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := clientCommon.ValidateServerResponse(resp)
 	if err != nil {
-		logger.Debugf("%s %+v", err, resp)
-		fmt.Printf("Cloud not process the response body received from the server. The error was: %s\n", err)
+		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
-	var decodedJson BackupListResponse
+	var decodedJson ListResponse
 	err = json.Unmarshal(body, &decodedJson)
 	if err != nil {
 		fmt.Printf("Could not decode the JSON response received from server. Error was: %s\n", err)
 		os.Exit(1)
 	}
-	if resp.StatusCode != 200 {
-		fmt.Println(decodedJson.Message)
-		os.Exit(1)
-	}
+
 	if jsonOutput {
 		err = utils.PpJson(body)
 		if err != nil {
@@ -76,13 +72,65 @@ func List(config clientConfig.Client, jsonOutput bool) {
 	}
 }
 
-// formats result and prints it in a nice way
-func printBackupList(decodedJson BackupListResponse){
+func Start(config clientConfig.Client, jsonOutput bool, jobName string) {
+	payload := struct{Name string `json:"name"`}{jobName,}
+	encodedPayload, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Printf("Could not JSON encode request payload. Received error was: %s", err)
+		os.Exit(1)
+	}
+
+	httpClient := &http.Client{}
+	req, err := http.NewRequest("POST", config.Address + ApiPrefix + "/backup/start",
+		bytes.NewBuffer(encodedPayload))
+	if err != nil {
+		fmt.Printf("Error starting the http client: %s\n", err)
+		os.Exit(1)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(config.Username, config.Password)
+
+	// make request
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		logger.Debugf("%s %+v", err, resp)
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	body, err := clientCommon.ValidateServerResponse(resp)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+	var decodedJson StartResponse
+	err = json.Unmarshal(body, &decodedJson)
+	if err != nil {
+		fmt.Printf("Could not decode the JSON response received from server. Error was: %s\n", err)
+		logger.Debugf("Server response was: %s", body)
+		os.Exit(1)
+	}
+
+	// process result
+	if jsonOutput {
+		err = utils.PpJson(body)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	} else {
+		fmt.Printf("%s\nJob id '%s' has been allocated for this run of backup job '%s'\n", decodedJson.Message,
+			decodedJson.Result.JobId, decodedJson.Result.Name)
+	}
+}
+
+// for a "list" command this formats the result and prints it in a nice way
+func printBackupList(decodedJson ListResponse){
 	logger.Debugf("%+v", decodedJson)
-	NameLentgh, StateLength, JobIdLength, StartTimeLenght, NextRunLenght := 4, 5, 6, 5, 8
+	NameLength, StateLength, JobIdLength, StartTimeLenght, NextRunLenght := 4, 5, 6, 5, 8
 	for _, job := range decodedJson.Result {
-		if utf8.RuneCountInString(job.Name) > NameLentgh {
-			NameLentgh = utf8.RuneCountInString(job.Name)
+		if utf8.RuneCountInString(job.Name) > NameLength {
+			NameLength = utf8.RuneCountInString(job.Name)
 		}
 		if utf8.RuneCountInString(job.State) > StateLength {
 			StateLength = utf8.RuneCountInString(job.State)
@@ -102,7 +150,7 @@ func printBackupList(decodedJson BackupListResponse){
 		}
 	}
 	// table header
-	tableTemplate := "%" + strconv.Itoa(NameLentgh) + "s | %" + strconv.Itoa(StateLength) + "s | %" +
+	tableTemplate := "%" + strconv.Itoa(NameLength) + "s | %" + strconv.Itoa(StateLength) + "s | %" +
 		strconv.Itoa(JobIdLength) + "s | %" + strconv.Itoa(StartTimeLenght) +  "s | %" + strconv.Itoa(NextRunLenght) +
 		"s\n"
 	fmt.Printf(tableTemplate, "Name", "State", "Job Id", "Start", "Next Run")
