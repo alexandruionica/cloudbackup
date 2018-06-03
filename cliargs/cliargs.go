@@ -100,6 +100,11 @@ type ArgsCommandClientBackupStart struct {
 
 type ArgsCommandClientBackupStop struct {
 	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job struct {
+		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
+	JobId string `short:"i" long:"job-id" description:"Id of the job to stop. Using this ensures that only a particular job is stopped. If the job id doesn't match the id of the running job having the same name then the stop operation will not proceed"`
 }
 
 type ArgsCommandClientBackupList struct {
@@ -227,7 +232,6 @@ func (command *ArgsCommandClientConfigDump) Execute(args []string) error {
 	return nil
 }
 
-
 func (command *ArgsCommandClientBackupList) Execute(args []string) error {
 	loggingArgs := misc.LoggingArgs{
 		Quiet:   true,
@@ -236,16 +240,15 @@ func (command *ArgsCommandClientBackupList) Execute(args []string) error {
 	}
 	misc.SetupLogging(loggingArgs)
 
-	clientConfig , path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
 	if err != nil {
 		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
 			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
 		os.Exit(1)
 	}
-	clientBackup.List(clientConfig, command.Json)
+	clientBackup.List(clConfig, command.Json)
 	return nil
 }
-
 
 func (command *ArgsCommandClientBackupStart) Execute(args []string) error {
 	loggingArgs := misc.LoggingArgs{
@@ -255,12 +258,30 @@ func (command *ArgsCommandClientBackupStart) Execute(args []string) error {
 	}
 	misc.SetupLogging(loggingArgs)
 
-	clientConfig , path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
 	if err != nil {
 		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
 			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
 		os.Exit(1)
 	}
-	clientBackup.Start(clientConfig, command.Json, command.Job.Name)
+	clientBackup.Start(clConfig, command.Json, command.Job.Name)
+	return nil
+}
+
+func (command *ArgsCommandClientBackupStop) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientBackup.Stop(clConfig, command.Json, command.Job.Name, command.JobId)
 	return nil
 }
