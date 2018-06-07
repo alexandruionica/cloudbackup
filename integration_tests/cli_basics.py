@@ -101,6 +101,26 @@ class TestCliBasics(unittest.TestCase):
         # if this raises and exception then we got a problem
         yaml.load(result['result'].stdout.decode("utf-8"))
 
+    # ./cloudbackup server config example produces valid config file
+    def test_cmd_server_example_config2(self):
+        result = run_shell_cmd(self.cmd + " server config example")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        # adjust server config file
+        loaded_config = yaml.load(result['result'].stdout.decode("utf-8"))
+        # we need to adjust data_dir as the path may not exist on the CI/CD systems
+        loaded_config['data_dir'] = './tmp/'
+        # skip https certificate path validation
+        loaded_config['https']['enabled'] = False
+        tmpfile = open(self.server_config_file_path, "w")
+        tmpfile.write(yaml.dump(loaded_config))
+        tmpfile.close()
+        # validate config file created from config example
+        result = run_shell_cmd(self.cmd + " server config validate -c " + self.server_config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+
     # ./cloudbackup misc hash-password
     def test_cmd_hash_password(self):
         test_password = 'ui7Ahtae\Quai5ia\W;oo"ri'
@@ -300,6 +320,20 @@ class TestCliBasics(unittest.TestCase):
                                          "{}".format(cmd_default, result))
         # if this raises and exception then we got a problem
         yaml.load(result['result'].stdout.decode("utf-8"))
+
+    # ./cloudbackup client config example produces valid config example,
+    def test_cmd_client_example_config2(self):
+        result = run_shell_cmd(self.cmd + " client config example")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        # adjust client config file
+        tmpfile = open(self.client_config_file_path, "w")
+        tmpfile.write(result['result'].stdout.decode("utf-8"))
+        tmpfile.close()
+        # validate config file created from config example
+        result = run_shell_cmd(self.cmd + " client config validate -c " + self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
 
 
 def get_args():

@@ -48,7 +48,7 @@ backup:
     exclusions:
       - /something/else
       - /var/lib/mysql
-    targets:
+    target:
       - name: aws_1
         type: s3
         user: AWS_ACCESS_KEY_ID
