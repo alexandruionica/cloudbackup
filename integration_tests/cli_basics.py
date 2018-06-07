@@ -120,7 +120,6 @@ class TestCliBasics(unittest.TestCase):
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
 
-
     # ./cloudbackup misc hash-password
     def test_cmd_hash_password(self):
         test_password = 'ui7Ahtae\Quai5ia\W;oo"ri'
@@ -317,7 +316,7 @@ class TestCliBasics(unittest.TestCase):
         for line in result['result'].stdout.decode("utf-8").split('\n'):
             line_num += 1
         self.assertGreater(line_num, 3, "Expected output from {} to be at least 3 lines long. Command output object: "
-                                         "{}".format(cmd_default, result))
+                                        "{}".format(cmd_default, result))
         # if this raises and exception then we got a problem
         yaml.load(result['result'].stdout.decode("utf-8"))
 
