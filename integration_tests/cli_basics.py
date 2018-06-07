@@ -288,6 +288,19 @@ class TestCliBasics(unittest.TestCase):
                                                                        'file but config dump shows otherwise:'
                                                                        ' {}'.format(decoded))
 
+    # ./cloudbackup client config example produces valid yaml, at least 4 lines long
+    def test_cmd_client_example_config1(self):
+        result = run_shell_cmd(self.cmd + " client config example")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        line_num = 0
+        for line in result['result'].stdout.decode("utf-8").split('\n'):
+            line_num += 1
+        self.assertGreater(line_num, 3, "Expected output from {} to be at least 3 lines long. Command output object: "
+                                         "{}".format(cmd_default, result))
+        # if this raises and exception then we got a problem
+        yaml.load(result['result'].stdout.decode("utf-8"))
+
 
 def get_args():
     """ Get arguments from CLI """
