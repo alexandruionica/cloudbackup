@@ -173,7 +173,7 @@ func (command *ArgsCommandServerStart) Execute(args []string) error {
 }
 
 func (command *ArgsCommandServerConfigExample) Execute(args []string) error {
-	fmt.Println(misc.SampleYamlConfig)
+	fmt.Println(misc.SampleServerYamlConfig)
 	os.Exit(0)
 	return nil
 }
@@ -283,5 +283,11 @@ func (command *ArgsCommandClientBackupStop) Execute(args []string) error {
 		os.Exit(1)
 	}
 	clientBackup.Stop(clConfig, command.Json, command.Job.Name, command.JobId)
+	return nil
+}
+
+func (command *ArgsCommandClientConfigExample) Execute(args []string) error {
+	fmt.Println(misc.SampleClientYamlConfig)
+	os.Exit(0)
 	return nil
 }

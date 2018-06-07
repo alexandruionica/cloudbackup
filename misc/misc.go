@@ -17,7 +17,8 @@ type LoggingArgs struct {
 	LogFile string
 }
 
-const SampleYamlConfig = `# where are the internal SQL databases to be kept
+const SampleServerYamlConfig = `---
+# where are the internal SQL databases to be kept
 data_dir: /var/lib/cloudbackup
 user:
   - name: testuser1
@@ -84,6 +85,11 @@ backup:
     versioning: true
     versions_max_num: 10
     versions_max_age: 6w`
+
+const SampleClientYamlConfig = `---
+username: testuser1
+password: 'HV}H/y?<9$]Z5N4N'
+address: http://127.0.0.1:8080`
 
 func SetupLogging(args LoggingArgs){
 	log.SetOutput(os.Stdout)
