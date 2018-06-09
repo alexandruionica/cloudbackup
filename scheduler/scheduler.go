@@ -7,6 +7,7 @@ import (
 	"github.com/satori/go.uuid"
 	"fmt"
 	"time"
+	"cloudbackup/backup/scan"
 )
 
 const loggingContext = "scheduler"
@@ -140,6 +141,26 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
 func startBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate){
 	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", name, jobUuid)
+
+	// extract config for this backup job only
+	var backupConfig config.Backup
+	for _, backup := range serverConfigCopy.Backup {
+		if backup.Name == name{
+			backupConfig = backup
+			break
+		}
+	}
+
+	// TODO - set lock for SQL object and then pass it to scan.Path()
+	// TODO - update some status report object and pass it to scan.Path()
+
+	// examine each path listed and backup contained files/directories if needed
+	for _, path := range backupConfig.Paths {
+		err := scan.Path(path, backupConfig)
+		if err != nil {
+			// TODO - mark backup as failed as some Major error was encountered
+		}
+	}
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
