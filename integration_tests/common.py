@@ -66,6 +66,8 @@ backup:
     paths:
       - /var/log
       - /var/www/html/data/
+    # do not follow symbolic links (defaults to true)
+    dereference: false
     target:
       - name: aws_2
         type: aws_s3

@@ -32,6 +32,7 @@ type Backup struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Paths []string `required:"true" yaml:"paths" json:"paths"`
 	Exclusions []string `yaml:"exclusions" json:"exclusions"`
+	Dereference bool `default:"true" yaml:"dereference" json:"dereference"`
 	Target []Target `required:"true" yaml:"target" json:"target"`
 	Schedule []string `yaml:"schedule" json:"schedule"`
 	Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
