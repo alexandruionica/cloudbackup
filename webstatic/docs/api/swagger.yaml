@@ -310,6 +310,9 @@ definitions:
           type: string
         example:
           - /etc/shadow
+      dereference:
+        type: boolean
+        default: true
       target:
         type: array
         items:
