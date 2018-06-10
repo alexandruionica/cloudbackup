@@ -21,6 +21,12 @@ try {
 	  exit $LastExitCode
 	}
 
+	& "$TESTSFOLDER\.venv\Scripts\pip.exe" freeze
+        if ( $LastExitCode -ne 0 ) {
+          echo "Error listing installed python modules and their dependencies versions"
+          exit $LastExitCode
+        }
+
 
 	if(!(Test-Path -Path "$TESTSFOLDER\.venv\Scripts\flake8.exe"  )){
 	  echo "Error: flake8 binary is missing. Can't proceed to lint python code"

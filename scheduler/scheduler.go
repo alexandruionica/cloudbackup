@@ -80,7 +80,7 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 				Err: true,
 			}
 		}
-		go startBackup(receivedBackupCommand.Name, startJobUuid, serverConfigCopy)
+		go startBackup(receivedBackupCommand.Name, startJobUuid, serverConfigCopy, backupJobsState)
 		return shared.ResponseBackupCommand{
 			Name: receivedBackupCommand.Name,
 			Id: receivedBackupCommand.Id,
@@ -139,7 +139,8 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
-func startBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate){
+func startBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate,
+	backupJobsState *shared.BackupJobsState){
 	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 
 	// extract config for this backup job only
@@ -156,7 +157,7 @@ func startBackup (name string, jobUuid string, serverConfigCopy config.CfgTempla
 
 	// examine each path listed and backup contained files/directories if needed
 	for _, path := range backupConfig.Paths {
-		err := scan.Path(path, backupConfig)
+		err := scan.Path(path, backupConfig, backupJobsState)
 		if err != nil {
 			// TODO - mark backup as failed as some Major error was encountered
 		}

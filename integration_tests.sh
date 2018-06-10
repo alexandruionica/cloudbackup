@@ -18,6 +18,9 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# list installed depencencies and the versions of their dependencies
+${TESTSFOLDER}/.venv/bin/pip freeze
+
 echo "Linting Python integration tests ..."
 # We put the linting here for simplicity, since this is not a Python project
 ${TESTSFOLDER}/.venv/bin/flake8 --ignore E501,F401,F403,F405 ${TESTSFOLDER}/ --exclude=.venv
