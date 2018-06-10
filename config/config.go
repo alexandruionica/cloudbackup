@@ -32,6 +32,7 @@ type Backup struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Paths []string `required:"true" yaml:"paths" json:"paths"`
 	Exclusions []string `yaml:"exclusions" json:"exclusions"`
+	// TODO - fix library bug - https://github.com/jinzhu/configor/issues/34
 	Dereference bool `default:"true" yaml:"dereference" json:"dereference"`
 	Target []Target `required:"true" yaml:"target" json:"target"`
 	Schedule []string `yaml:"schedule" json:"schedule"`

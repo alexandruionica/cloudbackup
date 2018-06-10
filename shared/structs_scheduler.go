@@ -77,6 +77,7 @@ type BackupJobStatus struct {
 	RxBandwidth5Min int64 `json:"rx_bandwidth_5_min,omitempty"`
 	TxBandwidth15Min int64 `json:"tx_bandwidth_15_min,omitempty"`
 	RxBandwidth15Min int64 `json:"rx_bandwidth_15_min,omitempty"`
+	StatsCounters map[string]uint64 `json:"stats_counters,omitempty"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
 	NextRun time.Time `json:"next_run"`
 }
@@ -190,6 +191,16 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		State: "running",
 		BackupJobId: BackupJobId,
 		StartTime: time.Now(),
+		// init statistics related fields
+		StatsCounters: map[string]uint64{
+			"examined_files": 0,
+			"examined_directories": 0,
+			"examine_produced_errors": 0,
+			"uploaded_files": 0,
+			"uploaded_directories_metadata": 0,
+			"upload_produced_errors": 0,
+		},
+		// TODO - init metadata for Bandwidth usage (also several new fields are needed in order to note when the last update was
 		// TODO - add NextRun
 	})
 	return nil
@@ -247,5 +258,21 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 		return nil
 	} else {
 		return errors.New(ErrJobAlreadyStopped)
+	}
+}
+
+// increment a statistics counter; this will not error if a job having the same name does not exist;
+// CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
+// stopped state
+func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName string) {
+	jobs.Lock.Lock()
+	defer func() {
+		jobs.Lock.Unlock()
+	}()
+	for _, job := range jobs.Running {
+		if BackupJobName == job.Name {
+			job.StatsCounters[counterName] +=1
+			break
+		}
 	}
 }

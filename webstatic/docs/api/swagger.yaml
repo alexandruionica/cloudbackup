@@ -383,14 +383,43 @@ definitions:
       start_time:
         type: string
         example: '2018-06-02T16:38:55.676712775+10:00'
+        description: 'A start time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored for jobs having "state"="stopped"'
       next_run:
         type: string
         example: '2018-06-03T16:38:55.676712775+10:00'
       job_id:
         type: string
-        example: 163A61FE-2205-4EB2-A0CB-B19A033C1CE3
+        example: '163A61FE-2205-4EB2-A0CB-B19A033C1CE3'
         pattern: >-
           ^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$
+      stats_counters:
+        type: object
+        description: 'This object is present in replies only if the job "state" is not "stopped"'
+        properties:
+          examined_files:
+            type: integer
+            description: 'How many files had their properties examined'
+            example: 604
+          examined_directories:
+            type: integer
+            description: 'How many directories had their properties examined'
+            example: 23
+          examine_produced_errors:
+            type: integer
+            description: 'While examining the properties of files and directories this may errors were encountered. Please get the logs for messages with level ERROR and WARNING produced by context="backup.scan" in order to get additional details. Items for which this counter got incremented also had one of "examined_files" or "examined_directories" incremented'
+            example: 2
+          uploaded_files:
+            type: integer
+            description: 'How many files were uploaded so far during the run of this backup job'
+            example: 230
+          uploaded_directories_metadata:
+            type: integer
+            description: 'How many directories had their properties uploaded so far during the run of this backup job'
+            example: 11
+          upload_produced_errors:
+            type: integer
+            description: 'How many files and directories produced irrecoverable errors so far during the run of this backup job. This implies said files and directories were not successfuly backed up.'
+            example: 11
   ResultBackupJobStart:
     type: object
     properties:
