@@ -559,6 +559,22 @@
               "example": 11
             }
           }
+        },
+        "stats_text": {
+          "type": "object",
+          "description": "This object is present in replies only if the job \"state\" is not \"stopped\"",
+          "properties": {
+            "current_directory": {
+              "type": "string",
+              "description": "The current directory being processed by the backup job which is in progress. If the field is empty then no directory is currently processed or processing has completed",
+              "example": "/var/lib/application/data"
+            },
+            "current_file": {
+              "type": "string",
+              "description": "The current file being processed by the backup job which is in progress. If the field is empty then no file is currently processed or processing has completed",
+              "example": "/var/lib/application/data/project.pdf"
+            }
+          }
         }
       }
     },
