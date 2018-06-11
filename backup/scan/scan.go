@@ -30,15 +30,20 @@ func Path(path string, backupConfig config.Backup, backupJobsState *shared.Backu
 	} else {
 		if stat.IsDir() {
 			backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories")
+			backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path)
 			err = walk(path, stat, backupConfig, backupJobsState)
 			if err != nil {
 				return err
 			}
 		} else {
 			backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
+			backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path)
 			// TODO - add call to function dealing with backing up individual files
 		}
 	}
+	// set to empty examined directory and file stats as we've completed the "run"
+	backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", "")
+	backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
 	return nil
 }
 
@@ -63,6 +68,9 @@ func readDirNames(dirname string) ([]string, error) {
 // walk recursively descends path, calling walkFn.
 func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsState *shared.BackupJobsState) error {
 	// TODO - call to backup the folder entry itself ($stat will ge used here)
+
+	// set current file examined to empty as otherwise output will look inconsistent if we descend a different folder
+	backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
 	logger.Debugf("Getting list of files and directories part of %s", path)
 	names, topLevelErr := readDirNames(path)
 	if topLevelErr != nil {
@@ -88,9 +96,11 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 		} else {
 			if fileInfo.IsDir() {
 				backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories")
+				backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path)
 				_ = walk(childPath, fileInfo, backupConfig, backupJobsState) // #nosec
 			} else {
 				backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
+				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path)
 				// TODO - add call to function dealing with backing up individual files
 			}
 		}
