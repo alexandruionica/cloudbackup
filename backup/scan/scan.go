@@ -24,7 +24,6 @@ func Path(path string, backupConfig config.Backup, backupJobsState *shared.Backu
 		stat, err = os.Lstat(path)
 	}
 	if err != nil {
-		// TODO - increment a counter in order to note that errors were encountered during backup
 		logger.Errorf("While trying to get properties of %s encountered error '%s'", path, err)
 		backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
 		return err

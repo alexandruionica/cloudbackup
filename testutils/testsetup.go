@@ -7,6 +7,9 @@ import (
 	"time"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"io/ioutil"
 )
 
 var MockYaml = []byte(`---
@@ -272,3 +275,79 @@ username: testuser1
 password: 'HV}H/y?<9$]Z5N4N'
 address: http://127.0.0.1:8080
 `)
+
+// folder with some files to test backing up; user must delete folder afterwards
+func SetupBackupDir(testName string, t *testing.T) (string){
+	var path = utils.SetupTmpDir("unittest_backup_scan_test_" + testName, t)
+	var err error
+	// something like /tmp/$RANDOM/dir1/dir2/dir3/dir4
+	err = os.MkdirAll(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "dir4", 0755) // #nosec
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+	// something like /tmp/$RANDOM/absolute_symlink_to_dir3 -> /tmp/$RANDOM/dir1/dir2/dir3
+	err = os.Symlink(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+		string(filepath.Separator) + "dir3", path + string(filepath.Separator) + "absolute_symlink_to_dir3")
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// something like /tmp/$RANDOM/relative_symlink_to_dir3 -> dir1/dir2/dir3
+	err = os.Symlink("dir1" + string(filepath.Separator) + "dir2" +
+		string(filepath.Separator) + "dir3", path + string(filepath.Separator) + "relative_symlink_to_dir3")
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// /tmp/$RANDOM/file1
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "file1", []byte(`text for file1`), 0644)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// /tmp/$RANDOM/dir1/dir2/dir3/file2
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "file2", []byte(`text for file2`), 0644)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+	// /tmp/$RANDOM/dir1/dir2/dir3/file3
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "file3", []byte(`text for file3`), 0644)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// /tmp/$RANDOM/dir1/dir2/dir3/file4
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "file4", []byte(`text for file4`), 0644)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// /tmp/$RANDOM/dir1/dir2/file5
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+		string(filepath.Separator) + "file5", []byte(`text for file5`), 0640)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// /tmp/$RANDOM/dir1/dir2/file6
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+		string(filepath.Separator) + "file6", []byte(`text for file6`), 0600)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	return path
+}
