@@ -45,9 +45,22 @@ backup:
     paths:
       - /something
       - /var/lib
+    # Bourne-Again shell like globing and globstar is supported in the below "exclusions" section.  
+    # Term	     Meaning
+    # *	         matches any sequence of non-path-separators
+    # **	     matches any sequence of characters, including path separators
+    # ?	         matches any single non-path-separator character
+    # [class]	 matches any single non-path-separator character against a class of characters (see below)
+    # {alt1,...} matches a sequence of characters if one of the comma-separated alternatives matches
+    #
+    # Character classes support the following:
+    # Class	 Meaning
+    # [abc]    matches any single character within the set
+    # [a-z]	 matches any single character in the range
+    # [^class] matches any single character which does not match the class
     exclusions:
       - /something/else
-      - /var/lib/mysql
+      - /var/lib/*.db
     target:
       - name: aws_1
         type: s3

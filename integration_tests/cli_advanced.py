@@ -82,8 +82,8 @@ class TestCliAdvanced(unittest.TestCase):
                                              " object: {}".format(result))
         # check all back jobs have state "stopped"
         for backup_job in decoded['result']:
-            self.assertEquals(backup_job['state'], 'stopped', "At least one backup job does not have state='stopped'."
-                                                              " Command output object: {}".format(result))
+            self.assertEqual(backup_job['state'], 'stopped', "At least one backup job does not have state='stopped'."
+                                                             " Command output object: {}".format(result))
 
     # ./cloudbackup client backup list -c client_config.yaml returns exit code 1 when server is offline
     def test_cmd_client_backup_list3(self):

@@ -7,6 +7,7 @@ import (
 	"cloudbackup/config"
 	log "github.com/sirupsen/logrus"
 	"cloudbackup/shared"
+	"github.com/bmatcuk/doublestar"
 )
 
 const loggingContext = "backup.scan"
@@ -65,7 +66,7 @@ func readDirNames(dirname string) ([]string, error) {
 	return names, nil
 }
 
-// walk recursively descends path, calling walkFn.
+// walk recursively path
 func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsState *shared.BackupJobsState) error {
 	// TODO - call to backup the folder entry itself ($stat will ge used here)
 
@@ -79,11 +80,23 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 	}
 
 	// even if $topLevelErr != nil it is possible that readDirNames() returned a partial list of directory contents
-	var err error
 	for _, name := range names {
 		childPath := filepath.Join(path, name)
 		logger.Debugf("Getting details for %s", childPath)
-		// TODO - add function to check if this path is excluded from backup
+		excluded, excludedExpr, err := isExcluded(backupConfig.Exclusions, childPath)
+		if err != nil {
+			logger.Warnf("While trying to check if %s should be excluded from being backed up, the following " +
+				"error was encountered '%s'", childPath, err)
+			backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
+			backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
+			continue
+		}
+		if excluded {
+			logger.Debugf("Skipping from backup %s as it is excluded by expression %s", childPath, excludedExpr)
+			backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
+			continue
+		}
+
 		var fileInfo os.FileInfo
 		if backupConfig.Dereference {
 			fileInfo, err = os.Stat(childPath)
@@ -102,8 +115,26 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 				backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path)
 				// TODO - add call to function dealing with backing up individual files
+
+				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
 			}
 		}
 	}
 	return topLevelErr
+}
+
+// check if $path is matches any of the Globstar elements of the $exclusions array. If a match is found then true
+// is returned followed also by the exclusion rule which matched and nil; if an error is encountered then the last
+// element will be the error message
+func isExcluded(exclusions []string, path string) (bool, string, error){
+	for _, excludedPath := range exclusions {
+		match, err := doublestar.PathMatch(excludedPath, path)
+		if err != nil {
+			return false, "", err
+		}
+		if match {
+			return true, excludedPath, nil
+		}
+	}
+	return false, "", nil
 }
