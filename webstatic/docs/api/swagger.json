@@ -530,12 +530,12 @@
           "properties": {
             "examined_files": {
               "type": "integer",
-              "description": "How many files had their properties examined",
+              "description": "How many files had their properties examined. Excluded files (via the \"exclusions\" section) do not increment this counter.",
               "example": 604
             },
             "examined_directories": {
               "type": "integer",
-              "description": "How many directories had their properties examined",
+              "description": "How many directories had their properties examined. Excluded directories (via the \"exclusions\" section) do not increment this counter.",
               "example": 23
             },
             "examine_produced_errors": {
