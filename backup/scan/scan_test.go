@@ -51,11 +51,16 @@ func TestPath1(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", uuid.NewV4().String())
+	jobId := uuid.NewV4().String()
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = Path(backupDirPath, backupConfig, backupJobsState)
+	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
+	}
+	_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan)
 	if err != nil {
 		t.Fatalf("Failed to walk mock backup directory path. Error was: %s", err)
 	}
@@ -111,11 +116,16 @@ func TestPath2(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", uuid.NewV4().String())
+	jobId := uuid.NewV4().String()
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = Path(backupDirPath, backupConfig, backupJobsState)
+	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
+	}
+	_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan)
 	if err != nil {
 		t.Fatalf("Failed to walk mock backup directory path. Error was: %s", err)
 	}
@@ -182,11 +192,16 @@ func TestPath3(t *testing.T) {
 		backupJobsState := &shared.BackupJobsState{}
 		backupJobsState.Lock = &sync.RWMutex{}
 		// populate state object with default values
-		err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", uuid.NewV4().String())
+		jobId := uuid.NewV4().String()
+		err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = Path(backupDirPath, backupConfig, backupJobsState)
+		closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+		if err != nil {
+			t.Fatalf("Failed to get signalling channel. Error was: %s", err)
+		}
+		_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan)
 		if err != nil {
 			t.Fatalf("Failed to walk mock backup directory path. Error was: %s", err)
 		}

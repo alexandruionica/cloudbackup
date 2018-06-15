@@ -77,6 +77,7 @@ func (srv *SrvData) Start() {
 	router.POST(ApiPrefix+ "/backup/start", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupStart)))
 	router.POST(ApiPrefix+ "/backup/stop", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupStop)))
 	router.GET(ApiPrefix+ "/backup/list", srv.BasicAuth(srv.CheckAccess(srv.handlerGetBackupList)))
+	router.POST(ApiPrefix+ "/backup/evaluate", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupEvaluate)))
 
 	// put a write lock and update the router - by this point all routes should have been added
 	srv.Mutex.Lock()

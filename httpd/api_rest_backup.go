@@ -217,3 +217,78 @@ func (srvSrc SrvData) handlerGetBackupList(w http.ResponseWriter, r *http.Reques
 	JSONSuccessWithResult(w, "success", "success",
 		srvCopy.backupJobsState.Get(configCopy, loggingContext + ".handlerGetBackupList"))
 }
+
+// for a given backup job name return the list of files that would be examined and optionally any excluded files
+func (srvSrc SrvData) handlerPostBackupEvaluate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
+		return
+	}
+	var decodedJson BackupJob
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if decodedJson.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name" +
+			" is needed in order to know what backup job you're requesting to be started"))
+		return
+	}
+	// get notified if the client closes the connection
+	notify := w.(http.CloseNotifier).CloseNotify()
+
+	// while a copy, some of the data is pointers so locking is still needed
+	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupEvaluate")
+	// while a copy, some of the data is pointers so locking is still needed
+	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerPostBackupEvaluate")
+	found := false
+	for _, backup := range configCopy.Backup {
+		if backup.Name == decodedJson.Name {
+			found = true
+		}
+	}
+
+	if found == false {
+		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job was found matching name:" +
+			" %s", decodedJson.Name))
+		return
+	}
+	flusher, ok := w.(http.Flusher)
+
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		logger.Debugf("HTTP2 Streaming unsupported in handlerGetBackupEvaluate()")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	counter := 0
+	for {
+		select {
+		// if the client closed the connection then exit
+		case _ = <-notify:
+			logger.Debug("Client closed connection so we're exiting")
+			return
+		default:
+			{
+				// Write to the ResponseWriter
+				// Server Sent Events compatible
+				_, _ = fmt.Fprintf(w, "data: %s\n", "zzzzzz") // #nosec
+				// Flush the data immediately instead of buffering it for later.
+				flusher.Flush()
+
+				time.Sleep(100 * time.Millisecond)
+				counter += 1
+				if counter > 100 {
+					return
+				}
+		}
+		}
+
+	}
+
+	//JSONSuccessWithResult(w, "success", "success",
+	//	srvCopy.backupJobsState.Get(configCopy, loggingContext + ".handlerGetBackupList"))
+}

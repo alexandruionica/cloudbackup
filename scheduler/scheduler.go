@@ -80,7 +80,7 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 				Err: true,
 			}
 		}
-		go startBackup(receivedBackupCommand.Name, startJobUuid, serverConfigCopy, backupJobsState)
+		go runBackup(receivedBackupCommand.Name, startJobUuid, serverConfigCopy, backupJobsState)
 		return shared.ResponseBackupCommand{
 			Name: receivedBackupCommand.Name,
 			Id: receivedBackupCommand.Id,
@@ -100,7 +100,26 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 					Err: true,
 				}
 			}
-			err := backupJobsState.MarkStopped(receivedBackupCommand.Name, loggingContext + ".processBackupCommand",
+
+			closeChan, err := backupJobsState.GetSignalChanForJob(receivedBackupCommand.Name,
+				receivedBackupCommand.BackupJobId)
+			// if we got an error than something else has already marked the backup job as != "running"
+			if err != nil {
+				msg := fmt.Sprintf("It seems that while trying to get the signalling channel for backup job " +
+					"'%s' having id '%s' that another process change the job state to something else than 'running'",
+					receivedBackupCommand.Name, receivedBackupCommand.BackupJobId)
+				logger.Warn(msg)
+				// it is assumed that whatever process requested the backup to be stopped will also take care of fully
+				// stopping it
+				return shared.ResponseBackupCommand{
+					Name: receivedBackupCommand.Name,
+					Id: receivedBackupCommand.Id,
+					Message: shared.ErrJobNotFoundInRunningState,
+					Err: true,
+				}
+			}
+
+			err = backupJobsState.MarkStopped(receivedBackupCommand.Name, loggingContext + ".processBackupCommand",
 				receivedBackupCommand.BackupJobId, false)
 			if err != nil {
 				return shared.ResponseBackupCommand{
@@ -110,7 +129,12 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 					Err: true,
 				}
 			}
-			go stopBackup(receivedBackupCommand.Name, receivedBackupCommand.BackupJobId, serverConfigCopy, backupJobsState)
+
+			// this will block until something reads the channel so we'll launch it in a GO routine
+			// this signals the runBackup() go routine that the current running backup should stop.
+			go func(){
+				closeChan <- true
+			}()
 			return shared.ResponseBackupCommand{
 				Name: receivedBackupCommand.Name,
 				Id: receivedBackupCommand.Id,
@@ -139,7 +163,7 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
-func startBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate,
+func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	backupJobsState *shared.BackupJobsState){
 	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 
@@ -155,26 +179,71 @@ func startBackup (name string, jobUuid string, serverConfigCopy config.CfgTempla
 	// TODO - set lock for SQL object and then pass it to scan.Path()
 	// TODO - update some status report object and pass it to scan.Path()
 
+	closeChan, err := backupJobsState.GetSignalChanForJob(name, jobUuid)
+	// if we got an error than something else has already marked the backup job as != "running"
+	if err != nil {
+		logger.Errorf("It seems that while starting up backup job '%s' having id '%s' another process stopped " +
+			"this backup job run", name, jobUuid)
+		// it is assumed that whatever process requested the backup to be stopped will also take care of fully
+		// stopping it
+		return
+	}
+
 	// examine each path listed and backup contained files/directories if needed
 	for _, path := range backupConfig.Paths {
-		err := scan.Path(path, backupConfig, backupJobsState)
-		if err != nil {
-			// TODO - mark backup as failed as some Major error was encountered
+		select {
+		case <-closeChan:
+			{
+				logger.Infof("cancelling running backup job '%s' having id '%s'", name, jobUuid)
+				break
+			}
+		default:
+			exiting, err := scan.Path(path, backupConfig, backupJobsState, closeChan)
+			// Examine FIRST $exit and then $err
+			if exiting {
+				// TODO - mark backup as interrupted
+				break
+			}
+			if err != nil {
+				// TODO - mark backup as failed as some Major error was encountered
+
+				break
+			}
 		}
 	}
+	stopBackup(name, jobUuid, backupConfig, backupJobsState, closeChan)
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
-func stopBackup (name string, jobUuid string, serverConfigCopy config.CfgTemplate, backupJobsState *shared.BackupJobsState){
+func stopBackup (name string, jobUuid string, backupConfig config.Backup,
+	backupJobsState *shared.BackupJobsState, closeChan chan bool ){
 	// TODO - if $jobUuid is empty string then stop whatever is the current running backup for the given $name (and
 	// figure out the UUID in order to correctly log it in the below logger call
 	logger.Infof("Stopping backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 	// TODO - implement stop; in the mean time sleep for 20 seconds and then mark job as stopped
 	time.Sleep(20 * time.Second)
+
+	// TODO - before MarkStopped() copy report (state) somewhere
 	err := backupJobsState.MarkStopped(name, loggingContext + ".stopBackup",
 		jobUuid, true)
 	if err != nil {
 		logger.Warnf("Encountered an error when trying to mark backup job '%s' having job id '%s' as 'stopped'. " +
 			"The error was: %s", name, jobUuid, err)
 	}
+
+	// before exiting loop several times over the communication channel; nothing should be there but this ensures we
+	// don't end up with a memory leak or a panic in case we got a bug
+	for i := 0; i < 100; i++ {
+		select {
+		case <- closeChan:
+			{
+				logger.Warnf("signalling channel for backup job '%s' having id '%s' should have been empty " +
+					"but there was a message on it", name, jobUuid)
+			}
+		default:
+		}
+	}
+	close(closeChan)
+
+	// TODO - close SQL connection
 }
