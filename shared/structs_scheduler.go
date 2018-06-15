@@ -11,6 +11,7 @@ import (
 const ErrJobAlreadyRunning = "job already running"
 const ErrJobAlreadyStopped = "job already stopped"
 const ErrJobAlreadyStopping = "job already stopping"
+const ErrJobNotFoundInRunningState = "no running job with given name and uuid was found"
 
 type CommWithSchedulerForBackup struct {
 	// this needs to be locked before acquiring the channel to send messages to the scheduler goroutine or read messages
@@ -81,6 +82,8 @@ type BackupJobStatus struct {
 	StatsText map[string]string `json:"stats_text,omitempty"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
 	NextRun time.Time `json:"next_run"`
+	// using this channel we signal a Backup job task that it should proceed to shutdown now
+	SignalClose chan bool `json:"-"`
 }
 
 type BackupJobsState struct {
@@ -187,6 +190,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			return errors.New(ErrJobAlreadyRunning)
 		}
 	}
+
 	jobs.Running = append(jobs.Running, BackupJobStatus{
 		Name: name,
 		State: "running",
@@ -205,6 +209,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"current_directory": "",
 			"current_file": "",
 		},
+		SignalClose: make(chan bool),
 		// TODO - init metadata for Bandwidth usage (also several new fields are needed in order to note when the last update was
 		// TODO - add NextRun
 	})
@@ -296,4 +301,38 @@ func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName stri
 			break
 		}
 	}
+}
+
+
+// return the signal channel used by a particular Running job with a particular uuid (or if uuid="" then match on
+//    name only)
+func (jobs *BackupJobsState) GetSignalChanForJob(BackupJobName string, BackupJobId string) (chan bool, error) {
+	jobs.Lock.Lock()
+	defer func() {
+		jobs.Lock.Unlock()
+	}()
+
+	var signalChan chan bool
+	found := false
+
+	for _, job := range jobs.Running {
+		if BackupJobName == job.Name {
+			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if BackupJobId == "" {
+				found = true
+				signalChan = job.SignalClose
+				break
+			} else {
+				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+					found = true
+					signalChan = job.SignalClose
+					break
+				}
+			}
+		}
+	}
+	if found {
+		return signalChan, nil
+	}
+	return nil, errors.New(ErrJobNotFoundInRunningState)
 }
