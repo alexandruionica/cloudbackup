@@ -103,7 +103,8 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 		select {
 		case <-closeChan:
 			{
-				logger.Infof("cancelling running backup job '%s'", backupConfig.Name)
+				logger.Infof("while processing '%s' received request to cancel running backup job '%s'",
+					path, backupConfig.Name)
 				return true, topLevelErr
 			}
 		default:

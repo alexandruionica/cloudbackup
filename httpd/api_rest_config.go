@@ -107,6 +107,9 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 			"trying to compare new config with the old one in order to establish if they differ")
 		return
 	}
+	// TODO - do not allow configuration changes for a given Backup if there are in progress backups or restores for
+	// that section
+
 	var writeErr error
 	// compare new and old config and if there is no difference then don't rewrite the config file
 	if bytes.Equal(oldConfigMarshalled, NewConfigMarshalled) {

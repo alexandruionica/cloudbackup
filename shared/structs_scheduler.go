@@ -17,10 +17,13 @@ type CommWithSchedulerForBackup struct {
 	// this needs to be locked before acquiring the channel to send messages to the scheduler goroutine or read messages
 	// sent by the scheduler goroutine
 	Mutex *sync.Mutex
-	// on this chanel the scheduler receives commands
+	// on this channel the scheduler receives commands
 	ReceivedCommand chan ReceiveBackupCommand
-	// on this chanel the scheduler sends the response to commands it received
+	// on this channel the scheduler sends the response to commands it received
 	SendResponse chan ResponseBackupCommand
+	// on this channel we signal the Scheduler to stop all running backups and then shutdown itself. Scheduler will
+	// reply back on the same channel when before it exits
+	Shutdown chan bool
 }
 
 type ReceiveBackupCommand struct {
@@ -59,6 +62,9 @@ func (comm *CommWithSchedulerForBackup) Init () {
 	comm.ReceivedCommand = make(chan ReceiveBackupCommand)
 	// channel used for synchronization; do NOT change it to a buffered channel
 	comm.SendResponse = make(chan ResponseBackupCommand)
+	// on this channel we signal the Scheduler to stop all running backups and then shutdown itself; Scheduler will
+	// reply back on the same channel when before it exits;  do NOT change it to a buffered channel
+	comm.Shutdown = make(chan bool)
 }
 
 type BackupJobStatus struct {
