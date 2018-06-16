@@ -111,8 +111,8 @@ func (srv *SrvData) Stop(){
 	srv.serverExiting = true
 	srv.Mutex.Unlock()
 
-	// preparation to exit with grace period of 30 seconds
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// preparation to exit with grace period of 10 seconds
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	err := srv.httpsrv.Shutdown(ctx)

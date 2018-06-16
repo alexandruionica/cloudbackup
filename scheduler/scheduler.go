@@ -32,9 +32,18 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 	// infinite loop
 	for {
 		select {
+		case _ = <-SchedulerCommBackup.Shutdown:
+			{
+				logger.Info("Scheduler requested to stop any running backups or restores and then exit")
+				// TODO - add code to stop restores too (right now only backups are stopped)
+				stopAllBackups(backupJobsState, serverConfigCopy)
+				// Signal back on the same channel that scheduler is done cleaning up
+				SchedulerCommBackup.Shutdown <- true
+				return
+			}
 		case _ = <-cfgChange:
 			{
-				logger.Debug("Scheduler reloading configuration")
+				logger.Info("Scheduler reloading configuration")
 				// while a copy, some of the data is pointers so locking is still needed
 				serverConfigCopy = configuration.GetWithLock(loggingContext + ".eventProcessor")
 				// TODO - notify cron scheduler to reload too
@@ -119,6 +128,7 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 				}
 			}
 
+			// set job state to "stopping"
 			err = backupJobsState.MarkStopped(receivedBackupCommand.Name, loggingContext + ".processBackupCommand",
 				receivedBackupCommand.BackupJobId, false)
 			if err != nil {
@@ -223,13 +233,9 @@ func stopBackup (name string, jobUuid string, backupConfig config.Backup,
 	// TODO - implement stop; in the mean time sleep for 20 seconds and then mark job as stopped
 	time.Sleep(20 * time.Second)
 
-	// TODO - before MarkStopped() copy report (state) somewhere
-	err := backupJobsState.MarkStopped(name, loggingContext + ".stopBackup",
-		jobUuid, true)
-	if err != nil {
-		logger.Warnf("Encountered an error when trying to mark backup job '%s' having job id '%s' as 'stopped'. " +
-			"The error was: %s", name, jobUuid, err)
-	}
+	// set state to "stopping"; ignore any errors (job may be set to state "stopping" already if stop was requested
+	//  via the API but stop can also be triggered due to SIGTERM/SIGINT being received
+	_ = backupJobsState.MarkStopped(name, loggingContext + ".stopBackup", jobUuid, false) // #nosec
 
 	// before exiting loop several times over the communication channel; nothing should be there but this ensures we
 	// don't end up with a memory leak or a panic in case we got a bug
@@ -245,5 +251,30 @@ func stopBackup (name string, jobUuid string, backupConfig config.Backup,
 	}
 	close(closeChan)
 
+	// TODO - before MarkStopped(stopped=true) copy report (state) somewhere
+
+	// set state to "stopped"
+	err := backupJobsState.MarkStopped(name, loggingContext + ".stopBackup",
+		jobUuid, true)
+	if err != nil {
+		logger.Warnf("Encountered an error when trying to mark backup job '%s' having job id '%s' as 'stopped'. " +
+			"The error was: %s", name, jobUuid, err)
+	}
+
 	// TODO - close SQL connection
+}
+
+func stopAllBackups (backupJobsState *shared.BackupJobsState, serverConfigCopy config.CfgTemplate){
+	if len(backupJobsState.Running) >0 {
+		logger.Info("Stopping all running backup jobs")
+	}
+	for _, job := range backupJobsState.Running {
+		// find the config for this backup job only
+		for _, backup := range serverConfigCopy.Backup {
+			if backup.Name == job.Name{
+				stopBackup(job.Name, job.BackupJobId, backup, backupJobsState, job.SignalClose)
+				break
+			}
+		}
+	}
 }
