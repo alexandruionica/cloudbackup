@@ -18,8 +18,8 @@ var logger = log.WithFields(log.Fields{
 // Path descends into the file tree rooted at $path, calls walk() if $path is a directory and otherwise backup function
 // return: first parameter will be "true" only if it was signalled via closeChan to stop the running backup; second
 // parameter signifies errors
-func Path(path string, backupConfig config.Backup, backupJobsState *shared.BackupJobsState,
-	closeChan chan bool) (bool, error) {
+func Path(path string, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface,
+	closeChan chan bool, dryRun bool) (bool, error) {
 	var stat os.FileInfo
 	var err error
 	if backupConfig.Dereference {
@@ -41,8 +41,9 @@ func Path(path string, backupConfig config.Backup, backupJobsState *shared.Backu
 		default:
 			if stat.IsDir() {
 				backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories")
-				backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path)
-				exiting, err := walk(path, stat, backupConfig, backupJobsState, closeChan)
+				backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
+					"", "")
+				exiting, err := walk(path, stat, backupConfig, backupJobsState, closeChan, dryRun)
 				// backup job was signalled to exit - Examine FIRST $exiting and then $err
 				if exiting {
 					return true, err
@@ -52,14 +53,17 @@ func Path(path string, backupConfig config.Backup, backupJobsState *shared.Backu
 				}
 			} else {
 				backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
-				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path)
-				// TODO - add call to function dealing with backing up individual files
+				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
+				if ! dryRun {
+					// TODO - add call to function dealing with backing up individual files
+				}
+
 			}
 		}
 	}
 	// set to empty examined directory and file stats as we've completed the "run"
-	backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", "")
-	backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
+	backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", "", "", "")
+	backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "", "", "")
 	return false, nil
 }
 
@@ -84,12 +88,14 @@ func readDirNames(dirname string) ([]string, error) {
 // walk recursively path
 // return: first parameter will be "true" only if it was signalled via closeChan to stop the running backup; second
 // parameter signifies errors
-func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsState *shared.BackupJobsState,
-	closeChan chan bool) (bool, error) {
-	// TODO - call to backup the folder entry itself ($stat will ge used here)
+func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface,
+	closeChan chan bool, dryRun bool) (bool, error) {
+	if ! dryRun {
+		// TODO - call to backup the folder entry itself ($stat will ge used here)
+	}
 
 	// set current file examined to empty as otherwise output will look inconsistent if we descend a different folder
-	backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
+	backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "", "", "")
 	logger.Debugf("Getting list of files and directories part of %s", path)
 	names, topLevelErr := readDirNames(path)
 	if topLevelErr != nil {
@@ -99,7 +105,6 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 
 	// even if $topLevelErr != nil it is possible that readDirNames() returned a partial list of directory contents
 	for _, name := range names {
-
 		select {
 		case <-closeChan:
 			{
@@ -115,12 +120,14 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 				logger.Warnf("While trying to check if %s should be excluded from being backed up, the following " +
 					"error was encountered '%s'", childPath, err)
 				backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
-				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
+				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown", childPath, "",
+					err.Error())
 				continue
 			}
 			if excluded {
 				logger.Debugf("Skipping from backup %s as it is excluded by expression %s", childPath, excludedExpr)
-				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
+				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown",
+					childPath, excludedExpr, "")
 				continue
 			}
 
@@ -133,21 +140,28 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 			if err != nil {
 				logger.Warnf("While trying to get properties of %s encountered error '%s'", childPath, err)
 				backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
+				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown", childPath,
+					"", err.Error())
 			} else {
 				if fileInfo.IsDir() {
 					backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories")
-					backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path)
-					exiting, _ := walk(childPath, fileInfo, backupConfig, backupJobsState, closeChan) // #nosec
+					backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", childPath,
+						"", "")
+					exiting, _ := walk(childPath, fileInfo, backupConfig, backupJobsState, closeChan, dryRun) // #nosec
 					// lower level walk() was signalled to exit
 					if exiting {
 						return true, topLevelErr
 					}
 				} else {
 					backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
-					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path)
-					// TODO - add call to function dealing with backing up individual files
+					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", childPath,
+						"","")
+					if ! dryRun {
+						// TODO - add call to function dealing with backing up individual files
+					}
 
-					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "")
+					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "",
+						"", "")
 				}
 			}
 		}

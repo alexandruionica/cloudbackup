@@ -13,6 +13,7 @@ import (
 	"cloudbackup/password"
 	"strings"
 	"cloudbackup/shared"
+	"cloudbackup/backup/scan"
 )
 
 // various "code" messages the API can return
@@ -287,4 +288,31 @@ func ValidateJsonHTTPInput (w http.ResponseWriter, r *http.Request) (bodyBytes [
 func LogHttpRequest(r *http.Request){
 	log.WithFields(log.Fields{"context": loggingContext + ".access"}).Infof("%s %s %s %s", r.RemoteAddr,
 		r.Method, r.Host, r.RequestURI)
+}
+
+
+// calls an "evaluate" of the backup paths for a particular job
+func dryRunBackupPaths(backupConfig config.Backup, backupJobsState *shared.DryRunBackupJobsState, cancelScanPath chan bool,
+	scanPathExit chan bool) {
+	for _, path := range backupConfig.Paths {
+		// backupJobsState MUST be a pointer
+		exiting, err := scan.Path(path, backupConfig, backupJobsState, cancelScanPath, true)
+		// Examine FIRST $exit and then $err ;  $exiting means that a signal was sent so scan.Path() exits, on request,
+		// 	early
+		if exiting {
+			logger.Debug("scan.Path() reported to dryRunBackupPaths() that it was requested to cancel its run")
+			scanPathExit <- true
+			return
+		}
+		if err != nil {
+			// TODO - somehow message HttpEval handler that booboo was encountered
+			scanPathExit <- true
+			logger.Debug("dryRunBackupPaths() has encountered and error and is exiting")
+			return
+		}
+	}
+	// message HttpEval handler that scan.Path() has completed successfully its run
+	scanPathExit <- true
+	logger.Debug("dryRunBackupPaths() has successfully completed its run and is exiting")
+	return
 }

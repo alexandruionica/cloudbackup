@@ -208,7 +208,8 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 				break
 			}
 		default:
-			exiting, err := scan.Path(path, backupConfig, backupJobsState, closeChan)
+			// backupJobsState MUST be a pointer
+			exiting, err := scan.Path(path, backupConfig, backupJobsState, closeChan, false)
 			// Examine FIRST $exit and then $err
 			if exiting {
 				// TODO - mark backup as interrupted

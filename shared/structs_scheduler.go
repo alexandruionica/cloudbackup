@@ -12,6 +12,7 @@ const ErrJobAlreadyRunning = "job already running"
 const ErrJobAlreadyStopped = "job already stopped"
 const ErrJobAlreadyStopping = "job already stopping"
 const ErrJobNotFoundInRunningState = "no running job with given name and uuid was found"
+const ErrJobNotFoundInEvaluatingState = "no evaluating job with given name and uuid was found"
 
 type CommWithSchedulerForBackup struct {
 	// this needs to be locked before acquiring the channel to send messages to the scheduler goroutine or read messages
@@ -98,6 +99,12 @@ type BackupJobsState struct {
 	Lock *sync.RWMutex
 }
 
+// this interface is used only for cloudbackup/backup/scan/Scan() in order to be able to pass a different object when doing a
+//  dry run report
+type BackupJobsStateInterface interface {
+	IncrementCounter(BackupJobName string, counterName string)
+	UpdateStatsText(BackupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
+}
 
 // returns a slice with the state of both running and stopped jobs. $cfgCopy MUST be a copy and not a dereference of
 // the actual pointer to the main config (as slices are passed by reference and bad things will happen)
@@ -295,15 +302,29 @@ func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName 
 
 // update StatsText map; this will not error if a job having the same name does not exist;
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
-// stopped state
-func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName string, statValue string) {
+// stopped state; $exclusionExpr and $fileError are not used but are needed in the signature in order to match
+// interface expectations
+func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName string, statValue string,
+	exclusionExpr string, fileError string) {
+	// we use the "unknown" marker when reporting errors for getting file stat() of files/folder being excluded. This
+	// 	maker is useful only in the other implementation of this interface method so here we just skip over it
+	// 	all together
+	if statName == "unknown" {
+		return
+	}
 	jobs.Lock.Lock()
 	defer func() {
 		jobs.Lock.Unlock()
 	}()
 	for _, job := range jobs.Running {
 		if BackupJobName == job.Name {
-			job.StatsText[statName] = statValue
+			// if an exclusion has matched or we got an error then we don't want the file/directory to appear any more as
+			// currently being processed
+			if exclusionExpr == "" || fileError == "" {
+				job.StatsText[statName] = ""
+			} else {
+				job.StatsText[statName] = statValue
+			}
 			break
 		}
 	}
