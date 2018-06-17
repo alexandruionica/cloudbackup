@@ -87,6 +87,7 @@ type ArgsCommandClientBackup struct {
 	Start ArgsCommandClientBackupStart `command:"start" description:"Start a backup job"`
 	Stop  ArgsCommandClientBackupStop `command:"stop" description:"Stop a running backup job"`
 	List  ArgsCommandClientBackupList `command:"list" description:"List all backup jobs and a brief status for each of them"`
+	DryRun ArgsCommandClientBackupDryRun `command:"dryrun" description:"Dry run a backup job in order to see what files and directories get evaluated"`
 
 }
 
@@ -105,6 +106,14 @@ type ArgsCommandClientBackupStop struct {
 		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
 	JobId string `short:"i" long:"job-id" description:"Id of the job to stop. Using this ensures that only a particular job is stopped. If the job id doesn't match the id of the running job having the same name then the stop operation will not proceed"`
+}
+
+type ArgsCommandClientBackupDryRun struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation is successful then print JSON responses as they are received from server. If this option is not specified then the response is processed and the output is a plaintext table followed by a summary at the end."`
+	Job struct {
+		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
 }
 
 type ArgsCommandClientBackupList struct {
@@ -283,6 +292,24 @@ func (command *ArgsCommandClientBackupStop) Execute(args []string) error {
 		os.Exit(1)
 	}
 	clientBackup.Stop(clConfig, command.Json, command.Job.Name, command.JobId)
+	return nil
+}
+
+func (command *ArgsCommandClientBackupDryRun) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientBackup.DryRun(clConfig, command.Json, command.Job.Name)
 	return nil
 }
 

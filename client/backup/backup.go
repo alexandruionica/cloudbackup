@@ -15,6 +15,8 @@ import (
 	"cloudbackup/utils"
 	clientConfig "cloudbackup/client/config"
 	clientCommon "cloudbackup/client/common"
+	"bufio"
+	"io"
 )
 
 const ApiPrefix = "/api/v1"
@@ -175,6 +177,76 @@ func Stop(config clientConfig.Client, jsonOutput bool, jobName string, JobId str
 		os.Exit(0)
 	} else {
 		fmt.Printf("%s\n", decodedJson.Message)
+	}
+}
+
+func DryRun(config clientConfig.Client, jsonOutput bool, jobName string) {
+	payload := struct{Name string `json:"name"`}{jobName,}
+	encodedPayload, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Printf("Could not JSON encode request payload. Received error was: %s", err)
+		os.Exit(1)
+	}
+
+	httpClient := &http.Client{}
+	req, err := http.NewRequest("POST", config.Address + ApiPrefix + "/backup/dryrun",
+		bytes.NewBuffer(encodedPayload))
+	if err != nil {
+		fmt.Printf("Error starting the http client: %s\n", err)
+		os.Exit(1)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(config.Username, config.Password)
+
+	// make request
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		logger.Debugf("%s %+v", err, resp)
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	// clientCommon.ValidateServerResponse() reads the whole response body and then closes it and this won't work with
+	//  http2 SSE (or will buffer all responses) so we want to trigger this only if something went wrong
+	if resp.StatusCode != 200 {
+		_, err := clientCommon.ValidateServerResponse(resp)
+		if err != nil {
+			fmt.Printf("%s\n", err)
+			os.Exit(1)
+		}
+	}
+
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			fmt.Printf("While parsing response from server, the following error was encountered: '%s'\n", err)
+			os.Exit(1)
+		}
+		if bytes.HasPrefix(line, []byte("data: ")) {
+			if jsonOutput {
+				fmt.Printf(string(line)[6:])
+			} else {
+				var decodedJsonMessage shared.ScanEvalItemReport
+				err := json.Unmarshal(line[6:], &decodedJsonMessage)
+				if err != nil {
+					fmt.Printf(string(line)[6:])
+				} else {
+					incl := "include"
+					inclAppend := ""
+					fType := " " + decodedJsonMessage.Type
+					if decodedJsonMessage.Excluded {
+						incl = "exclude"
+						inclAppend = fmt.Sprintf( " matching exclusion rule: '%s'", decodedJsonMessage.ExclusionExpr)
+						// type is unknown so we'll skip printing this field
+						fType = ""
+					}
+					fmt.Printf("%s%s %s%s\n", incl, fType, decodedJsonMessage.Name, inclAppend)
+				}
+			}
+		}
 	}
 }
 

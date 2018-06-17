@@ -60,7 +60,7 @@ func TestPath1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
-	_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan)
+	_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan, false)
 	if err != nil {
 		t.Fatalf("Failed to walk mock backup directory path. Error was: %s", err)
 	}
@@ -125,7 +125,7 @@ func TestPath2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
-	_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan)
+	_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan, false)
 	if err != nil {
 		t.Fatalf("Failed to walk mock backup directory path. Error was: %s", err)
 	}
@@ -201,7 +201,7 @@ func TestPath3(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 		}
-		_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan)
+		_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan, false)
 		if err != nil {
 			t.Fatalf("Failed to walk mock backup directory path. Error was: %s", err)
 		}

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"time"
+	"sync"
+	"cloudbackup/config"
 )
 
 type BackupJob struct {
@@ -219,7 +221,7 @@ func (srvSrc SrvData) handlerGetBackupList(w http.ResponseWriter, r *http.Reques
 }
 
 // for a given backup job name return the list of files that would be examined and optionally any excluded files
-func (srvSrc SrvData) handlerPostBackupEvaluate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	bodyBytes, err := ValidateJsonHTTPInput(w, r)
 	if err != nil {
 		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
@@ -236,13 +238,15 @@ func (srvSrc SrvData) handlerPostBackupEvaluate(w http.ResponseWriter, r *http.R
 	notify := w.(http.CloseNotifier).CloseNotify()
 
 	// while a copy, some of the data is pointers so locking is still needed
-	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupEvaluate")
+	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupDryRun")
 	// while a copy, some of the data is pointers so locking is still needed
-	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerPostBackupEvaluate")
+	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerPostBackupDryRun")
 	found := false
+	var backupConfig config.Backup
 	for _, backup := range configCopy.Backup {
 		if backup.Name == decodedJson.Name {
 			found = true
+			backupConfig = backup
 		}
 	}
 
@@ -255,7 +259,7 @@ func (srvSrc SrvData) handlerPostBackupEvaluate(w http.ResponseWriter, r *http.R
 
 	if !ok {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-		logger.Debugf("HTTP2 Streaming unsupported in handlerGetBackupEvaluate()")
+		logger.Debugf("HTTP2 Streaming unsupported in handlerPostBackupDryRun()")
 		return
 	}
 
@@ -264,27 +268,76 @@ func (srvSrc SrvData) handlerPostBackupEvaluate(w http.ResponseWriter, r *http.R
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	counter := 0
+	// backupJobState contains the state of the evaluated job
+	backupJobsState := &shared.DryRunBackupJobsState{Lock: &sync.RWMutex{}}
+	reportChan := make(chan shared.ScanEvalItemReport)
+	backupJobsState.ReportChan = reportChan
+	evaljobId := uuid.NewV4().String()
+	err = backupJobsState.MarkEvaluating(decodedJson.Name, loggingContext + ".handlerPostBackupDryRun",
+		evaljobId)
+	if err != nil {
+		logger.Debugf("While trying to start an evaluate backup job, received error: '%s'", err)
+	}
+	cancelScanPath, err := backupJobsState.GetSignalChanForJob(decodedJson.Name, evaljobId)
+	// this channel is used to tell this http handler that scanPathExit has completed it's run and exited (either exit
+	// was cause by a cancel request or scan.Path just finished it's run)
+	scanPathExit := make(chan bool)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalError, fmt.Sprintf("Received error '%s' " +
+			"while trying to setup the state object for the evaluate job run", err))
+		return
+	}
+
+	// launch GO routine which collects and reports
+	go dryRunBackupPaths(backupConfig, backupJobsState, cancelScanPath, scanPathExit)
+
+	//counter := 0
 	for {
 		select {
 		// if the client closed the connection then exit
 		case _ = <-notify:
-			logger.Debug("Client closed connection so we're exiting")
+			logger.Debug("Client closed connection so we're exiting. Sending signal to scan.Path() so " +
+				"dryRunBackupPaths() exits")
+			// signal scan.Path() to exit
+			cancelScanPath <- true
+			// TODO - figure out why the above works only ~ 50% of the time; grep for 'dryRunBackupPaths|received request to cancel' ;
+			// seems when the issue happens, the message doesn't make it down the channel to scan.Path or scan.walk()
+			logger.Debug("Successfully sent signal to scan.Path(), waiting for reply from dryRunBackupPaths() " +
+				"that it is ready to exit")
+			// wait for scan.Path() to exit
+			_ = <- scanPathExit
+			logger.Debug("handlerPostBackupDryRun() received reply from dryRunBackupPaths() that it has cleaned" +
+				" up. Http handler exiting")
 			return
-		default:
+		case message := <- reportChan:
 			{
 				// Write to the ResponseWriter
 				// Server Sent Events compatible
-				_, _ = fmt.Fprintf(w, "data: %s\n", "zzzzzz") // #nosec
-				// Flush the data immediately instead of buffering it for later.
-				flusher.Flush()
-
-				time.Sleep(100 * time.Millisecond)
-				counter += 1
-				if counter > 100 {
-					return
+				jsonMsg, err := json.Marshal(message)
+				if err != nil {
+					logger.Warnf("Could not json encode message received from evaluate job. Error was: '%s'", err)
+				} else {
+					_, _ = fmt.Fprintf(w, "data: %s\n", jsonMsg) // #nosec
+					// Flush the data immediately instead of buffering it for later.
+					flusher.Flush()
 				}
+
+
+				//time.Sleep(100 * time.Millisecond)
+				//counter += 1
+				//if counter > 100 {
+				//	return
+				//}
 		}
+		// scan.Path completed it's run (a cancel run was not called if we hit this step)
+		case _ = <- scanPathExit:
+			{
+				logger.Debug("scan.Path() triggered by handlerPostBackupDryRun() has completed its run so the " +
+				"http handler will exit now")
+				// TODO - send final report
+				_, _ = fmt.Fprintf(w, "data: %s\n", "Completed run") // #nosec
+				return
+			}
 		}
 
 	}
