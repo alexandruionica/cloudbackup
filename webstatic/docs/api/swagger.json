@@ -292,6 +292,65 @@
         },
         "security": []
       }
+    },
+    "/backup/dryrun": {
+      "post": {
+        "tags": [
+          "backup"
+        ],
+        "summary": "Perform a dry run for a backup job.",
+        "description": "Performs a dry run backup job now. The purpose of this operation is to report back what files would be considered for backup, what would be  excluded and the exclusion rule which matched and also reports on  errors produced when trying to get file properties. The response is http2 Server Side Events and requires a client capable of consuming it. Response codes != 200 will be regular json while response code 200 will  be followed by http2 SSE. Each received event for the 200 status code  will be in the format \"data: {json object}\" except the last line at the  end of the input which will be \"data: Completed run\". Unfortunatelly  Swagger doesn't allow proper documentation of SSE so the response object  definition is the actual {json object} to be expecte after the \"data: \"  field.",
+        "operationId": "BackupDryRun",
+        "produces": [
+          "text/event-stream",
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup to start",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BackupJobName"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "x-produces": "text/event-stream",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseBackupDryRun"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "404": {
+            "description": "No backup job matches the provided name",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        },
+        "security": []
+      }
     }
   },
   "securityDefinitions": {
@@ -578,6 +637,37 @@
         }
       }
     },
+    "ResultBackupJobDryRun": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "/var/www/web-data/file0.dat",
+          "description": "Name of the file or directory being reported"
+        },
+        "type": {
+          "type": "string",
+          "example": "running",
+          "pattern": "^(file|directory|unknown)$",
+          "description": "Unknown is reported when the file was excluded by an exclusion rule as then its properties aren't fetched so it can't be determined if it was a file or directory. Unknown is also reported when an error was encountered when trying to get the properties so again it can't be established if it is a file or a directory"
+        },
+        "excluded": {
+          "type": "boolean",
+          "example": true,
+          "description": "If this file or directory matched an exclusion rule. If excluded then it will not be considered for a backup"
+        },
+        "exclusion_expr": {
+          "type": "string",
+          "example": "/var/www/web-data/*.dat",
+          "description": "The expression which matched the file or folder and caused it to be excluded from being considered for backup. This expression will correspond to one of the expressions mentioned in the configuration file. If $excluded==false then this will be an empty string"
+        },
+        "error": {
+          "type": "string",
+          "example": "open /etc/ssl/private: permission denied",
+          "description": "Empty string if no error was encountered and otherwise the error message produced when trying to get the file or directory properties"
+        }
+      }
+    },
     "ResultBackupJobStart": {
       "type": "object",
       "properties": {
@@ -684,6 +774,9 @@
           "$ref": "#/definitions/ResultBackupJobStart"
         }
       }
+    },
+    "ApiResponseBackupDryRun": {
+      "$ref": "#/definitions/ResultBackupJobDryRun"
     }
   },
   "externalDocs": {
