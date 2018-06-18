@@ -40,9 +40,6 @@ func Path(path string, backupConfig config.Backup, backupJobsState shared.Backup
 			}
 		default:
 			if stat.IsDir() {
-				backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories")
-				backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
-					"", "")
 				exiting, err := walk(path, stat, backupConfig, backupJobsState, closeChan, dryRun)
 				// backup job was signalled to exit - Examine FIRST $exiting and then $err
 				if exiting {
@@ -96,12 +93,19 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 
 	// set current file examined to empty as otherwise output will look inconsistent if we descend a different folder
 	backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "", "", "")
+	backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories")
 	logger.Debugf("Getting list of files and directories part of %s", path)
 	names, topLevelErr := readDirNames(path)
 	if topLevelErr != nil {
 		logger.Warnf("While trying to get directory listing for '%s' encountered error '%s'", path, topLevelErr)
 		backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
+		backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
+			"", topLevelErr.Error())
+	} else {
+		backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
+			"", "")
 	}
+
 
 	// even if $topLevelErr != nil it is possible that readDirNames() returned a partial list of directory contents
 	for _, name := range names {
@@ -144,9 +148,6 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 					"", err.Error())
 			} else {
 				if fileInfo.IsDir() {
-					backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories")
-					backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", childPath,
-						"", "")
 					exiting, _ := walk(childPath, fileInfo, backupConfig, backupJobsState, closeChan, dryRun) // #nosec
 					// lower level walk() was signalled to exit
 					if exiting {
@@ -159,7 +160,8 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 					if ! dryRun {
 						// TODO - add call to function dealing with backing up individual files
 					}
-
+					// mark current examined file as none as we don't know if the next iteration of the main for loop
+					//  will next encounter a directory or not
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "",
 						"", "")
 				}
