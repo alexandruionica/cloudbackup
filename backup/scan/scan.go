@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"cloudbackup/shared"
 	"github.com/bmatcuk/doublestar"
+	"cloudbackup/daemon/globals"
 )
 
 const loggingContext = "backup.scan"
@@ -20,6 +21,8 @@ var logger = log.WithFields(log.Fields{
 // parameter signifies errors
 func Path(path string, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface,
 	closeChan chan bool, dryRun bool) (bool, error) {
+	globals.Stats.IncrementFunctions("scan.Path")
+	defer globals.Stats.DecrementFunctions("scan.Path")
 	var stat os.FileInfo
 	var err error
 	if backupConfig.Dereference {

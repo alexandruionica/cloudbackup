@@ -302,6 +302,7 @@ func dryRunBackupPaths(backupConfig config.Backup, backupJobsState *shared.DryRu
 		if exiting {
 			logger.Debug("scan.Path() reported to dryRunBackupPaths() that it was requested to cancel its run")
 			scanPathExit <- true
+			logger.Debug("dryRunBackupPaths() successfully messaged that it's exiting and so it's exiting")
 			return
 		}
 		if err != nil {

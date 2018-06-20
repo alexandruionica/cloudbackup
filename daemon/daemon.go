@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 	"fmt"
+	"cloudbackup/daemon/globals"
 )
 
 const loggingContext = "daemon"
@@ -19,6 +20,7 @@ var logger = log.WithFields(log.Fields{
 })
 
 func Start(configFile string, debug bool) {
+	globals.Stats.IncrementRoutines("other")
 	// we use this to notify the HTTP server that the global config has changed
 	sndCfgChangeToHttpd := make(chan bool, 50)
 	// we use this to notify the Backup Scheduler that the global config has changed
@@ -65,7 +67,8 @@ func WaitForEvent(httpServer *httpd.SrvData, rcvCfgChangeFromHttpd <-chan bool, 
 	signal.Notify(signalChan,
 		syscall.SIGINT,
 		syscall.SIGTERM,
-		syscall.SIGQUIT)
+		syscall.SIGQUIT,
+		syscall.SIGUSR1,)
 	// infinite loop
 	for {
 		select {
@@ -106,6 +109,10 @@ func ProcessSignal(s os.Signal, httpServer *httpd.SrvData, shutdownScheduler cha
 		shutdownScheduler <- true
 		logger.Info("Exiting")
 		os.Exit(0)
+
+	case syscall.SIGUSR1:
+		logger.Info("Received SIGUSR1")
+		globals.Stats.Log()
 
 	default:
 		logger.Warn(fmt.Sprintf("Received unknown signal: %s . Ignoring", s))

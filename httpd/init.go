@@ -10,6 +10,7 @@ import (
 	"time"
 	"sync"
 	"cloudbackup/shared"
+	"cloudbackup/daemon/globals"
 )
 const (
 	loggingContext = "httpd"
@@ -86,6 +87,8 @@ func (srv *SrvData) Start() {
 	logger.Debug(fmt.Sprintf("%+v", srv))
 	// start http or https server in a separate routine
 	go func() {
+		globals.Stats.IncrementRoutines("other")
+		defer globals.Stats.DecrementRoutines("other")
 		var err error
 		var extraMsg string
 		if srv.httpsEnabled {
