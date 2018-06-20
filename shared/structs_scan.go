@@ -122,7 +122,8 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 			"current_directory": "",
 			"current_file": "",
 		},
-		SignalClose: make(chan bool),
+		// buffered channel of 1
+		SignalClose: make(chan bool, 1),
 	})
 	return nil
 }

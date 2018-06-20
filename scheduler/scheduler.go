@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 	"cloudbackup/backup/scan"
+	"cloudbackup/daemon/globals"
 )
 
 const loggingContext = "scheduler"
@@ -24,6 +25,9 @@ func Start (cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithScheduler
 
 func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
 	backupJobsState *shared.BackupJobsState, configuration *config.RuntimeConfig) {
+	globals.Stats.IncrementRoutines("other")
+	defer globals.Stats.DecrementRoutines("other")
+
 	logger.Info("Starting scheduling component")
 	//const SleepSec = 1
 	var receivedBackupCommand = shared.ReceiveBackupCommand{}
@@ -175,6 +179,8 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
 func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	backupJobsState *shared.BackupJobsState){
+	globals.Stats.IncrementRoutines("runBackup")
+	defer globals.Stats.DecrementRoutines("runBackup")
 	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 
 	// extract config for this backup job only

@@ -10,6 +10,7 @@ import (
 	"time"
 	"sync"
 	"cloudbackup/config"
+	"cloudbackup/daemon/globals"
 )
 
 type BackupJob struct {
@@ -18,6 +19,8 @@ type BackupJob struct {
 }
 
 func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	bodyBytes, err := ValidateJsonHTTPInput(w, r)
 	if err != nil {
 		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
@@ -112,6 +115,8 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 }
 
 func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	bodyBytes, err := ValidateJsonHTTPInput(w, r)
 	if err != nil {
 		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
@@ -212,6 +217,8 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 
 // return a summary of backup jobs (running and stopped)
 func (srvSrc SrvData) handlerGetBackupList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	// while a copy, some of the data is pointers so locking is still needed
 	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerGetBackupList")
 	// while a copy, some of the data is pointers so locking is still needed
@@ -222,6 +229,8 @@ func (srvSrc SrvData) handlerGetBackupList(w http.ResponseWriter, r *http.Reques
 
 // for a given backup job name return the list of files that would be examined and optionally any excluded files
 func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	bodyBytes, err := ValidateJsonHTTPInput(w, r)
 	if err != nil {
 		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
@@ -304,11 +313,6 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 			// seems when the issue happens, the message doesn't make it down the channel to scan.Path or scan.walk()
 			logger.Debug("Successfully sent signal to scan.Path(), waiting for reply from dryRunBackupPaths() " +
 				"that it is ready to exit")
-			// wait for scan.Path() to exit
-			_ = <- scanPathExit
-			logger.Debug("handlerPostBackupDryRun() received reply from dryRunBackupPaths() that it has cleaned" +
-				" up. Http handler exiting")
-			return
 		case message := <- reportChan:
 			{
 				// Write to the ResponseWriter

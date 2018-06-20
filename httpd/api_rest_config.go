@@ -10,10 +10,13 @@ import (
 	"os"
 	"github.com/jinzhu/configor"
 	"bytes"
+	"cloudbackup/daemon/globals"
 )
 
 // serve $api_prefix/config and logger.Info requester
 func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	srv := srvSrc.GetWithLock(loggingContext + ".pageRoot")
 	runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".handlerGetConfig")
 
@@ -26,6 +29,8 @@ func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _
 
 // process POST for $api_prefix/config . If successful then it updates the whole daemon config
 func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	bodyBytes , err := ValidateJsonHTTPInput(w, r)
 	if err != nil {
 		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
@@ -150,6 +155,8 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 
 // process POST for $api_prefix/config/backup . If successful then it updates the whole daemon config
 func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	bodyBytes , err := ValidateJsonHTTPInput(w, r)
 	if err != nil {
 		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
