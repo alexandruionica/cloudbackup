@@ -234,16 +234,25 @@ func DryRun(config clientConfig.Client, jsonOutput bool, jobName string) {
 				if err != nil {
 					fmt.Printf(string(line)[6:])
 				} else {
+					marker := " "
 					incl := "include"
 					inclAppend := ""
 					fType := " " + decodedJsonMessage.Type
 					if decodedJsonMessage.Excluded {
+						marker = "X"
 						incl = "exclude"
-						inclAppend = fmt.Sprintf( " matching exclusion rule: '%s'", decodedJsonMessage.ExclusionExpr)
+						inclAppend = fmt.Sprintf( " matching exclusion rule: '%s'",
+							decodedJsonMessage.ExclusionExpr)
 						// type is unknown so we'll skip printing this field
 						fType = ""
 					}
-					fmt.Printf("%s%s %s%s\n", incl, fType, decodedJsonMessage.Name, inclAppend)
+					errAppend := ""
+					if decodedJsonMessage.Error != "" {
+						errAppend = fmt.Sprintf(" not possible due to error: '%s'", decodedJsonMessage.Error)
+						marker = "X"
+					}
+					fmt.Printf("%s| %s%s %s%s%s\n", marker, incl, fType, decodedJsonMessage.Name, inclAppend,
+						errAppend)
 				}
 			}
 		}

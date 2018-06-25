@@ -238,9 +238,9 @@ paths:
          Response codes != 200 will be regular json while response code 200 will 
          be followed by http2 SSE. Each received event for the 200 status code 
          will be in the format "data: {json object}" except the last line at the 
-         end of the input which will be "data: Completed run". Unfortunatelly 
+         end of the input which will start with "data: Completed run:". Unfortunatelly 
          Swagger doesn't allow proper documentation of SSE so the response object 
-         definition is the actual {json object} to be expecte after the "data: " 
+         definition is the actual {json object} to be expected after the "data: " 
          field.
       operationId: BackupDryRun
       produces:
@@ -461,6 +461,10 @@ definitions:
             type: integer
             description: 'While examining the properties of files and directories this may errors were encountered. Please get the logs for messages with level ERROR and WARNING produced by context="backup.scan" in order to get additional details. Items for which this counter got incremented also had one of "examined_files" or "examined_directories" incremented'
             example: 2
+          excluded:
+            type: integer
+            description: 'How many files or directories where excluded due to matching some exclusion rule provided by the user (in the configuration file).'
+            example: 7
           uploaded_files:
             type: integer
             description: 'How many files were uploaded so far during the run of this backup job'

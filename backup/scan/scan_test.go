@@ -67,8 +67,9 @@ func TestPath1(t *testing.T) {
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examine_produced_errors": 0,
-		"examined_directories": 9,
-		"examined_files": 12,
+		"examined_directories": 10,
+		"examined_files": 13,
+		"excluded": 0,
 		"upload_produced_errors": 0,
 		"uploaded_directories_metadata": 0,
 		"uploaded_files": 0,
@@ -132,8 +133,9 @@ func TestPath2(t *testing.T) {
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examine_produced_errors": 0,
-		"examined_directories": 5,
-		"examined_files": 8,
+		"examined_directories": 6,
+		"examined_files": 9,
+		"excluded": 0,
 		"upload_produced_errors": 0,
 		"uploaded_directories_metadata": 0,
 		"uploaded_files": 0,
@@ -208,8 +210,9 @@ func TestPath3(t *testing.T) {
 		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		expectedStats := map[string]uint64{
 			"examine_produced_errors": 1,
-			"examined_directories": 4,
-			"examined_files": 5,
+			"examined_directories": 5,
+			"examined_files": 6,
+			"excluded": 0,
 			"upload_produced_errors": 0,
 			"uploaded_directories_metadata": 0,
 			"uploaded_files": 0,
@@ -218,5 +221,75 @@ func TestPath3(t *testing.T) {
 			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 				backupJobsState.Running[0].StatsCounters, expectedStats)
 		}
+	}
+}
+
+// test number of examined files as reported by Path() when  dereference=true and we have two simple exclusion rules
+func TestPath4(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := config.Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	utils.Pp(result)
+
+	// folder with some mock files and symlinks
+	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
+	defer func() {
+		err = os.RemoveAll(backupDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	backupConfig := result.Config.Backup[0]
+	// overwrite whatever was in the mock config with the tmp path we want to test
+	backupConfig.Paths = []string{backupDirPath}
+	backupConfig.Exclusions = []string{
+		backupDirPath + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir5",
+		backupDirPath + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "file7",
+	}
+	// set dereference to True
+	backupConfig.Dereference = true
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{}
+	backupJobsState.Lock = &sync.RWMutex{}
+	// populate state object with default values
+	jobId := uuid.NewV4().String()
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
+	}
+	_, err = Path(backupDirPath, backupConfig, backupJobsState, closeChan, false)
+	if err != nil {
+		t.Fatalf("Failed to walk mock backup directory path. Error was: %s", err)
+	}
+	utils.Pp(backupJobsState.Running[0].StatsCounters)
+	expectedStats := map[string]uint64{
+		"examine_produced_errors": 0,
+		"examined_directories": 9,
+		"examined_files": 12,
+		"excluded": 2,
+		"upload_produced_errors": 0,
+		"uploaded_directories_metadata": 0,
+		"uploaded_files": 0,
+	}
+	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
+			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
 }

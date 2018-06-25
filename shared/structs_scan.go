@@ -114,6 +114,9 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 			"examined_files": 0,
 			"examined_directories": 0,
 			"examine_produced_errors": 0,
+			// excluded files or directories due to matching some exclusion rule provided by the user (in the config)
+			//  excluded don't count against examined_files or examined_directories
+			"excluded": 0,
 			"uploaded_files": 0,
 			"uploaded_directories_metadata": 0,
 			"upload_produced_errors": 0,
@@ -158,4 +161,34 @@ func (jobs *DryRunBackupJobsState) GetSignalChanForJob(BackupJobName string, Bac
 		return signalChan, nil
 	}
 	return nil, errors.New(ErrJobNotFoundInEvaluatingState)
+}
+
+// returns a copy of stats so far; the copy is of StatsCounters & StatsText
+func (jobs *DryRunBackupJobsState) GetStats(BackupJobName string) (BackupJobStatus, error) {
+	jobs.Lock.Lock()
+	defer func() {
+		jobs.Lock.Unlock()
+	}()
+
+	result := BackupJobStatus{
+		StatsCounters: make(map[string]uint64),
+		StatsText: make(map[string]string),
+	}
+	found := false
+	for _, job := range jobs.DryRunning {
+		if BackupJobName == job.Name {
+			found = true
+			// copy maps
+			for k,v := range job.StatsCounters {
+				result.StatsCounters[k] = v
+			}
+			for k,v := range job.StatsText {
+				result.StatsText[k] = v
+			}
+		}
+	}
+	if found {
+		return result, nil
+	}
+	return result, errors.New(ErrJobNotFoundInEvaluatingState)
 }

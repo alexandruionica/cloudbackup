@@ -135,6 +135,7 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 				logger.Debugf("Skipping from backup %s as it is excluded by expression %s", childPath, excludedExpr)
 				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown",
 					childPath, excludedExpr, "")
+				backupJobsState.IncrementCounter(backupConfig.Name, "excluded")
 				continue
 			}
 
