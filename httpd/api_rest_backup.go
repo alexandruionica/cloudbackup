@@ -309,8 +309,6 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 				"dryRunBackupPaths() exits")
 			// signal scan.Path() to exit
 			cancelScanPath <- true
-			// TODO - figure out why the above works only ~ 50% of the time; grep for 'dryRunBackupPaths|received request to cancel' ;
-			// seems when the issue happens, the message doesn't make it down the channel to scan.Path or scan.walk()
 			logger.Debug("Successfully sent signal to scan.Path(), waiting for reply from dryRunBackupPaths() " +
 				"that it is ready to exit")
 		case message := <- reportChan:
@@ -325,21 +323,28 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 					// Flush the data immediately instead of buffering it for later.
 					flusher.Flush()
 				}
-
-
-				//time.Sleep(100 * time.Millisecond)
-				//counter += 1
-				//if counter > 100 {
-				//	return
-				//}
 		}
 		// scan.Path completed it's run (a cancel run was not called if we hit this step)
 		case _ = <- scanPathExit:
 			{
 				logger.Debug("scan.Path() triggered by handlerPostBackupDryRun() has completed its run so the " +
 				"http handler will exit now")
-				// TODO - send final report
-				_, _ = fmt.Fprintf(w, "data: %s\n", "Completed run") // #nosec
+				finalMsg := "Completed run"
+				result, err := backupJobsState.GetStats(decodedJson.Name)
+				if err != nil {
+					logger.Warnf("Received error while trying to get stats at the final of Dry Run job '%s'. " +
+						"Error was: '%s'", decodedJson.Name, err)
+				} else {
+					finalMsg += fmt.Sprintf(": %d examined files, %d examined directories, %d excluded files " +
+						"or directories, %d errors encountered", result.StatsCounters["examined_files"],
+						result.StatsCounters["examined_directories"], result.StatsCounters["excluded"],
+						result.StatsCounters["examine_produced_errors"])
+				}
+
+				_, _ = fmt.Fprintf(w, "data: %s\n", finalMsg) // #nosec
+				// close channels to avoid memory leaks
+				close(reportChan)
+				close(scanPathExit)
 				return
 			}
 		}

@@ -349,5 +349,21 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 		t.Fatal(err)
 	}
 
+	// /tmp/$RANDOM/dir1/dir5/
+	err = os.MkdirAll(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+		"dir5", 0755) // #nosec
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// /tmp/$RANDOM/dir1/file7
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+		"file7", []byte(`text for file7`), 0600)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
 	return path
 }

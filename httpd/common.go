@@ -306,7 +306,6 @@ func dryRunBackupPaths(backupConfig config.Backup, backupJobsState *shared.DryRu
 			return
 		}
 		if err != nil {
-			// TODO - somehow message HttpEval handler that booboo was encountered
 			scanPathExit <- true
 			logger.Debug("dryRunBackupPaths() has encountered and error and is exiting")
 			return
