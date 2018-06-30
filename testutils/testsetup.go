@@ -310,9 +310,10 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 		t.Fatal(err)
 	}
 
-	// /tmp/$RANDOM/dir1/dir2/dir3/file2
+	// /tmp/$RANDOM/dir1/dir2/dir3/file2.txt
 	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "file2", []byte(`text for file2`), 0644)
+		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "file2.txt", []byte(`text for file2.txt`),
+		0644)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
@@ -360,6 +361,38 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 	// /tmp/$RANDOM/dir1/file7
 	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
 		"file7", []byte(`text for file7`), 0600)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// unicode in filename /tmp/$RANDOM/dir1/file8世界⌘ä
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+		"file8世界⌘ä", []byte(`text for file8世界⌘ä`), 0600)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// dir with unicode in name /tmp/$RANDOM/dir1/dir6öüÂș/
+	err = os.MkdirAll(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+		"dir6öüÂș", 0755) // #nosec
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// plain file name in unicode dirname /tmp/$RANDOM/dir1/dir6öüÂș/file9
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+		"dir6öüÂș" + string(filepath.Separator) + "file9", []byte(`text for file9`), 0600)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+
+	// unicode file name in unicode dirname /tmp/$RANDOM/dir1/dir6öüÂș/file10ŹżÇù.txt
+	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+		"dir6öüÂș" + string(filepath.Separator) + "file10ŹżÇù.txt", []byte(`text for file10ŹżÇù.txt`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
