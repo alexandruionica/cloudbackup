@@ -62,8 +62,8 @@ backup:
     #     - "**/*.txt"  would exclude all .txt files across all directories
     #     - "/var/lib/*.txt" would exclude .txt files only if they are located in "/var/lib/". If .txt files are 
     #         located in "/var/lib/something/" then they would not be matched by the exclusion rule
-	# If using exclusion rules then please run "cloudbackup client backup dryrun" in order to check that they work as 
-	#  expected
+    # If using exclusion rules then please run "cloudbackup client backup dryrun" in order to check that they work as 
+    #  expected
     exclusions:
       - /something/else
       - /var/lib/*.db
