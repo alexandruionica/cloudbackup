@@ -45,6 +45,12 @@ backup:
     # [abc]    matches any single character within the set
     # [a-z]	 matches any single character in the range
     # [^class] matches any single character which does not match the class
+    # Example:
+    #     - "**/*.txt"  would exclude all .txt files across all directories
+    #     - "/var/lib/*.txt" would exclude .txt files only if they are located in "/var/lib/". If .txt files are
+    #         located in "/var/lib/something/" then they would not be matched by the exclusion rule
+	# If using exclusion rules then please run "cloudbackup client backup dryrun" in order to check that they work as
+	#  expected
     exclusions:
       - /etc/systemd/system
     dereference: false

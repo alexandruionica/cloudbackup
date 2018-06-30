@@ -109,7 +109,6 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 			"", "")
 	}
 
-
 	// even if $topLevelErr != nil it is possible that readDirNames() returned a partial list of directory contents
 	for _, name := range names {
 		select {
