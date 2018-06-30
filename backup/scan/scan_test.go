@@ -660,7 +660,7 @@ func TestPath9(t *testing.T) {
 	backupConfig := result.Config.Backup[0]
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
-	backupConfig.Exclusions = []string{"**/*.txt"}
+	backupConfig.Exclusions = []string{"**" + string(filepath.Separator) + "*.txt"}
 	// set dereference to False
 	backupConfig.Dereference = false
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
@@ -732,7 +732,7 @@ func TestPath10(t *testing.T) {
 	backupConfig := result.Config.Backup[0]
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
-	backupConfig.Exclusions = []string{"**/file[2-4]*.txt"}
+	backupConfig.Exclusions = []string{"**" + string(filepath.Separator) + "file[2-4]*.txt"}
 	// set dereference to False
 	backupConfig.Dereference = false
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
@@ -804,7 +804,7 @@ func TestPath11(t *testing.T) {
 	backupConfig := result.Config.Backup[0]
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
-	backupConfig.Exclusions = []string{"**/file?.txt"}
+	backupConfig.Exclusions = []string{"**" + string(filepath.Separator) + "file?.txt"}
 	// set dereference to False
 	backupConfig.Dereference = false
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
@@ -876,7 +876,7 @@ func TestPath12(t *testing.T) {
 	backupConfig := result.Config.Backup[0]
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
-	backupConfig.Exclusions = []string{"**/file{1,2}.txt"}
+	backupConfig.Exclusions = []string{"**" + string(filepath.Separator) + "file{1,2}.txt"}
 	// set dereference to False
 	backupConfig.Dereference = false
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
