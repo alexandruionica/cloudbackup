@@ -323,7 +323,7 @@ func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName stri
 		if BackupJobName == job.Name {
 			// if an exclusion has matched or we got an error then we don't want the file/directory to appear any more as
 			// currently being processed
-			if exclusionExpr == "" || fileError == "" {
+			if exclusionExpr != "" || fileError != "" {
 				job.StatsText[statName] = ""
 			} else {
 				job.StatsText[statName] = statValue
