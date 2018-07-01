@@ -121,7 +121,18 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 	}()
 	// add state of running jobs
 	for _, job := range jobs.Running {
-		result = append(result, job)
+		jobCopy := job
+		// init empty maps
+		jobCopy.StatsCounters = make(map[string]uint64)
+		jobCopy.StatsText = make(map[string]string)
+		// copy maps
+		for k,v := range job.StatsCounters {
+			jobCopy.StatsCounters[k] = v
+		}
+		for k,v := range job.StatsText {
+			jobCopy.StatsText[k] = v
+		}
+		result = append(result, jobCopy)
 		runningList[job.Name] = job.Name
 	}
 	// add state of stopped jobs (what is not part of running must be stopped)
