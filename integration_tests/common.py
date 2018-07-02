@@ -8,6 +8,7 @@ import socket
 import shlex
 import subprocess
 import time
+import tempfile
 from pprint import pprint
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
@@ -332,3 +333,33 @@ def get_md5_sum(filepath):
             hasher.update(buf)
             buf = afile.read(blocksize)
     return hasher.hexdigest()
+
+
+def setup_dir_with_tmp_files():
+    """
+    Creates a tmp dir and populate it with some files and directories
+    :return: tuple consisting of directory path and then a dict in the form {"path_item": type} where type is one of
+            ["file", "dir"]
+    """
+    tmpdir = tempfile.mkdtemp(prefix="integration_test_")
+    # tmpdir will get prepended to each item
+    filelist = {
+        "dir1": "dir",
+        "dir1" + os.sep + "dir2": "dir",
+        "dir1" + os.sep + "dir2" + os.sep + "file1.txt": "file",
+        "dir1" + os.sep + "dir2" + os.sep + "file2⻆⽄〄㉎㍌㨂侣.html": "file",
+        "dir1" + os.sep + "dir2" + os.sep + "file3.txሥሿ": "file",
+        "dir1" + os.sep + "dir3ͲᾆЎ": "dir",
+        "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file4.html": "file",
+        "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file5صقڜ.txt": "file",
+        "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file6א.htmڿ": "file",
+    }
+
+    for fname in filelist:
+        ftype = filelist[fname]
+        if ftype == "dir":
+            os.makedirs(tmpdir + os.sep + fname, exist_ok=True)
+        elif ftype == "file":
+            with open(tmpdir + os.sep + fname, "w") as f:
+                f.write("some text for " + tmpdir + os.sep + fname)
+    return tmpdir, filelist
