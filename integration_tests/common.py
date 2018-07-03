@@ -363,6 +363,6 @@ def setup_dir_with_tmp_files():
             parent_dir = os.path.dirname(tmpdir + os.sep + fname)
             if not os.path.exists(parent_dir):
                 os.makedirs(parent_dir, exist_ok=True)
-            with open(tmpdir + os.sep + fname, "w", encoding="utf-8") as f:
-                f.write("some text for " + tmpdir + os.sep + fname)
+            with open(tmpdir + os.sep + fname, "w") as f:
+                f.write("some text")
     return tmpdir, filelist
