@@ -19,6 +19,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # list installed depencencies and the versions of their dependencies
+${TESTSFOLDER}/.venv/bin/python --version
 ${TESTSFOLDER}/.venv/bin/pip freeze
 
 echo "Linting Python integration tests ..."

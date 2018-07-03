@@ -21,6 +21,7 @@ try {
 	  exit $LastExitCode
 	}
 
+	& "$TESTSFOLDER\.venv\Scripts\python.exe" --version
 	& "$TESTSFOLDER\.venv\Scripts\pip.exe" freeze
         if ( $LastExitCode -ne 0 ) {
           echo "Error listing installed python modules and their dependencies versions"
