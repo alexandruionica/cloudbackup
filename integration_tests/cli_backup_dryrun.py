@@ -83,6 +83,56 @@ class TestCliBackupValidate(unittest.TestCase):
         self.assertEqual(0, excluded_files_or_dirs)
         self.assertEqual(0, errors_encountered)
 
+    # ./cloudbackup client backup dryrun first_backup --json -c client_config.yaml     works
+    def test_cmd_client_backup_dryrun2(self):
+        result = run_shell_cmd(self.cmd + " client backup dryrun first_backup --json -c " +
+                               self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        num_files, num_dirs = 0, 0
+        for fname in self.filelist:
+            if self.filelist[fname] == "dir":
+                num_dirs += 1
+            elif self.filelist[fname] == "file":
+                num_files += 1
+        last_line = result['result'].stdout.decode("utf-8").split('\n')[-2]
+        re_result = re.search('^Completed run: ([0-9]+) examined files, ([0-9]+) examined directories, ([0-9]+) '
+                              'excluded files or directories, ([0-9]+) errors encountered', last_line)
+        # check regex worked
+        self.assertTrue(re_result)
+        examined_files = int(re_result.group(1))
+        examined_directories = int(re_result.group(2))
+        excluded_files_or_dirs = int(re_result.group(3))
+        errors_encountered = int(re_result.group(4))
+        self.assertEqual(num_files, examined_files)
+        # top level dir counts too so we increment with 1 the initial list of directories
+        self.assertEqual(num_dirs + 1, examined_directories)
+        self.assertEqual(0, excluded_files_or_dirs)
+        self.assertEqual(0, errors_encountered)
+        # decode output except last line
+        dryrun_examined = {}
+        not_decoded = 0
+        for line in result['result'].stdout.decode("utf-8").split('\n'):
+            try:
+                decoded = json.loads(line)
+            except json.decoder.JSONDecodeError:
+                not_decoded += 1
+                continue
+            if decoded['excluded']:
+                continue
+            if decoded['type'] == "directory":
+                dryrun_examined[decoded["name"]] = 'dir'
+            else:
+                dryrun_examined[decoded["name"]] = decoded['type']
+        self.assertEqual(2, not_decoded, "More than two lines in the json output could not be decoded. It is expected"
+                                         " that 1 line starting with 'Completed run:' and the last (empty) line can't"
+                                         " be json decoded")
+        # add to the list of generated files also the top level dir. This because the dryrun will include it
+        self.filelist[self.tmpdir] = 'dir'
+        # in case the dicts don't match, show the full diff
+        self.maxDiff = None
+        self.assertDictEqual(self.filelist, dryrun_examined)
+
 
 def get_args():
     """ Get arguments from CLI """
