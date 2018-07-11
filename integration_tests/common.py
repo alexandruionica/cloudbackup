@@ -342,27 +342,31 @@ def setup_dir_with_tmp_files():
             ["file", "dir"]
     """
     tmpdir = tempfile.mkdtemp(prefix="integration_test_")
-    # tmpdir will get prepended to each item
+    # tmpdir gets prepended to each item
     filelist = {
-        "dir1": "dir",
-        "dir1" + os.sep + "dir2": "dir",
-        "dir1" + os.sep + "dir2" + os.sep + "file1.txt": "file",
-        "dir1" + os.sep + "dir2" + os.sep + "file2⻆⽄〄㉎㍌㨂侣.html": "file",
-        "dir1" + os.sep + "dir2" + os.sep + "file3.txሥሿ": "file",
-        "dir1" + os.sep + "dir3ͲᾆЎ": "dir",
-        "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file4.html": "file",
-        "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file5صقڜ.txt": "file",
-        "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file6א.htmڿ": "file",
+        tmpdir + os.sep + "dir1": "dir",
+        tmpdir + os.sep + "dir1" + os.sep + "dir2": "dir",
+        tmpdir + os.sep + "dir1" + os.sep + "dir2" + os.sep + "file1.txt": "file",
+        tmpdir + os.sep + "dir1" + os.sep + "dir2" + os.sep + "file2⻆⽄〄㉎㍌㨂侣.html": "file",
+        tmpdir + os.sep + "dir1" + os.sep + "dir2" + os.sep + "file3.txሥሿ": "file",
+        tmpdir + os.sep + "dir1" + os.sep + "dir3ͲᾆЎ": "dir",
+        tmpdir + os.sep + "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file4.html": "file",
+        tmpdir + os.sep + "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file5صقڜ.txt": "file",
+        tmpdir + os.sep + "dir1" + os.sep + "dir3ͲᾆЎ" + os.sep + "file6א.htmڿ": "file",
+        tmpdir + os.sep + "dir1" + os.sep + "dir5": "dir",
+        tmpdir + os.sep + "dir1" + os.sep + "dir5" + os.sep + "file7.txt": "file",
+        tmpdir + os.sep + "dir1" + os.sep + "dir5" + os.sep + "file8.htm": "file",
+        tmpdir + os.sep + "dir1" + os.sep + "file9.txt": "file",
     }
 
     for fname in filelist:
         ftype = filelist[fname]
         if ftype == "dir":
-            os.makedirs(tmpdir + os.sep + fname, exist_ok=True)
+            os.makedirs(fname, exist_ok=True)
         elif ftype == "file":
-            parent_dir = os.path.dirname(tmpdir + os.sep + fname)
+            parent_dir = os.path.dirname(fname)
             if not os.path.exists(parent_dir):
                 os.makedirs(parent_dir, exist_ok=True)
-            with open(tmpdir + os.sep + fname, "w", encoding="utf-8") as f:
-                f.write("some text for " + tmpdir + os.sep + fname)
+            with open(fname, "w", encoding="utf-8") as f:
+                f.write("some text for " + fname)
     return tmpdir, filelist
