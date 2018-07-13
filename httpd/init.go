@@ -26,6 +26,7 @@ var logger = log.WithFields(log.Fields{
 var ReadAccess = map[string][]string{
 	//"POST": []string{"aaa", "bbb"},
 	"GET": {"/config", "/backup/list"},
+	"POST": {"/backup/dryrun"},
 }
 
 // pseudo constructor to setup a new http server
