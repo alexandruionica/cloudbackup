@@ -86,3 +86,7 @@ run:
 
 deps: 
 	$(GLIDECMD) install
+
+docs:
+	@echo "############ Generating Documentation ############"
+	./generate_docs.sh

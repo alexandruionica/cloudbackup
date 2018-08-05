@@ -68,6 +68,7 @@ func (srv *SrvData) Start() {
 	router.GET("/", srv.handlerRoot)
 	// serve documentation - static files - NO AUTHENTICATION needed; NO REQUEST LOGGING done
 	router.ServeFiles("/docs/*filepath", http.Dir(staticHtmlDir + "/docs"))
+	router.ServeFiles("/docs_api/*filepath", http.Dir(staticHtmlDir + "/docs_api"))
 	// redirect /swgger.json to /docs/api/swgger.json - NO AUTHENTICATION needed; NO REQUEST LOGGING done
 	router.GET("/swagger.json", handlerGETtlSwaggerJson)
 	// redirect /swgger.yaml to /docs/api/swgger.yaml - NO AUTHENTICATION needed; NO REQUEST LOGGING done
