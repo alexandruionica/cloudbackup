@@ -7,3 +7,4 @@ site_dir: ../webstatic/docs/
 nav:
     - Home: index.md
     - Architecture: architecture.md
+    - API: /docs_api/index.html

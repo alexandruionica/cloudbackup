@@ -33,3 +33,10 @@ make
 go install
 ```
 
+# Generating Documentation
+
+Run on Linux/Unixes only:
+
+```
+make docs
+```
