@@ -4,7 +4,7 @@
 
 ## Potential issues
 
-- if a file is create locally and its creation date is set to be in the past then once backed up the file would be restored when also selecting a restore point which is before the file was created locally
+- if a file is created locally and its creation date is set to be in the past then once backed up the file would be restored when also selecting a restore point which is before the file was created locally
 
 ## File Metadata
 
