@@ -1,0 +1,9 @@
+site_name: Cloudbackup Docs
+theme:
+    name: readthedocs
+extra_css:
+    - custom.css
+site_dir: ../webstatic/docs/
+nav:
+    - Home: index.md
+    - Architecture: architecture.md
