@@ -1,0 +1,5 @@
+site_name: Cloudbackup PRIVATE DOCS
+dev_addr: '127.0.0.1:8100'
+nav:
+- Home: index.md
+- Architecture: architecture.md
