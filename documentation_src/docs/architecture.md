@@ -20,5 +20,5 @@ For Linux and Unix backed up files:
 - encrypted (bool)
 - delete_marker (bool)
 - filename_encoded (bool) if filename contains unicode chars then convert them to unicode escaped code points
-- symlink_target (valid only for symlinks)
+- link_target (valid only for symlinks)
 - checksum (valid only if checksum is enabled)
