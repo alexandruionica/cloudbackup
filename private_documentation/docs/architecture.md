@@ -1,25 +1,59 @@
-# Overview
+# Overview 
 
-Bla bla bla
+There is only one binary which can be started as a server or which can be used as a CLI client. In server mode this is the actual backup engine while the CLI's purpose is only to interact with the backup engine and give it instructions.
 
-# Program Components
+When running in server mode it requires a configuration file and also a set of static web assets which it uses for serving documentation or for service the static parts of a web UI.
+
+## Command Stucture
+
+The command and its main options are depicted below. Command line parameters are supported and can be discovered using the `--help` option. For example:
+```
+$ cloudbackup client backup dryrun --help
+Usage:
+  cloudbackup [OPTIONS] client backup dryrun [dryrun-OPTIONS] job_name
+
+Help Options:
+  -h, --help            Show this help message
+
+[dryrun command options]
+      -c, --configfile= Client configuration file expected to be in YAML format and have .yml or .yaml extension. If unspecified then the default is to attempt to use $HOME/.cloudbackup.yaml on Linux or Unixes and %HomeDrive%%HomePath% on Microsoft Windows
+      -u, --username=   Username to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_USERNAME followed by an attempt to use the command line specified configuration file (if not specified then
+                        a configuration file will be searched at the default location)
+      -p, --password=   Password to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_PASSWORD followed by an attempt to use the command line specified configuration file (if not specified then
+                        a configuration file will be searched at the default location)
+      -a, --address=    Address to use when connecting to the server. The format expect is one of 'https://1.2.3.4:8443' or 'http://127.0.0.1:8080'. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_ADDRESS followed by an
+                        attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)
+      -d, --debug       Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug
+          --jsonlog     Set logging to JSON. Defaults to plaintext
+          --json        If the operation is successful then print JSON responses as they are received from server. If this option is not specified then the response is processed and the output is a plaintext table followed by a summary at the end.
+
+[dryrun command arguments]
+  job_name:             Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server
+```
+
+![command](img/command_expanded.png)
+
+## Server Components
+
+When running in daemon mode, there are several important GO routines (called components from here one).
 
 - daemon:
-  - started by the CLI when starting up the server part of the software
-  - in charge of starting the `httpd server` and `scheduler` components
-  - one the above are started it keeps running listening for any signals being sent (for example SIGTERM) and reacts to them. On *nix platforms it also listens for SIGUSR1 and dumps some stats to stdout when it is received
-  - if a "exit/shutdown" type signal is received then it sends messages to the `httpd server` and `scheduler` notifying them to exit and once they do it terminates the run of the server program.
-  - if it receives a "configuration change" event from the `httpd server` then notifies the `scheduler` that it needs to reload it's configuration   
+    - started by the CLI when starting up the server part of the software
+    - in charge of starting the `httpd server` and `scheduler` components. It uses separate channels to communicate with each of those. 
+    - once the above are started it keeps running and listening for any signals being sent (for example SIGTERM) and reacts to them. On *nix platforms it also listens for SIGUSR1 and dumps some stats to stdout when it is received. It also listens for "events"
+    - if it receives a "configuration change" event from the `httpd server` then notifies the `scheduler` that it needs to reload it's configuration
+    - if a "exit/shutdown" type signal is received then it sends messages to the `httpd server` and `scheduler` notifying them to exit and once they do it terminates the run of the server program.
 - httpd server:
-  - provides the REST API and that is the only way of controlling the software.
-  - serves static files containing the documentation  
-  - when a configuration change (config file change) is requested and performed then it informs the `daemon` which in turn will notify other components
+    - provides the REST API and that is the only way of controlling the software.
+    - serves static files containing the documentation  
+    - when a configuration change (config file change) is requested and performed then it informs the `daemon` which in turn will notify other components
+    - uses a struct to keep the configuration data and both the `daemon` and `scheduler` routines have pointers to this struct (and need to use locking) 
 - scheduler (starts / stops backup and restore jobs):
-  - receives manual commands (backup start / stop ; restore start / stop) via the `http server`
-  - receives "scheduled" job commands from the `cron` component
-  - starts the `cron` component and when it receives a "shutdown/exit" or "configuration reload" it notifies the `cron` component 
+    - receives manual commands (backup start / stop ; restore start / stop) via the `http server`
+    - receives "scheduled" job commands from the `cron` component
+    - starts the `cron` component and when it receives a "shutdown/exit" or "configuration reload" it notifies the `cron` component 
 - cron:
-  - requests backup jobs to be started based on the schedule mentioned in the configuration file
+    - requests backup jobs to be started based on the schedule mentioned in the configuration file
 
 # Database
 

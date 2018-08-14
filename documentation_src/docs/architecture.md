@@ -1,3 +1,38 @@
+# Overview 
+
+There is only one binary which can be started as a server or which can be used as a CLI client. In server mode this is the actual backup engine while the CLI's purpose is only to interact with the backup engine and give it instructions.
+
+When running in server mode it requires a configuration file and also a set of static web assets which it uses for serving documentation or for service the static parts of a web UI.
+
+## Command Stucture
+
+The command and its main options are depicted below. Command line parameters are supported and can be discovered using the `--help` option. For example:
+```
+$ cloudbackup client backup dryrun --help
+Usage:
+  cloudbackup [OPTIONS] client backup dryrun [dryrun-OPTIONS] job_name
+
+Help Options:
+  -h, --help            Show this help message
+
+[dryrun command options]
+      -c, --configfile= Client configuration file expected to be in YAML format and have .yml or .yaml extension. If unspecified then the default is to attempt to use $HOME/.cloudbackup.yaml on Linux or Unixes and %HomeDrive%%HomePath% on Microsoft Windows
+      -u, --username=   Username to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_USERNAME followed by an attempt to use the command line specified configuration file (if not specified then
+                        a configuration file will be searched at the default location)
+      -p, --password=   Password to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_PASSWORD followed by an attempt to use the command line specified configuration file (if not specified then
+                        a configuration file will be searched at the default location)
+      -a, --address=    Address to use when connecting to the server. The format expect is one of 'https://1.2.3.4:8443' or 'http://127.0.0.1:8080'. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_ADDRESS followed by an
+                        attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)
+      -d, --debug       Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug
+          --jsonlog     Set logging to JSON. Defaults to plaintext
+          --json        If the operation is successful then print JSON responses as they are received from server. If this option is not specified then the response is processed and the output is a plaintext table followed by a summary at the end.
+
+[dryrun command arguments]
+  job_name:             Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server
+```
+
+![command](img/command_expanded.png)
+
 ## File Lifecycle
 
 ![file lifecycle diagram](img/file_lifecycle.png)
