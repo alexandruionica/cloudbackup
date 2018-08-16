@@ -59,13 +59,19 @@
     <a class="current" href="./">Architecture</a>
     <ul class="subnav">
             
-    <li class="toctree-l2"><a href="#file-lifecycle">File Lifecycle</a></li>
+    <li class="toctree-l2"><a href="#overview">Overview</a></li>
     
-
-    <li class="toctree-l2"><a href="#potential-issues">Potential issues</a></li>
-    
-
-    <li class="toctree-l2"><a href="#file-metadata">File Metadata</a></li>
+        <ul>
+        
+            <li><a class="toctree-l3" href="#command-stucture">Command Stucture</a></li>
+        
+            <li><a class="toctree-l3" href="#file-lifecycle">File Lifecycle</a></li>
+        
+            <li><a class="toctree-l3" href="#potential-issues">Potential issues</a></li>
+        
+            <li><a class="toctree-l3" href="#file-metadata">File Metadata</a></li>
+        
+        </ul>
     
 
     </ul>
@@ -108,7 +114,36 @@
           <div role="main">
             <div class="section">
               
-                <h2 id="file-lifecycle">File Lifecycle</h2>
+                <h1 id="overview">Overview</h1>
+<p>There is only one binary which can be started as a server or which can be used as a CLI client. In server mode this is the actual backup engine while the CLI's purpose is only to interact with the backup engine and give it instructions.</p>
+<p>When running in server mode it requires a configuration file and also a set of static web assets which it uses for serving documentation or for service the static parts of a web UI.</p>
+<h2 id="command-stucture">Command Stucture</h2>
+<p>The command and its main options are depicted below. Command line parameters are supported and can be discovered using the <code>--help</code> option. For example:</p>
+<pre><code>$ cloudbackup client backup dryrun --help
+Usage:
+  cloudbackup [OPTIONS] client backup dryrun [dryrun-OPTIONS] job_name
+
+Help Options:
+  -h, --help            Show this help message
+
+[dryrun command options]
+      -c, --configfile= Client configuration file expected to be in YAML format and have .yml or .yaml extension. If unspecified then the default is to attempt to use $HOME/.cloudbackup.yaml on Linux or Unixes and %HomeDrive%%HomePath% on Microsoft Windows
+      -u, --username=   Username to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_USERNAME followed by an attempt to use the command line specified configuration file (if not specified then
+                        a configuration file will be searched at the default location)
+      -p, --password=   Password to use when connecting to the server. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_PASSWORD followed by an attempt to use the command line specified configuration file (if not specified then
+                        a configuration file will be searched at the default location)
+      -a, --address=    Address to use when connecting to the server. The format expect is one of 'https://1.2.3.4:8443' or 'http://127.0.0.1:8080'. If not specified then an attempt will be made to use environment variable CLOUDBACKUP_CLIENT_ADDRESS followed by an
+                        attempt to use the command line specified configuration file (if not specified then a configuration file will be searched at the default location)
+      -d, --debug       Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug
+          --jsonlog     Set logging to JSON. Defaults to plaintext
+          --json        If the operation is successful then print JSON responses as they are received from server. If this option is not specified then the response is processed and the output is a plaintext table followed by a summary at the end.
+
+[dryrun command arguments]
+  job_name:             Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server
+</code></pre>
+
+<p><img alt="command" src="../img/command_expanded.png" /></p>
+<h2 id="file-lifecycle">File Lifecycle</h2>
 <p><img alt="file lifecycle diagram" src="../img/file_lifecycle.png" /></p>
 <h2 id="potential-issues">Potential issues</h2>
 <ul>
@@ -127,7 +162,7 @@
 <li>encrypted (bool)</li>
 <li>delete_marker (bool)</li>
 <li>filename_encoded (bool) if filename contains unicode chars then convert them to unicode escaped code points</li>
-<li>symlink_target (valid only for symlinks)</li>
+<li>link_target (valid only for symlinks)</li>
 <li>checksum (valid only if checksum is enabled)</li>
 </ul>
               
