@@ -9,6 +9,7 @@ import (
 	"time"
 	"cloudbackup/backup/scan"
 	"cloudbackup/daemon/globals"
+	"cloudbackup/database"
 )
 
 const loggingContext = "scheduler"
@@ -192,7 +193,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 		}
 	}
 
-	// TODO - set lock for SQL object and then pass it to scan.Path()
 	// TODO - update some status report object and pass it to scan.Path()
 
 	closeChan, err := backupJobsState.GetSignalChanForJob(name, jobUuid)
@@ -205,12 +205,21 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 		return
 	}
 
+	// TODO - set lock for SQL object and then pass it to scan.Path()
+	err = database.Start(serverConfigCopy.DataDir, name)
+	// the backup can not run as we can't initialise/connect to the database
+	if err != nil {
+		// TODO - mark the backup as failed (failed to start)
+		stopBackup(name, jobUuid, backupConfig, backupJobsState, closeChan)
+		return
+	}
+
 	// examine each path listed and backup contained files/directories if needed
 	for _, path := range backupConfig.Paths {
 		select {
 		case <-closeChan:
 			{
-				logger.Infof("cancelling running backup job '%s' having id '%s'", name, jobUuid)
+				logger.Infof("Cancelling running backup job '%s' having id '%s'", name, jobUuid)
 				break
 			}
 		default:
@@ -248,15 +257,20 @@ func stopBackup (name string, jobUuid string, backupConfig config.Backup,
 	// don't end up with a memory leak or a panic in case we got a bug
 	for i := 0; i < 100; i++ {
 		select {
-		case <- closeChan:
+		case closeChanMsg := <- closeChan:
 			{
+				if closeChanMsg == false {
+					// the CloseChan channel has been already closed. This happens in the rare case that more than one
+					// stopBackup() happens at the same time
+					logger.Debug("More than one call to stopBackup() done. Exiting this stopBackup() instance")
+					return
+				}
 				logger.Warnf("signalling channel for backup job '%s' having id '%s' should have been empty " +
-					"but there was a message on it", name, jobUuid)
+					"but there was a message on it.", name, jobUuid)
 			}
 		default:
 		}
 	}
-	close(closeChan)
 
 	// TODO - before MarkStopped(stopped=true) copy report (state) somewhere
 

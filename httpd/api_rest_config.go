@@ -85,6 +85,17 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 		return
 	}
 
+	// create DB files, if needed
+	err = config.ValidateAndCreateDB(NewConfig)
+	if err != nil {
+		msg := fmt.Sprintf("The new configuration triggered a create for the internal databases used to hold " +
+			"information about backed up files and during this create event the following error was encountered:" +
+			" %s", err)
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, msg)
+		logger.Debug(msg)
+		return
+	}
+
 	srv := srvSrc.GetWithLock(loggingContext + ".handlerPutConfig")
 	oldConfig := srv.globalcfg.GetWithLock(loggingContext + ".handlerPutConfig")
 
