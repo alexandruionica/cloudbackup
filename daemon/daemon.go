@@ -30,6 +30,11 @@ func Start(configFile string, debug bool) {
 	if err != nil {
 		os.Exit(1)
 	}
+	// create DB files, if needed
+	err = config.ValidateAndCreateDB(configuration.Config)
+	if err != nil {
+		os.Exit(1)
+	}
 	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
