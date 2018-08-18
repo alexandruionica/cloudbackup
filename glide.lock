@@ -1,8 +1,8 @@
-hash: cf6ef3f9a2a51e87b4dad491ffb472dcc69acd9ed75f7a9f4c715c0c4a92fdcf
-updated: 2018-06-12T21:54:50.401832384+10:00
+hash: 0e93dc638d11399d2d1e7f55886ceb98cbec09eda2866bbc0addc09a54e7dfc5
+updated: 2018-08-18T10:38:39.207085049+10:00
 imports:
 - name: github.com/bmatcuk/doublestar
-  version: b3608229437ba4dc33dae64d56a79a2a73f1f6b2
+  version: 85a78806aa1b4707d1dbace9be592cf1ece91ab3
 - name: github.com/BurntSushi/toml
   version: a368813c5e648fee92e5f6c30e3944ff9d5e8895
 - name: github.com/howeyc/gopass
@@ -14,7 +14,7 @@ imports:
 - name: github.com/julienschmidt/httprouter
   version: adbc77eec0d91467376ca515bc3a14b8434d0f18
 - name: github.com/mattn/go-sqlite3
-  version: 6c771bb9887719704b210e87e934f08be014bdb1
+  version: 25ecb14adfc7543176f7d85291ec7dba82c6f7e4
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
