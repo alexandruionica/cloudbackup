@@ -15,7 +15,7 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-func Createdb (dbfilepath string) error {
+func CreateDb(dbfilepath string) error {
 
 	logger.Debugf("Opening database file '%s' used to store details for backup job '%s' and proceeding to " +
 		"create tables")
@@ -33,7 +33,8 @@ func Createdb (dbfilepath string) error {
 	}()
 
 	sqlStmt := `
-	CREATE TABLE files (path STRING NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, checksum_type, encrypted INTEGER, targets_ids TEXT);
+	CREATE TABLE files (path STRING NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
+	ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, checksum_type, encrypted INTEGER, targets_ids TEXT);
 	`
 	logger.Debugf("Creating tables")
 	_, err = db.Exec(sqlStmt)
@@ -46,7 +47,7 @@ func Createdb (dbfilepath string) error {
 	return nil
 }
 
-// figure out the abosolute path to the database file
+// figure out the absolute path to the database file
 func GetDbFilePath(datadir string, backupName string) (string, error){
 	dbfilepath, err := filepath.Abs(datadir + string(filepath.Separator) + backupName + ".sqlite")
 	if err != nil {
@@ -76,11 +77,12 @@ func DbFileExists(dbfilepath string) bool {
 // is called during program startup/config reload and it encounters an error then log a specific error message which is
 // different if this function is called during backup start
 func ValidateAndCreate(datadir string, backupName string, configInit bool) error {
-	// check if database file exists
+	// figure out name and absolute path to db file
 	dbfilepath, err := GetDbFilePath(datadir, backupName)
 	if err != nil {
 		return err
 	}
+	// check if database file exists
 	if ! DbFileExists(dbfilepath) {
 		if configInit{
 			logger.Warnf("Database file '%s' used to store details for backup job '%s' doesn't exist. This is " +
@@ -94,7 +96,7 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 				"established. Creating the database now in order to proceed with the backup.",
 				dbfilepath, backupName)
 		}
-		err2 := Createdb(dbfilepath)
+		err2 := CreateDb(dbfilepath)
 		if err2 != nil {
 			logger.Errorf("Backups for job '%s' are not possible as the database file can't be created and " +
 				"initialised",
