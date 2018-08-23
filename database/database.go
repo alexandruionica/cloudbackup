@@ -7,9 +7,11 @@ import (
 	"database/sql"
 	"errors"
 	"path/filepath"
+	"os"
 )
 
 const loggingContext = "database"
+const DbOptions = "_foreign_keys=1"
 var ErrCouldNotCreateDB = errors.New("could not create database")
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
@@ -19,7 +21,7 @@ func CreateDb(dbfilepath string) error {
 
 	logger.Debugf("Opening database file '%s' used to store details for backup job '%s' and proceeding to " +
 		"create tables")
-	db, err := sql.Open("sqlite3", dbfilepath)
+	db, err := sql.Open("sqlite3", dbfilepath + "?" + DbOptions)
 	if err != nil {
 		logger.Errorf("Could not create database %s due to error: %s", dbfilepath, err)
 		return ErrCouldNotCreateDB
@@ -33,14 +35,48 @@ func CreateDb(dbfilepath string) error {
 	}()
 
 	sqlStmt := `
-	CREATE TABLE files (path STRING NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
+	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
 	ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, checksum_type, encrypted INTEGER, targets_ids TEXT);
+
+	CREATE TABLE targets (id INTEGER NOT NULL PRIMARY KEY, backup_id TEXT, backup TEXT, name TEXT, type TEXT);
+
+	CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, type TEXT, start_time TEXT, end_time TEXT, state TEXT, 
+	processed_files INTEGER, processed_dirs INTEGER);
+
+	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target_id INTEGER, 
+	upload_date TEXT, job_id TEXT, current INTEGER , delete_marker INTEGER, version TEXT, type TEXT, 
+	link_target TEXT, size INTEGER, mtime TEXT, ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, 
+	checksum_type, encrypted INTEGER, targets_ids TEXT, 
+	FOREIGN KEY(target_id) REFERENCES targets(id), FOREIGN KEY(job_id) REFERENCES jobs(id));
+	
+	CREATE INDEX remote_files_job_id ON remote_files(job_id);
+	CREATE INDEX remote_files_local_path ON remote_files(local_path);
+
+	CREATE TABLE backup_collections (file_uuid TEXT, job_id TEXT, FOREIGN KEY(file_uuid) REFERENCES remote_files(uuid), 
+	FOREIGN KEY(job_id) REFERENCES jobs(id));
+	
+	CREATE INDEX backup_collections_jobid ON backup_collections(job_id);
+
 	`
 	logger.Debugf("Creating tables")
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		logger.Errorf("Encountered error while attempting to create database '%s' . The error is: %s",
 			dbfilepath, err)
+		logger.Debugf("Closing '%s' and removing the file", dbfilepath)
+		// close connection to the db
+		err2 := db.Close()
+		if err2 != nil {
+			logger.Errorf("While trying to close '%s' encountered error: '%s'", dbfilepath, err2 )
+		}
+		// remove the incorrectly initialised db file
+		if DbFileExists(dbfilepath) {
+			err2 = os.Remove(dbfilepath)
+			if err2 != nil {
+				logger.Errorf("An additional error was encountered when trying to remove the incorrectly " +
+					"initialised db file '%s'. The error was: %s", dbfilepath, err2)
+			}
+		}
 		return err
 	}
 
@@ -98,7 +134,7 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 		}
 		err2 := CreateDb(dbfilepath)
 		if err2 != nil {
-			logger.Errorf("Backups for job '%s' are not possible as the database file can't be created and " +
+			logger.Errorf("Backups for job '%s' are not possible as the database file can't be created or " +
 				"initialised",
 				backupName)
 			return err2
