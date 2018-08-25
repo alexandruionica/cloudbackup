@@ -124,8 +124,8 @@ class TestCliAdvanced(unittest.TestCase):
             if backup_job['name'] == 'first_backup':
                 found_first_backup = True
                 # check state of backup is "running"
-                self.assertEquals(backup_job['state'], 'running', "Backup job does not have state='running'. Command "
-                                                                  "output object: {}".format(result))
+                self.assertEqual(backup_job['state'], 'running', "Backup job does not have state='running'. Command "
+                                                                 "output object: {}".format(result))
         self.assertTrue(found_first_backup, "1. 'first_backup' was not found in list of backup jobs. Command output "
                                             "object: {}".format(result))
         # stop running backup
