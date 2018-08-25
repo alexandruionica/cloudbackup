@@ -186,7 +186,7 @@ func TestIncrementCounterAndGet(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-	serverConfigCopy := configuration.GetWithLock(logContext)
+	serverConfigCopy := configuration.GetCopyWithLock(logContext)
 
 	backupJobsState := &BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
@@ -241,7 +241,7 @@ func TestUpdateStatsTextAndGet(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-	serverConfigCopy := configuration.GetWithLock(logContext)
+	serverConfigCopy := configuration.GetCopyWithLock(logContext)
 
 	backupJobsState := &BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}

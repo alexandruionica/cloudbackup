@@ -6,8 +6,8 @@ import (
 	"sync"
 )
 
-// test struct.MarkEvaluating() and struct.GetStats() and struct.GetSignalChanForJob()
-func TestMarkEvaluatingAndGetStatsAndGetSignalChanForJob(t *testing.T) {
+// test struct.MarkEvaluating() and struct.GetStats() and struct.GetCancelFunctionForJob()
+func TestMarkEvaluatingAndGetStatsAndGetCancelAndGetContextForJob(t *testing.T) {
 	backupJobsState := &DryRunBackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	jobName := "backupJob1"
@@ -39,23 +39,43 @@ func TestMarkEvaluatingAndGetStatsAndGetSignalChanForJob(t *testing.T) {
 			" was expected")
 	}
 
-	_, err = backupJobsState.GetSignalChanForJob(jobName, JobUuid)
+	_, err = backupJobsState.GetContextForJob(jobName, JobUuid)
 	if err != nil {
-		t.Fatalf("backupJobsState.GetSignalChanForJob() when called using valid job name and valid job id" +
+		t.Fatalf("backupJobsState.GetContextForJob() when called using valid job name and valid job id" +
 			" returned error: %s", err)
 	}
 
-	_, err = backupJobsState.GetSignalChanForJob(jobName, "")
+	_, err = backupJobsState.GetContextForJob(jobName, "")
 	if err != nil {
-		t.Fatalf("backupJobsState.GetSignalChanForJob() when called using valid job name and  empty job id" +
+		t.Fatalf("backupJobsState.GetContextForJob() when called using valid job name and  empty job id" +
 			" returned error: %s", err)
 	}
 
-	_, err = backupJobsState.GetSignalChanForJob("jobWichDoesNotExist2", "")
+	_, err = backupJobsState.GetContextForJob("jobWichDoesNotExist2", "")
 	if err == nil {
-		t.Fatal("backupJobsState.GetSignalChanForJob() when called using INVALID job name and empty job id" +
+		t.Fatal("backupJobsState.GetContextForJob() when called using INVALID job name and empty job id" +
 			" did not return any error despite one being expected")
 	}
+
+
+	_, err = backupJobsState.GetCancelFunctionForJob(jobName, JobUuid)
+	if err != nil {
+		t.Fatalf("backupJobsState.GetCancelFunctionForJob() when called using valid job name and valid job id" +
+			" returned error: %s", err)
+	}
+
+	_, err = backupJobsState.GetCancelFunctionForJob(jobName, "")
+	if err != nil {
+		t.Fatalf("backupJobsState.GetCancelFunctionForJob() when called using valid job name and  empty job id" +
+			" returned error: %s", err)
+	}
+
+	_, err = backupJobsState.GetCancelFunctionForJob("jobWichDoesNotExist2", "")
+	if err == nil {
+		t.Fatal("backupJobsState.GetCancelFunctionForJob() when called using INVALID job name and empty job id" +
+			" did not return any error despite one being expected")
+	}
+
 }
 
 // test struct.IncrementCounter()

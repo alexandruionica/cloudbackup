@@ -93,6 +93,9 @@ type CfgTemplate struct {
 	Http Http `yaml:"http" json:"http"`
 	Https Https `yaml:"https" json:"https"`
 	Backup []Backup `yaml:"backup" json:"backup"`
+	// the mutex is used for locking mainly only when we deal with copies of this struct (which may not have the parent
+	// RuntimeConfig struct containing this struct)
+	Mutex *sync.RWMutex `yaml:"-" json:"-"`
 }
 
 
@@ -108,7 +111,7 @@ type RuntimeConfig struct {
 
 // return a copy of the config struct. Lock while reading the struct. logContext is used for passing the caller's
 // logging context as to make it clear where the call is coming from
-func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
+func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
 	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying server config" +
 		" struct")
 	cfg.Mutex.RLock()
@@ -140,6 +143,8 @@ func (cfg *RuntimeConfig) GetWithLock(logContext string) CfgTemplate {
 		cfgCopy.Backup[i].Schedule = make([]string, len(cfg.Config.Backup[i].Schedule))
 		copy(cfgCopy.Backup[i].Schedule, cfg.Config.Backup[i].Schedule)
 	}
+	// new mutex for locking
+	cfgCopy.Mutex = &sync.RWMutex{}
 	return cfgCopy
 }
 
@@ -182,6 +187,10 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 	if err != nil {
 		return &RuntimeConfig{}, err
 	}
+
+	// rarely used lock (this is to be used only by functions which get the Config struct but don't get also the
+	// parent struct (which has a different lock)
+	Config.Mutex = &sync.RWMutex{}
 
 	return &RuntimeConfig{Mutex: mutex,
 					      Path: path,

@@ -159,7 +159,7 @@ func (command *ArgsCommandServerConfigDump) Execute(args []string) error {
 	if err == nil {
 		// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 		//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
-		utils.Pp(config.SanitizeCfgTemplate(configuration.GetWithLock(loggingContext)))
+		utils.Pp(config.SanitizeCfgTemplate(configuration.GetCopyWithLock(loggingContext)))
 		os.Exit(0)
 	} else {
 		fmt.Printf("Config file %s did not pass validation\n", command.ConfigFile)

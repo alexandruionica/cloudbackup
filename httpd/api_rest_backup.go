@@ -34,15 +34,19 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	// while a copy, some of the data is pointers so locking is still needed
-	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupStart")
+	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostBackupStart")
 	// while a copy, some of the data is pointers so locking is still needed
-	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerPostBackupStart")
+	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostBackupStart")
 	found := false
+	// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
+	// shared with other functions (running in other routines)
+	configCopy.Mutex.RLock()
 	for _, backup := range configCopy.Backup {
 		if backup.Name == decodedJson.Name {
 			found = true
 		}
 	}
+	configCopy.Mutex.RUnlock()
 
 	if found == false {
 		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job was found matching name:" +
@@ -130,7 +134,7 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	// while a copy, some of the data is pointers so locking is still needed
-	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupStop")
+	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostBackupStop")
 
 	if srvCopy.backupJobsState.IsRunning(decodedJson.Name, decodedJson.JobId , loggingContext + ".handlerPostBackupStart") == false {
 		var errorMsg string
@@ -220,9 +224,9 @@ func (srvSrc SrvData) handlerGetBackupList(w http.ResponseWriter, r *http.Reques
 	globals.Stats.IncrementRoutines("httpd_handlers")
 	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	// while a copy, some of the data is pointers so locking is still needed
-	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerGetBackupList")
+	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerGetBackupList")
 	// while a copy, some of the data is pointers so locking is still needed
-	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerGetBackupList")
+	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerGetBackupList")
 	JSONSuccessWithResult(w, "success", "success",
 		srvCopy.backupJobsState.Get(configCopy, loggingContext + ".handlerGetBackupList"))
 }
@@ -247,17 +251,21 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 	notify := w.(http.CloseNotifier).CloseNotify()
 
 	// while a copy, some of the data is pointers so locking is still needed
-	srvCopy := srvSrc.GetWithLock(loggingContext + ".handlerPostBackupDryRun")
+	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostBackupDryRun")
 	// while a copy, some of the data is pointers so locking is still needed
-	configCopy := srvCopy.globalcfg.GetWithLock(loggingContext + ".handlerPostBackupDryRun")
+	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostBackupDryRun")
 	found := false
 	var backupConfig config.Backup
+	// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
+	// shared with other functions (running in other routines)
+	configCopy.Mutex.RLock()
 	for _, backup := range configCopy.Backup {
 		if backup.Name == decodedJson.Name {
 			found = true
 			backupConfig = backup
 		}
 	}
+	configCopy.Mutex.RUnlock()
 
 	if found == false {
 		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job was found matching name:" +
@@ -287,7 +295,8 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		logger.Debugf("While trying to start an evaluate backup job, received error: '%s'", err)
 	}
-	cancelScanPath, err := backupJobsState.GetSignalChanForJob(decodedJson.Name, evaljobId)
+	cancel, err := backupJobsState.GetCancelFunctionForJob(decodedJson.Name, evaljobId)
+
 	// this channel is used to tell this http handler that scanPathExit has completed it's run and exited (either exit
 	// was cause by a cancel request or scan.Path just finished it's run)
 	scanPathExit := make(chan bool)
@@ -297,8 +306,16 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	ctx, err := backupJobsState.GetContextForJob(decodedJson.Name, evaljobId)
+	// if we got an error than something else has already marked the backup job as != "running"
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalError, fmt.Sprintf("Received error '%s' " +
+			"while trying to setup the state object for the evaluate job run", err))
+		return
+	}
+
 	// launch GO routine which collects and reports
-	go dryRunBackupPaths(backupConfig, backupJobsState, cancelScanPath, scanPathExit)
+	go dryRunBackupPaths(ctx, backupConfig, backupJobsState, scanPathExit)
 
 	//counter := 0
 	for {
@@ -307,10 +324,11 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 		case _ = <-notify:
 			logger.Debug("Client closed connection so we're exiting. Sending signal to scan.Path() so " +
 				"dryRunBackupPaths() exits")
-			// signal scan.Path() to exit
-			cancelScanPath <- true
+			// signal scan.Path() to exit; this is a non blocking call, it may take a lot longer for it to exit
+			cancel()
 			logger.Debug("Successfully sent signal to scan.Path(), waiting for reply from dryRunBackupPaths() " +
 				"that it is ready to exit")
+			// when dryRunBackupPaths() is done it will put a message on the "scanPathExit" channel
 		case message := <- reportChan:
 			{
 				// Write to the ResponseWriter
@@ -324,7 +342,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 					flusher.Flush()
 				}
 		}
-		// scan.Path completed it's run (a cancel run was not called if we hit this step)
+		// scan.Path completed it's run (a cancel may have been requested)
 		case _ = <- scanPathExit:
 			{
 				logger.Debug("scan.Path() triggered by handlerPostBackupDryRun() has completed its run so the " +

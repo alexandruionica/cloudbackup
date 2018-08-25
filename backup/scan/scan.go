@@ -9,6 +9,7 @@ import (
 	"cloudbackup/shared"
 	"github.com/bmatcuk/doublestar"
 	"cloudbackup/daemon/globals"
+	"context"
 )
 
 const loggingContext = "backup.scan"
@@ -19,8 +20,8 @@ var logger = log.WithFields(log.Fields{
 // Path descends into the file tree rooted at $path, calls walk() if $path is a directory and otherwise backup function
 // return: first parameter will be "true" only if it was signalled via closeChan to stop the running backup; second
 // parameter signifies errors
-func Path(path string, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface,
-	closeChan chan bool, dryRun bool) (bool, error) {
+func Path(ctx context.Context, path string, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface,
+	dryRun bool) (bool, error) {
 	globals.Stats.IncrementFunctions("scan.Path")
 	defer globals.Stats.DecrementFunctions("scan.Path")
 	var stat os.FileInfo
@@ -36,14 +37,14 @@ func Path(path string, backupConfig config.Backup, backupJobsState shared.Backup
 		return false, err
 	} else {
 		select {
-		case <-closeChan:
+		case <-ctx.Done():
 			{
 				logger.Infof("cancelling running backup job '%s'", backupConfig.Name)
 				return true, nil
 			}
 		default:
 			if stat.IsDir() {
-				exiting, err := walk(path, stat, backupConfig, backupJobsState, closeChan, dryRun)
+				exiting, err := walk(ctx, path, stat, backupConfig, backupJobsState, dryRun)
 				// backup job was signalled to exit - Examine FIRST $exiting and then $err
 				if exiting {
 					return true, err
@@ -88,8 +89,8 @@ func readDirNames(dirname string) ([]string, error) {
 // walk recursively path
 // return: first parameter will be "true" only if it was signalled via closeChan to stop the running backup; second
 // parameter signifies errors
-func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface,
-	closeChan chan bool, dryRun bool) (bool, error) {
+func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup,
+	backupJobsState shared.BackupJobsStateInterface, dryRun bool) (bool, error) {
 	if ! dryRun {
 		// TODO - call to backup the folder entry itself ($stat will ge used here)
 	}
@@ -112,7 +113,7 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 	// even if $topLevelErr != nil it is possible that readDirNames() returned a partial list of directory contents
 	for _, name := range names {
 		select {
-		case <-closeChan:
+		case <-ctx.Done():
 			{
 				logger.Infof("while processing '%s' received request to cancel running backup job '%s'",
 					path, backupConfig.Name)
@@ -151,7 +152,7 @@ func walk(path string, stat os.FileInfo, backupConfig config.Backup, backupJobsS
 					"", err.Error())
 			} else {
 				if fileInfo.IsDir() {
-					exiting, _ := walk(childPath, fileInfo, backupConfig, backupJobsState, closeChan, dryRun) // #nosec
+					exiting, _ := walk(ctx, childPath, fileInfo, backupConfig, backupJobsState, dryRun) // #nosec
 					// lower level walk() was signalled to exit
 					if exiting {
 						return true, topLevelErr
