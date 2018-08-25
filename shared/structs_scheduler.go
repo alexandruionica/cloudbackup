@@ -6,6 +6,7 @@ import (
 	"cloudbackup/config"
 	log "github.com/sirupsen/logrus"
 	"errors"
+	"context"
 )
 
 const ErrJobAlreadyRunning = "job already running"
@@ -13,6 +14,7 @@ const ErrJobAlreadyStopped = "job already stopped"
 const ErrJobAlreadyStopping = "job already stopping"
 const ErrJobNotFoundInRunningState = "no running job with given name and uuid was found"
 const ErrJobNotFoundInEvaluatingState = "no evaluating job with given name and uuid was found"
+const loggingContext = "structs_scheduler"
 
 type CommWithSchedulerForBackup struct {
 	// this needs to be locked before acquiring the channel to send messages to the scheduler goroutine or read messages
@@ -89,8 +91,10 @@ type BackupJobStatus struct {
 	StatsText map[string]string `json:"stats_text,omitempty"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
 	NextRun time.Time `json:"next_run"`
-	// using this channel we signal a Backup job task that it should proceed to shutdown now
-	SignalClose chan bool `json:"-"`
+	// using this context we signal a Backup job task that it should proceed to shutdown now
+	Ctx context.Context `json:"-"`
+	// cancel function produced when above context is created. This is needed in order to actually issue the cancel
+	Cancel context.CancelFunc `json:"-"`
 }
 
 type BackupJobsState struct {
@@ -135,6 +139,9 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 		result = append(result, jobCopy)
 		runningList[job.Name] = job.Name
 	}
+	// while "cfgCopy" is a copy, some of the data is pointers so locking is still needed as it may be shared with
+	// other functions (running in other routines)
+	cfgCopy.Mutex.RLock()
 	// add state of stopped jobs (what is not part of running must be stopped)
 	for _, backupJob := range cfgCopy.Backup {
 		if _, foundMatch := runningList[backupJob.Name]; foundMatch == false {
@@ -145,6 +152,7 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 			})
 		}
 	}
+	cfgCopy.Mutex.RUnlock()
 	return result
 }
 
@@ -214,7 +222,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			return errors.New(ErrJobAlreadyRunning)
 		}
 	}
-
+	ctx, cancel := context.WithCancel(context.Background())
 	jobs.Running = append(jobs.Running, BackupJobStatus{
 		Name: name,
 		State: "running",
@@ -236,7 +244,8 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"current_directory": "",
 			"current_file": "",
 		},
-		SignalClose: make(chan bool),
+		Ctx: ctx,
+		Cancel: cancel,
 		// TODO - init metadata for Bandwidth usage (also several new fields are needed in order to note when the last update was
 		// TODO - add NextRun
 	})
@@ -345,15 +354,20 @@ func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName stri
 }
 
 
-// return the signal channel used by a particular Running job with a particular uuid (or if uuid="" then match on
+// return the cancel function for a particular Running job with a particular uuid (or if uuid="" then match on
 //    name only)
-func (jobs *BackupJobsState) GetSignalChanForJob(BackupJobName string, BackupJobId string) (chan bool, error) {
-	jobs.Lock.Lock()
+func (jobs *BackupJobsState) GetCancelFunctionForJob(BackupJobName string, BackupJobId string) (context.CancelFunc, error) {
+	log.WithFields(log.Fields{"context": loggingContext + ".GetCancelFunctionForJob"}).Debug("Acquiring read lock " +
+		"before reading the backup jobs struct")
+	jobs.Lock.RLock()
+
 	defer func() {
-		jobs.Lock.Unlock()
+		jobs.Lock.RUnlock()
+		log.WithFields(log.Fields{"context": loggingContext + ".GetCancelFunctionForJob"}).Debug("Read lock " +
+			"released after reading the backup jobs struct")
 	}()
 
-	var signalChan chan bool
+	var CancelFunction context.CancelFunc
 	found := false
 
 	for _, job := range jobs.Running {
@@ -361,19 +375,58 @@ func (jobs *BackupJobsState) GetSignalChanForJob(BackupJobName string, BackupJob
 			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
 			if BackupJobId == "" {
 				found = true
-				signalChan = job.SignalClose
+				CancelFunction = job.Cancel
 				break
 			} else {
 				if BackupJobId != "" && job.BackupJobId == BackupJobId {
 					found = true
-					signalChan = job.SignalClose
+					CancelFunction = job.Cancel
 					break
 				}
 			}
 		}
 	}
+
 	if found {
-		return signalChan, nil
+		return CancelFunction, nil
+	}
+	return nil, errors.New(ErrJobNotFoundInRunningState)
+}
+
+// return the context for a particular Running job with a particular uuid (or if uuid="" then match on
+//    name only)
+func (jobs *BackupJobsState) GetContextForJob(BackupJobName string, BackupJobId string) (context.Context, error) {
+	log.WithFields(log.Fields{"context": loggingContext + ".GetContextForJob"}).Debug("Acquiring read lock " +
+		"before reading the backup jobs struct")
+	jobs.Lock.RLock()
+	defer func() {
+		jobs.Lock.RUnlock()
+		log.WithFields(log.Fields{"context": loggingContext + ".GetContextForJob"}).Debug("Read lock " +
+			"released after reading the backup jobs struct")
+	}()
+
+	var ctx context.Context
+	found := false
+
+	for _, job := range jobs.Running {
+		if BackupJobName == job.Name {
+			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if BackupJobId == "" {
+				found = true
+				ctx = job.Ctx
+				break
+			} else {
+				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+					found = true
+					ctx = job.Ctx
+					break
+				}
+			}
+		}
+	}
+
+	if found {
+		return ctx, nil
 	}
 	return nil, errors.New(ErrJobNotFoundInRunningState)
 }

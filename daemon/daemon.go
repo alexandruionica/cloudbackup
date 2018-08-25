@@ -43,15 +43,15 @@ func Start(configFile string, debug bool) {
 	backupJobsState.Lock = &sync.RWMutex{}
 
 	var httpServer *httpd.SrvData
-	if configuration.GetWithLock(loggingContext).Https.Enabled{
+	if configuration.GetCopyWithLock(loggingContext).Https.Enabled{
 		logger.Info("Because the HTTPS server has been enabled the HTTP server will not be started")
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
-			configuration.GetWithLock(loggingContext).Https.BindAddress, true,
-			configuration.GetWithLock(loggingContext).Https.SslCertPath,
-			configuration.GetWithLock(loggingContext).Https.SslKeyPath, commWithSchedulerForBackup, backupJobsState)
+			configuration.GetCopyWithLock(loggingContext).Https.BindAddress, true,
+			configuration.GetCopyWithLock(loggingContext).Https.SslCertPath,
+			configuration.GetCopyWithLock(loggingContext).Https.SslKeyPath, commWithSchedulerForBackup, backupJobsState)
 	}else {
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
-			configuration.GetWithLock(loggingContext).Http.BindAddress, false, "",
+			configuration.GetCopyWithLock(loggingContext).Http.BindAddress, false, "",
 			"", commWithSchedulerForBackup, backupJobsState)
 	}
 

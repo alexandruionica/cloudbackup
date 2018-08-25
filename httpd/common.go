@@ -14,6 +14,7 @@ import (
 	"strings"
 	"cloudbackup/shared"
 	"cloudbackup/backup/scan"
+	"context"
 )
 
 // various "code" messages the API can return
@@ -58,7 +59,7 @@ type SrvData struct {
 	backupJobsState *shared.BackupJobsState
 }
 
-func (srv *SrvData) GetWithLock(logContext string) SrvData {
+func (srv *SrvData) GetCopyWithLock(logContext string) SrvData {
 	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying HTTPD config " +
 		"struct")
 	srv.Mutex.RLock()
@@ -80,8 +81,8 @@ func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 		LogHttpRequest(r)
 		// Get the Basic Authentication credentials
 		httpUser, httpPassword, hasAuth := r.BasicAuth()
-		srv := srvSrc.GetWithLock(loggingContext + ".BasicAuth")
-		runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".BasicAuth")
+		srv := srvSrc.GetCopyWithLock(loggingContext + ".BasicAuth")
+		runtimeCfg := srv.globalcfg.GetCopyWithLock(loggingContext + ".BasicAuth")
 		isAuthenticated := false
 		errmsg := "Basic authentication is required. Please provide an username and password"
 
@@ -89,6 +90,9 @@ func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 			errmsg = "Invalid username or password"
 			logger.Debugf("Checking if user: '%s' provided via HTTP(S) matches any username + password hash " +
 				"from the config", httpUser)
+			// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
+			// shared with other functions (running in other routines)
+			runtimeCfg.Mutex.RLock()
 			if len(runtimeCfg.User) == 0 {
 				errmsg = "The server configuration doesn't have a 'User' section defined so http(s) authentication " +
 					"will fail"
@@ -108,6 +112,7 @@ func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 					}
 				}
 			}
+			runtimeCfg.Mutex.RUnlock()
 
 			if isAuthenticated == false {
 				logger.Debug("Could not find any matching username + password(hash) in the config")
@@ -140,9 +145,12 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 			return
 		}
 
-		srv := srvSrc.GetWithLock(loggingContext + ".CheckAccess")
-		runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".CheckAccess")
+		srv := srvSrc.GetCopyWithLock(loggingContext + ".CheckAccess")
+		runtimeCfg := srv.globalcfg.GetCopyWithLock(loggingContext + ".CheckAccess")
 		hasAccess := false
+		// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
+		// shared with other functions (running in other routines)
+		runtimeCfg.Mutex.RLock()
 		for _, user := range runtimeCfg.User {
 			if user.Name == httpUser {
 				if strings.ToLower(user.Access) == "write" {
@@ -166,6 +174,7 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 
 			}
 		}
+		runtimeCfg.Mutex.RUnlock()
 		if hasAccess {
 			// Delegate request to the given handle
 			handle(w, r, ps)
@@ -292,11 +301,11 @@ func LogHttpRequest(r *http.Request){
 
 
 // calls an "evaluate" of the backup paths for a particular job
-func dryRunBackupPaths(backupConfig config.Backup, backupJobsState *shared.DryRunBackupJobsState, cancelScanPath chan bool,
+func dryRunBackupPaths(ctx context.Context, backupConfig config.Backup, backupJobsState *shared.DryRunBackupJobsState,
 	scanPathExit chan bool) {
 	for _, path := range backupConfig.Paths {
 		// backupJobsState MUST be a pointer
-		exiting, err := scan.Path(path, backupConfig, backupJobsState, cancelScanPath, true)
+		exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, true)
 		// Examine FIRST $exit and then $err ;  $exiting means that a signal was sent so scan.Path() exits, on request,
 		// 	early
 		if exiting {
@@ -306,8 +315,8 @@ func dryRunBackupPaths(backupConfig config.Backup, backupJobsState *shared.DryRu
 			return
 		}
 		if err != nil {
-			scanPathExit <- true
 			logger.Debug("dryRunBackupPaths() has encountered and error and is exiting")
+			scanPathExit <- true
 			return
 		}
 	}

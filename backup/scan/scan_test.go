@@ -57,13 +57,13 @@ func TestPath1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -127,13 +127,13 @@ func TestPath2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -208,13 +208,13 @@ func TestPath3(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+		ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 		if err != nil {
 			t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 		}
 
 		for _, backupPath := range backupConfig.Paths {
-			_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 			if err != nil {
 				t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 			}
@@ -283,13 +283,13 @@ func TestPath4(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -357,13 +357,12 @@ func TestPath5(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
-
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -434,12 +433,12 @@ func TestPath6(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -520,13 +519,13 @@ func TestPath7(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -600,13 +599,13 @@ func TestPath8(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -672,13 +671,13 @@ func TestPath9(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -744,13 +743,13 @@ func TestPath10(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -816,13 +815,13 @@ func TestPath11(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -888,13 +887,13 @@ func TestPath12(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	closeChan, err := backupJobsState.GetSignalChanForJob(backupConfig.Name, jobId)
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(backupPath, backupConfig, backupJobsState, closeChan, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}

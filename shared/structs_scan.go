@@ -6,6 +6,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"context"
 )
 
 type DryRunBackupJobsState struct {
@@ -104,6 +105,7 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 		}
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	jobs.DryRunning = append(jobs.DryRunning, BackupJobStatus{
 		Name: name,
 		State: "evaluating",
@@ -125,49 +127,85 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 			"current_directory": "",
 			"current_file": "",
 		},
-		// buffered channel of 1
-		SignalClose: make(chan bool, 1),
+		Ctx: ctx,
+		Cancel: cancel,
 	})
 	return nil
 }
 
 // return the signal channel used by a particular DryRunning job with a particular uuid (or if uuid="" then match on
 //    name only)
-func (jobs *DryRunBackupJobsState) GetSignalChanForJob(BackupJobName string, BackupJobId string) (chan bool, error) {
-	jobs.Lock.Lock()
+func (jobs *DryRunBackupJobsState) GetCancelFunctionForJob(BackupJobName string, BackupJobId string) (context.CancelFunc, error) {
+	jobs.Lock.RLock()
 	defer func() {
-		jobs.Lock.Unlock()
+		jobs.Lock.RUnlock()
 	}()
 
-	var signalChan chan bool
+	var CancelFunction context.CancelFunc
 	found := false
+
 	for _, job := range jobs.DryRunning {
 		if BackupJobName == job.Name {
 			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
 			if BackupJobId == "" {
 				found = true
-				signalChan = job.SignalClose
+				CancelFunction = job.Cancel
 				break
 			} else {
 				if BackupJobId != "" && job.BackupJobId == BackupJobId {
 					found = true
-					signalChan = job.SignalClose
+					CancelFunction = job.Cancel
 					break
 				}
 			}
 		}
 	}
+
 	if found {
-		return signalChan, nil
+		return CancelFunction, nil
+	}
+	return nil, errors.New(ErrJobNotFoundInEvaluatingState)
+}
+
+// return the context for a particular Running job with a particular uuid (or if uuid="" then match on
+//    name only)
+func (jobs *DryRunBackupJobsState) GetContextForJob(BackupJobName string, BackupJobId string) (context.Context, error) {
+	jobs.Lock.RLock()
+	defer func() {
+		jobs.Lock.RUnlock()
+	}()
+
+	var ctx context.Context
+	found := false
+
+	for _, job := range jobs.DryRunning {
+		if BackupJobName == job.Name {
+			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if BackupJobId == "" {
+				found = true
+				ctx = job.Ctx
+				break
+			} else {
+				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+					found = true
+					ctx = job.Ctx
+					break
+				}
+			}
+		}
+	}
+
+	if found {
+		return ctx, nil
 	}
 	return nil, errors.New(ErrJobNotFoundInEvaluatingState)
 }
 
 // returns a copy of stats so far; the copy is of StatsCounters & StatsText
 func (jobs *DryRunBackupJobsState) GetStats(BackupJobName string) (BackupJobStatus, error) {
-	jobs.Lock.Lock()
+	jobs.Lock.RLock()
 	defer func() {
-		jobs.Lock.Unlock()
+		jobs.Lock.RUnlock()
 	}()
 
 	result := BackupJobStatus{

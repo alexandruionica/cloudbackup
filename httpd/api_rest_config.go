@@ -17,8 +17,8 @@ import (
 func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
 	globals.Stats.IncrementRoutines("httpd_handlers")
 	defer globals.Stats.DecrementRoutines("httpd_handlers")
-	srv := srvSrc.GetWithLock(loggingContext + ".pageRoot")
-	runtimeCfg := srv.globalcfg.GetWithLock(loggingContext + ".handlerGetConfig")
+	srv := srvSrc.GetCopyWithLock(loggingContext + ".pageRoot")
+	runtimeCfg := srv.globalcfg.GetCopyWithLock(loggingContext + ".handlerGetConfig")
 
 	// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 	//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
@@ -96,8 +96,8 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 		return
 	}
 
-	srv := srvSrc.GetWithLock(loggingContext + ".handlerPutConfig")
-	oldConfig := srv.globalcfg.GetWithLock(loggingContext + ".handlerPutConfig")
+	srv := srvSrc.GetCopyWithLock(loggingContext + ".handlerPutConfig")
+	oldConfig := srv.globalcfg.GetCopyWithLock(loggingContext + ".handlerPutConfig")
 
 	// for password fields containing only asterisks ('*******') attempt to read the actual password from the old config
 	err = config.CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
@@ -226,10 +226,10 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	srv := srvSrc.GetWithLock(loggingContext + ".handlerPutConfig")
-	oldConfig := srv.globalcfg.GetWithLock(loggingContext + ".handlerPutConfig")
+	srv := srvSrc.GetCopyWithLock(loggingContext + ".handlerPutConfig")
+	oldConfig := srv.globalcfg.GetCopyWithLock(loggingContext + ".handlerPutConfig")
 	// we'll put any config changes in the "copy" of the old config
-	NewConfig := srv.globalcfg.GetWithLock(loggingContext + ".handlerPutConfig")
+	NewConfig := srv.globalcfg.GetCopyWithLock(loggingContext + ".handlerPutConfig")
 
 	// for password fields containing only asterisks ('*******') attempt to read the actual password from the old config
 	err = config.CopyPasswordsFromOldConfigBackup(backups, oldConfig.Backup)

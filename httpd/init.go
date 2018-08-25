@@ -62,7 +62,7 @@ func (srv *SrvData) Start() {
 		msg = ""
 		protocol = "http://"
 	}
-	staticHtmlDir := srv.globalcfg.GetWithLock(loggingContext).HtmlDir
+	staticHtmlDir := srv.globalcfg.GetCopyWithLock(loggingContext).HtmlDir
 	logger.Infof("Starting web server to listen on %s%s%s", protocol, srv.httpsrv.Addr, msg)
 	router := httprouter.New()
 	router.GET("/", srv.handlerRoot)
@@ -100,7 +100,7 @@ func (srv *SrvData) Start() {
 			extraMsg = "HTTP"
 			err = srv.httpsrv.ListenAndServe()
 		}
-		srvCopy := srv.GetWithLock(loggingContext)
+		srvCopy := srv.GetCopyWithLock(loggingContext)
 		if err != nil && srvCopy.serverExiting == false {
 			logger.Errorf("%s server could not be started or encountered an error during it's operation",
 				extraMsg)

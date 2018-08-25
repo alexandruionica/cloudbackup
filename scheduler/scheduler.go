@@ -10,6 +10,7 @@ import (
 	"cloudbackup/backup/scan"
 	"cloudbackup/daemon/globals"
 	"cloudbackup/database"
+	"context"
 )
 
 const loggingContext = "scheduler"
@@ -32,8 +33,6 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 	logger.Info("Starting scheduling component")
 	//const SleepSec = 1
 	var receivedBackupCommand = shared.ReceiveBackupCommand{}
-	// while a copy, some of the data is pointers so locking is still needed
-	serverConfigCopy := configuration.GetWithLock(loggingContext + ".eventProcessor")
 	// infinite loop
 	for {
 		select {
@@ -41,6 +40,8 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 			{
 				logger.Info("Scheduler requested to stop any running backups or restores and then exit")
 				// TODO - add code to stop restores too (right now only backups are stopped)
+				// while a copy, some of the data is pointers so locking is still needed
+				serverConfigCopy := configuration.GetCopyWithLock(loggingContext + ".eventProcessor")
 				stopAllBackups(backupJobsState, serverConfigCopy)
 				// Signal back on the same channel that scheduler is done cleaning up
 				SchedulerCommBackup.Shutdown <- true
@@ -49,13 +50,14 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 		case _ = <-cfgChange:
 			{
 				logger.Info("Scheduler reloading configuration")
-				// while a copy, some of the data is pointers so locking is still needed
-				serverConfigCopy = configuration.GetWithLock(loggingContext + ".eventProcessor")
-				// TODO - notify cron scheduler to reload too
+
+				// TODO - notify cron scheduler to reload
 			}
 		case receivedBackupCommand = <-SchedulerCommBackup.ReceivedCommand:
 			{
 				logger.Debugf("Scheduler received command: %+v", receivedBackupCommand)
+				// while a copy, some of the data is pointers so locking is still needed
+				serverConfigCopy := configuration.GetCopyWithLock(loggingContext + ".eventProcessor")
 				select {
 				case SchedulerCommBackup.SendResponse <- processBackupCommand(receivedBackupCommand, backupJobsState,
 					serverConfigCopy):
@@ -115,12 +117,12 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 				}
 			}
 
-			closeChan, err := backupJobsState.GetSignalChanForJob(receivedBackupCommand.Name,
+			cancelFunc, err := backupJobsState.GetCancelFunctionForJob(receivedBackupCommand.Name,
 				receivedBackupCommand.BackupJobId)
 			// if we got an error than something else has already marked the backup job as != "running"
 			if err != nil {
 				msg := fmt.Sprintf("It seems that while trying to get the signalling channel for backup job " +
-					"'%s' having id '%s' that another process change the job state to something else than 'running'",
+					"'%s' having id '%s' that another process changed the job state to something else than 'running'",
 					receivedBackupCommand.Name, receivedBackupCommand.BackupJobId)
 				logger.Warn(msg)
 				// it is assumed that whatever process requested the backup to be stopped will also take care of fully
@@ -145,11 +147,9 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 				}
 			}
 
-			// this will block until something reads the channel so we'll launch it in a GO routine
-			// this signals the runBackup() go routine that the current running backup should stop.
-			go func(){
-				closeChan <- true
-			}()
+			// request job to stop (this is a non blocking call, the backup job may finish considerably later)
+			signalBackupToStop(cancelFunc, receivedBackupCommand.Name, receivedBackupCommand.BackupJobId)
+
 			return shared.ResponseBackupCommand{
 				Name: receivedBackupCommand.Name,
 				Id: receivedBackupCommand.Id,
@@ -186,16 +186,18 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 
 	// extract config for this backup job only
 	var backupConfig config.Backup
+	serverConfigCopy.Mutex.RLock()
 	for _, backup := range serverConfigCopy.Backup {
 		if backup.Name == name{
 			backupConfig = backup
 			break
 		}
 	}
+	serverConfigCopy.Mutex.RUnlock()
 
 	// TODO - update some status report object and pass it to scan.Path()
 
-	closeChan, err := backupJobsState.GetSignalChanForJob(name, jobUuid)
+	ctx, err := backupJobsState.GetContextForJob(name, jobUuid)
 	// if we got an error than something else has already marked the backup job as != "running"
 	if err != nil {
 		logger.Errorf("It seems that while starting up backup job '%s' having id '%s' another process stopped " +
@@ -210,21 +212,21 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// the backup can not run as we can't initialise/connect to the database
 	if err != nil {
 		// TODO - mark the backup as failed (failed to start)
-		stopBackup(name, jobUuid, backupConfig, backupJobsState, closeChan)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState)
 		return
 	}
 
 	// examine each path listed and backup contained files/directories if needed
 	for _, path := range backupConfig.Paths {
 		select {
-		case <-closeChan:
+		case <-ctx.Done():
 			{
 				logger.Infof("Cancelling running backup job '%s' having id '%s'", name, jobUuid)
 				break
 			}
 		default:
 			// backupJobsState MUST be a pointer
-			exiting, err := scan.Path(path, backupConfig, backupJobsState, closeChan, false)
+			exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, false)
 			// Examine FIRST $exit and then $err
 			if exiting {
 				// TODO - mark backup as interrupted
@@ -237,45 +239,24 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		}
 	}
-	stopBackup(name, jobUuid, backupConfig, backupJobsState, closeChan)
+	cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState)
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
-func stopBackup (name string, jobUuid string, backupConfig config.Backup,
-	backupJobsState *shared.BackupJobsState, closeChan chan bool ){
-	// TODO - if $jobUuid is empty string then stop whatever is the current running backup for the given $name (and
-	// figure out the UUID in order to correctly log it in the below logger call
-	logger.Infof("Stopping backup job having name '%s' with allocated job id '%s'", name, jobUuid)
+func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
+	backupJobsState *shared.BackupJobsState){
 	// TODO - implement stop; in the mean time sleep for 20 seconds and then mark job as stopped
 	time.Sleep(20 * time.Second)
 
 	// set state to "stopping"; ignore any errors (job may be set to state "stopping" already if stop was requested
 	//  via the API but stop can also be triggered due to SIGTERM/SIGINT being received
-	_ = backupJobsState.MarkStopped(name, loggingContext + ".stopBackup", jobUuid, false) // #nosec
+	_ = backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup", jobUuid, false) // #nosec
 
-	// before exiting loop several times over the communication channel; nothing should be there but this ensures we
-	// don't end up with a memory leak or a panic in case we got a bug
-	for i := 0; i < 100; i++ {
-		select {
-		case closeChanMsg := <- closeChan:
-			{
-				if closeChanMsg == false {
-					// the CloseChan channel has been already closed. This happens in the rare case that more than one
-					// stopBackup() happens at the same time
-					logger.Debug("More than one call to stopBackup() done. Exiting this stopBackup() instance")
-					return
-				}
-				logger.Warnf("signalling channel for backup job '%s' having id '%s' should have been empty " +
-					"but there was a message on it.", name, jobUuid)
-			}
-		default:
-		}
-	}
 
 	// TODO - before MarkStopped(stopped=true) copy report (state) somewhere
 
 	// set state to "stopped"
-	err := backupJobsState.MarkStopped(name, loggingContext + ".stopBackup",
+	err := backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup",
 		jobUuid, true)
 	if err != nil {
 		logger.Warnf("Encountered an error when trying to mark backup job '%s' having job id '%s' as 'stopped'. " +
@@ -285,17 +266,56 @@ func stopBackup (name string, jobUuid string, backupConfig config.Backup,
 	// TODO - close SQL connection
 }
 
+// non-blocking function which signals a given backup job that it should stop whatever is doing and exit
+func signalBackupToStop(cancelFunction context.CancelFunc, name string, jobUuid string){
+	// TODO - if $jobUuid is empty string then stop whatever is the current running backup for the given $name (and
+	// figure out the UUID in order to correctly log it in the below logger call
+	logger.Infof("Signalling backup job having name '%s' with allocated job id '%s' to stop", name, jobUuid)
+	// cancel running backup; this is a non blocking call and the running backup may keep going for a while before it
+	// exits
+	cancelFunction()
+	}
+
 func stopAllBackups (backupJobsState *shared.BackupJobsState, serverConfigCopy config.CfgTemplate){
 	if len(backupJobsState.Running) >0 {
 		logger.Info("Stopping all running backup jobs")
 	}
+
+	log.WithFields(log.Fields{"context": loggingContext + ".stopAllBackups"}).Debug("Acquiring read lock before" +
+		" reading the backup jobs struct")
+	backupJobsState.Lock.RLock()
 	for _, job := range backupJobsState.Running {
-		// find the config for this backup job only
+		// find the config for this backup job only; lock config copy before walking the "Backup" slice
+		serverConfigCopy.Mutex.RLock()
+		log.WithFields(log.Fields{"context": loggingContext + ".stopAllBackups"}).Debug("Acquiring read lock " +
+			"before reading the copy of the server config struct")
 		for _, backup := range serverConfigCopy.Backup {
 			if backup.Name == job.Name{
-				stopBackup(job.Name, job.BackupJobId, backup, backupJobsState, job.SignalClose)
+				// this is a non blocking call
+				signalBackupToStop(job.Cancel, job.Name, job.BackupJobId)
 				break
 			}
 		}
+		serverConfigCopy.Mutex.RUnlock()
+		log.WithFields(log.Fields{"context": loggingContext + ".stopAllBackups"}).Debug("Read lock released after" +
+			" reading the copy of the server config struct")
+	}
+	backupJobsState.Lock.RUnlock()
+	log.WithFields(log.Fields{"context": loggingContext + ".stopAllBackups"}).Debug("Read lock released after" +
+		" reading the backup jobs struct")
+
+	waitForAllBackupToBeStopped(backupJobsState)
+	logger.Info("All running backup jobs have exited, as requested.")
+}
+
+// wait until the list of running backups has 0 length
+func waitForAllBackupToBeStopped(backupJobsState *shared.BackupJobsState) {
+	for {
+		backupJobsState.Lock.RLock()
+		if len(backupJobsState.Running) == 0 {
+			break
+		}
+		backupJobsState.Lock.RUnlock()
+		time.Sleep(1 * time.Second)
 	}
 }

@@ -9,7 +9,7 @@ import (
 // serve / and logger.Info requester
 func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
 	LogHttpRequest(r)
-	srv := srvSrc.GetWithLock(loggingContext + ".handlerRoot")
+	srv := srvSrc.GetCopyWithLock(loggingContext + ".handlerRoot")
 	if srv.httpsEnabled{
 		_, err := w.Write([]byte("HTTPS server is running\n"))
 		if err != nil {
