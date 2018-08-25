@@ -245,6 +245,16 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
 func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 	backupJobsState *shared.BackupJobsState){
+	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then
+	//  it will leak at least a channel. Calling it for an already cancelled backup will not cause any issue
+	cancel, err := backupJobsState.GetCancelFunctionForJob(name, jobUuid)
+	if err != nil {
+		logger.Warnf("While trying cleanup the cancel context for backup '%s' having uuid '%s' the '%s' error " +
+			"was encountered. This will leak some memory.", name, jobUuid, err )
+	} else {
+		cancel()
+	}
+
 	// TODO - implement stop; in the mean time sleep for 20 seconds and then mark job as stopped
 	time.Sleep(20 * time.Second)
 
@@ -256,7 +266,7 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 	// TODO - before MarkStopped(stopped=true) copy report (state) somewhere
 
 	// set state to "stopped"
-	err := backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup",
+	err = backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup",
 		jobUuid, true)
 	if err != nil {
 		logger.Warnf("Encountered an error when trying to mark backup job '%s' having job id '%s' as 'stopped'. " +
