@@ -10,6 +10,7 @@ import (
 	"github.com/bmatcuk/doublestar"
 	"cloudbackup/daemon/globals"
 	"context"
+	"database/sql"
 )
 
 const loggingContext = "backup.scan"
@@ -21,7 +22,7 @@ var logger = log.WithFields(log.Fields{
 // return: first parameter will be "true" only if it was signalled via closeChan to stop the running backup; second
 // parameter signifies errors
 func Path(ctx context.Context, path string, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface,
-	dryRun bool) (bool, error) {
+	dryRun bool, db *sql.DB) (bool, error) {
 	globals.Stats.IncrementFunctions("scan.Path")
 	defer globals.Stats.DecrementFunctions("scan.Path")
 	var stat os.FileInfo
@@ -44,7 +45,7 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 			}
 		default:
 			if stat.IsDir() {
-				exiting, err := walk(ctx, path, stat, backupConfig, backupJobsState, dryRun)
+				exiting, err := walk(ctx, path, stat, backupConfig, backupJobsState, dryRun, db)
 				// backup job was signalled to exit - Examine FIRST $exiting and then $err
 				if exiting {
 					return true, err
@@ -87,10 +88,11 @@ func readDirNames(dirname string) ([]string, error) {
 }
 
 // walk recursively path
-// return: first parameter will be "true" only if it was signalled via closeChan to stop the running backup; second
-// parameter signifies errors
+// parameters: ctx is context for cancellation of the walk(), the 'db' parameters is the DB pointer used for sql ops
+// return: first value will be "true" only if it was signalled via the ctx context to stop the running backup;
+// second value signifies errors
 func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup,
-	backupJobsState shared.BackupJobsStateInterface, dryRun bool) (bool, error) {
+	backupJobsState shared.BackupJobsStateInterface, dryRun bool, db *sql.DB) (bool, error) {
 	if ! dryRun {
 		// TODO - call to backup the folder entry itself ($stat will ge used here)
 	}
@@ -152,7 +154,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 					"", err.Error())
 			} else {
 				if fileInfo.IsDir() {
-					exiting, _ := walk(ctx, childPath, fileInfo, backupConfig, backupJobsState, dryRun) // #nosec
+					exiting, _ := walk(ctx, childPath, fileInfo, backupConfig, backupJobsState, dryRun, db) // #nosec
 					// lower level walk() was signalled to exit
 					if exiting {
 						return true, topLevelErr

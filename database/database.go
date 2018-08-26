@@ -13,26 +13,16 @@ import (
 const loggingContext = "database"
 const DbOptions = "_foreign_keys=1"
 var ErrCouldNotCreateDB = errors.New("could not create database")
+var ErrCouldNotOpenDB = errors.New("could not open database")
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
 func CreateDb(dbfilepath string) error {
-
-	logger.Debugf("Opening database file '%s' used to store details for backup job '%s' and proceeding to " +
-		"create tables")
-	db, err := sql.Open("sqlite3", dbfilepath + "?" + DbOptions)
+	db, err := OpenDb(dbfilepath)
 	if err != nil {
-		logger.Errorf("Could not create database %s due to error: %s", dbfilepath, err)
 		return ErrCouldNotCreateDB
 	}
-	defer func() {
-		err := db.Close()
-		if err != nil {
-			logger.Warnf("While trying to close() the database '%s' the following error was encounterd: %s",
-				dbfilepath, err)
-		}
-	}()
 
 	sqlStmt := `
 	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
@@ -58,29 +48,48 @@ func CreateDb(dbfilepath string) error {
 	CREATE INDEX backup_collections_jobid ON backup_collections(job_id);
 
 	`
-	logger.Debugf("Creating tables")
+	logger.Debugf("Creating tables in '%s' database", dbfilepath)
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
 		logger.Errorf("Encountered error while attempting to create database '%s' . The error is: %s",
 			dbfilepath, err)
 		logger.Debugf("Closing '%s' and removing the file", dbfilepath)
 		// close connection to the db
-		err2 := db.Close()
-		if err2 != nil {
-			logger.Errorf("While trying to close '%s' encountered error: '%s'", dbfilepath, err2 )
-		}
+		CloseDb(db, dbfilepath)
 		// remove the incorrectly initialised db file
 		if DbFileExists(dbfilepath) {
-			err2 = os.Remove(dbfilepath)
+			err2 := os.Remove(dbfilepath)
 			if err2 != nil {
 				logger.Errorf("An additional error was encountered when trying to remove the incorrectly " +
 					"initialised db file '%s'. The error was: %s", dbfilepath, err2)
 			}
 		}
 		return err
+	} else {
+		// close connection to the db
+		CloseDb(db, dbfilepath)
 	}
 
 	return nil
+}
+
+// opens a connection to the DB and if successful, it returns the *sql.DB
+func OpenDb(dbfilepath string) (*sql.DB, error) {
+	logger.Debugf("Opening database file '%s'")
+	db, err := sql.Open("sqlite3", dbfilepath + "?" + DbOptions)
+	if err != nil {
+		logger.Errorf("Could not open database %s due to error: %s", dbfilepath, err)
+		return &sql.DB{}, ErrCouldNotOpenDB
+	}
+	return db, nil
+}
+
+// close a database; the "name" parameter will generally be the name of the backup job or the full path to the DB file
+func CloseDb(db *sql.DB, name string) {
+	err := db.Close()
+	if err != nil {
+		logger.Errorf("While trying to close database '%s' encountered error: '%s'", name, err )
+	}
 }
 
 // figure out the absolute path to the database file
@@ -145,13 +154,22 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 
 // Take care of starting the db connection;
 // Parameters: "datadir" value from the config file and the name of the backup job
-func Start(datadir string, backupName string) error {
+func Start(datadir string, backupName string) (*sql.DB, error) {
+	// check if DB exists, if not then create it
 	err := ValidateAndCreate(datadir, backupName, false)
 	if err != nil {
-		return err
+		return &sql.DB{}, err
 	}
 
-	// TODO - connect to DB
+	dbfilepath, err := GetDbFilePath(datadir, backupName)
+	if err != nil {
+		return &sql.DB{}, err
+	}
 
-	return nil
+	db, err := OpenDb(dbfilepath)
+	if err != nil {
+		return &sql.DB{}, err
+	}
+
+	return db, nil
 }

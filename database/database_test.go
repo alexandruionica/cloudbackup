@@ -236,7 +236,7 @@ func TestStart1(t *testing.T) {
 		}
 	}()
 
-	err := Start(dbDataDirPath, backupName)
+	_, err := Start(dbDataDirPath, backupName)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
@@ -259,7 +259,7 @@ func TestStart2(t *testing.T) {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
 
-	err = Start(dbDataDirPath, backupName)
+	_, err = Start(dbDataDirPath, backupName)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
