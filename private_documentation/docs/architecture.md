@@ -4,6 +4,11 @@ There is only one binary which can be started as a server or which can be used a
 
 When running in server mode it requires a configuration file and also a set of static web assets which it uses for serving documentation or for service the static parts of a web UI.
 
+Backup/Restore jobs:
+- for a given backup name only one backup job can run at a time. This MUST not be changed as things in the code are done assuming this is true. For example the SQL db should not be opened in write mode by more than 1 "thing" (SQLITE limitation)
+- the above stands true for restore jobs too .. no more than one at a time for a given backup name
+- The 1 write "thing" DB limitation implies that a restore job CAN'T run at the same time a backup job runs for a given backup name (each backup name has a dedicated db file; a restore writes in the same db file). The reverse stands true too, a backup should never run if a restore for the same DB name is running
+
 ## Command Stucture
 
 The command and its main options are depicted below. Command line parameters are supported and can be discovered using the `--help` option. For example:

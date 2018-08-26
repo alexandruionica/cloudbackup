@@ -86,6 +86,7 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 	switch receivedBackupCommand.Command {
 	case "start": {
 		startJobUuid := uuid.NewV4().String()
+		// TODO - check also that a restore isn't running for the same backup name (to implement when restores are implemented)
 		err := backupJobsState.MarkRunning(receivedBackupCommand.Name, loggingContext + ".processBackupCommand",
 			startJobUuid)
 		if err != nil {
@@ -207,8 +208,8 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 		return
 	}
 
-	// TODO - set lock for SQL object and then pass it to scan.Path()
-	err = database.Start(serverConfigCopy.DataDir, name)
+	// get DB connection pointer
+	db, err := database.Start(serverConfigCopy.DataDir, name)
 	// the backup can not run as we can't initialise/connect to the database
 	if err != nil {
 		// TODO - mark the backup as failed (failed to start)
@@ -226,7 +227,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		default:
 			// backupJobsState MUST be a pointer
-			exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, false)
+			exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, db)
 			// Examine FIRST $exit and then $err
 			if exiting {
 				// TODO - mark backup as interrupted
@@ -239,6 +240,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		}
 	}
+	database.CloseDb(db, name)
 	cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState)
 }
 

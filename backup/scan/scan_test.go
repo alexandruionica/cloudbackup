@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"path/filepath"
 	"io/ioutil"
+	"cloudbackup/database"
 )
 
 // test number of examined files as reported by Path() when  dereference=true
@@ -59,11 +60,24 @@ func TestPath1(t *testing.T) {
 	}
 	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
 	if err != nil {
-		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -132,8 +146,21 @@ func TestPath2(t *testing.T) {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -213,8 +240,21 @@ func TestPath3(t *testing.T) {
 			t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 		}
 
+		err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+		if err != nil {
+			t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+		}
+		dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+		if err != nil {
+			t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+		}
+		db, err := database.OpenDb(dbfilepath)
+		if err != nil {
+			t.Fatalf("database.OpenDb() returned error: '%s'", err)
+		}
+
 		for _, backupPath := range backupConfig.Paths {
-			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 			if err != nil {
 				t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 			}
@@ -288,8 +328,21 @@ func TestPath4(t *testing.T) {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -361,8 +414,22 @@ func TestPath5(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
+
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -437,8 +504,22 @@ func TestPath6(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
+
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -524,8 +605,21 @@ func TestPath7(t *testing.T) {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -604,8 +698,21 @@ func TestPath8(t *testing.T) {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -676,8 +783,21 @@ func TestPath9(t *testing.T) {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -748,8 +868,21 @@ func TestPath10(t *testing.T) {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -820,8 +953,21 @@ func TestPath11(t *testing.T) {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -892,8 +1038,21 @@ func TestPath12(t *testing.T) {
 		t.Fatalf("Failed to get signalling channel. Error was: %s", err)
 	}
 
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
+	}
+	db, err := database.OpenDb(dbfilepath)
+	if err != nil {
+		t.Fatalf("database.OpenDb() returned error: '%s'", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, db)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}

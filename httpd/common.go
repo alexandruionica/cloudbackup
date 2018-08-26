@@ -15,6 +15,7 @@ import (
 	"cloudbackup/shared"
 	"cloudbackup/backup/scan"
 	"context"
+	"database/sql"
 )
 
 // various "code" messages the API can return
@@ -305,7 +306,7 @@ func dryRunBackupPaths(ctx context.Context, backupConfig config.Backup, backupJo
 	scanPathExit chan bool) {
 	for _, path := range backupConfig.Paths {
 		// backupJobsState MUST be a pointer
-		exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, true)
+		exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, true, &sql.DB{})
 		// Examine FIRST $exit and then $err ;  $exiting means that a signal was sent so scan.Path() exits, on request,
 		// 	early
 		if exiting {

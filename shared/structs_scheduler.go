@@ -101,6 +101,9 @@ type BackupJobsState struct {
 	Running []BackupJobStatus
 	// used for locking during reads or writes as this struct will be shared all over the place
 	Lock *sync.RWMutex
+	// TODO - when implementing the "restoring" field also adjust the MarkRunning (and probably the MarkRestoring to
+	// be created) in order to check also that a restore isn't running for the same backup name (to implement when
+	// restores are implemented)
 }
 
 // this interface is used only for cloudbackup/backup/scan/Scan() in order to be able to pass a different object when doing a
@@ -217,6 +220,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		log.WithFields(log.Fields{"context": logContext}).Debug("read/write lock released after updating running " +
 			"backup jobs struct")
 	}()
+	// TODO - check also that a restore isn't running for the same backup name (to implement when restores are implemented)
 	for _, job := range jobs.Running {
 		if name == job.Name {
 			return errors.New(ErrJobAlreadyRunning)
