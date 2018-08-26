@@ -18,11 +18,7 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-func CreateDb(dbfilepath string) error {
-	db, err := OpenDb(dbfilepath)
-	if err != nil {
-		return ErrCouldNotCreateDB
-	}
+func CreateDb(db *sql.DB, dbfilepath string) error {
 
 	sqlStmt := `
 	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
@@ -49,7 +45,7 @@ func CreateDb(dbfilepath string) error {
 
 	`
 	logger.Debugf("Creating tables in '%s' database", dbfilepath)
-	_, err = db.Exec(sqlStmt)
+	_, err := db.Exec(sqlStmt)
 	if err != nil {
 		logger.Errorf("Encountered error while attempting to create database '%s' . The error is: %s",
 			dbfilepath, err)
@@ -74,7 +70,12 @@ func CreateDb(dbfilepath string) error {
 }
 
 // opens a connection to the DB and if successful, it returns the *sql.DB
-func OpenDb(dbfilepath string) (*sql.DB, error) {
+func OpenDb(datadir string, backupName string) (*sql.DB, error) {
+	dbfilepath, err := GetDbFilePath(datadir, backupName)
+	if err != nil {
+		return &sql.DB{}, err
+	}
+
 	logger.Debugf("Opening database file '%s'")
 	db, err := sql.Open("sqlite3", dbfilepath + "?" + DbOptions)
 	if err != nil {
@@ -141,12 +142,17 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 				"established. Creating the database now in order to proceed with the backup.",
 				dbfilepath, backupName)
 		}
-		err2 := CreateDb(dbfilepath)
-		if err2 != nil {
+		db, err := OpenDb(datadir, backupName)
+		if err != nil {
+			return ErrCouldNotCreateDB
+		}
+
+		err = CreateDb(db, backupName)
+		if err != nil {
 			logger.Errorf("Backups for job '%s' are not possible as the database file can't be created or " +
 				"initialised",
 				backupName)
-			return err2
+			return err
 		}
 	}
 	return nil
@@ -161,12 +167,7 @@ func Start(datadir string, backupName string) (*sql.DB, error) {
 		return &sql.DB{}, err
 	}
 
-	dbfilepath, err := GetDbFilePath(datadir, backupName)
-	if err != nil {
-		return &sql.DB{}, err
-	}
-
-	db, err := OpenDb(dbfilepath)
+	db, err := OpenDb(datadir, backupName)
 	if err != nil {
 		return &sql.DB{}, err
 	}

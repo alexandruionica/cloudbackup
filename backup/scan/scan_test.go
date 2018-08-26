@@ -67,11 +67,7 @@ func TestPath1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -150,11 +146,7 @@ func TestPath2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -244,11 +236,7 @@ func TestPath3(t *testing.T) {
 		if err != nil {
 			t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 		}
-		dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-		if err != nil {
-			t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-		}
-		db, err := database.OpenDb(dbfilepath)
+		db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 		if err != nil {
 			t.Fatalf("database.OpenDb() returned error: '%s'", err)
 		}
@@ -332,11 +320,7 @@ func TestPath4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -419,11 +403,7 @@ func TestPath5(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -509,11 +489,7 @@ func TestPath6(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -609,11 +585,7 @@ func TestPath7(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -702,11 +674,7 @@ func TestPath8(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -787,11 +755,7 @@ func TestPath9(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -872,11 +836,7 @@ func TestPath10(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -957,11 +917,7 @@ func TestPath11(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
@@ -1042,11 +998,7 @@ func TestPath12(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	dbfilepath, err := database.GetDbFilePath(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.GetDbFilePath() returned error: '%s'", err)
-	}
-	db, err := database.OpenDb(dbfilepath)
+	db, err := database.OpenDb(result.Config.DataDir, backupConfig.Name)
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}

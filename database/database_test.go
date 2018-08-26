@@ -87,14 +87,18 @@ func TestDbFileExists2(t *testing.T) {
 // test CreateDb() with valid, absolute path to the .sqlite database file
 func TestCreateDb1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
 	defer func() {
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	dbFilePath := dbDataDirPath + string(filepath.Separator) + "backup1.sqlite"
-	err := CreateDb(dbFilePath)
+	db, err := OpenDb(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	err = CreateDb(db, backupName)
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
@@ -103,15 +107,22 @@ func TestCreateDb1(t *testing.T) {
 // test CreateDb() with invalid, absolute path to the .sqlite database file
 func TestCreateDb2(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
 	defer func() {
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	dbFilePath := dbDataDirPath + string(filepath.Separator) + "folder_which_does_not_exist" + string(filepath.Separator) + "backup1.sqlite"
-	err := CreateDb(dbFilePath)
+	db, err := OpenDb(dbDataDirPath + string(filepath.Separator) + "folder_which_does_not_exist", backupName)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	err = CreateDb(db, backupName)
 	expectedErr := "unable to open database file"
+	if err == nil {
+		t.Fatal("Expected CreateDb() to produce an error but it didn't")
+	}
 	if err.Error() != expectedErr {
 		t.Fatalf("CreateDb() was expected to return error: '%s' but it returned: '%s'", expectedErr, err)
 	}
@@ -121,19 +132,27 @@ func TestCreateDb2(t *testing.T) {
 //  call should return an error
 func TestCreateDb3(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
 	defer func() {
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	dbFilePath := dbDataDirPath + string(filepath.Separator) + "backup1.sqlite"
-	err := CreateDb(dbFilePath)
+	db, err := OpenDb(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	err = CreateDb(db, backupName)
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
 
-	err = CreateDb(dbFilePath)
+	db, err = OpenDb(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	err = CreateDb(db, backupName)
 	expectedErr := "table files already exists"
 	if err.Error() != expectedErr {
 		t.Fatalf("2nd call to CreateDb() was expected to return error: '%s' but it returned: '%s'",
@@ -189,8 +208,11 @@ func TestValidateAndCreate3(t *testing.T) {
 		}
 	}()
 
-	dbFilePath := dbDataDirPath + string(filepath.Separator) + backupName + ".sqlite"
-	err := CreateDb(dbFilePath)
+	db, err := OpenDb(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	err = CreateDb(db, backupName)
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
@@ -213,8 +235,11 @@ func TestValidateAndCreate4(t *testing.T) {
 		}
 	}()
 
-	dbFilePath := dbDataDirPath + string(filepath.Separator) + backupName + ".sqlite"
-	err := CreateDb(dbFilePath)
+	db, err := OpenDb(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	err = CreateDb(db, backupName)
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
@@ -253,8 +278,11 @@ func TestStart2(t *testing.T) {
 		}
 	}()
 
-	dbFilePath := dbDataDirPath + string(filepath.Separator) + backupName + ".sqlite"
-	err := CreateDb(dbFilePath)
+	db, err := OpenDb(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	err = CreateDb(db, backupName)
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
