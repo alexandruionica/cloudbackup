@@ -70,7 +70,9 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 }
 
 // opens a connection to the DB and if successful, it returns the *sql.DB
-func OpenDb(datadir string, backupName string) (*sql.DB, error) {
+// params: $datadir is the folder containing the database file; $backupName is the name of the backup (we use if to
+// figure the sql file path); if $fileExists == false then don't attempt to "ping" the DB as it will error
+func OpenDb(datadir string, backupName string, fileExists bool) (*sql.DB, error) {
 	dbfilepath, err := GetDbFilePath(datadir, backupName)
 	if err != nil {
 		return &sql.DB{}, err
@@ -82,6 +84,15 @@ func OpenDb(datadir string, backupName string) (*sql.DB, error) {
 		logger.Errorf("Could not open database %s due to error: %s", dbfilepath, err)
 		return &sql.DB{}, ErrCouldNotOpenDB
 	}
+
+	if fileExists {
+		err = db.Ping()
+		if err != nil {
+			logger.Errorf("Connection test to the database %s returned error: %s", dbfilepath, err)
+			return &sql.DB{}, ErrCouldNotOpenDB
+		}
+	}
+
 	return db, nil
 }
 
@@ -142,7 +153,7 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 				"established. Creating the database now in order to proceed with the backup.",
 				dbfilepath, backupName)
 		}
-		db, err := OpenDb(datadir, backupName)
+		db, err := OpenDb(datadir, backupName, false)
 		if err != nil {
 			return ErrCouldNotCreateDB
 		}
@@ -167,7 +178,7 @@ func Start(datadir string, backupName string) (*sql.DB, error) {
 		return &sql.DB{}, err
 	}
 
-	db, err := OpenDb(datadir, backupName)
+	db, err := OpenDb(datadir, backupName, true)
 	if err != nil {
 		return &sql.DB{}, err
 	}
