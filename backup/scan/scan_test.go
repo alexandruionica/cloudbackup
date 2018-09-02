@@ -93,6 +93,7 @@ func TestPath1(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=false
@@ -172,6 +173,7 @@ func TestPath2(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=false and top level folder is unreadable
@@ -262,6 +264,7 @@ func TestPath3(t *testing.T) {
 			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 				backupJobsState.Running[0].StatsCounters, expectedStats)
 		}
+		database.CloseDb(db, backupConfig.Name)
 	}
 }
 
@@ -346,6 +349,7 @@ func TestPath4(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=true and we have an exclusion rule
@@ -429,6 +433,7 @@ func TestPath5(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=true and the top level path is a file
@@ -515,6 +520,7 @@ func TestPath6(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=true with two top level paths in the config file:
@@ -611,6 +617,7 @@ func TestPath7(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=true with two top level paths in the config file:
@@ -700,6 +707,7 @@ func TestPath8(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=false and we have an exclusion rule
@@ -781,6 +789,7 @@ func TestPath9(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=false and we have an exclusion rule
@@ -862,6 +871,7 @@ func TestPath10(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=false and we have an exclusion rule
@@ -943,6 +953,7 @@ func TestPath11(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // test number of examined files as reported by Path() when  dereference=false and we have an exclusion rule
@@ -1024,6 +1035,7 @@ func TestPath12(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
+	database.CloseDb(db, backupConfig.Name)
 }
 
 // should not match exclusion
