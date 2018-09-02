@@ -104,13 +104,14 @@ func TestOpenDb1(t *testing.T) {
 func TestCreateDb1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
+	db, err := OpenDb(dbDataDirPath, backupName, false)
 	defer func() {
+		CloseDb(db, backupName)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	db, err := OpenDb(dbDataDirPath, backupName, false)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -130,7 +131,9 @@ func TestCreateDb2_1(t *testing.T) {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	db, err := OpenDb(dbDataDirPath + string(filepath.Separator) + "folder_which_does_not_exist", backupName, false)
+	db, err := OpenDb(dbDataDirPath + string(filepath.Separator) + "folder_which_does_not_exist", backupName,
+		false)
+	defer CloseDb(db, backupName)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -156,6 +159,7 @@ func TestCreateDb3(t *testing.T) {
 		}
 	}()
 	db, err := OpenDb(dbDataDirPath, backupName, false)
+	defer CloseDb(db, backupName)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -164,11 +168,12 @@ func TestCreateDb3(t *testing.T) {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
 
-	db, err = OpenDb(dbDataDirPath, backupName, true)
+	db2, err := OpenDb(dbDataDirPath, backupName, true)
+	defer CloseDb(db2, backupName)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
-	err = CreateDb(db, backupName)
+	err = CreateDb(db2, backupName)
 	expectedErr := "table files already exists"
 	if err.Error() != expectedErr {
 		t.Fatalf("2nd call to CreateDb() was expected to return error: '%s' but it returned: '%s'",
@@ -225,6 +230,7 @@ func TestValidateAndCreate3(t *testing.T) {
 	}()
 
 	db, err := OpenDb(dbDataDirPath, backupName, false)
+	defer CloseDb(db, backupName)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -252,6 +258,7 @@ func TestValidateAndCreate4(t *testing.T) {
 	}()
 
 	db, err := OpenDb(dbDataDirPath, backupName, false)
+	defer CloseDb(db, backupName)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -277,7 +284,8 @@ func TestStart1(t *testing.T) {
 		}
 	}()
 
-	_, err := Start(dbDataDirPath, backupName)
+	db , err := Start(dbDataDirPath, backupName)
+	defer CloseDb(db, backupName)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
@@ -295,6 +303,7 @@ func TestStart2(t *testing.T) {
 	}()
 
 	db, err := OpenDb(dbDataDirPath, backupName, false)
+	defer CloseDb(db, backupName)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -302,8 +311,10 @@ func TestStart2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
+	CloseDb(db, backupName)
 
-	_, err = Start(dbDataDirPath, backupName)
+	db2, err := Start(dbDataDirPath, backupName)
+	defer CloseDb(db2, backupName)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
