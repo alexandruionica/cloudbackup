@@ -11,7 +11,9 @@ import (
 )
 
 const loggingContext = "database"
-const DbOptions = "_foreign_keys=1"
+// cache=shared - according to https://www.sqlite.org/sharedcache.html this improves performance
+// _foreign_keys=1 - enable foreign keys support and enforcement
+const DbOptions = "_foreign_keys=1&cache=shared"
 var ErrCouldNotCreateDB = errors.New("could not create database")
 var ErrCouldNotOpenDB = errors.New("could not open database")
 var logger = log.WithFields(log.Fields{
@@ -22,18 +24,18 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 
 	sqlStmt := `
 	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
-	ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, checksum_type, encrypted INTEGER, targets_ids TEXT);
+	ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, checksum_type, encrypted INTEGER, targets TEXT);
 
-	CREATE TABLE targets (id INTEGER NOT NULL PRIMARY KEY, backup_id TEXT, backup TEXT, name TEXT, type TEXT);
+	CREATE TABLE targets (name TEXT NOT NULL PRIMARY KEY, backup_name TEXT, type TEXT, date_added TEXT);
 
 	CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, type TEXT, start_time TEXT, end_time TEXT, state TEXT, 
 	processed_files INTEGER, processed_dirs INTEGER);
 
-	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target_id INTEGER, 
-	upload_date TEXT, job_id TEXT, current INTEGER , delete_marker INTEGER, version TEXT, type TEXT, 
+	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target TEXT, 
+	upload_date TEXT, job_id TEXT, current INTEGER , delete_marker INTEGER, version TEXT, src_os TEXT, type TEXT, 
 	link_target TEXT, size INTEGER, mtime TEXT, ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, 
-	checksum_type, encrypted INTEGER, targets_ids TEXT, 
-	FOREIGN KEY(target_id) REFERENCES targets(id), FOREIGN KEY(job_id) REFERENCES jobs(id));
+	checksum_type, encrypted INTEGER,
+	FOREIGN KEY(target) REFERENCES targets(name), FOREIGN KEY(job_id) REFERENCES jobs(id));
 	
 	CREATE INDEX remote_files_job_id ON remote_files(job_id);
 	CREATE INDEX remote_files_local_path ON remote_files(local_path);
@@ -78,12 +80,24 @@ func OpenDb(datadir string, backupName string, fileExists bool) (*sql.DB, error)
 		return &sql.DB{}, err
 	}
 
-	logger.Debugf("Opening database file '%s'")
+	logger.Debugf("Opening database file '%s'", dbfilepath)
 	db, err := sql.Open("sqlite3", dbfilepath + "?" + DbOptions)
 	if err != nil {
 		logger.Errorf("Could not open database %s due to error: %s", dbfilepath, err)
 		return &sql.DB{}, ErrCouldNotOpenDB
 	}
+	/* according to https://github.com/mattn/go-sqlite3
+	Error: database is locked
+		When you get an database is locked. Please use the following options.
+		Add to DSN: cache=shared
+
+		Example:
+		db, err := sql.Open("sqlite3", "file:locked.sqlite?cache=shared")
+		Second please set the database connections of the SQL package to 1.
+
+		db.SetMaxOpenConn(1)
+	 */
+	db.SetMaxOpenConns(1)
 
 	if fileExists {
 		err = db.Ping()
