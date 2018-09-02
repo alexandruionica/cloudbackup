@@ -11,6 +11,7 @@ import (
 	"cloudbackup/daemon/globals"
 	"cloudbackup/database"
 	"context"
+	"cloudbackup/database/dbops"
 )
 
 const loggingContext = "scheduler"
@@ -211,6 +212,16 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// get DB connection pointer
 	db, err := database.Start(serverConfigCopy.DataDir, name)
 	// the backup can not run as we can't initialise/connect to the database
+	if err != nil {
+		// TODO - mark the backup as failed (failed to start)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState)
+		return
+	}
+
+	// ensure the DB has all needed info in the tables
+	err = dbops.EnsureTargetsInDb(db, backupConfig)
+	// the backup can not run as we can't ensure the database has the needed data before we commence
+	// comparing/adding/updating entries about files
 	if err != nil {
 		// TODO - mark the backup as failed (failed to start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState)
