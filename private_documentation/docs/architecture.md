@@ -66,7 +66,23 @@ There will be one database for each `backup` section of the config file. The str
 
 ![database diagram](img/database_structure.png)
 
+## Tables
+
+### files
+
 For each local file and directory belonging under a backed up path there will be an entry in the `files` table.
+
+Entries are inserted / updated / deleted during a backup job run. The only exception to this is a manual "purge" job before a backup section of the config file is deleted/updated or worst case scenario after this has happened (this is not desirable).  
+
+### targets
+
+Records 1 to 1 mapping of the targets mentioned in the configuration file for a given backup job definition.
+
+Entries in this table are added only when a backup job starts (basically it is checked that for each config target entry we have an entry in the table).
+
+Before removing a target during configuration file update a manual "purge" job should be run (or worst case scenario afterwards). Ideall we block config file changes via the API if the purge was not ran.
+
+### remote_files
 
 The `remote_files` table contains a listing of all remote stored copies of the files (basically the backups). A file from the `files` table can have multiple entries in the `remote_files` table due to multiple versions of said file being backed up.
 There is one case where entries in the `remote_files` tables won't have any more a corresponding entry in the `files` table and that is when the local file got deleted. 
