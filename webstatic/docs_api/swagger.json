@@ -477,6 +477,10 @@
           "type": "boolean",
           "default": true
         },
+        "checksum": {
+          "type": "boolean",
+          "default": false
+        },
         "target": {
           "type": "array",
           "items": {
@@ -499,10 +503,6 @@
         "encrypt_pass": {
           "type": "string",
           "default": ""
-        },
-        "versioning": {
-          "type": "boolean",
-          "default": false
         },
         "versions_max_num": {
           "type": "integer"

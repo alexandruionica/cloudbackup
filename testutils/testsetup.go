@@ -69,7 +69,7 @@ backup:
     schedule:
       - 00 08 01 * *
       - 00 08 06 * *
-    versioning: true
+    checksum: true
     versions_max_num: 10
     versions_max_age: 6w`)
 

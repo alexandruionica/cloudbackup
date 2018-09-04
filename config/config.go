@@ -35,13 +35,15 @@ type Backup struct {
 	Exclusions []string `yaml:"exclusions" json:"exclusions"`
 	// TODO - fix library bug - https://github.com/jinzhu/configor/issues/34
 	Dereference bool `default:"true" yaml:"dereference" json:"dereference"`
+	Checksum bool `default:"false" yaml:"checksum" json:"checksum"`
 	Target []Target `required:"true" yaml:"target" json:"target"`
 	Schedule []string `yaml:"schedule" json:"schedule"`
 	Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
 	EncryptPass string `yaml:"encrypt_pass" json:"encrypt_pass"`
-	Versioning bool `default:"false" yaml:"versioning" json:"versioning"`
-	VersionsMaxNum uint `yaml:"versions_max_num" json:"versions_max_num"`
-	VersionsMaxAge string `yaml:"versions_max_age" json:"versions_max_age"`
+	// 0 means unlimited number of versions
+	VersionsMaxNum uint `default:"0" yaml:"versions_max_num" json:"versions_max_num"`
+	// 0 means unlimited number of age
+	VersionsMaxAge string `default:"0" yaml:"versions_max_age" json:"versions_max_age"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
@@ -272,33 +274,18 @@ func ValidateBackup(backups []Backup, logError bool) error {
 			}
 			return errors.New(msg)
 		}
-		if backup.Versioning == false && backup.VersionsMaxNum > 0 {
-			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +
-				"'versions_max_num=%d' . Enable versioning or remove the 'versions_max_num' setting",
-					i, backup.Name, backup.VersionsMaxNum)
-			if logError{
-				logger.Error(msg)
-			}
-			return errors.New(msg)
+
+		if backup.VersionsMaxAge != "0" {
+			// TODO - validate that the AGE string is valid (to figure out what valid means)
+			//msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +
+			//	"'versions_max_age=%s' . Enable versioning or remove the 'versions_max_age' setting", i, backup.Name,
+			//		backup.VersionsMaxAge)
+			//if logError{
+			//	logger.Error(msg)
+			//}
+			//return errors.New(msg)
 		}
-		if backup.Versioning == false && backup.VersionsMaxAge != "" {
-			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +
-				"'versions_max_age=%s' . Enable versioning or remove the 'versions_max_age' setting", i, backup.Name,
-					backup.VersionsMaxAge)
-			if logError{
-				logger.Error(msg)
-			}
-			return errors.New(msg)
-		}
-		if backup.Versioning == true && backup.VersionsMaxAge == "" && backup.VersionsMaxNum == 0 {
-			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=true' but " +
-				"'versions_max_num=0' or is unset and 'versions_max_age' is unset. Disable versioning or set " +
-					"'versions_max_num' > 0 or set 'versions_max_age'", i, backup.Name)
-			if logError{
-				logger.Error(msg)
-			}
-			return errors.New(msg)
-		}
+
 		err := ValidateBackupTarget(backup.Target, logError, backup.Name)
 		if err != nil {
 			return err

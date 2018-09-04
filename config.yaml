@@ -49,8 +49,8 @@ backup:
     #     - "**/*.txt"  would exclude all .txt files across all directories
     #     - "/var/lib/*.txt" would exclude .txt files only if they are located in "/var/lib/". If .txt files are
     #         located in "/var/lib/something/" then they would not be matched by the exclusion rule
-	# If using exclusion rules then please run "cloudbackup client backup dryrun" in order to check that they work as
-	#  expected
+    # If using exclusion rules then please run "cloudbackup client backup dryrun" in order to check that they work as
+    #  expected
     exclusions:
       - /etc/systemd/system
     dereference: false
@@ -70,6 +70,8 @@ backup:
       - /var/www/html/data/
     # do not follow symbolic links (defaults to true)
     dereference: false
+    # use the file's checksum in order to establish if a backup is needed (defaults to false)
+    checksum: true
     target:
       - name: aws_2
         type: aws_s3
@@ -90,6 +92,7 @@ backup:
     schedule:
       - '00 08 01 * *'
       - '00 08 06 * *'
-    versioning: true
+    # defaults to 0 which means unlimited number of versions
     versions_max_num: 10
+    # defaults to 0 which means unlimited age
     versions_max_age: 6w
