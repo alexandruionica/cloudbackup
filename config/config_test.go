@@ -221,99 +221,37 @@ func TestValidate1(t *testing.T) {
 	}
 }
 
-// valid yaml with invalid versioning setting
-func TestValidate2(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	result , err := Load(path, false, &sync.RWMutex{})
-	if err != nil {
-		t.Fatalf("Could not load fake config file. Error was: %s", err)
-	}
-
-	result.Config.Backup[0].Versioning = true
-	err = Validate(result.Config, false)
-	if err == nil {
-		t.Fatal("Config file loaded successfully but should have failed due to versioning being enabled but not" +
-			" versions_max_age or versions_max_num are having default values")
-	}
-	err = ValidateBackup(result.Config.Backup, true)
-	if err == nil {
-		t.Fatal("Config struct validated but should have failed due to versioning being enabled but not" +
-			" versions_max_age or versions_max_num are having default values")
-	}
-}
-
-func TestValidate3(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	result , err := Load(path, false, &sync.RWMutex{})
-	if err != nil {
-		t.Fatalf("Could not load fake config file. Error was: %s", err)
-	}
-
-	result.Config.Backup[0].VersionsMaxAge = "10w"
-	err = Validate(result.Config, false)
-	if err == nil {
-		t.Fatal("Config file loaded successfully but should have failed due to versions_max_age being set and" +
-			" versioning being disabled ")
-	}
-	err = ValidateBackup(result.Config.Backup, true)
-	if err == nil {
-		t.Fatal("Config struct validated but should have failed due to versions_max_age being set and" +
-			" versioning being disabled ")
-	}
-}
-
-func TestValidate4(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	result , err := Load(path, false, &sync.RWMutex{})
-	if err != nil {
-		t.Fatalf("Could not load fake config file. Error was: %s", err)
-	}
-
-	result.Config.Backup[0].VersionsMaxNum = 5
-	err = Validate(result.Config, false)
-	if err == nil {
-		t.Fatal("Config file loaded successfully but should have failed due to VersionsMaxNum > 0  and" +
-			" versioning being disabled ")
-	}
-	err = ValidateBackup(result.Config.Backup, true)
-	if err == nil {
-		t.Fatal("Config struct validated but should have failed due to VersionsMaxNum > 0  and" +
-			" versioning being disabled ")
-	}
-}
+// TODO - validate various values for VersionsMaxAge parameter (below is an old test which needs adjusting)
+//func TestValidate3(t *testing.T) {
+//	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+//	defer func() {
+//		err := os.Remove(path)
+//		if err != nil {
+//			t.Fatal(err)
+//		}
+//	}()
+//
+//	result , err := Load(path, false, &sync.RWMutex{})
+//	if err != nil {
+//		t.Fatalf("Could not load fake config file. Error was: %s", err)
+//	}
+//
+//	result.Config.Backup[0].VersionsMaxAge = "10w"
+//	err = Validate(result.Config, false)
+//	if err == nil {
+//		t.Fatal("Config file loaded successfully but should have failed due to versions_max_age being set and" +
+//			" versioning being disabled ")
+//	}
+//	err = ValidateBackup(result.Config.Backup, true)
+//	if err == nil {
+//		t.Fatal("Config struct validated but should have failed due to versions_max_age being set and" +
+//			" versioning being disabled ")
+//	}
+//}
 
 // validate data_dir using absolute path which does not exist
 func TestValidate5(t *testing.T) {

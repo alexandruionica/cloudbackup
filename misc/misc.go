@@ -83,6 +83,8 @@ backup:
       - /var/www/html/data/log/
     # do not follow symbolic links (defaults to true)
     dereference: false
+    # use the file's checksum in order to establish if a backup is needed (defaults to false)
+    checksum: true
     target:
       - name: aws_2
         type: aws_s3
@@ -103,8 +105,9 @@ backup:
     schedule:
       - '00 08 01 * *'
       - '00 08 06 * *'
-    versioning: true
+    # defaults to 0 which means unlimited number of versions
     versions_max_num: 10
+    # defaults to 0 which means unlimited age
     versions_max_age: 6w`
 
 const SampleClientYamlConfig = `---
