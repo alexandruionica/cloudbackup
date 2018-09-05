@@ -67,15 +67,15 @@ endif
 cover: 
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
 testdeps:
-	$(GOCMD) get github.com/kisielk/errcheck
+	$(GOCMD) get -u github.com/kisielk/errcheck
 	$(GOCMD) install github.com/kisielk/errcheck
-	$(GOCMD) get github.com/opennota/check/cmd/aligncheck
+	$(GOCMD) get -u github.com/opennota/check/cmd/aligncheck
 	$(GOCMD) install github.com/opennota/check/cmd/aligncheck
-	$(GOCMD) get github.com/opennota/check/cmd/structcheck
+	$(GOCMD) get -u github.com/opennota/check/cmd/structcheck
 	$(GOCMD) install github.com/opennota/check/cmd/structcheck
-	$(GOCMD) get github.com/opennota/check/cmd/varcheck
+	$(GOCMD) get -u github.com/opennota/check/cmd/varcheck
 	$(GOCMD) install github.com/opennota/check/cmd/varcheck
-	$(GOCMD) get github.com/securego/gosec/cmd/gosec/...
+	$(GOCMD) get -u github.com/securego/gosec/cmd/gosec/...
 	$(GOCMD) install github.com/securego/gosec/cmd/gosec
 
 clean: $(GOCMD) clean
