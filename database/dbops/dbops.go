@@ -1,9 +1,11 @@
 package dbops
 
 import (
+	"cloudbackup/config"
+	"cloudbackup/database"
+	"cloudbackup/shared"
 	"database/sql"
 	log "github.com/sirupsen/logrus"
-	"cloudbackup/config"
 	"time"
 )
 
@@ -13,47 +15,83 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
+func CloseStatementsAndDb(dbData shared.DbData) {
+	if dbData.Connected {
+		// close common used prepare statements
+		ClosePreparedStatements(dbData.PreparedStatements)
+		// close db connection
+		database.CloseDb(dbData.Db, dbData.Name)
+	}
+}
+
 // prepare the most used SQL statements. This should increase performance and also help with SQL injection prevention
-// returns: *QueryStmt, *InsertStmt, *UpdateStmt and an error object
-func Prepare(db *sql.DB) (*sql.Stmt, *sql.Stmt, *sql.Stmt, error) {
+// returns: a shared.DbPreparedStatements and an error object
+func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
+	var err error
+	var PreparedStatements shared.DbPreparedStatements
 	// query statement
-	QueryStmt, err := db.Prepare("SELECT path, type, link_target, size, mtime, ctime, uid, gid, perm_mode, " +
+	PreparedStatements.QueryStmt, err = db.Prepare("SELECT path, type, link_target, size, mtime, ctime, uid, gid, perm_mode, " +
 		"checksum, checksum_type, encrypted, targets_ids FROM files WHERE path = ?")
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL query statement, encountered error: '%s'", err)
-		return &sql.Stmt{}, &sql.Stmt{}, &sql.Stmt{}, err
+		return PreparedStatements, err
 	}
 
 	// insert statement
-	InsertStmt, err := db.Prepare("INSERT INTO files (path, type, link_target, size, mtime, ctime, uid, gid, " +
+	PreparedStatements.InsertStmt, err = db.Prepare("INSERT INTO files (path, type, link_target, size, mtime, ctime, uid, gid, " +
 		"perm_mode, checksum, checksum_type, encrypted, targets_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL insert statement, encountered error: '%s'", err)
 		// close other opened statements before returning
-		err2 := QueryStmt.Close()
+		err2 := PreparedStatements.QueryStmt.Close()
 		if err2 != nil {
 			logger.Warnf("While trying to early close 'QueryStmt' received error: '%s'", err2)
 		}
-		return &sql.Stmt{}, &sql.Stmt{}, &sql.Stmt{}, err
+		return PreparedStatements, err
 	}
 
-	UpdateStmt, err := db.Prepare("UPDATE files SET type=?, link_target=?, size=?, mtime=?, ctime=?, uid=?, " +
+	// update statement
+	PreparedStatements.UpdateStmt, err = db.Prepare("UPDATE files SET type=?, link_target=?, size=?, mtime=?, ctime=?, uid=?, " +
 		"gid=?, perm_mode=?, checksum=?, checksum_type=?, encrypted=?, targets_ids=? WHERE path=?")
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
 		// close other opened statements before returning
-		err2 := QueryStmt.Close()
+		err2 := PreparedStatements.QueryStmt.Close()
 		if err2 != nil {
 			logger.Warnf("While trying to early close 'QueryStmt' received error: '%s'", err2)
 		}
-		err2 = InsertStmt.Close()
+		err2 = PreparedStatements.InsertStmt.Close()
 		if err2 != nil {
 			logger.Warnf("While trying to early close 'InsertStmt' received error: '%s'", err2)
 		}
-		return &sql.Stmt{}, &sql.Stmt{}, &sql.Stmt{}, err
+		return PreparedStatements, err
 	}
 
-	return QueryStmt, InsertStmt, UpdateStmt, err
+	return PreparedStatements, nil
+}
+
+// close a shared.DbPreparedStatements object
+func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements){
+	if dbPreparedStatements.QueryStmt != nil {
+		err := dbPreparedStatements.QueryStmt.Close()
+		if err != nil {
+			logger.Warnf("Could not close the db query statement for common operations")
+		}
+	}
+
+	if dbPreparedStatements.InsertStmt != nil {
+		err := dbPreparedStatements.InsertStmt.Close()
+		if err != nil {
+			logger.Warnf("Could not close the db insert statement for common operations")
+		}
+	}
+
+	if dbPreparedStatements.UpdateStmt != nil {
+		err := dbPreparedStatements.UpdateStmt.Close()
+		if err != nil {
+			logger.Warnf("Could not close the db update statement for common operations")
+		}
+	}
 }
 
 // TODO - when a config update changes anything regarding targets ; specially deleting targets, we need to ensure no lingering entries remain in the db and decide what to do with remote files

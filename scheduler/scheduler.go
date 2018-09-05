@@ -1,17 +1,17 @@
 package scheduler
 
 import (
-	log "github.com/sirupsen/logrus"
-	"cloudbackup/config"
-	"cloudbackup/shared"
-	"github.com/satori/go.uuid"
-	"fmt"
-	"time"
 	"cloudbackup/backup/scan"
+	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
 	"cloudbackup/database"
-	"context"
 	"cloudbackup/database/dbops"
+	"cloudbackup/shared"
+	"context"
+	"fmt"
+	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 const loggingContext = "scheduler"
@@ -209,22 +209,33 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 		return
 	}
 
+	dbData := shared.DbData{Connected: false, Name: name}
 	// get DB connection pointer
-	db, err := database.Start(serverConfigCopy.DataDir, name)
+	dbData.Db, err = database.Start(serverConfigCopy.DataDir, name)
 	// the backup can not run as we can't initialise/connect to the database
 	if err != nil {
 		// TODO - mark the backup as failed (failed to start)
-		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
 		return
+	} else {
+		dbData.Connected = true
 	}
 
 	// ensure the DB has all needed info in the tables
-	err = dbops.EnsureTargetsInDb(db, backupConfig)
+	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
 	// the backup can not run as we can't ensure the database has the needed data before we commence
 	// comparing/adding/updating entries about files
 	if err != nil {
 		// TODO - mark the backup as failed (failed to start)
-		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		return
+	}
+
+	// get DB prepared statements for the most common operations
+	dbData.PreparedStatements, err = dbops.Prepare(dbData.Db)
+	if err != nil {
+		// TODO - mark the backup as failed (failed to start)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
 		return
 	}
 
@@ -238,7 +249,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		default:
 			// backupJobsState MUST be a pointer
-			exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, db)
+			exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData)
 			// Examine FIRST $exit and then $err
 			if exiting {
 				// TODO - mark backup as interrupted
@@ -251,13 +262,13 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		}
 	}
-	database.CloseDb(db, name)
-	cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState)
+
+	cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
 func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
-	backupJobsState *shared.BackupJobsState){
+	backupJobsState *shared.BackupJobsState, dbData shared.DbData){
 	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then
 	//  it will leak at least a channel. Calling it for an already cancelled backup will not cause any issue
 	cancel, err := backupJobsState.GetCancelFunctionForJob(name, jobUuid)
@@ -286,7 +297,9 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 			"The error was: %s", name, jobUuid, err)
 	}
 
-	// TODO - close SQL connection
+	// close SQL connection and opened statements
+	dbops.CloseStatementsAndDb(dbData)
+
 }
 
 // non-blocking function which signals a given backup job that it should stop whatever is doing and exit

@@ -1,21 +1,20 @@
 package httpd
 
 import (
-	"net/http"
-	"cloudbackup/config"
-	"sync"
-	log "github.com/sirupsen/logrus"
-	"encoding/json"
-	"fmt"
-	"errors"
-	"io/ioutil"
-	"github.com/julienschmidt/httprouter"
-	"cloudbackup/password"
-	"strings"
-	"cloudbackup/shared"
 	"cloudbackup/backup/scan"
+	"cloudbackup/config"
+	"cloudbackup/password"
+	"cloudbackup/shared"
 	"context"
-	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/julienschmidt/httprouter"
+	log "github.com/sirupsen/logrus"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"sync"
 )
 
 // various "code" messages the API can return
@@ -306,7 +305,7 @@ func dryRunBackupPaths(ctx context.Context, backupConfig config.Backup, backupJo
 	scanPathExit chan bool) {
 	for _, path := range backupConfig.Paths {
 		// backupJobsState MUST be a pointer
-		exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, true, &sql.DB{})
+		exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, true, shared.DbData{Connected: false})
 		// Examine FIRST $exit and then $err ;  $exiting means that a signal was sent so scan.Path() exits, on request,
 		// 	early
 		if exiting {
