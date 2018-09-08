@@ -13,6 +13,9 @@ import (
 	yaml "gopkg.in/yaml.v2"
 	"io/ioutil"
 	"cloudbackup/database"
+    "golang.org/x/exp/utf8string"
+
+
 )
 
 const loggingContext = "config"
@@ -266,6 +269,18 @@ func ValidateBackup(backups []Backup, logError bool) error {
 		} else {
 			names = append(names, backup.Name)
 		}
+		// check backup "Name" is ASCII only. We use the backup name as part of the file name holding the SQL database
+		// and there is potential that on some OSes the filesystem doesn't support ASCII
+		nameTested := utf8string.NewString(backup.Name)
+		if ! nameTested.IsASCII() {
+			msg := fmt.Sprintf("Backup having name '%s' contains non ASCII characters but only ASCII characters " +
+				"are allowed for backup names", backup.Name)
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+
 		if backup.Encrypt && backup.EncryptPass == ""{
 			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'encrypt=true' but 'encrypt_pass' is not" +
 				" set. Set a password or disable encryption", i, backup.Name)
@@ -350,6 +365,16 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 			return errors.New(msg)
 		} else {
 			names = append(names, target.Name)
+		}
+
+		// check target name doesn't contain commas as those are now allowed
+		if strings.ContainsAny(target.Name, ","){
+			msg := fmt.Sprintf("Target '%s' contains a command in it's name. Commas are now allowed in target " +
+				"names", target.Name)
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
 		}
 	}
 	return nil

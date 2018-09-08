@@ -451,7 +451,8 @@
       "properties": {
         "name": {
           "type": "string",
-          "example": "generic-server"
+          "example": "generic-server",
+          "description": "Only ASCII characters are allowed for this property."
         },
         "paths": {
           "type": "array",
@@ -523,7 +524,8 @@
       "properties": {
         "name": {
           "type": "string",
-          "example": "aws_1"
+          "example": "aws_1",
+          "description": "Name of the backup target. Commas are not allowed characters."
         },
         "type": {
           "type": "string",
