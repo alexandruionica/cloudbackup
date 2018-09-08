@@ -31,7 +31,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	var PreparedStatements shared.DbPreparedStatements
 	// query statement
 	PreparedStatements.QueryStmt, err = db.Prepare("SELECT path, type, link_target, size, mtime, ctime, uid, gid, perm_mode, " +
-		"checksum, checksum_type, encrypted, targets_ids FROM files WHERE path = ?")
+		"checksum, checksum_type, encrypted, targets FROM files WHERE path = ?")
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL query statement, encountered error: '%s'", err)
 		return PreparedStatements, err
@@ -39,7 +39,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// insert statement
 	PreparedStatements.InsertStmt, err = db.Prepare("INSERT INTO files (path, type, link_target, size, mtime, ctime, uid, gid, " +
-		"perm_mode, checksum, checksum_type, encrypted, targets_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+		"perm_mode, checksum, checksum_type, encrypted, targets) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL insert statement, encountered error: '%s'", err)
 		// close other opened statements before returning
@@ -52,7 +52,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// update statement
 	PreparedStatements.UpdateStmt, err = db.Prepare("UPDATE files SET type=?, link_target=?, size=?, mtime=?, ctime=?, uid=?, " +
-		"gid=?, perm_mode=?, checksum=?, checksum_type=?, encrypted=?, targets_ids=? WHERE path=?")
+		"gid=?, perm_mode=?, checksum=?, checksum_type=?, encrypted=?, targets=? WHERE path=?")
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
 		// close other opened statements before returning

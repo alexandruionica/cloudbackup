@@ -75,7 +75,7 @@ func TestPath1(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -156,7 +156,7 @@ func TestPath2(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -248,7 +248,7 @@ func TestPath3(t *testing.T) {
 		dbData := shared.DbData{Db: db, Connected: true}
 
 		for _, backupPath := range backupConfig.Paths {
-			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 			if err != nil {
 				t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 			}
@@ -334,7 +334,7 @@ func TestPath4(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -419,7 +419,7 @@ func TestPath5(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -507,7 +507,7 @@ func TestPath6(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -605,7 +605,7 @@ func TestPath7(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -696,7 +696,7 @@ func TestPath8(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -779,7 +779,7 @@ func TestPath9(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -862,7 +862,7 @@ func TestPath10(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -945,7 +945,7 @@ func TestPath11(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1028,7 +1028,7 @@ func TestPath12(t *testing.T) {
 	dbData := shared.DbData{Db: db, Connected: true}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1049,6 +1049,98 @@ func TestPath12(t *testing.T) {
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
 	database.CloseDb(db, backupConfig.Name)
+}
+
+// test number of examined files as reported by Path() when  dereference=true and when using an actual DB
+func TestPath13(t *testing.T) {
+	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	result , err := config.Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	utils.Pp(result)
+
+	// folder with some mock files and symlinks
+	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
+	defer func() {
+		err = os.RemoveAll(backupDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	backupConfig := result.Config.Backup[0]
+	// overwrite whatever was in the mock config with the tmp path we want to test
+	backupConfig.Paths = []string{backupDirPath}
+	// set dereference to True
+	backupConfig.Dereference = true
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{}
+	backupJobsState.Lock = &sync.RWMutex{}
+	// populate state object with default values
+	jobId := uuid.NewV4().String()
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+	if err != nil {
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+	}
+	db, err := database.Start(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.Start() returned error: '%s'", err)
+	}
+
+	preparedStatements, err := dbops.Prepare(db)
+	if err != nil {
+		t.Fatalf("dbops.Prepare() returned error: '%s'", err)
+		database.CloseDb(db, backupConfig.Name)
+	}
+
+	dbData := shared.DbData{
+		Db: db,
+		Connected: true,
+		PreparedStatements: preparedStatements,
+	}
+
+	for _, backupPath := range backupConfig.Paths {
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		if err != nil {
+			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
+		}
+	}
+
+	utils.Pp(backupJobsState.Running[0].StatsCounters)
+	expectedStats := map[string]uint64{
+		"examine_produced_errors": 0,
+		"examined_directories": 11,
+		"examined_files": 16,
+		"excluded": 0,
+		"upload_produced_errors": 0,
+		"uploaded_directories_metadata": 0,
+		"uploaded_files": 0,
+	}
+	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
+			backupJobsState.Running[0].StatsCounters, expectedStats)
+	}
+	dbops.CloseStatementsAndDb(dbData)
 }
 
 // should not match exclusion
