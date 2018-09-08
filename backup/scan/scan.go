@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"cloudbackup/backup"
 	"os"
 	"path/filepath"
 
@@ -56,7 +57,14 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 				backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
 				if ! dryRun {
-					// TODO - add call to function dealing with backing up individual files
+					// call to function dealing with backing up individual files
+					cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData)
+					if cancelled{
+						return true, nil
+					}
+					if err != nil {
+						return false, err
+					}
 				}
 
 			}
@@ -93,7 +101,16 @@ func readDirNames(dirname string) ([]string, error) {
 func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup,
 	backupJobsState shared.BackupJobsStateInterface, dryRun bool, dbData shared.DbData) (bool, error) {
 	if ! dryRun {
-		// TODO - call to backup the folder entry itself ($stat will ge used here)
+		// call to backup the folder entry itself
+		cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData)
+		if cancelled{
+			return true, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		// if no error was reported and no cancellation was reported either then we continue to process all files and
+		// folders part of the just "backed up" directory
 	}
 
 	// set current file examined to empty as otherwise output will look inconsistent if we descend a different folder
@@ -163,7 +180,14 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", childPath,
 						"","")
 					if ! dryRun {
-						// TODO - add call to function dealing with backing up individual files
+						// call to function dealing with backing up of files
+						cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData)
+						if cancelled{
+							return true, nil
+						}
+						if err != nil {
+							return false, err
+						}
 					}
 					// mark current examined file as none as we don't know if the next iteration of the main for loop
 					//  will next encounter a directory or not
