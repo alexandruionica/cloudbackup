@@ -1,5 +1,5 @@
 hash: 0e93dc638d11399d2d1e7f55886ceb98cbec09eda2866bbc0addc09a54e7dfc5
-updated: 2018-08-18T10:38:39.207085049+10:00
+updated: 2018-09-08T16:20:11.095418396+10:00
 imports:
 - name: github.com/bmatcuk/doublestar
   version: 85a78806aa1b4707d1dbace9be592cf1ece91ab3
@@ -27,6 +27,10 @@ imports:
   - bcrypt
   - blowfish
   - ssh/terminal
+- name: golang.org/x/exp
+  version: e88728d35e99800368f4acc0969018db6b0d3dd5
+  subpackages:
+  - utf8string
 - name: golang.org/x/sys
   version: 37707fdb30a5b38865cfb95e5aab41707daec7fd
   subpackages:
