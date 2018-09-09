@@ -14,6 +14,8 @@ const ErrJobAlreadyStopped = "job already stopped"
 const ErrJobAlreadyStopping = "job already stopping"
 const ErrJobNotFoundInRunningState = "no running job with given name and uuid was found"
 const ErrJobNotFoundInEvaluatingState = "no evaluating job with given name and uuid was found"
+const ErrCouldNotGenerateJobId = "could not generate a unique id for the job"
+const ErrUnknownJobType = "unknown job type"
 const loggingContext = "structs_scheduler"
 
 type CommWithSchedulerForBackup struct {
