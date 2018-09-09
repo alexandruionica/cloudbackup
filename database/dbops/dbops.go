@@ -192,3 +192,43 @@ func EnsureTargetsInDb(db *sql.DB, backupConfig config.Backup) error {
 	}
 	return nil
 }
+
+// for a given UUID it check that no job exists with its value. Job type is not relevant
+// returns: bool with true if a match was found, false otherwise; err field if error is encountered (if an error is
+// found then the bool field value is to be ignored)
+func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
+	logger.Debug("Checking the database doesn't have a record of job id '%s'", jobid)
+	var jobIdInDb string
+	// build list of targets from the Database
+	rows, err := db.Query("SELECT id from jobs")
+	if err != nil {
+		logger.Errorf("While trying to get from the database any job id with uuid '%s', the following error was "+
+			"encountered: '%s'", jobid, err)
+		return false, err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() a db.Query for retrieving any job id with a given uuid, the " +
+				"following error was encountered: '%s'", err)
+		}
+	}()
+	for rows.Next() {
+		err := rows.Scan(&jobIdInDb)
+		if err != nil {
+			logger.Errorf("While enumerating from the database the list of jobs with a given uuid, the " +
+				"following error was encountered: '%s'", err)
+			return false, err
+		}
+		// any result row means we had a match
+		return true, nil
+	}
+	err = rows.Err()
+	if err != nil {
+		logger.Errorf("Could not enumerate the list of all targets from the database due to the following "+
+			"error: '%s'", err)
+		return false, err
+	}
+	// if we got here there there wasn't any match and no error was encountered
+	return false, nil
+}

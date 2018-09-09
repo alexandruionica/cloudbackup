@@ -8,6 +8,7 @@ import (
 	"cloudbackup/database/dbops"
 	"cloudbackup/shared"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
@@ -86,9 +87,17 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 	serverConfigCopy config.CfgTemplate) shared.ResponseBackupCommand {
 	switch receivedBackupCommand.Command {
 	case "start": {
-		startJobUuid := uuid.NewV4().String()
+		startJobUuid ,err := GenerateJobUuid(receivedBackupCommand.Name, backupJobsState, serverConfigCopy, "backup")
+		if err != nil {
+			return shared.ResponseBackupCommand{
+				Name: receivedBackupCommand.Name,
+				Id: receivedBackupCommand.Id,
+				Message: err.Error(),
+				Err: true,
+			}
+		}
 		// TODO - check also that a restore isn't running for the same backup name (to implement when restores are implemented)
-		err := backupJobsState.MarkRunning(receivedBackupCommand.Name, loggingContext + ".processBackupCommand",
+		err = backupJobsState.MarkRunning(receivedBackupCommand.Name, loggingContext + ".processBackupCommand",
 			startJobUuid)
 		if err != nil {
 			return shared.ResponseBackupCommand{
@@ -354,4 +363,69 @@ func waitForAllBackupToBeStopped(backupJobsState *shared.BackupJobsState) {
 		backupJobsState.Lock.RUnlock()
 		time.Sleep(1 * time.Second)
 	}
+}
+
+// generate uuid and validate that this is unique in both the running jobs state and also in the SQL DB
+// returns: string with UUID if successful to generate, error object if an error is encountered (if this is the case
+// then the value of the UUID string should be ignored)
+func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serverConfigCopy config.CfgTemplate, jobType string)(string, error) {
+	// TODO - when implementing restore or purge jobs , add support in this function too
+	if jobType != "backup" {
+		logger.Warnf("generating UUIDs for job of type '%s' is not supported", jobType)
+		return "", errors.New(shared.ErrUnknownJobType)
+	}
+
+	// get DataDir path as we need it for accessing the SQL DB
+	serverConfigCopy.Mutex.RLock()
+	dataDir := serverConfigCopy.DataDir
+	serverConfigCopy.Mutex.RUnlock()
+
+	// try at most 20 times to generate a unique UUID. If this is not sufficient then the program has a serious issue
+	for i := 0; i < 20; i++ {
+		jobUuid := uuid.NewV4().String()
+
+		// first check the state of running jobs and see if we got a matching UUID
+		log.WithFields(log.Fields{"context": loggingContext + ".GenerateJobUuid"}).Debug("Acquiring read lock before " +
+			"reading running backup jobs struct")
+		backupJobsState.Lock.RLock()
+		// TODO - add separate if block for "restore" and "purge" type jobs
+		if jobType == "backup" {
+			for _, job := range backupJobsState.Running {
+				if job.BackupJobId == jobUuid {
+					logger.Debugf("Found uuid '%s' already in the list of running backup jobs", jobUuid)
+					continue
+				}
+			}
+		}
+		backupJobsState.Lock.RUnlock()
+		log.WithFields(log.Fields{"context": loggingContext + ".GenerateJobUuid"}).Debug("Read lock released after" +
+			" reading running backup jobs struct")
+
+		// if we got here, then start a DB connection and check if we got a job (no matter the type) with this UUID
+		// known in the database ; we use the UUID as a primary key in a table so it needs to be unique
+		// get DB connection pointer
+		db, err := database.Start(dataDir, Name)
+		// the backup can not run as we can't initialise/connect to the database
+		if err != nil {
+			logger.Errorf("Could not connect to the SQL database in order to validate uniqueness of UUID for" +
+				" '%s' job '%s'", jobType, Name)
+			return "", err
+		}
+		// check db
+		foundUuidInDB, err := dbops.CheckJobUuidExists(db, jobUuid)
+		if err != nil {
+			database.CloseDb(db, Name)
+			return "", err
+		}
+		if foundUuidInDB {
+			database.CloseDb(db, Name)
+			continue
+		} else {
+			database.CloseDb(db, Name)
+			return jobUuid, nil
+		}
+	}
+	// if we got here then we could not generate an unique UUID after 20 attempts so we'll give up
+	logger.Warnf("Tried 20 times to generate a unique job id for '%s' job '%s'", jobType, Name)
+	return "", errors.New(shared.ErrCouldNotGenerateJobId)
 }
