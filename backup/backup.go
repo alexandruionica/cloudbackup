@@ -90,3 +90,10 @@ func getBackedupObjectDataFromDb (path string, dbData shared.DbData) (bool, shar
 	// if we got here, all was fine
 	return false, dbRecord, nil
 }
+
+
+// uploads an object (file / dir / symlink) to the remote object storage. For dirs/symlinks it only uploads metadata
+// return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
+func UploadObject (ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup) (bool, error) {
+	return false, nil
+}

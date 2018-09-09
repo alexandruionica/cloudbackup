@@ -436,3 +436,29 @@ func (jobs *BackupJobsState) GetContextForJob(BackupJobName string, BackupJobId 
 	}
 	return nil, errors.New(ErrJobNotFoundInRunningState)
 }
+
+// gets the start time of a backup job
+// returns: time of start ; error if encountered and error
+func (jobs *BackupJobsState) GetStartTime(name string, JobId string, logContext string) (time.Time, error) {
+	log.WithFields(log.Fields{"context": logContext + ".GetStartTime"}).Debug("Acquiring read lock before " +
+		"reading running backup jobs struct")
+	jobs.Lock.RLock()
+	defer func() {
+		jobs.Lock.RUnlock()
+		log.WithFields(log.Fields{"context": logContext + ".GetStartTime"}).Debug("Read lock released after " +
+			"reading running backup jobs struct")
+	}()
+	for _, job := range jobs.Running {
+		if name == job.Name {
+			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if JobId == "" {
+				return job.StartTime, nil
+			} else {
+				if JobId != "" && job.BackupJobId == JobId {
+					return job.StartTime, nil
+				}
+			}
+		}
+	}
+	return time.Time{}, errors.New(ErrJobNotFoundInRunningState)
+}
