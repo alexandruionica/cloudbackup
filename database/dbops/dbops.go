@@ -197,10 +197,10 @@ func EnsureTargetsInDb(db *sql.DB, backupConfig config.Backup) error {
 // returns: bool with true if a match was found, false otherwise; err field if error is encountered (if an error is
 // found then the bool field value is to be ignored)
 func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
-	logger.Debug("Checking the database doesn't have a record of job id '%s'", jobid)
+	logger.Debugf("Checking if the database has a record of job id '%s'", jobid)
 	var jobIdInDb string
 	// build list of targets from the Database
-	rows, err := db.Query("SELECT id from jobs")
+	rows, err := db.Query("SELECT id FROM jobs WHERE id = ?", jobid)
 	if err != nil {
 		logger.Errorf("While trying to get from the database any job id with uuid '%s', the following error was "+
 			"encountered: '%s'", jobid, err)
@@ -221,6 +221,7 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 			return false, err
 		}
 		// any result row means we had a match
+		logger.Debugf("Found in the database a record of job id '%s'", jobid)
 		return true, nil
 	}
 	err = rows.Err()
@@ -230,5 +231,23 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 		return false, err
 	}
 	// if we got here there there wasn't any match and no error was encountered
+	logger.Debugf("Did not find in the database a record of job id '%s'", jobid)
 	return false, nil
+}
+
+// adds a new record in the "jobs" table for a new job
+func AddJobDetails(db *sql.DB, jobId string, jobType string, startTime time.Time) error {
+	/*
+		CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
+	processed_files INTEGER, processed_dirs INTEGER);
+	 */
+	_, err := db.Exec("INSERT INTO jobs (id, type, start_time, end_time, state, processed_files, processed_dirs) " +
+		"VALUES " +
+		"(?, ?, ?, ?, ?, ?, ?)", jobId, jobType, startTime, "", "started", 0, 0)
+	if err != nil {
+		logger.Errorf("While trying to add information about %s job having id '%s' to the database, the "+
+			"following error was encountered: '%s'", jobType, jobId, err)
+		return err
+	}
+	return nil
 }

@@ -223,7 +223,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	dbData.Db, err = database.Start(serverConfigCopy.DataDir, name)
 	// the backup can not run as we can't initialise/connect to the database
 	if err != nil {
-		// TODO - mark the backup as failed (failed to start)
+		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
 		return
 	} else {
@@ -235,7 +235,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// the backup can not run as we can't ensure the database has the needed data before we commence
 	// comparing/adding/updating entries about files
 	if err != nil {
-		// TODO - mark the backup as failed (failed to start)
+		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
 		return
 	}
@@ -243,7 +243,23 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// get DB prepared statements for the most common operations
 	dbData.PreparedStatements, err = dbops.Prepare(dbData.Db)
 	if err != nil {
-		// TODO - mark the backup as failed (failed to start)
+		// TODO - mark the backup as failed (failed to/during? start)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		return
+	}
+
+	// get Job start time
+	jobStartTime, err := backupJobsState.GetStartTime(name, jobUuid, loggingContext + ".runBackup")
+	if err != nil {
+		// TODO - mark the backup as failed (failed to/during? start)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		return
+	}
+
+	// add entry to "jobs" DB table
+	err = dbops.AddJobDetails(dbData.Db, jobUuid, "backup", jobStartTime)
+	if err != nil {
+		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
 		return
 	}
@@ -408,7 +424,7 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 		// the backup can not run as we can't initialise/connect to the database
 		if err != nil {
 			logger.Errorf("Could not connect to the SQL database in order to validate uniqueness of UUID for" +
-				" '%s' job '%s'", jobType, Name)
+				" %s job '%s'", jobType, Name)
 			return "", err
 		}
 		// check db
