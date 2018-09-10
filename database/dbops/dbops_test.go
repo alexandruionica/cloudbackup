@@ -2,12 +2,15 @@ package dbops
 
 import (
 	"cloudbackup/config"
+	"cloudbackup/database"
+	"cloudbackup/shared"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
-	"cloudbackup/database"
+	"github.com/satori/go.uuid"
 	"os"
 	"sync"
 	"testing"
+	"time"
 )
 
 // test EnsureTargetsInDb() with empty db
@@ -254,4 +257,244 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 			t.Fatalf("Target '%s' exists in the config file but it wasn't found in the DB", backupConfig.Target)
 		}
 	}
+}
+
+// test that Prepare() produces usable prepared statements
+func TestPrepare1(t *testing.T){
+	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
+	path := "an_imaginary_file_name"
+	defer func() {
+		err := os.RemoveAll(dbDataDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	db, err := database.Start(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	preparedStatements, err := Prepare(db)
+	if err != nil {
+		t.Fatalf("Prepare() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	// test Prepared Query
+	rows, err := preparedStatements.QueryStmt.Query(path)
+	if err != nil {
+		t.Fatalf("While querying the database in order to check if '%s' has been previously backed" +
+			" up, the following error was encountered: %s", path, err)
+	}
+
+	err = rows.Close()
+	if err != nil {
+		t.Fatalf("While trying to Close() a prepared statement for checking if '%s' has been" +
+			" previously backed up, the following error was encountered: %s", path, err)
+	}
+
+	// test Prepared Insert
+	_, err = preparedStatements.InsertStmt.Exec(path, "file", "", 1234, time.Now(), time.Now(), 100, 200, "0755", "",
+		"none", 0, "a_target")
+	if err != nil {
+		t.Fatalf("While trying to use prepared statement with preparedStatements.InsertStmt.Exec() for checking " +
+			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
+	}
+
+	// test Prepared Update
+	_, err = preparedStatements.UpdateStmt.Exec("file", "", 1234, time.Now(), time.Now(), 100, 200, "0755", "",
+		"none", 0, "a_target", path)
+	if err != nil {
+		t.Fatalf("While trying to use prepared statement with preparedStatements.UpdateStmt.Exec() for checking " +
+			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
+	}
+
+	ClosePreparedStatements(preparedStatements)
+	database.CloseDb(db, backupName)
+}
+
+func TestClosePreparedStatements1(t *testing.T){
+	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
+	defer func() {
+		err := os.RemoveAll(dbDataDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	db, err := database.Start(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	preparedStatements, err := Prepare(db)
+	if err != nil {
+		t.Fatalf("Prepare() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	ClosePreparedStatements(preparedStatements)
+	database.CloseDb(db, backupName)
+}
+
+
+// test with empty shared.DbData struct
+func TestCloseStatementsAndDb1(t *testing.T) {
+	dbData := shared.DbData{}
+	CloseStatementsAndDb(dbData)
+}
+
+// test with populated shared.DbData struct but without populated shared.DbData.PreparedStatements
+func TestCloseStatementsAndDb2(t *testing.T) {
+	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
+	defer func() {
+		err := os.RemoveAll(dbDataDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	db, err := database.Start(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	dbData := shared.DbData{
+		Connected: true,
+		Db: db,
+		Name: backupName,
+	}
+	CloseStatementsAndDb(dbData)
+}
+
+// test with populated shared.DbData struct and with populated shared.DbData.PreparedStatements
+func TestCloseStatementsAndDb3(t *testing.T) {
+	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
+	defer func() {
+		err := os.RemoveAll(dbDataDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	db, err := database.Start(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	preparedStatements, err := Prepare(db)
+	if err != nil {
+		t.Fatalf("Prepare() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	dbData := shared.DbData{
+		Connected: true,
+		Db: db,
+		Name: backupName,
+		PreparedStatements: preparedStatements,
+	}
+	CloseStatementsAndDb(dbData)
+}
+
+
+// should succeed
+func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
+	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
+	jobid := uuid.NewV4().String()
+	defer func() {
+		err := os.RemoveAll(dbDataDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	db, err := database.Start(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	err = AddJobDetails(db, jobid, "backup", time.Now())
+	if err != nil {
+		t.Fatalf("AddJobDetails() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	// check data actually made it to the DB
+	rows, err := db.Query("SELECT id FROM jobs WHERE id = ?", jobid)
+	if err != nil {
+		t.Fatalf("While trying to get from the database any job id with uuid '%s', the following error was "+
+			"encountered: '%s'", jobid, err)
+	}
+
+	foundRecord := false
+	var jobIdInDb string
+	for rows.Next() {
+		err := rows.Scan(&jobIdInDb)
+		if err != nil {
+			logger.Errorf("While enumerating from the database the list of jobs with a given uuid, the " +
+				"following error was encountered: '%s'", err)
+		}
+		// any result row means we had a match
+		foundRecord = true
+	}
+	err = rows.Err()
+	if err != nil {
+		t.Fatalf("Could not enumerate the list of all targets from the database due to the following "+
+			"error: '%s'", err)
+	}
+	_ = rows.Close() // #nosec
+
+	if ! foundRecord {
+		t.Fatalf("Did not find in the DB a match for the job details which just got added")
+	}
+
+	// test above also using CheckJobUuidExists()
+
+	foundRecordUsingFunction, err := CheckJobUuidExists(db, jobid)
+	if err != nil {
+		t.Fatalf("CheckJobUuidExists() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	if ! foundRecordUsingFunction {
+		t.Fatalf("CheckJobUuidExists() did not find in the DB a match for the job details which just got added")
+	}
+
+	// search for record which doesn't exist
+	foundRecordUsingFunction, err = CheckJobUuidExists(db, uuid.NewV4().String())
+	if err != nil {
+		t.Fatalf("CheckJobUuidExists() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	if foundRecordUsingFunction {
+		t.Fatalf("CheckJobUuidExists() found a record in the DB but it should have not")
+	}
+
+	database.CloseDb(db, backupName)
+}
+
+
+// should return false as we're using an empty db
+func TestCheckJobUuidExists1(t *testing.T) {
+	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
+	defer func() {
+		err := os.RemoveAll(dbDataDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	db, err := database.Start(dbDataDirPath, backupName)
+	if err != nil {
+		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	// search for record which doesn't exist
+	foundRecordUsingFunction, err := CheckJobUuidExists(db, uuid.NewV4().String())
+	if err != nil {
+		t.Fatalf("2. CheckJobUuidExists() wasn't supposed to return an error but did return: '%s'", err)
+	}
+
+	if foundRecordUsingFunction {
+		t.Fatalf("CheckJobUuidExists() found a record in the DB but it should have not as we're using an empty DB")
+	}
+
+	database.CloseDb(db, backupName)
 }
