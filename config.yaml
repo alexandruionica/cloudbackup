@@ -30,8 +30,8 @@ user:
 backup:
   - name: first_backup
     paths:
-      #- /tmp/test
-      - /etc/systemd
+      #- /etc/systemd
+      - /etc
     # Bourne-Again shell like globing and globstar is supported in the below "exclusions" section.
     # Term	     Meaning
     # *	         matches any sequence of non-path-separators

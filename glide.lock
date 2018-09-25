@@ -1,6 +1,10 @@
-hash: 0e93dc638d11399d2d1e7f55886ceb98cbec09eda2866bbc0addc09a54e7dfc5
-updated: 2018-09-08T16:20:11.095418396+10:00
+hash: 1d3e5a70824e8ef2f3e02751c730df7ef1a919fe363edead04addcba257f56bf
+updated: 2018-09-25T22:00:27.104687431+10:00
 imports:
+- name: github.com/bearmini/go-acl
+  version: a423b25ba3ef3afa637b85a6222ccf2abffd01c6
+  subpackages:
+  - api
 - name: github.com/bmatcuk/doublestar
   version: 85a78806aa1b4707d1dbace9be592cf1ece91ab3
 - name: github.com/BurntSushi/toml
