@@ -27,11 +27,11 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 	// perform backup work
 	default:
 		{
-			dBentryFound, dbRecordProperties, err := getBackedupObjectDataFromDb(path, dbData)
+			dbEntryFound, dbRecordProperties, err := getBackedupObjectPropertiesFromDb(path, dbData)
 			if err != nil {
 				return false, err
 			}
-			if dBentryFound {
+			if dbEntryFound {
 				// check if properties match between DB record and os.FileInfo
 				logger.Infof("Found db record for '%s' with properties '%+v'", path, dbRecordProperties)
 
@@ -47,7 +47,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 // returns the following values: bool depicting if an entry was found or not; if found a populated
 // shared.BackedUpFileProperties object containing all of the properties of given object as extracted from the DB
 // record; an error object is an error is encountered
-func getBackedupObjectDataFromDb (path string, dbData shared.DbData) (bool, shared.BackedUpFileProperties, error){
+func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool, shared.BackedUpFileProperties, error){
 	rows, err := dbData.PreparedStatements.QueryStmt.Query(path)
 	if err != nil {
 		logger.Errorf("While querying the database in order to check if '%s' has been previously backed" +
@@ -91,6 +91,49 @@ func getBackedupObjectDataFromDb (path string, dbData shared.DbData) (bool, shar
 	return false, dbRecord, nil
 }
 
+// compares SQL DB obtained data about a file/dir/symlink with its current, on disk properties
+//func objectPropertiesMatchDbRecord(path string, dbRecordProperties shared.BackedUpFileProperties, stat os.FileInfo) bool {
+//	/*
+//	type BackedUpFileProperties struct {
+//	Path string
+//	// one of: file / dir / symlink
+//	Type string
+//	// valid only for "symlink" type; otherwise it will be empty string
+//	LinkTarget string
+//	Size int64
+//	// time object modified
+//	Mtime time.Time
+//	// time object created
+//	Ctime time.Time
+//	// user id on *nix , Username on Windows (hence this is a string)
+//	// TODO - validate that on Windows this is better than using a SID and also what to do in the Username or SID doesn't exist (on Windows only)
+//	Uid string
+//	// group id on *nix, Group name on Windows
+//	// TODO - validate that on Windows this is better than using a SID and also what to do in the Groupname or SID doesn't exist (on Windows only)
+//	Gid string
+//	// on *nix this is the file mode (ex: 0755) ; on Windows some kind of basic permissions
+//	// TODO - figure out file permissions on Windows
+//	PermMode string
+//	// if checksuming is enabled then this will be non empty
+//	Checksum string
+//	// if checksuming is enabled then this will hold whatever algorithm was used for checksumming
+//	ChecksumType string
+//	Encrypted bool
+//	// references the "name" of one or more entries in "targets" table ; multiple entries will be comma separated
+//	Targets string
+//}
+//	 */
+//	onDiskObjectProperties := shared.BackedUpFileProperties{
+//		Path: path,
+//		Size: stat.Size(),
+//		Mtime: stat.ModTime(),
+//		// TODO - implement ctime - see possible options like https://github.com/djherbis/times/issues/1 (and library it provides)
+//		Ctime: time.Time{},
+//		Uid:
+//
+//	}
+//
+//}
 
 // uploads an object (file / dir / symlink) to the remote object storage. For dirs/symlinks it only uploads metadata
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered

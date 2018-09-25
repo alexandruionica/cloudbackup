@@ -14,7 +14,9 @@ type BackedUpFileProperties struct {
 	Size int64
 	// time object modified
 	Mtime time.Time
-	// time object created
+	// time inode got changed, basically file properties got changed (but not file content). Exception is that ctime
+	// will also get updated if the file contents got changed. Ctime is platform and file system dependent (probably
+	// MS Windows doesn't have it) ; to check out this https://github.com/djherbis/times/issues/1 and the library it provides
 	Ctime time.Time
 	// user id on *nix , Username on Windows (hence this is a string)
 	// TODO - validate that on Windows this is better than using a SID and also what to do in the Username or SID doesn't exist (on Windows only)
