@@ -103,7 +103,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 //	Size int64
 //	// time object modified
 //	Mtime time.Time
-//	// time object created
+//	// time object metadata changed (ctime gets updated if file content gets changed too)
 //	Ctime time.Time
 //	// user id on *nix , Username on Windows (hence this is a string)
 //	// TODO - validate that on Windows this is better than using a SID and also what to do in the Username or SID doesn't exist (on Windows only)
