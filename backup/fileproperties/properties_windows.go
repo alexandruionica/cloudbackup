@@ -45,18 +45,19 @@ type FilePermissions struct {
 }
 
 // gets in a platform dependent way the properties of a file or directory. The code here works only on NTFS file systems
+// parameters: $path is the path to the file/directory ; $stat - not used in the Windows implementation
 // returns: owner name (string) ; FilePermissions object which was JSON Marshalled (string); error if != nil then the first
 // two strings will be empty
 //
 // Example usage:
-// 	_, jsonPermissions, err := getObjectPermissions(`C:\Users\bestygre\Desktop\test`)
+// 	_, jsonPermissions, err := getObjectPermissions(`C:\Users\testuser\Desktop\test`)
 //	if err != nil {
 //		fmt.Printf("Got error: %s\n", err)
 //	} else {
 //		fmt.Printf("%+v\n", jsonPermissions)
 //	}
 //
-func getObjectPermissions(path string) (string, string, error) {
+func getObjectPermissions(path string, stat os.FileInfo) (string, string, error) {
 	// Stuff to read to have a basic understanding of dACLS, ACEs and others:
 	// https://docs.microsoft.com/en-us/windows/desktop/secauthz/dacls-and-aces
 	var (

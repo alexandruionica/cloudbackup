@@ -24,7 +24,8 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 
 	sqlStmt := `
 	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
-	ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, checksum_type, encrypted INTEGER, targets TEXT);
+	ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, checksum_type, encrypted INTEGER, 
+	targets TEXT);
 
 	CREATE TABLE targets (name TEXT NOT NULL PRIMARY KEY, backup_name TEXT, type TEXT, date_added TEXT);
 
@@ -33,7 +34,7 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 
 	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target TEXT, 
 	upload_date TEXT, job_id TEXT, current INTEGER , delete_marker INTEGER, version TEXT, src_os TEXT, type TEXT, 
-	link_target TEXT, size INTEGER, mtime TEXT, ctime TEXT, uid TEXT, gid TEXT, perm_mode TEXT, checksum TEXT, 
+	link_target TEXT, size INTEGER, mtime TEXT, ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, 
 	checksum_type, encrypted INTEGER,
 	FOREIGN KEY(target) REFERENCES targets(name), FOREIGN KEY(job_id) REFERENCES jobs(id));
 	
