@@ -1,4 +1,4 @@
-// +build !windows
+// +build darwin freebsd netbsd openbsd solaris linux
 
 package daemon
 
