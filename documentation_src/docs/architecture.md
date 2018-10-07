@@ -43,12 +43,10 @@ Help Options:
 
 ## File Metadata
 
-For Linux and Unix backed up files:
+For backed up files:
 
 - filepath
-- uid
-- gid
-- perm_mode (octal)
+- owner
 - size
 - mtime
 - ctime

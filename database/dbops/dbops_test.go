@@ -294,7 +294,7 @@ func TestPrepare1(t *testing.T){
 	}
 
 	// test Prepared Insert
-	_, err = preparedStatements.InsertStmt.Exec(path, "file", "", 1234, time.Now(), time.Now(), 100, 200, "0755", "",
+	_, err = preparedStatements.InsertStmt.Exec(path, "file", "", 1234, time.Now(), time.Now(), "testuser1", "", "",
 		"none", 0, "a_target")
 	if err != nil {
 		t.Fatalf("While trying to use prepared statement with preparedStatements.InsertStmt.Exec() for checking " +
@@ -302,7 +302,7 @@ func TestPrepare1(t *testing.T){
 	}
 
 	// test Prepared Update
-	_, err = preparedStatements.UpdateStmt.Exec("file", "", 1234, time.Now(), time.Now(), 100, 200, "0755", "",
+	_, err = preparedStatements.UpdateStmt.Exec("file", "", 1234, time.Now(), time.Now(), "testuser2", "", "",
 		"none", 0, "a_target", path)
 	if err != nil {
 		t.Fatalf("While trying to use prepared statement with preparedStatements.UpdateStmt.Exec() for checking " +
