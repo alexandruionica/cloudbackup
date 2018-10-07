@@ -6,6 +6,7 @@ import (
 	"golang.org/x/sys/windows"
 	"strings"
 	"unicode/utf8"
+	"os"
 )
 
 // Windows user/group account details
