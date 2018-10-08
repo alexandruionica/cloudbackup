@@ -13,7 +13,8 @@ import (
 type Account struct {
 	// see https://docs.microsoft.com/en-us/windows/desktop/secauthz/security-identifiers for what a SID is
 	SID string
-	// this is the name to which the above SID resolves - we'll try to use this when restoring if the SID doesn't exist
+	// this is the name to which the above SID resolves - we'll try to use this when restoring if the SID doesn't exist.
+	// If the SID can't be resolved to a name then the SIDs value will be set in the name field too
 	Name string
 	// name of the first domain on which this SID is found
 	Domain string
@@ -125,6 +126,9 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 			"following error was encountered: '%s'", filePerm.Owner.SID, path, err)
 		return "", "", ErrCouldNotGetAccountDetails
 	}
+	if filePerm.Owner.Name == "" {
+		filePerm.Owner.Name = filePerm.Owner.SID
+	}
 
 	if group == nil {
 		logger.Warnf("could not establish owning group for '%s'", path)
@@ -142,6 +146,9 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 		logger.Warnf("while trying to get account details for '%s' which is the owning group of '%s' the " +
 			"following error was encountered: '%s'", filePerm.Group.SID, path, err)
 		return "", "", ErrCouldNotGetAccountDetails
+	}
+	if filePerm.Group.Name == "" {
+		filePerm.Group.Name = filePerm.Group.SID
 	}
 
 	if dAcl == nil {
