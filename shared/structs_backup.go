@@ -18,15 +18,11 @@ type BackedUpFileProperties struct {
 	// will also get updated if the file contents got changed. Ctime is platform and file system dependent (probably
 	// MS Windows doesn't have it) ; to check out this https://github.com/djherbis/times/issues/1 and the library it provides
 	Ctime time.Time
-	// user id on *nix , Username on Windows (hence this is a string)
-	// TODO - validate that on Windows this is better than using a SID and also what to do in the Username or SID doesn't exist (on Windows only)
-	Uid string
-	// group id on *nix, Group name on Windows
-	// TODO - validate that on Windows this is better than using a SID and also what to do in the Groupname or SID doesn't exist (on Windows only)
-	Gid string
-	// on *nix this is the file mode (ex: 0755) ; on Windows some kind of basic permissions
-	// TODO - figure out file permissions on Windows
-	PermMode string
+	// user (short) name on *nix , Username on Windows (hence this is a string)
+	Owner string
+	// this is a JSON encoded string with platform dependent structure (so far there are 2 variants: one for Unixes
+	// and one for Windows). See getObjectPermissions() in cloudbackup/backup/fileproperties/ for details.
+	Permissons string
 	// if checksuming is enabled then this will be non empty
 	Checksum string
 	// if checksuming is enabled then this will hold whatever algorithm was used for checksumming

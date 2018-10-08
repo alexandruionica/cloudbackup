@@ -13,7 +13,8 @@ import (
 type Account struct {
 	Id uint32
 	// this is the name to which the above numerical id resolves - we'll try to use this when restoring if the numerical
-	// id doesn't exist
+	// id doesn't exist. If the name can't be resolved or is empty then we'll use the string representation of the
+	// above ID
 	Name string
 }
 
@@ -61,18 +62,21 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 	if err != nil {
 		logger.Warnf("While trying to get the username for user id '%d' the following error was encountered: %s",
 			filePerm.Owner.Id, err)
-		return "", "", ErrCouldNotGetAccountDetails
+		filePerm.Owner.Name = strconv.FormatUint(uint64(filePerm.Owner.Id), 10)
+	} else {
+		filePerm.Owner.Name = username.Username
 	}
-	filePerm.Owner.Name = username.Username
 
 	// lookup group name from group id
 	groupname, err := user.LookupGroupId(strconv.FormatUint(uint64(filePerm.Group.Id), 10))
 	if err != nil {
 		logger.Warnf("While trying to get the group name for group id '%d' the following error was encountered: %s",
 			filePerm.Group.Id, err)
-		return "", "", ErrCouldNotGetAccountDetails
+		filePerm.Group.Name = strconv.FormatUint(uint64(filePerm.Group.Id), 10)
+	} else {
+		filePerm.Group.Name = groupname.Name
 	}
-	filePerm.Group.Name = groupname.Name
+
 
 	logger.Debugf("permissions of '%s' are: %+v\n", path, filePerm)
 

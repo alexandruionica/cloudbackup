@@ -70,7 +70,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 		}
 		entryFound = true
 		err := rows.Scan(&dbRecord.Path, &dbRecord.Type, &dbRecord.LinkTarget, &dbRecord.Size, &dbRecord.Mtime,
-			&dbRecord.Ctime, &dbRecord.Uid, &dbRecord.Gid, &dbRecord.PermMode, &dbRecord.Checksum,
+			&dbRecord.Ctime, &dbRecord.Owner, &dbRecord.Permissons, &dbRecord.Checksum,
 			&dbRecord.ChecksumType, &dbRecord.Encrypted, &dbRecord.Targets)
 		if err != nil {
 			logger.Errorf("While retrieving the database record for '%s' the following error was encountered:" +
