@@ -28,17 +28,17 @@ type FilePermissions struct {
 // parameters: $path is the path to the file/directory ; $stat - not used in the Windows implementation
 // ext3/ext4/xfs/ufs/zfs file systems while probably also other posix compliant ones will work
 // returns: owner name (string) ; FilePermissions object which was JSON Marshalled (string); error if != nil then the first
-// two strings will be empty
+// string will probably still have a valid value while the second will be empty
 //
 // Example usage:
-// 	_, jsonPermissions, err := getObjectPermissions(`/home/testuser/Desktop/test`, os.stat(`/home/testuser/Desktop/test`))
+// 	_, jsonPermissions, err := GetObjectPermissions(`/home/testuser/Desktop/test`, os.stat(`/home/testuser/Desktop/test`))
 //	if err != nil {
 //		fmt.Printf("Got error: %s\n", err)
 //	} else {
 //		fmt.Printf("%+v\n", jsonPermissions)
 //	}
 //
-func getObjectPermissions(path string, stat os.FileInfo) (string, string, error) {
+func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error) {
 	filePerm := FilePermissions{
 		Mode: stat.Mode(),
 		Owner: Account{
@@ -83,7 +83,7 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 	jsonPayload, err := json.Marshal(filePerm)
 	if err !=nil {
 		logger.Warnf("Could not JSON encode the permissions of '%s' due to error: '%s'", path, err)
-		return "", "", ErrCouldNotJsonEncode
+		return filePerm.Owner.Name, "", ErrCouldNotJsonEncode
 	}
 	return filePerm.Owner.Name, string(jsonPayload), nil
 }
