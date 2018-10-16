@@ -348,3 +348,122 @@ func TestDirExists7(t *testing.T) {
 		t.Fatalf("Expected error '%s' but got error '%s'", ErrNoSuchDir.Error(), err.Error())
 	}
 }
+
+// plain file which exists
+func TestGetFileMD5Sum1(t *testing.T) {
+	path, err := SetupTmpFileWithContent([]byte(`some text goes here`), "unittest_utils_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	_, err = FileExists(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedChecksum := "0711b8d9b25c7dee5f23575028a3c82f"
+	checksum, err := GetFileMD5Sum(path)
+	if err != nil {
+		t.Fatalf("GetFileMD5Sum() returned an error despite none being expected: %s", err)
+	}
+	if checksum != expectedChecksum {
+		t.Fatalf("GetFileMD5Sum() was supposed to return for %s the checksum '%s' but it returned '%s'",
+			path, expectedChecksum, checksum)
+	}
+}
+
+// targeted file does not exist
+func TestGetFileMD5Sum2(t *testing.T) {
+	var path = filepath.Join(os.TempDir(), "unittest_utils_test_broken_symlink")
+	checksum, err := GetFileMD5Sum(path)
+	if err == nil {
+		t.Fatal("GetFileMD5Sum() did not return an error despite one being expected")
+	}
+	if checksum != "" {
+		t.Fatalf("GetFileMD5Sum() was supposed to return for missing file %s the checksum '' (empty string) " +
+			"but it returned '%s'", path, checksum)
+	}
+}
+
+// plain file
+func TestFileType1(t *testing.T) {
+	path, err := SetupTmpFileWithContent([]byte(`some text goes here`), "unittest_utils_test_TestFileType1_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+	_, err = FileExists(path, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filestat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("os.stat() returned an error despite none being expected: %s", err)
+	}
+	filetype := FileType(filestat)
+	if filetype != "file" {
+		t.Fatalf("Was expecting FileType() to return value 'file' but it returned '%s'", filetype)
+	}
+}
+
+// test with directory
+func TestFileType2(t *testing.T) {
+	var path = os.TempDir()
+	stat , err := DirExists(path, true)
+	if err != nil {
+		t.Fatalf("While trying to get os.stat() of %s got error : %s", path, err)
+	}
+
+	filetype := FileType(stat)
+	if filetype != "dir" {
+		t.Fatalf("Was expecting FileType() to return value 'dir' but it returned '%s'", filetype)
+	}
+}
+
+// test with symlink
+func TestFileType3(t *testing.T) {
+	path, err := SetupTmpFileWithContent([]byte(`some text goes here`), "unittest_utils_test_")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := os.Remove(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	var symLinkPath = filepath.Join(os.TempDir(), "unittest_utils_test_symlink_to_dir7")
+	err = os.Symlink(path, symLinkPath)
+	if err != nil {
+		t.Fatalf("Error setting up symlink: %s", err)
+	}
+	defer func() {
+		err := os.Remove(symLinkPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	_, err = FileExists(symLinkPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filestat, err := os.Lstat(symLinkPath)
+	if err != nil {
+		t.Fatalf("os.stat() returned an error despite none being expected: %s", err)
+	}
+	filetype := FileType(filestat)
+	if filetype != "symlink" {
+		t.Fatalf("Was expecting FileType() to return value 'symlink' but it returned '%s'", filetype)
+	}
+}

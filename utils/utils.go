@@ -1,10 +1,12 @@
 package utils
 
 import (
+	"crypto/md5" // #nosec
 	"encoding/json"
 	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io"
 	"os"
 	"testing"
 	"io/ioutil"
@@ -154,4 +156,43 @@ func SetupTmpDir(prefix string, t *testing.T) string {
 		t.Fatal(err)
 	}
 	return tmpdir
+}
+
+
+func GetFileMD5Sum(path string)(string, error){
+	f, err := os.Open(path) // #nosec
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		err := f.Close()
+		if err != nil {
+			logger.Warnf("After MD5 checksum calculation for '%s' while trying to close the file descriptor " +
+				"the following error was encountered: %s", path, err)
+		}
+	}()
+
+	h := md5.New() // #nosec
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	// %x means: base 16, with lower-case letters for a-f
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// checks if the given "stat" is one of: file, symlink, directory. It is expected that only objects of those types are
+// passed but if this not the case then anything else will be labeled as "unknown"
+func FileType(stat os.FileInfo) (string) {
+	if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
+		return "symlink"
+	}
+	if stat.IsDir() {
+		return "dir"
+	}
+	// Not a symlink
+	if stat.Mode().IsRegular() != true {
+		return "unknown"
+	}
+	return "file"
 }

@@ -49,17 +49,18 @@ type FilePermissions struct {
 // gets in a platform dependent way the properties of a file or directory. The code here works only on NTFS file systems
 // parameters: $path is the path to the file/directory ; $stat - not used in the Windows implementation
 // returns: owner name (string) ; FilePermissions object which was JSON Marshalled (string); error if != nil then the first
-// two strings will be empty
+// strings will container if possible the account name and if this can't be extracted then the account SID or worst
+// case scenario it will be empty; the second string will be empty if an error is encountered
 //
 // Example usage:
-// 	_, jsonPermissions, err := getObjectPermissions(`C:\Users\testuser\Desktop\test`)
+// 	_, jsonPermissions, err := GetObjectPermissions(`C:\Users\testuser\Desktop\test`)
 //	if err != nil {
 //		fmt.Printf("Got error: %s\n", err)
 //	} else {
 //		fmt.Printf("%+v\n", jsonPermissions)
 //	}
 //
-func getObjectPermissions(path string, stat os.FileInfo) (string, string, error) {
+func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error) {
 	// Stuff to read to have a basic understanding of dACLS, ACEs and others:
 	// https://docs.microsoft.com/en-us/windows/desktop/secauthz/dacls-and-aces
 	var (
@@ -124,7 +125,7 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 	if err != nil {
 		logger.Warnf("while trying to get account details for '%s' which is the owner of '%s' the " +
 			"following error was encountered: '%s'", filePerm.Owner.SID, path, err)
-		return "", "", ErrCouldNotGetAccountDetails
+		return filePerm.Owner.SID, "", ErrCouldNotGetAccountDetails
 	}
 	if filePerm.Owner.Name == "" {
 		filePerm.Owner.Name = filePerm.Owner.SID
@@ -132,20 +133,20 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 
 	if group == nil {
 		logger.Warnf("could not establish owning group for '%s'", path)
-		return "", "", ErrCouldNotGetGroup
+		return filePerm.Owner.Name, "", ErrCouldNotGetGroup
 	}
 	filePerm.Group.SID, err = group.String()
 	if err != nil {
 		logger.Warnf("while trying to get the string representation of the account SID representing the group of " +
 			"'%s' the following error was encountered: '%s'", path, err)
-		return "", "", ErrCouldNotGetSidString
+		return filePerm.Owner.Name, "", ErrCouldNotGetSidString
 	}
 
 	filePerm.Group.Name, filePerm.Group.Domain, filePerm.Group.Type, err = group.LookupAccount("")
 	if err != nil {
 		logger.Warnf("while trying to get account details for '%s' which is the owning group of '%s' the " +
 			"following error was encountered: '%s'", filePerm.Group.SID, path, err)
-		return "", "", ErrCouldNotGetAccountDetails
+		return filePerm.Owner.Name, "", ErrCouldNotGetAccountDetails
 	}
 	if filePerm.Group.Name == "" {
 		filePerm.Group.Name = filePerm.Group.SID
@@ -156,7 +157,7 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 		logger.Info("'%s' doesn't have a DACL\n", path)
 		jsonPayload, err := json.Marshal(filePerm)
 		if err !=nil {
-			return "", "", ErrCouldNotJsonEncode
+			return filePerm.Owner.Name, "", ErrCouldNotJsonEncode
 		}
 		return filePerm.Owner.Name, string(jsonPayload), nil
 	}
@@ -170,13 +171,13 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 		if err != nil {
 			logger.Warnf("while trying to get the string representation of the account SID for ACL " +
 				"entry %d belonging to '%s' the following error was encountered: '%s'", currentAceNumber , path, err)
-			return "", "", ErrCouldNotGetSidString
+			return filePerm.Owner.Name, "", ErrCouldNotGetSidString
 		}
 		sidAccountName, sidDomain, sidAccountType, err := ace.GetSID().LookupAccount("")
 		if err != nil {
 			logger.Warnf("unable to get security details for ACL entry %d having details '%+v' of '%s' as the " +
 				"following error was encountered: '%s'", currentAceNumber, ace, path, err)
-			return "", "", ErrCouldNotGetAccountDetails
+			return filePerm.Owner.Name, "", ErrCouldNotGetAccountDetails
 		}
 
 		entry := ACE{
@@ -271,7 +272,7 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 		default:
 			{
 				logger.Warnf("Unsupported Access Control Entry of type: '%+v'", aceDetails)
-				return "", "", ErrUnsupportedAceType
+				return filePerm.Owner.Name, "", ErrUnsupportedAceType
 			}
 		}
 		filePerm.ACEs = append(filePerm.ACEs, entry)
@@ -284,7 +285,7 @@ func getObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 	jsonPayload, err := json.Marshal(filePerm)
 	if err !=nil {
 		logger.Warnf("Could not JSON encode the permissions of '%s' due to error: '%s'", path, err)
-		return "", "", ErrCouldNotJsonEncode
+		return filePerm.Owner.Name, "", ErrCouldNotJsonEncode
 	}
 	return filePerm.Owner.Name, string(jsonPayload), nil
 }
