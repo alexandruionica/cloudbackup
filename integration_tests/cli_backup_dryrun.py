@@ -26,10 +26,8 @@ class TestCliBackupValidate(unittest.TestCase):
         self.username2 = 'testuser2'
         self.password2 = 'Oonaawai8Eep]eethe8eefa$'
         # server - config file
-        tmphandle, self.server_config_file_path = tempfile.mkstemp(suffix='_integration_tests_server_config_file.yaml')
-        tmpfile = os.fdopen(tmphandle, "w")
-        tmpfile.write(working_server_config_file_content)
-        tmpfile.close()
+        self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
+            suffix='_integration_tests_cli_backup_dryrun_')
         # client - config file
         tmphandle, self.client_config_file_path = tempfile.mkstemp(suffix='_integration_tests_client_config_file.yaml')
         tmpfile = os.fdopen(tmphandle, "w")
@@ -49,11 +47,16 @@ class TestCliBackupValidate(unittest.TestCase):
         self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url)
 
     def tearDown(self):
-        if os.path.exists(self.server_config_file_path):
-            os.remove(self.server_config_file_path)
+        self.daemon.kill()
+        # remove config file and any tmp dirs required by config file statements
+        for entry in self.to_delete:
+            if os.path.exists(entry):
+                if os.path.isdir(entry):
+                    shutil.rmtree(entry)
+                else:
+                    os.remove(entry)
         if os.path.exists(self.client_config_file_path):
             os.remove(self.client_config_file_path)
-        self.daemon.kill()
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
 

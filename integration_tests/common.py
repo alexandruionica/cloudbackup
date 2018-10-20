@@ -373,3 +373,16 @@ def setup_dir_with_tmp_files():
             with open(fname, "w", encoding="utf-8") as f:
                 f.write("some text for " + fname)
     return tmpdir, filelist
+
+
+# sets up a server config file to be used for various tests
+# returns: path to config file; array of paths to delete (config file path, various temporary directories which may
+# be needed)
+def setup_tmp_config_file_and_tmp_dirs(suffix):
+    tmphandle, config_file_path = tempfile.mkstemp(suffix=suffix + '__config.yaml')
+    data_dir = tempfile.mkdtemp(suffix=suffix + '__datadir')
+    server_config = working_server_config_file_content.replace("data_dir: ./tmp/", "data_dir: " + data_dir, 1)
+    tmpfile = os.fdopen(tmphandle, "w")
+    tmpfile.write(server_config)
+    tmpfile.close()
+    return config_file_path, [config_file_path, data_dir]
