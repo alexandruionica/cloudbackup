@@ -40,19 +40,42 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				// check if properties match between DB record and os.FileInfo
 				logger.Infof("Found db record for '%s' with properties '%+v'", path, dbRecordProperties)
 				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum)
+				newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
+				if err != nil {
+					// something bad enough happened that we don't have a usable db record so we can't proceed to
+					// backup this file
+					return false, err
+				}
 				if contentChanged {
-					_, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
-					// newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
+					// back up the object to one or more remote object stores
+					cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig)
 					if err != nil {
-						// something bad enough happened that we don't have a usable db record so we can't proceed to
-						// backup this file
 						return false, err
 					}
-					// TODO - proceed to upload file & metadata and then add "Target" to DB record and then update record in db
+					if cancelled {
+						return true, nil
+					}
+					// TODO - add "Target" to DB record and then update record in db
+
+					// backup successful
+					return false, nil
+
 				} else {
 					if metadataChanged {
 						// TODO - proceed to update file metadata in the DB and on the remote ???? (to decide what to do with
 						// the remote: changed owner is probably something we want to flag, but not much else)
+						// back up the object to one or more remote object stores
+						cancelled, err := UpdateObjectMetadata(ctx, path, newDbRecord, backupConfig)
+						if err != nil {
+							return false, err
+						}
+						if cancelled {
+							return true, nil
+						}
+						// TODO - insert / update db records
+
+						// backup successful
+						return false, nil
 					}
 				}
 			// no db record found so this is the first time this object is backed up
@@ -65,14 +88,24 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				if err != nil {
 					ctime = time.Time{}
 				}
-				_, err = PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
-				// newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
+				newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
 				if err != nil {
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
 					// backup this file
 					return false, err
 				}
-				// TODO - proceed to upload file & metadata and then insert DB record
+				// back up the object to one or more remote object stores
+				cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig)
+				if err != nil {
+					return false, err
+				}
+				if cancelled {
+					return true, nil
+				}
+				// TODO - insert DB records
+
+				// backup successful
+				return false, nil
 			}
 		}
 	}
@@ -136,7 +169,8 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.BackedUpFileProperties, compareChecksum bool) (contentChanged bool,
 	metadataChanged bool, ctime time.Time, checksum string) {
 	var err error
-	if compareChecksum && utils.FileType(stat) == "file" {
+	objectType := utils.FileType(stat)
+	if compareChecksum && objectType == "file" {
 		checksum, err = utils.GetFileMD5Sum(path)
 		if err != nil {
 			// if we got any errors means we could not calculate the checksum so to be safe, we consider that the file needs to be uploaded
@@ -147,14 +181,30 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 	// if size or mtime differs then we got a file change
 	} else if stat.Size() != dbRecordProperties.Size || stat.ModTime() != dbRecordProperties.Mtime {
 		contentChanged = true
+	// if type changed then we need to back it up (for example in the DB it's marked as a symlink but on disk it's a file now
+	} else if objectType != dbRecordProperties.Type {
+		contentChanged = true
 	}
 	ctime, err = fileproperties.GetCtime(path)
+	// in case of error we just treat it as the metadata changed as we can't know for sure if it didn't and it's better to be safe and just back it up
 	if err != nil {
 		metadataChanged = true
 	} else {
 		if ctime != dbRecordProperties.Ctime {
 			metadataChanged = true
 		}
+	}
+	// if we have a symlink, check if the symlink target has changed and if so then update metadata
+	if ! metadataChanged && objectType == "symlink" {
+		linkTarget, err := os.Readlink(path)
+		    // in case of error we just treat it as the metadata changed as we can't know for sure if it didn't and it's better to be safe and just back it up
+			if err != nil {
+				metadataChanged = true
+			} else {
+				if linkTarget != dbRecordProperties.LinkTarget {
+					metadataChanged = true
+				}
+			}
 	}
 	return
 }
@@ -222,7 +272,32 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 }
 
 // uploads an object (file / dir / symlink) to the remote object storage. For dirs/symlinks it only uploads metadata
+// for files it uploads both content and metadata
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func UploadObject (ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup) (bool, error) {
+func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties, backupConfig config.Backup) (bool, error) {
+	// TODO - use the context and pass it further down
+	if newDbRecord.Type == "file" {
+		logger.Debugf("Uploading '%s'", path)
+	} else {
+		logger.Debugf("Uploading metadata for '%s' which is of type '%s'", path, newDbRecord.Type)
+	}
+
+
+	// TODO - construct metadata before uploading
+
+	return false, nil
+}
+
+// updates remote metadata for an object (file / dir / symlink) to the remote object storage. The object must already
+// have been uploaded
+// params: $ctx for canceable context; $path with absolute path to object being backed up; $newDbRecord has all of the
+// details about the object which will be partially used for the metadata; $backupConfig is the struct with the details
+// of this backup as represented in the config file
+// return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
+func UpdateObjectMetadata(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties, backupConfig config.Backup) (bool, error) {
+	// TODO - use the context and pass it further down
+	logger.Debugf("Updating remote stored metadata for previously backed up and unchanged '%s'", path)
+
+
 	return false, nil
 }
