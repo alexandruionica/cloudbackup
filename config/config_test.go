@@ -12,17 +12,9 @@ import (
 // test loading config file with regular reporting from configor library
 func TestLoad1(t *testing.T) {
 	var compare = &RuntimeConfig{}
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -38,17 +30,9 @@ func TestLoad1(t *testing.T) {
 // test loading config file with DEBUG(actually called Verbose) reporting from configor library
 func TestLoad2(t *testing.T) {
 	var compare = &RuntimeConfig{}
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result, err := Load(path, true, &sync.RWMutex{})
 	if err != nil {
@@ -137,17 +121,9 @@ func TestLoad6(t *testing.T) {
 }
 
 func TestConfiguration_GetCopyWithLock(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -164,17 +140,9 @@ func TestConfiguration_GetCopyWithLock(t *testing.T) {
 
 // validate valid config yaml
 func TestValidate0(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -193,17 +161,9 @@ func TestValidate0(t *testing.T) {
 
 // validate invalid config (yaml is valid but once loaded we change a setting to make Struct fail validation)
 func TestValidate1(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -255,17 +215,9 @@ func TestValidate1(t *testing.T) {
 
 // validate data_dir using absolute path which does not exist
 func TestValidate5(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -287,17 +239,9 @@ func TestValidate5(t *testing.T) {
 }
 
 func TestValidate6(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -319,17 +263,9 @@ func TestValidate6(t *testing.T) {
 }
 
 func TestValidate7(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -351,17 +287,9 @@ func TestValidate7(t *testing.T) {
 }
 
 func TestValidate8(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -384,17 +312,9 @@ func TestValidate8(t *testing.T) {
 }
 
 func TestValidate9(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -418,17 +338,9 @@ func TestValidate9(t *testing.T) {
 }
 
 func TestValidate10(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -453,17 +365,9 @@ func TestValidate10(t *testing.T) {
 
 // two users with the same name
 func TestValidate11(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -487,17 +391,9 @@ func TestValidate11(t *testing.T) {
 
 // user with invalid password hash
 func TestValidate12(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -521,17 +417,9 @@ func TestValidate12(t *testing.T) {
 
 // two backups with the same name
 func TestValidate13(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -555,17 +443,9 @@ func TestValidate13(t *testing.T) {
 
 // two backups targets the same name belonging to one backup
 func TestValidate14(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -591,17 +471,9 @@ func TestValidate14(t *testing.T) {
 
 // users with password hash set to "******"
 func TestValidate15(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -627,17 +499,9 @@ func TestValidate15(t *testing.T) {
 
 // users with password hash set to "******BLA"
 func TestValidate16(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -663,17 +527,9 @@ func TestValidate16(t *testing.T) {
 
 // validate User's 'access' key (allowed values should be only 'read', 'write')
 func TestValidate17(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -721,17 +577,9 @@ func TestValidate17(t *testing.T) {
 
 // validate html_dir and html_dir using absolute path which does not exist
 func TestValidate18(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -753,17 +601,9 @@ func TestValidate18(t *testing.T) {
 }
 
 func TestValidate19(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -787,17 +627,9 @@ func TestValidate19(t *testing.T) {
 
 // check that commas are now allowed in target names
 func TestValidate20(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -814,17 +646,9 @@ func TestValidate20(t *testing.T) {
 
 // check that a backup "Name" containing non ASCII characters is not permitted
 func TestValidate21(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -860,17 +684,9 @@ func TestCheckStringIsOnly3(t *testing.T) {
 
 // check that for fully populated configs (actual hash in the password field) we don't get an error
 func TestCopyPasswordsFromOldConfig(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -901,17 +717,9 @@ func TestCopyPasswordsFromOldConfig(t *testing.T) {
 
 // check that "****" password actually get replaced with hashes
 func TestCopyPasswordsFromOldConfig2(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -962,17 +770,9 @@ func TestCopyPasswordsFromOldConfig2(t *testing.T) {
 
 // check that for a user with pass=*** that we get an error if the user doesn't exist in the old config
 func TestCopyPasswordsFromOldConfig3(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1000,17 +800,9 @@ func TestCopyPasswordsFromOldConfig3(t *testing.T) {
 
 // check that for a Backup with EncryptPass=*** that we get an error if the Backup doesn't exist in the old config
 func TestCopyPasswordsFromOldConfig4(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1039,17 +831,9 @@ func TestCopyPasswordsFromOldConfig4(t *testing.T) {
 // check that for a Backup with EncryptPass=*** that we get an error if the Backup doesn't have a password in the
 // old config
 func TestCopyPasswordsFromOldConfig5(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1077,17 +861,9 @@ func TestCopyPasswordsFromOldConfig5(t *testing.T) {
 
 // check that for a Backup.Target with Pass=*** that we get an error if the Target doesn't exist in the old config
 func TestCopyPasswordsFromOldConfig6(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1120,17 +896,9 @@ func TestCopyPasswordsFromOldConfig6(t *testing.T) {
 // check that for a Backup.Target with Pass=*** that we get an error if the Backup with that name doesn't exist in the
 // old config
 func TestCopyPasswordsFromOldConfig7(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1163,17 +931,9 @@ func TestCopyPasswordsFromOldConfig7(t *testing.T) {
 // check that for a Backup.Target with Pass=*** that we get an error if the Target doesn't have a password in the
 // old config
 func TestCopyPasswordsFromOldConfig8(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1206,17 +966,9 @@ func TestCopyPasswordsFromOldConfig8(t *testing.T) {
 
 // check passwords get replaced with *****
 func TestSanitizeCfgTemplate(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1256,17 +1008,9 @@ func TestValidateDir(t *testing.T) {
 // save  config, load again an compare settings got saved
 func TestSave(t *testing.T) {
 	const tmpName = "cHanGedName"
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := Load(path, false, &sync.RWMutex{})
 	if err != nil {

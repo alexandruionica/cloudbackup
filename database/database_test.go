@@ -50,17 +50,10 @@ func TestGetDbFilePath2(t *testing.T) {
 func TestDbFileExists1(t *testing.T) {
 	// we will test with a yaml file (not an .sqlite) but it doesn't matter the extension or content as long as the
 	// file exits
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_database_DbFileExists_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_database_DbFileExists_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
 	exists := DbFileExists(path)
 	if ! exists {
 		t.Fatalf("DbFileExists() was supposed to return true for '%s' but it didn't", path)

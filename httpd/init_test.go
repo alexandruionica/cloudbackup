@@ -1,16 +1,15 @@
 package httpd
 
 import (
-	"testing"
 	"cloudbackup/config"
+	"cloudbackup/shared"
 	"cloudbackup/testutils"
-	"cloudbackup/utils"
+	"crypto/tls"
 	"net/http"
 	"os"
-	"sync"
 	"reflect"
-	"crypto/tls"
-	"cloudbackup/shared"
+	"sync"
+	"testing"
 )
 
 const addr = "localhost:8080"
@@ -18,16 +17,10 @@ const addrSsl = "localhost:8443"
 
 func TestNew(t *testing.T) {
 	var compare = &SrvData{}
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_init_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
@@ -51,16 +44,10 @@ func TestNew(t *testing.T) {
 }
 
 func TestStartAndCloseHttp(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_init_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
@@ -71,7 +58,7 @@ func TestStartAndCloseHttp(t *testing.T) {
 		commWithSchedulerForBackup, backupJobsState)
 	srv.Start()
 	// check several times is port is being listened on
-	err = testutils.WaitForServerToStart("127.0.0.1", "8080", t)
+	err := testutils.WaitForServerToStart("127.0.0.1", "8080", t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,17 +78,13 @@ func TestStartAndCloseHttp(t *testing.T) {
 }
 
 func TestStartAndCloseHttps(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_init_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
 	var sslCert, sslKey = testutils.SetupSslCertAndKey("unittest_httpd_test_", t)
 	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = os.Remove(sslCert)
+		err := os.Remove(sslCert)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -122,7 +105,7 @@ func TestStartAndCloseHttps(t *testing.T) {
 	srv.Start()
 
 	// check several times is port is being listened on
-	err = testutils.WaitForServerToStart("127.0.0.1", "8443", t)
+	err := testutils.WaitForServerToStart("127.0.0.1", "8443", t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,13 +129,9 @@ func TestStartAndCloseHttps(t *testing.T) {
 //func TestStop(t *testing.T) {
 //	// the default server Mux remains initialised from previous tests so we need to clean it up first
 //	http.DefaultServeMux = http.NewServeMux()
-//	var path = utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_httpd_test_", t)
-//	defer func() {
-//		err := os.Remove(path)
-//		if err != nil {
-//			t.Fatal(err)
-//		}
-//	}()
+//	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_init_test_")
+//	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+//	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 //	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 //	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "")
 //	srv.Start()
