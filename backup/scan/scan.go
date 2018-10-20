@@ -181,7 +181,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 						"","")
 					if ! dryRun {
 						// call to function dealing with backing up of files
-						cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData)
+						cancelled, err := backup.Do(ctx, childPath, fileInfo, backupConfig, dbData)
 						if cancelled{
 							return true, nil
 						}
