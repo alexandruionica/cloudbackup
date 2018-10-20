@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import sys
+import shutil
 import tempfile
 import unittest
 import yaml
@@ -17,10 +18,8 @@ class TestCliBasics(unittest.TestCase):
     def setUp(self):
         self.cmd = cmd_default
         # server - config file
-        tmphandle, self.server_config_file_path = tempfile.mkstemp(suffix='_integration_tests_server_config_file.yaml')
-        tmpfile = os.fdopen(tmphandle, "w")
-        tmpfile.write(working_server_config_file_content)
-        tmpfile.close()
+        self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
+            suffix='_integration_tests_cli_basics')
         # client - config file
         tmphandle, self.client_config_file_path = tempfile.mkstemp(suffix='_integration_tests_client_config_file.yaml')
         tmpfile = os.fdopen(tmphandle, "w")
@@ -28,8 +27,13 @@ class TestCliBasics(unittest.TestCase):
         tmpfile.close()
 
     def tearDown(self):
-        if os.path.exists(self.server_config_file_path):
-            os.remove(self.server_config_file_path)
+        # remove config file and any tmp dirs required by config file statements
+        for entry in self.to_delete:
+            if os.path.exists(entry):
+                if os.path.isdir(entry):
+                    shutil.rmtree(entry)
+                else:
+                    os.remove(entry)
         if os.path.exists(self.client_config_file_path):
             os.remove(self.client_config_file_path)
 

@@ -28,10 +28,8 @@ class TestRestAPIBackup(unittest.TestCase):
         self.username2 = 'testuser2'
         self.password2 = 'Oonaawai8Eep]eethe8eefa$'
         # server - config file
-        tmphandle, self.server_config_file_path = tempfile.mkstemp(suffix='_integration_tests_rest_api_backup.yaml')
-        tmpfile = os.fdopen(tmphandle, "w")
-        tmpfile.write(working_server_config_file_content)
-        tmpfile.close()
+        self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
+            suffix='_integration_tests_rest_api_backup')
         # tmp files for tests
         self.tmpdir, self.filelist = setup_dir_with_tmp_files()
         # adjust server config for job to include above tmpdir
@@ -48,9 +46,14 @@ class TestRestAPIBackup(unittest.TestCase):
         self.api_root = '/api/v1'
 
     def tearDown(self):
-        if os.path.exists(self.server_config_file_path):
-            os.remove(self.server_config_file_path)
         self.daemon.kill()
+        # remove config file and any tmp dirs required by config file statements
+        for entry in self.to_delete:
+            if os.path.exists(entry):
+                if os.path.isdir(entry):
+                    shutil.rmtree(entry)
+                else:
+                    os.remove(entry)
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
 

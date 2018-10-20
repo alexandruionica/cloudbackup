@@ -6,6 +6,7 @@ import os
 import re
 import requests
 import sys
+import shutil
 import tempfile
 import unittest
 import yaml
@@ -17,17 +18,20 @@ from swagger_tester import swagger_test
 class TestRestAPISwagger(unittest.TestCase):
     def setUp(self):
         self.cmd = cmd_default
-        tmphandle, self.config_file_path = tempfile.mkstemp(suffix='_integration_tests_rest_api.yaml')
-        tmpfile = os.fdopen(tmphandle, "w")
-        tmpfile.write(working_server_config_file_content)
-        tmpfile.close()
+        self.config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
+            suffix='_integration_tests_rest_api_swagger')
         self.base_url = "http://127.0.0.1:8080"
         self.daemon = BackupDaemon(config_path=self.config_file_path, base_url=self.base_url)
 
     def tearDown(self):
-        if os.path.exists(self.config_file_path):
-            os.remove(self.config_file_path)
         self.daemon.kill()
+        # remove config file and any tmp dirs required by config file statements
+        for entry in self.to_delete:
+            if os.path.exists(entry):
+                if os.path.isdir(entry):
+                    shutil.rmtree(entry)
+                else:
+                    os.remove(entry)
 
     def test_swagger_unauthorized(self):
         swagger_test(app_url=self.base_url)
