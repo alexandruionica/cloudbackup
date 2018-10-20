@@ -1,26 +1,18 @@
 package cliargs
 
 import (
-	"testing"
 	"cloudbackup/testutils"
-	"cloudbackup/utils"
 	"os"
 	"os/exec"
+	"testing"
 )
 
 
 func TestExecute1OfArgsCommandConfigCommandValidate(t *testing.T){
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_cliargs_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded - for some reason, this doesn't
+	// work as expected only for this particular unittest; might have something to do with the below cmd.exec()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	testobj := &ArgsCommandServerConfigValidate{
 		Debug: false,
@@ -34,7 +26,7 @@ func TestExecute1OfArgsCommandConfigCommandValidate(t *testing.T){
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=TestExecute1OfArgsCommandConfigCommandValidate")
 	cmd.Env = append(os.Environ(), "TEST_RUNNING=1")
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		t.Fatalf("process ran with err %v, want exit status 0", err)
 	}

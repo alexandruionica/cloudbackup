@@ -1,13 +1,12 @@
 package shared
 
 import (
-	"testing"
+	"cloudbackup/config"
+	"cloudbackup/testutils"
+	"cloudbackup/utils"
 	"github.com/satori/go.uuid"
 	"sync"
-	"cloudbackup/config"
-	"cloudbackup/utils"
-	"cloudbackup/testutils"
-	"os"
+	"testing"
 )
 
 // test struct.MarkRunning() struct.MarkStopping() struct.IsRunning() and struct.IsStopping()
@@ -170,17 +169,10 @@ func TestMarkRunningStoppingAndIsRunningIsStopping2(t *testing.T) {
 // test struct.IncrementCounter() and also struct.Get()
 func TestIncrementCounterAndGet(t *testing.T) {
 	logContext := "TestIncrementCounter"
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_structs_scheduler_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
 	configuration , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
@@ -225,17 +217,10 @@ func TestIncrementCounterAndGet(t *testing.T) {
 // test struct.UpdateStatsText() and also struct.Get()
 func TestUpdateStatsTextAndGet(t *testing.T) {
 	logContext := "TestIncrementCounter"
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_structs_scheduler_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
 	configuration , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)

@@ -19,17 +19,9 @@ import (
 
 // test number of examined files as reported by Path() when  dereference=true
 func TestPath1(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -100,17 +92,9 @@ func TestPath1(t *testing.T) {
 
 // test number of examined files as reported by Path() when  dereference=false
 func TestPath2(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -183,17 +167,9 @@ func TestPath2(t *testing.T) {
 func TestPath3(t *testing.T) {
 	// skip this test on Windows as  os.Chmod 0000 is not possible on Windows
 	if runtime.GOOS != "windows" {
-		path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-		if err != nil {
-			t.Fatal(err)
-		}
+		path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 		// remove tmpfile which holds the yaml as the config has been parsed and loaded
-		defer func() {
-			err := os.Remove(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}()
+		defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 		result , err := config.Load(path, false, &sync.RWMutex{})
 		if err != nil {
@@ -274,17 +250,9 @@ func TestPath3(t *testing.T) {
 
 // test number of examined files as reported by Path() when  dereference=true and we have two simple exclusion rules
 func TestPath4(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -360,17 +328,9 @@ func TestPath4(t *testing.T) {
 // test number of examined files as reported by Path() when  dereference=true and we have an exclusion rule
 // matching a unicode dir name
 func TestPath5(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -444,17 +404,9 @@ func TestPath5(t *testing.T) {
 
 // test number of examined files as reported by Path() when  dereference=true and the top level path is a file
 func TestPath6(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -533,17 +485,9 @@ func TestPath6(t *testing.T) {
 // test number of examined files as reported by Path() when  dereference=true with two top level paths in the config file:
 //  one a folder (containing stuff) and the other one a file
 func TestPath7(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -631,17 +575,9 @@ func TestPath7(t *testing.T) {
 // test number of examined files as reported by Path() when  dereference=true with two top level paths in the config file:
 //  one a folder (containing stuff) and the other one also a folder (having a copy of the files/folders from 1st path)
 func TestPath8(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -722,17 +658,9 @@ func TestPath8(t *testing.T) {
 // test number of examined files as reported by Path() when  dereference=false and we have an exclusion rule
 // matching any file ending with .txt within any folder
 func TestPath9(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -805,17 +733,9 @@ func TestPath9(t *testing.T) {
 // test number of examined files as reported by Path() when  dereference=false and we have an exclusion rule
 // matching any file ending with file[2-4]*.txt within any folder
 func TestPath10(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -888,17 +808,9 @@ func TestPath10(t *testing.T) {
 // test number of examined files as reported by Path() when  dereference=false and we have an exclusion rule
 // matching any file ending with file?.txt within any folder
 func TestPath11(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -971,17 +883,9 @@ func TestPath11(t *testing.T) {
 // test number of examined files as reported by Path() when  dereference=false and we have an exclusion rule
 // matching any file ending with file{1,2}.txt within any folder
 func TestPath12(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1053,17 +957,9 @@ func TestPath12(t *testing.T) {
 
 // test number of examined files as reported by Path() when  dereference=true and when using an actual DB
 func TestPath13(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_backup_scan_path_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result , err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {

@@ -1,17 +1,20 @@
 package testutils
 
 import (
-	"testing"
+	"bytes"
 	"cloudbackup/utils"
-	"net"
-	"time"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
-	"io/ioutil"
+	"testing"
+	"time"
 )
 
+// BEWARE that if you change "data_dir: /tmp" or "html_dir: /tmp" then the function SetupMockConfigAndTmpPaths
+// needs to also be adjusted
 var MockYaml = []byte(`---
 data_dir: /tmp
 html_dir: /tmp
@@ -399,4 +402,37 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 	}
 
 	return path
+}
+
+// sets up a server config file with whatever additional tmp dirs are needed. It's up to the user to delete the
+// created items which are returned as an slice of strings
+// returns: path to config file; slice of paths to delete
+func SetupMockConfigAndTmpPaths(t *testing.T, prefix string) (string, []string) {
+	dbDataDirPath := utils.SetupTmpDir(prefix + "_datadir_", t)
+	HtmlDirPath := utils.SetupTmpDir(prefix + "_htmldir_", t)
+	newMockYaml := bytes.Replace(MockYaml, []byte("data_dir: /tmp"), []byte("data_dir: " + dbDataDirPath), 1)
+	newMockYaml = bytes.Replace(newMockYaml, []byte("html_dir: /tmp"), []byte("html_dir: " + HtmlDirPath), 1)
+	path, err := utils.SetupTmpFileWithContent(newMockYaml, prefix + "_config_")
+	if err != nil {
+		err2 := os.RemoveAll(dbDataDirPath)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", dbDataDirPath, err2)
+		}
+		t.Fatalf("Could not create tmp config file due to error: %s", err)
+	}
+
+	pathsToDelete := make([]string,0)
+	pathsToDelete = append(pathsToDelete, path, dbDataDirPath, HtmlDirPath)
+	return path, pathsToDelete
+}
+
+// given a slice containing paths, it tries delete each one of them from disk
+func DeleteTestFilesAndDirs(toDelete []string){
+	for _, item := range toDelete {
+		err := os.RemoveAll(item)
+		if err != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", item, err)
+		}
+
+	}
 }

@@ -16,23 +16,17 @@ import (
 // test EnsureTargetsInDb() with empty db
 func TestEnsureTargetsInDb1(t *testing.T) {
 	// setup config file in a tmpdir
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_database_dbops_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	srvConfig, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-	// setup tmp dir to hold the database
+	// setup tmp dir to hold the database - while this is normally setup automatically, here we want to be sure the DB
+	// is closed before we attempt to delete the file
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	db , err := database.Start(dbDataDirPath, backupName)
@@ -106,23 +100,17 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 // test EnsureTargetsInDb() with empty db and then with non empty db where it doesn't need to do anything
 func TestEnsureTargetsInDb2(t *testing.T) {
 	// setup config file in a tmpdir
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_database_dbops_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	srvConfig, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-	// setup tmp dir to hold the database
+	// setup tmp dir to hold the database - while this is normally setup automatically, here we want to be sure the DB
+	// is closed before we attempt to delete the file
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	db , err := database.Start(dbDataDirPath, backupName)
@@ -155,23 +143,17 @@ func TestEnsureTargetsInDb2(t *testing.T) {
 // test EnsureTargetsInDb() with empty db and then with non empty db where it needs to add 1 entry
 func TestEnsureTargetsInDb3(t *testing.T) {
 	// setup config file in a tmpdir
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_database_dbops_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	srvConfig, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-	// setup tmp dir to hold the database
+	// setup tmp dir to hold the database - while this is normally setup automatically, here we want to be sure the DB
+	// is closed before we attempt to delete the file
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	db , err := database.Start(dbDataDirPath, backupName)

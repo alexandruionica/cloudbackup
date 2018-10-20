@@ -1,44 +1,24 @@
 package scheduler
 
 import (
+	"cloudbackup/config"
 	"cloudbackup/shared"
 	"cloudbackup/testutils"
-	"cloudbackup/utils"
-	"cloudbackup/config"
 	"github.com/satori/go.uuid"
-	"os"
 	"sync"
 	"testing"
 )
 
 //normal function usage, when no error conditions exist (empty backupJobsState.Running slice)
 func TestGenerateJobUuid1(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_scheduler_GenerateJobUuid_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_scheduler_GenerateJobUuid_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	dbDataDirPath := utils.SetupTmpDir("unittest_scheduler_GenerateJobUuid_datadir_", t)
-	defer func() {
-		err := os.RemoveAll(dbDataDirPath) // #nosec
-		if err != nil {
-			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-
-	result.Config.DataDir = dbDataDirPath
 
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
@@ -56,32 +36,14 @@ func TestGenerateJobUuid1(t *testing.T) {
 
 //normal function usage, when no error conditions exist (populated backupJobsState.Running slice)
 func TestGenerateJobUuid2(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_scheduler_GenerateJobUuid_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_scheduler_GenerateJobUuid_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	dbDataDirPath := utils.SetupTmpDir("unittest_scheduler_GenerateJobUuid_datadir_", t)
-	defer func() {
-		err := os.RemoveAll(dbDataDirPath) // #nosec
-		if err != nil {
-			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-
-	result.Config.DataDir = dbDataDirPath
 
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
@@ -107,32 +69,14 @@ func TestGenerateJobUuid2(t *testing.T) {
 
 // pass in unknown job type, should error
 func TestGenerateJobUuid3(t *testing.T) {
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_scheduler_GenerateJobUuid_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_scheduler_GenerateJobUuid_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	dbDataDirPath := utils.SetupTmpDir("unittest_scheduler_GenerateJobUuid_datadir_", t)
-	defer func() {
-		err := os.RemoveAll(dbDataDirPath) // #nosec
-		if err != nil {
-			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-
-	result.Config.DataDir = dbDataDirPath
 
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}

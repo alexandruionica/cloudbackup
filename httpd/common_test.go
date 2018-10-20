@@ -1,35 +1,25 @@
 package httpd
 
 import (
-	"testing"
+	"cloudbackup/config"
+	"cloudbackup/testutils"
+	"encoding/json"
+	"github.com/julienschmidt/httprouter"
+	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
-	"github.com/julienschmidt/httprouter"
-	"net/http"
-	"cloudbackup/config"
-	"cloudbackup/utils"
-	"cloudbackup/testutils"
-	"os"
-	"io/ioutil"
-	"encoding/json"
+	"testing"
 )
 
 
 // basic auth test - if not supplying credentials then 401 is returned
 func TestBasicAuth1(t *testing.T) {
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -65,17 +55,9 @@ func TestBasicAuth2(t *testing.T) {
 	username := "testuser1"
 	password := "HV}H/y?<9$]Z5N4N"
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -111,17 +93,9 @@ func TestBasicAuth3(t *testing.T) {
 	username := "testuser1"
 	password := "@#$@#$"
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -157,17 +131,9 @@ func TestBasicAuth4(t *testing.T) {
 	username := "justauser"
 	password := "HV}H/y?<9$]Z5N4N"
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -204,17 +170,9 @@ func TestBasicAuth5(t *testing.T) {
 	username := "justauser"
 	password := "some-pass"
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -249,17 +207,9 @@ func TestBasicAuth5(t *testing.T) {
 // calling CheckAccess() on unauthenticated sessions should return HTTP response code 500
 func TestCheckAccess1(t *testing.T) {
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -296,17 +246,9 @@ func TestCheckAccess2(t *testing.T) {
 	username := "testuser1"
 	password := "HV}H/y?<9$]Z5N4N"
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -344,17 +286,9 @@ func TestCheckAccess3(t *testing.T) {
 	username := "testuser2"
 	password := "Oonaawai8Eep]eethe8eefa$"
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -393,17 +327,9 @@ func TestCheckAccess4(t *testing.T) {
 	username := "testuser2"
 	password := "Oonaawai8Eep]eethe8eefa$"
 	// load config file
-	path, err := utils.SetupTmpFileWithContent(testutils.MockYaml, "unittest_config_test_")
-	if err != nil {
-		t.Fatal(err)
-	}
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer func() {
-		err := os.Remove(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
