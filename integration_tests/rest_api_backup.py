@@ -63,9 +63,11 @@ class TestRestAPIBackup(unittest.TestCase):
                     os.remove(entry)
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
-        if platform.system() == 'Windows':
-            if os.path.exists(self.inttestlog):
-                os.remove(self.inttestlog)
+        # for some reason the below fails despite the cloudbackup.exe process supposed to be killed and the above
+        # succeeding, for now just abandoning this as a non issue and leaving log files behind
+        # if platform.system() == 'Windows':
+        #     if os.path.exists(self.inttestlog):
+        #         os.remove(self.inttestlog)
 
     def ValidatedAndDecodeResponse(self, r, url):
         """
