@@ -65,12 +65,12 @@ func TestGetCtime2(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_fileproperties_TestGetCtime2_", t)
-	//defer func() {
-	//	err := os.RemoveAll(backupDirPath) // #nosec
-	//	if err != nil {
-	//		t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
-	//	}
-	//}()
+	defer func() {
+		err := os.RemoveAll(backupDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
 	var files []string
 	err := filepath.Walk(backupDirPath, func(path string, info os.FileInfo, err error) error {
 		files = append(files, path)
