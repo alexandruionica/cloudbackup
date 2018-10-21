@@ -19,12 +19,12 @@ func testGetcTime(t *testing.T, path string, timestart time.Time) {
 		t.Fatalf("File creation time for %s is reported to be before this test started. Ctime: %s; test " +
 			"start: %s", path, fileCtime, timestart)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 	time1stTest := time.Now()
 	if fileCtime.After(time1stTest) {
 		t.Fatalf("Ctime for %s is reported to be %s which is in the future", path, fileCtime)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 	// update file ctime and see we can see a different result from GetCtime
 	if err := os.Chmod(path, 0700); err != nil {
 		t.Fatalf("While trying to chmod() file %s got error: %s", path, err)
@@ -44,7 +44,7 @@ func testGetcTime(t *testing.T, path string, timestart time.Time) {
 func TestGetCtime1(t *testing.T) {
 	timestart := time.Now()
 	// seems that if we don't sleep for a bit then we get an error when we do the first comparison below
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 	path, err := utils.SetupTmpFileWithContent([]byte("blablabla"), "unittest_backup_fileproperties_TestGetCtime1_")
 	if err != nil {
 		t.Fatalf("While trying to setup tmpfile used for test got error: %s", err)
@@ -58,7 +58,7 @@ func TestGetCtime1(t *testing.T) {
 	testGetcTime(t, path, timestart)
 }
 
-// repeat above test but with multiple files
+// repeat above test but with multiple files/folders/symlinks which also have unicode in their name
 func TestGetCtime2(t *testing.T) {
 	timestart := time.Now()
 	// seems that if we don't sleep for a bit then we get an error when we do the first comparison below
