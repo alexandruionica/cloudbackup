@@ -85,7 +85,7 @@ func TestGetCtime2(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		t.Fatalf("While walking path %s got error: %s", backupDirPath, err)
 	}
 	for _, file := range files {
 		testGetcTime(t, file, timestart)
