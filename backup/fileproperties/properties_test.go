@@ -5,6 +5,8 @@ import (
 	"cloudbackup/utils"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -24,20 +26,26 @@ func testGetcTime(t *testing.T, path string, timestart time.Time) {
 	if fileCtime.After(time1stTest) {
 		t.Fatalf("Ctime for %s is reported to be %s which is in the future", path, fileCtime)
 	}
-	time.Sleep(20 * time.Millisecond)
-	// update file ctime and see we can see a different result from GetCtime
-	if err := os.Chmod(path, 0700); err != nil {
-		t.Fatalf("While trying to chmod() file %s got error: %s", path, err)
-	}
-	fileCtime2, err := GetCtime(path)
-	if err != nil {
-		t.Fatalf("2. While trying to get ctime for %s got error: %s", path, err)
-	}
-	if fileCtime.Equal(fileCtime2) {
-		t.Fatal("File ctime should have changed after chmod but it's reported to be the same")
-	}
-	if fileCtime2.Before(time1stTest){
-		t.Fatal("After chmod() the 2nd file ctime should be newer but it isn't")
+	// Symlinks on windows don't seem to have their ctime updated so we'll skip the test on this platform only
+	if ! (strings.Contains(path, "symlink") && runtime.GOOS == "windows") {
+		time.Sleep(20 * time.Millisecond)
+		// update file ctime and see we can see a different result from GetCtime
+		if err := os.Chmod(path, 0444); err != nil {
+			t.Fatalf("While trying to chmod() file %s got error: %s", path, err)
+		}
+		if err := os.Chmod(path, 0700); err != nil {
+			t.Fatalf("While trying to chmod() file %s got error: %s", path, err)
+		}
+		fileCtime2, err := GetCtime(path)
+		if err != nil {
+			t.Fatalf("2. While trying to get ctime for %s got error: %s", path, err)
+		}
+		if fileCtime.Equal(fileCtime2) {
+			t.Fatalf("File %s ctime should have changed after chmod but it's reported to be the same: %s vs %s", path, fileCtime, fileCtime2)
+		}
+		if fileCtime2.Before(time1stTest){
+			t.Fatal("After chmod() the 2nd file ctime should be newer but it isn't")
+		}
 	}
 }
 
