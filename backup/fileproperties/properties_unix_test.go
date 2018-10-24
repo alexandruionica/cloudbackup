@@ -76,7 +76,8 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username,
 	}
 	//
 	if groupname != expandedPerm.Group.Name {
-		t.Fatalf("Expected group of %s to be %s but instead got owner %s", file, groupname, expandedPerm.Group.Name)
+		t.Fatalf("Expected group name of %s to be %s but instead got group name %s . Full details are: %+v",
+			file, groupname, expandedPerm.Group.Name, expandedPerm)
 	}
 	gidNumeric, err := strconv.Atoi(gid)
 	if err != nil {
