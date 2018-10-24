@@ -31,7 +31,7 @@ func getRunningUserDetails(t *testing.T)(uid, username, gid, groupname string){
 	scanner.Scan()
 	lineOutput := scanner.Text()
 	// Use raw strings to avoid having to quote the backslashes.
-	cmdOutput := regexp.MustCompile(`^uid=([0-9]+)\(([a-z]*)\) gid=([0-9]+)\(([a-z]*)\)`)
+	cmdOutput := regexp.MustCompile(`^uid=([0-9]+)\(([a-zA-Z0-9-]*)\) gid=([0-9]+)\(([a-zA-Z0-9-]*)\)`)
 	regexResultArray := cmdOutput.FindStringSubmatch(lineOutput)
 	if regexResultArray == nil {
 		t.Fatal("Could not regex uid, username, gid & groupname")
