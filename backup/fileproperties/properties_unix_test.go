@@ -87,6 +87,10 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username,
 	if err != nil {
 		t.Fatal(err)
 	}
+	// on FreeBSD files under tmp seem to always get the groupname of "wheel"
+	if runtime.GOOS == "freebsd" {
+		gidNumeric = 0
+	}
 	if uint32(gidNumeric) != expandedPerm.Group.Id {
 		t.Fatalf("Expected group id of %s to be %d but instead got id %d", file, gidNumeric, expandedPerm.Group.Id)
 	}
