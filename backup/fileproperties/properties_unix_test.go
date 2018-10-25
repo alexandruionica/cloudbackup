@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"testing"
 )
@@ -74,7 +75,10 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username,
 	if uint32(uidNumeric) != expandedPerm.Owner.Id {
 		t.Fatalf("Expected owner id of %s to be %d but instead got id %d", file, uidNumeric, expandedPerm.Owner.Id)
 	}
-	//
+	// on FreeBSD files under tmp seem to always get the groupname of "wheel"
+	if runtime.GOOS == "freebsd" {
+		groupname = "wheel"
+	}
 	if groupname != expandedPerm.Group.Name {
 		t.Fatalf("Expected group name of %s to be %s but instead got group name %s . Full details are: %+v",
 			file, groupname, expandedPerm.Group.Name, expandedPerm)
