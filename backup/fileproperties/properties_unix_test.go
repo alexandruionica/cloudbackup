@@ -6,13 +6,13 @@ import (
 	"bufio"
 	"cloudbackup/testutils"
 	"encoding/json"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -43,13 +43,119 @@ func getRunningUserDetails(t *testing.T)(uid, username, gid, groupname string){
 	groupname = regexResultArray[4]
 
 	if err := cmd.Wait(); err != nil {
-		log.Fatal(err)
+		t.Fatalf("Command returned error: %s", err)
 	}
 	return uid, username, gid, groupname
 }
 
+
+func getFileMode(t *testing.T, path string, dereference bool)(string){
+	/* Command output for  stat is :
+
+	freebsd/linux/MacOS:  stat -L  (for lstat = dereference)
+	Linux stat output:
+	  File: config.yaml
+	  Size: 3977      	Blocks: 8          IO Block: 4096   regular file
+	Device: fd03h/64771d	Inode: 8130693     Links: 1
+	Access: (0664/-rw-rw-r--)  Uid: ( 1000/ aionica)   Gid: ( 1000/ aionica)
+	Access: 2018-10-21 22:05:53.088448425 +1100
+	Modify: 2018-10-04 19:03:52.099925973 +1000
+	Change: 2018-10-04 19:03:52.099925973 +1000
+	 Birth: -
+
+
+	FreeBSD output from   stat -x
+	  File: "secrets.tdb"
+	  Size: 430080       FileType: Regular File
+	  Mode: (0600/-rw-------)         Uid: (    0/    root)  Gid: (    0/   wheel)
+	Device: 205,3574202471   Inode: 115026    Links: 1
+	Access: Sun Dec 11 00:10:52 2016
+	Modify: Sun Dec 11 00:10:52 2016
+	Change: Tue Sep 12 20:44:54 2017
+
+	MacOS X output from  stat -x  test.py
+	  File: "test.py"
+	  Size: 62           FileType: Regular File
+	  Mode: (0644/-rw-r--r--)         Uid: (  501/ cionica)  Gid: (   20/   staff)
+	Device: 1,4   Inode: 8388253    Links: 1
+	Access: Fri May 20 01:23:56 2016
+	Modify: Fri May 20 01:23:56 2016
+	Change: Fri May 20 01:23:56 2016
+	 */
+	var cmd *exec.Cmd
+	switch os := runtime.GOOS; os {
+	case "darwin", "freebsd":
+		{
+			if dereference {
+				cmd = exec.Command("stat", "-x", "-L", path)
+			} else {
+				cmd = exec.Command("stat", "-x", path)
+			}
+		}
+	case "linux":
+		{
+			if dereference {
+				cmd = exec.Command("stat","-L", path)
+			} else {
+				cmd = exec.Command("stat", path)
+			}
+		}
+	default:
+		t.Fatalf("1. This test doesn't support OS of type: %s . Please adjust the test as needed", runtime.GOOS)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatalf("Could not setup pipe due to error: %s", err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("Could not start command due to err: %s", err)
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	var lineOutput string
+	foundMatch := false
+	// read only the first line of output
+	for scanner.Scan() {
+		lineOutput = scanner.Text()
+		switch os := runtime.GOOS; os {
+			case "darwin", "freebsd":
+				{
+					if strings.HasPrefix(lineOutput, "  Mode: ("){
+						foundMatch = true
+					}
+				}
+			case "linux":
+				{
+					if strings.HasPrefix(lineOutput, "Access: ("){
+						foundMatch = true
+					}
+				}
+			default:
+				t.Fatalf("2. This test doesn't support OS of type: %s . Please adjust the test as needed", runtime.GOOS)
+
+		}
+		if foundMatch {
+			break
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("while reading standard input got error: %s", err)
+	}
+	if ! foundMatch {
+		t.Fatalf("Command output did not match expected patterns so no regex search was attempted.")
+	}
+	// Use raw strings to avoid having to quote the backslashes.
+	cmdOutput := regexp.MustCompile(`^ *[a-zA-Z]+: \(([0-9]+)/`)
+	regexResultArray := cmdOutput.FindStringSubmatch(lineOutput)
+	if regexResultArray == nil {
+		t.Fatalf("File mode regex didn't return a match. Input was: '%s'", lineOutput)
+	}
+	return regexResultArray[1]
+
+}
+
 // workhorse for the test in this file
-func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username, gid, groupname string){
+func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username, gid, groupname, mode string){
 	owner, permissions, err := GetObjectPermissions(file, filestat)
 	if err != nil {
 		t.Fatalf("While trying to get permissions of %s got error: %s", file, err)
@@ -94,13 +200,20 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username,
 	if uint32(gidNumeric) != expandedPerm.Group.Id {
 		t.Fatalf("Expected group id of %s to be %d but instead got id %d", file, gidNumeric, expandedPerm.Group.Id)
 	}
-	fileMode := filestat.Mode()
-	if fileMode != expandedPerm.Mode {
-		t.Fatalf("Expected file mode for %s to be %s but instead it's %s", file, fileMode, expandedPerm.Mode)
+
+	modeNumeric, err := strconv.ParseUint(mode, 8, 32)
+	if err != nil {
+		t.Fatalf("Could not convert %s to uint64", mode)
+	}
+	if uint32(modeNumeric) != uint32(expandedPerm.Mode.Perm()) {
+		t.Fatalf("Expected file mode for %s to be %s but instead it's %o . BEWARE that output from the second " +
+			"field may have the first '0' truncated but actual comparison is done on the numeric value instead of hex" +
+			" representation", file, mode, expandedPerm.Mode.Perm())
 	}
 }
 
-// compare file / dir / symlink properties returned by GetObjectPermissions() with data supplied by OS tools
+// compare file / dir / symlink properties returned by GetObjectPermissions() with data supplied by OS tools while
+// DEREFERENCE links
 func TestGetObjectPermissions1withStat(t *testing.T){
 	uid, username, gid, groupname := getRunningUserDetails(t)
 
@@ -125,11 +238,12 @@ func TestGetObjectPermissions1withStat(t *testing.T){
 		if err != nil {
 			t.Fatalf("while running run os.Stat(%s) got error: %s", file, err)
 		}
-		examineFile(t, file, filestat, uid, username, gid, groupname)
+		mode := getFileMode(t, file, true)
+		examineFile(t, file, filestat, uid, username, gid, groupname, mode)
 	}
 }
 
-// use Lstat instead of Stat
+//use Lstat instead of Stat which means to NOT dereference links
 func TestGetObjectPermissions1withLstat(t *testing.T){
 	uid, username, gid, groupname := getRunningUserDetails(t)
 
@@ -154,6 +268,7 @@ func TestGetObjectPermissions1withLstat(t *testing.T){
 		if err != nil {
 			t.Fatalf("while running run os.Stat(%s) got error: %s", file, err)
 		}
-		examineFile(t, file, filestat, uid, username, gid, groupname)
+		mode := getFileMode(t, file, false)
+		examineFile(t, file, filestat, uid, username, gid, groupname, mode)
 	}
 }
