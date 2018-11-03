@@ -11,8 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"testing"
 	"strings"
+	"testing"
 )
 
 // obtain data about current user using OS supplied utilities instead on relying on Golang libraries
@@ -54,6 +54,76 @@ func getRunningUserDetails(t *testing.T)(sid, username, domain string){
 	return sid, username, domain
 }
 
+type propertiesFromPowerShell struct {
+	Name string
+	Domain string
+	FileSystemRights string
+	AccessControlType string
+	IsInherited string
+}
+
+func getFilePropertiesUsingPowershell(t *testing.T, file string)([]propertiesFromPowerShell){
+	/* The command will return output similar to the below example
+	PS C:\Users\vagrant> (get-acl <folder or file name>).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto
+
+	IdentityReference       FileSystemRights AccessControlType IsInherited                InheritanceFlags
+	-----------------       ---------------- ----------------- -----------                ----------------
+	NT AUTHORITY\SYSTEM          FullControl             Allow        True ContainerInherit, ObjectInherit
+	BUILTIN\Administrators       FullControl             Allow        True ContainerInherit, ObjectInherit
+	VAGRANT-RS57QRT\vagrant      FullControl             Allow        True ContainerInherit, ObjectInherit
+	 */
+	cmd := exec.Command("powershell", "-NonInteractive", `(get-acl ` + file +  `).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto`)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatalf("Could not setup pipe for Powershell command due to error: %s", err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("Could not start for Powershell command due to err: %s", err)
+	}
+
+	var lineOutput, allOutput string
+	var retrievedProperties []propertiesFromPowerShell
+	const marker = "----------"
+	foundMarker := false
+	scanner := bufio.NewScanner(stdout)
+	// read only the first line of output
+	for scanner.Scan() {
+		lineOutput = scanner.Text()
+		allOutput = allOutput + lineOutput + "\n"
+		// start doing the regexes only after the marker is found
+		if strings.HasPrefix(lineOutput, marker) {
+			foundMarker = true
+			continue
+		}
+		if foundMarker && lineOutput != "" {
+			// matching for stuff like:   NT AUTHORITY\SYSTEM          FullControl             Allow        True ContainerInherit, ObjectInherit
+			cmdOutput := regexp.MustCompile(`^([a-zA-Z0-9 -]+)\\([a-zA-Z0-9-]*) +([a-zA-Z0-9-]+) +([a-zA-Z0-9-]+) +([a-zA-Z0-9-]+)`)
+			regexResultArray := cmdOutput.FindStringSubmatch(lineOutput)
+			if regexResultArray == nil {
+				t.Fatalf("Could not regex file properties from output returned by the Powershell commandlet. " +
+					"Line which failed to regex is: '%s'", lineOutput)
+			}
+			fileProp := propertiesFromPowerShell{
+				Name: regexResultArray[2],
+				Domain: regexResultArray[1],
+				FileSystemRights: regexResultArray[3],
+				AccessControlType: regexResultArray[4],
+				IsInherited: regexResultArray[5],
+			}
+			retrievedProperties = append(retrievedProperties, fileProp)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("while reading standard input from Powershell command, got error: %s", err)
+	}
+	if len(retrievedProperties) == 0 {
+		t.Fatalf("Either the file %s has no access controls on it or more likely parsing the file properties " +
+			"output from Powershell did not find any lines containing ACLs. The output of the powershell was: %s" +
+			"\n", file, allOutput)
+	}
+	return retrievedProperties
+}
+
 // workhorse for the test in this file
 func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username, domain string){
 	owner, permissions, err := GetObjectPermissions(file, filestat)
@@ -67,6 +137,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	if err != nil {
 		t.Fatalf("Could not json decode the permissions string due to error: %s", err)
 	}
+
 
 	// variable depicts if the creator  of the file is shown as the "Onwer" in the top level entry or in one of the ACE
 	// entries
@@ -123,6 +194,8 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 			t.Fatalf("Creator sid %s of %s was not found in any of the ACEs", sid, file)
 		}
 
+		// walk file properties and ensure that the creator has access:
+
 	} else {
 		if sid != expandedPerm.Owner.SID {
 			t.Fatalf("Expected owner sid of %s to be %s but instead got sid %s", file, sid, expandedPerm.Owner.SID)
@@ -133,18 +206,25 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 		}
 	}
 
-	// TODO - get file ACLs and compare
-	// (get-acl <folder name>).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto
-	/*
-	PS C:\Users\vagrant\Documents\golang\src\cloudbackup> (get-acl C:\Users\vagrant\AppData\Local\Temp\unittest_backup_scan_test_unittest_backup_fileproperties_TestGetCtime2_701449861).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto
+	// TODO - get file ACLs and compare - right now we basically just compare output from "whoami" command with
+	// Powershell ACL output but this is wrong because it doesn't actaully compare against the data the GO code gets
+	// when using the native Windows System calls
+	foundMatchInProperties := false
+	filePropertiesFromPowerShell := getFilePropertiesUsingPowershell(t, file)
+	for _, fileProperties := range(filePropertiesFromPowerShell) {
+		if strings.ToLower(username) == strings.ToLower(fileProperties.Name) && strings.ToLower(domain) == strings.ToLower(fileProperties.Domain) {
+			// FileSystemRights AccessControlType
+			// FullControl             Allow
+			if fileProperties.FileSystemRights == "FullControl" && fileProperties.AccessControlType == "Allow" {
+				foundMatchInProperties = true
+			}
+		}
+	}
+	if ! foundMatchInProperties {
+		t.Fatalf("The Powershell retrieved file properties don't have the creator of the files listed as " +
+			"having 'FullControl' on the file")
+	}
 
-
-	IdentityReference       FileSystemRights AccessControlType IsInherited                InheritanceFlags
-	-----------------       ---------------- ----------------- -----------                ----------------
-	NT AUTHORITY\SYSTEM          FullControl             Allow        True ContainerInherit, ObjectInherit
-	BUILTIN\Administrators       FullControl             Allow        True ContainerInherit, ObjectInherit
-	VAGRANT-RS57QRT\vagrant      FullControl             Allow        True ContainerInherit, ObjectInherit
-	 */
 }
 
 // compare file / dir / symlink properties returned by GetObjectPermissions() with data supplied by OS tools
@@ -177,30 +257,30 @@ func TestGetObjectPermissions1withStat(t *testing.T){
 }
 
 // use Lstat instead of Stat
-func TestGetObjectPermissions2withLstat(t *testing.T){
-	sid, username, domain := getRunningUserDetails(t)
-
-	// folder with some mock files and symlinks
-	backupDirPath := testutils.SetupBackupDir("unittest_backup_fileproperties_TestGetCtime2_", t)
-	defer func() {
-		err := os.RemoveAll(backupDirPath) // #nosec
-		if err != nil {
-			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
-		}
-	}()
-	var files []string
-	err := filepath.Walk(backupDirPath, func(path string, info os.FileInfo, err error) error {
-		files = append(files, path)
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("While walking path %s got error: %s", backupDirPath, err)
-	}
-	for _, file := range files {
-		filestat, err := os.Lstat(file)
-		if err != nil {
-			t.Fatalf("while running run os.Stat(%s) got error: %s", file, err)
-		}
-		examineFile(t, file, filestat, sid, username, domain)
-	}
-}
+//func TestGetObjectPermissions2withLstat(t *testing.T){
+//	sid, username, domain := getRunningUserDetails(t)
+//
+//	// folder with some mock files and symlinks
+//	backupDirPath := testutils.SetupBackupDir("unittest_backup_fileproperties_TestGetCtime2_", t)
+//	defer func() {
+//		err := os.RemoveAll(backupDirPath) // #nosec
+//		if err != nil {
+//			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+//		}
+//	}()
+//	var files []string
+//	err := filepath.Walk(backupDirPath, func(path string, info os.FileInfo, err error) error {
+//		files = append(files, path)
+//		return nil
+//	})
+//	if err != nil {
+//		t.Fatalf("While walking path %s got error: %s", backupDirPath, err)
+//	}
+//	for _, file := range files {
+//		filestat, err := os.Lstat(file)
+//		if err != nil {
+//			t.Fatalf("while running run os.Stat(%s) got error: %s", file, err)
+//		}
+//		examineFile(t, file, filestat, sid, username, domain)
+//	}
+//}
