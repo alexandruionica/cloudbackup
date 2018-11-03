@@ -71,10 +71,10 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	// variable depicts if the creator  of the file is shown as the "Onwer" in the top level entry or in one of the ACE
 	// entries
 	creatorInACES := false
-	if username != owner {
+	if strings.ToLower(username) != strings.ToLower(owner) {
 		// check the json structure to see if the ACLs contain the user we run under . Windows permissions seem to work in misterious ways
 		for _, AceEntry := range(expandedPerm.ACEs) {
-			if username == AceEntry.Account.Name {
+			if strings.ToLower(username) == strings.ToLower(AceEntry.Account.Name) {
 				creatorInACES = true
 				if strings.ToLower(domain) != strings.ToLower(AceEntry.Account.Domain) {
 					t.Fatalf("Expected domain user %s who created %s to be %s but instead got domain %s", username, file, strings.ToLower(domain),
@@ -92,10 +92,10 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	// entries
 	creatorInACES = false
 	// check permissions object has expected content
-	if username != expandedPerm.Owner.Name {
+	if strings.ToLower(username) != strings.ToLower(expandedPerm.Owner.Name) {
 		// check the json structure to see if the ACLs contain the user we run under . Windows permissions seem to work in mysterious ways
 		for _, AceEntry := range(expandedPerm.ACEs) {
-			if username == AceEntry.Account.Name {
+			if strings.ToLower(username) == strings.ToLower(AceEntry.Account.Name) {
 				creatorInACES = true
 			}
 		}
@@ -105,7 +105,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 		}
 	}
 
-	if owner != expandedPerm.Owner.Name {
+	if strings.ToLower(owner) != strings.ToLower(expandedPerm.Owner.Name) {
 		t.Fatalf("owner is %s while expandedPerm.Owner.Name is %s and it is expected they match", owner, expandedPerm.Owner.Name)
 	}
 
