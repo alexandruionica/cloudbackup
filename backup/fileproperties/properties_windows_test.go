@@ -11,8 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
+	"strings"
 )
 
 // obtain data about current user using OS supplied utilities instead on relying on Golang libraries
@@ -60,9 +60,6 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	if err != nil {
 		t.Fatalf("While trying to get permissions of %s got error: %s", file, err)
 	}
-	if username != owner {
-		t.Fatalf("1. Expected owner of %s to be %s but instead got owner %s", file, username, owner)
-	}
 
 	// JSON decode permissions object
 	var expandedPerm FilePermissions
@@ -70,20 +67,84 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	if err != nil {
 		t.Fatalf("Could not json decode the permissions string due to error: %s", err)
 	}
-	// check permissions object has expected content
-	if username != expandedPerm.Owner.Name {
-		t.Fatalf("2. Expected owner of %s to be %s but instead got owner %s", file, username, owner)
+
+	// variable depicts if the creator  of the file is shown as the "Onwer" in the top level entry or in one of the ACE
+	// entries
+	creatorInACES := false
+	if username != owner {
+		// check the json structure to see if the ACLs contain the user we run under . Windows permissions seem to work in misterious ways
+		for _, AceEntry := range(expandedPerm.ACEs) {
+			if username == AceEntry.Account.Name {
+				creatorInACES = true
+				if strings.ToLower(domain) != strings.ToLower(AceEntry.Account.Domain) {
+					t.Fatalf("Expected domain user %s who created %s to be %s but instead got domain %s", username, file, strings.ToLower(domain),
+						strings.ToLower(AceEntry.Account.Domain))
+				}
+			}
+		}
+		if ! creatorInACES {
+			t.Fatalf("1. Expected owner of %s to be %s but instead got owner %s . The expected owner wasn't " +
+				"found in any ACE entry either", file, username, owner)
+		}
 	}
 
-	if sid != expandedPerm.Owner.SID {
-		t.Fatalf("Expected owner sid of %s to be %s but instead got sid %s", file, sid, expandedPerm.Owner.SID)
+	// variable depicts if the creator  of the file is shown as the "Onwer" in the top level entry or in one of the ACE
+	// entries
+	creatorInACES = false
+	// check permissions object has expected content
+	if username != expandedPerm.Owner.Name {
+		// check the json structure to see if the ACLs contain the user we run under . Windows permissions seem to work in mysterious ways
+		for _, AceEntry := range(expandedPerm.ACEs) {
+			if username == AceEntry.Account.Name {
+				creatorInACES = true
+			}
+		}
+		if ! creatorInACES {
+			t.Fatalf("2. Expected owner of %s to be %s but instead got owner %s . The expected owner wasn't " +
+				"found in any ACE entry either", file, username, owner)
+		}
 	}
-	if strings.ToLower(domain) != strings.ToLower(expandedPerm.Owner.Domain) {
-		t.Fatalf("Expected owner domain of %s to be %s but instead got domain %s", file, strings.ToLower(domain),
-			strings.ToLower(expandedPerm.Owner.Domain))
+
+	if owner != expandedPerm.Owner.Name {
+		t.Fatalf("owner is %s while expandedPerm.Owner.Name is %s and it is expected they match", owner, expandedPerm.Owner.Name)
+	}
+
+	// if we know that the creator of the file doesn't have an entry in the top level response of the API call then
+	// we need to go through each ACE
+	if creatorInACES {
+		foundOwnerSidMatch := false
+		for _, AceEntry := range(expandedPerm.ACEs) {
+			if sid == AceEntry.Account.SID {
+				foundOwnerSidMatch = true
+			}
+		}
+
+		if ! foundOwnerSidMatch {
+			t.Fatalf("Creator sid %s of %s was not found in any of the ACEs", sid, file)
+		}
+
+	} else {
+		if sid != expandedPerm.Owner.SID {
+			t.Fatalf("Expected owner sid of %s to be %s but instead got sid %s", file, sid, expandedPerm.Owner.SID)
+		}
+		if strings.ToLower(domain) != strings.ToLower(expandedPerm.Owner.Domain) {
+			t.Fatalf("Expected owner domain of %s to be %s but instead got domain %s", file, strings.ToLower(domain),
+				strings.ToLower(expandedPerm.Owner.Domain))
+		}
 	}
 
 	// TODO - get file ACLs and compare
+	// (get-acl <folder name>).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto
+	/*
+	PS C:\Users\vagrant\Documents\golang\src\cloudbackup> (get-acl C:\Users\vagrant\AppData\Local\Temp\unittest_backup_scan_test_unittest_backup_fileproperties_TestGetCtime2_701449861).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto
+
+
+	IdentityReference       FileSystemRights AccessControlType IsInherited                InheritanceFlags
+	-----------------       ---------------- ----------------- -----------                ----------------
+	NT AUTHORITY\SYSTEM          FullControl             Allow        True ContainerInherit, ObjectInherit
+	BUILTIN\Administrators       FullControl             Allow        True ContainerInherit, ObjectInherit
+	VAGRANT-RS57QRT\vagrant      FullControl             Allow        True ContainerInherit, ObjectInherit
+	 */
 }
 
 // compare file / dir / symlink properties returned by GetObjectPermissions() with data supplied by OS tools

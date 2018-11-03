@@ -10,3 +10,4 @@ private_documentation/.venv
 private_documentation/__pycache__
 *.pyc
 *~
+.vagrant/

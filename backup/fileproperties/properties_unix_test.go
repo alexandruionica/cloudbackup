@@ -174,6 +174,11 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username,
 	if username != expandedPerm.Owner.Name {
 			t.Fatalf("2. Expected owner of %s to be %s but instead got owner %s", file, username, owner)
 	}
+
+	if owner != expandedPerm.Owner.Name {
+		t.Fatalf("owner is %s while expandedPerm.Owner.Name is %s and it is expected they match", owner, expandedPerm.Owner.Name)
+	}
+
 	uidNumeric, err := strconv.Atoi(uid)
 	if err != nil {
 		t.Fatal(err)
