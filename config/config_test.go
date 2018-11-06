@@ -663,6 +663,108 @@ func TestValidate21(t *testing.T) {
 	}
 }
 
+// backup target type which is known to be working
+func TestValidate22(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	targetType := "aws_s3"
+	result.Config.Backup[0].Target[0].Type = targetType
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatalf("Config file failed to load successfully but should have because target type '%s' should " +
+			"be allowed", targetType)
+	}
+	// validate also individual functions
+	err = ValidateBackup(result.Config.Backup, true)
+	if err != nil {
+		t.Fatalf("Config struct failed to validate but should have because target type '%s' should " +
+			"be allowed", targetType)
+	}
+	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
+	if err != nil {
+		t.Fatalf("Targets config struct failed to validate but should have because target type '%s' should " +
+			"be allowed", targetType)
+	}
+}
+
+// HIDDEN backup target type which is known to be working
+func TestValidate23(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	targetType := "test_null"
+	result.Config.Backup[0].Target[0].Type = targetType
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatalf("Config file failed to load successfully but should have because target type '%s' should " +
+			"be allowed", targetType)
+	}
+	// validate also individual functions
+	err = ValidateBackup(result.Config.Backup, true)
+	if err != nil {
+		t.Fatalf("Config struct failed to validate but should have because target type '%s' should " +
+			"be allowed", targetType)
+	}
+	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
+	if err != nil {
+		t.Fatalf("Targets config struct failed to validate but should have because target type '%s' should " +
+			"be allowed", targetType)
+	}
+}
+
+// backup target type which is UNKNOWN
+func TestValidate24(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	targetType := "madeup_type"
+	result.Config.Backup[0].Target[0].Type = targetType
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatalf("Config file should have failed to load successfully but didn't despite target type '%s' not " +
+			"being  allowed", targetType)
+	}
+	// validate also individual functions
+	err = ValidateBackup(result.Config.Backup, true)
+	if err == nil {
+		t.Fatalf("Config struct should have failed to load successfully but didn't despite target type '%s' not " +
+			"being  allowed", targetType)
+	}
+	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
+	if err == nil {
+		t.Fatalf("Targets config struct should have failed to load successfully but didn't despite target type" +
+			" '%s' not being  allowed", targetType)
+	}
+}
+
 func TestCheckStringIsOnly(t *testing.T) {
 	if CheckStringIsOnly("************", "*") != true {
 		t.Fatal("CheckStringIsOnly() did not return a match as expected")

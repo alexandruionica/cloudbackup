@@ -69,7 +69,7 @@ backup:
       - /var/lib/*.db
     target:
       - name: aws_1
-        type: s3
+        type: aws_s3
         user: AWS_ACCESS_KEY_ID
         pass: AWS_SECRET_ACCESS_KEY
         bucket: 'example-com-us-servers'
@@ -94,7 +94,7 @@ backup:
         prefix: 'backup/backups-for-server-51'
         storage_class: 'infrequent-access'
       - name: google_1
-        type: google_cloud_storage
+        type: gcp_storage
         user: JANEDOE
         pass: 34324fd
         bucket: 'my-google-bucket'
