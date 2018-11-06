@@ -22,6 +22,12 @@ const loggingContext = "config"
 const SecretReplace = "****************"
 // used for looking up environment variables holding configuration data
 const EnvPrefix = "CLOUDBACKUP"
+// allowed backup target types (this is used in a validation function below). If this is updated then please also
+// update the Swagger file
+var BackupTargetTypes = [...]string{"aws_s3", "gcp_storage", "azure_blob"}
+// allowed backup target types used for testing purposes only
+var HiddenBackupTargetTypes = [...]string{"test_null"}
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 	})
@@ -369,13 +375,35 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 
 		// check target name doesn't contain commas as those are now allowed
 		if strings.ContainsAny(target.Name, ","){
-			msg := fmt.Sprintf("Target '%s' contains a command in it's name. Commas are now allowed in target " +
+			msg := fmt.Sprintf("Target '%s' contains a comma in it's name. Commas are now allowed in target " +
 				"names", target.Name)
 			if logError{
 				logger.Error(msg)
 			}
 			return errors.New(msg)
 		}
+
+		matched := false
+		// check target type is allowed
+		for _, AllowedTargetType := range(BackupTargetTypes) {
+			if strings.ToLower(target.Type) == strings.ToLower(AllowedTargetType) {
+				matched = true
+			}
+		}
+		for _, AllowedTargetType := range(HiddenBackupTargetTypes) {
+			if strings.ToLower(target.Type) == strings.ToLower(AllowedTargetType) {
+				matched = true
+			}
+		}
+		if ! matched {
+			msg := fmt.Sprintf("Target '%s' is of type '%s' but this is not an allowed type. Allowed types " +
+				"are one of: %s", target.Name, target.Type, strings.Trim(fmt.Sprintf("%s", BackupTargetTypes), "[]"))
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+
 	}
 	return nil
 }

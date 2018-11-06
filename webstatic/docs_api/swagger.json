@@ -529,7 +529,8 @@
         },
         "type": {
           "type": "string",
-          "example": "s3"
+          "example": "aws_s3",
+          "description": "Backend type (object store) used for storing backups. Must be one of: aws_s3, gcp_storage, azure_blob"
         },
         "user": {
           "type": "string",

@@ -349,8 +349,7 @@ definitions:
       name:
         type: string
         example: generic-server
-        description: >-
-          Only ASCII characters are allowed for this property.
+        description: Only ASCII characters are allowed for this property.
       paths:
         type: array
         items:
@@ -402,11 +401,11 @@ definitions:
       name:
         type: string
         example: aws_1
-        description: >-
-          Name of the backup target. Commas are not allowed characters.
+        description: Name of the backup target. Commas are not allowed characters.
       type:
         type: string
-        example: s3
+        example: aws_s3
+        description: "Backend type (object store) used for storing backups. Must be one of: aws_s3, gcp_storage, azure_blob"
       user:
         type: string
         example: AWS_ACCESS_KEY_ID

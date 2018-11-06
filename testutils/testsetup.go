@@ -61,7 +61,7 @@ backup:
         prefix: backup/backups-for-server-51
         storage_class: infrequent-access
       - name: google_1
-        type: google_cloud_storage
+        type: gcp_storage
         user: JANEDOE
         pass: 34324fd
         bucket: my-google-bucket
@@ -113,7 +113,7 @@ backup:
         prefix: backup/backups-for-server-51
         storage_class: infrequent-access
       - name: google_1
-        type: google_cloud_storage
+        type: gcp_storage
         user: JANEDOE
         pass: 34324fd
         bucket: my-google-bucket
@@ -169,7 +169,7 @@ backup:
         prefix: backup/backups-for-server-51
         storage_class: infrequent-access
       - name: google_1
-        type: google_cloud_storage
+        type: gcp_storage
         user: JANEDOE
         pass: 34324fd
         bucket: my-google-bucket
