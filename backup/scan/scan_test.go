@@ -2,6 +2,7 @@ package scan
 
 import (
 	"cloudbackup/database/dbops"
+	"cloudbackup/objectstore"
 	"testing"
 	"cloudbackup/config"
 	"cloudbackup/utils"
@@ -66,8 +67,13 @@ func TestPath1(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -139,8 +145,13 @@ func TestPath2(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -223,8 +234,13 @@ func TestPath3(t *testing.T) {
 		}
 		dbData := shared.DbData{Db: db, Connected: true}
 
+		objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+		if err != nil {
+			t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+		}
+
 		for _, backupPath := range backupConfig.Paths {
-			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 			if err != nil {
 				t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 			}
@@ -301,8 +317,13 @@ func TestPath4(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -378,8 +399,13 @@ func TestPath5(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -458,8 +484,13 @@ func TestPath6(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -548,8 +579,13 @@ func TestPath7(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -631,8 +667,13 @@ func TestPath8(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -706,8 +747,13 @@ func TestPath9(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -781,8 +827,13 @@ func TestPath10(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -856,8 +907,13 @@ func TestPath11(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -931,8 +987,13 @@ func TestPath12(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1015,8 +1076,13 @@ func TestPath13(t *testing.T) {
 		PreparedStatements: preparedStatements,
 	}
 
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}

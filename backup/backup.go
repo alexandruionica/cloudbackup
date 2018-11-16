@@ -3,6 +3,7 @@ package backup
 import (
 	"cloudbackup/backup/fileproperties"
 	"cloudbackup/config"
+	"cloudbackup/objectstore"
 	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"context"
@@ -20,7 +21,8 @@ var logger = log.WithFields(log.Fields{
 
 // performs backup of a file or dir
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData) (bool, error) {
+func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
+	objectStores []objectstore.ObjectStore) (bool, error) {
 	select {
 	case <-ctx.Done():
 		{
@@ -47,32 +49,47 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					return false, err
 				}
 				if contentChanged {
+					encounteredError := false
+					var encounteredErrorObject error
 					// back up the object to one or more remote object stores
-					cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig)
-					if err != nil {
-						return false, err
+					for _, objectStore := range objectStores {
+						cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore)
+						if err != nil {
+							encounteredError = true
+							encounteredErrorObject = err
+						}
+						if cancelled {
+							return true, nil
+						}
 					}
-					if cancelled {
-						return true, nil
+					if encounteredError {
+						return false, encounteredErrorObject
 					}
-					// TODO - add "Target" to DB record and then update record in db
 
 					// backup successful
 					return false, nil
 
 				} else {
 					if metadataChanged {
-						// TODO - proceed to update file metadata in the DB and on the remote ???? (to decide what to do with
-						// the remote: changed owner is probably something we want to flag, but not much else)
-						// back up the object to one or more remote object stores
-						cancelled, err := UpdateObjectMetadata(ctx, path, newDbRecord, backupConfig)
-						if err != nil {
-							return false, err
+						encounteredError := false
+						var encounteredErrorObject error
+						// back up the object metadata to one or more remote object stores
+						for _, objectStore := range objectStores {
+							// TODO - proceed to update file metadata in the DB and on the remote ???? (to decide what to do with
+							// the remote: changed owner is probably something we want to flag, but not much else)
+							// back up the object to one or more remote object stores
+							cancelled, err := UpdateObjectMetadata(ctx, path, newDbRecord, backupConfig, objectStore)
+							if err != nil {
+								encounteredError = true
+								encounteredErrorObject = err
+							}
+							if cancelled {
+								return true, nil
+							}
 						}
-						if cancelled {
-							return true, nil
+						if encounteredError {
+							return false, encounteredErrorObject
 						}
-						// TODO - insert / update db records
 
 						// backup successful
 						return false, nil
@@ -94,15 +111,23 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					// backup this file
 					return false, err
 				}
+
+				encounteredError := false
+				var encounteredErrorObject error
 				// back up the object to one or more remote object stores
-				cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig)
-				if err != nil {
-					return false, err
+				for _, objectStore := range objectStores {
+					cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore)
+					if err != nil {
+						encounteredError = true
+						encounteredErrorObject = err
+					}
+					if cancelled {
+						return true, nil
+					}
 				}
-				if cancelled {
-					return true, nil
+				if encounteredError {
+					return false, encounteredErrorObject
 				}
-				// TODO - insert DB records
 
 				// backup successful
 				return false, nil
@@ -274,7 +299,8 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 // uploads an object (file / dir / symlink) to the remote object storage. For dirs/symlinks it only uploads metadata
 // for files it uploads both content and metadata
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties, backupConfig config.Backup) (bool, error) {
+func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,
+	backupConfig config.Backup, objectStores objectstore.ObjectStore) (bool, error) {
 	// TODO - use the context and pass it further down
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", path)
@@ -285,6 +311,8 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 
 	// TODO - construct metadata before uploading
 
+	// TODO - add "Target" to DB record and then update record in db
+
 	return false, nil
 }
 
@@ -294,9 +322,12 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 // details about the object which will be partially used for the metadata; $backupConfig is the struct with the details
 // of this backup as represented in the config file
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func UpdateObjectMetadata(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties, backupConfig config.Backup) (bool, error) {
+func UpdateObjectMetadata(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,
+	backupConfig config.Backup, objectStore objectstore.ObjectStore) (bool, error) {
 	// TODO - use the context and pass it further down
 	logger.Debugf("Updating remote stored metadata for previously backed up and unchanged '%s'", path)
+
+	// TODO - insert / update db records
 
 
 	return false, nil

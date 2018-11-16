@@ -6,6 +6,7 @@ import (
 	"cloudbackup/daemon/globals"
 	"cloudbackup/database"
 	"cloudbackup/database/dbops"
+	"cloudbackup/objectstore"
 	"cloudbackup/shared"
 	"context"
 	"errors"
@@ -264,6 +265,14 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 		return
 	}
 
+	// get object stores used for backing up files for this job
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	if err != nil {
+		// TODO - mark the backup as failed (failed to/during? start)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		return
+	}
+
 	// examine each path listed and backup contained files/directories if needed
 	for _, path := range backupConfig.Paths {
 		select {
@@ -274,7 +283,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		default:
 			// backupJobsState MUST be a pointer
-			exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData)
+			exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData, objectStores)
 			// Examine FIRST $exit and then $err
 			if exiting {
 				// TODO - mark backup as interrupted
