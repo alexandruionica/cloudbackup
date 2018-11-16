@@ -3,6 +3,7 @@ package httpd
 import (
 	"cloudbackup/backup/scan"
 	"cloudbackup/config"
+	"cloudbackup/objectstore"
 	"cloudbackup/password"
 	"cloudbackup/shared"
 	"context"
@@ -304,8 +305,10 @@ func LogHttpRequest(r *http.Request){
 func dryRunBackupPaths(ctx context.Context, backupConfig config.Backup, backupJobsState *shared.DryRunBackupJobsState,
 	scanPathExit chan bool) {
 	for _, path := range backupConfig.Paths {
+		// empty objectStores object as a dry run should never reach an upload function anyway
+		objectStores := make([]objectstore.ObjectStore, 0)
 		// backupJobsState MUST be a pointer
-		exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, true, shared.DbData{Connected: false})
+		exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, true, shared.DbData{Connected: false}, objectStores)
 		// Examine FIRST $exit and then $err ;  $exiting means that a signal was sent so scan.Path() exits, on request,
 		// 	early
 		if exiting {

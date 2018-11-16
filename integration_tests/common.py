@@ -55,7 +55,7 @@ backup:
       - /var/lib/mysql
     target:
       - name: aws_1
-        type: aws_s3
+        type: test_null
         user: BLABLA
         pass: zzzz
         bucket: 'myawesome-backup'
@@ -73,7 +73,7 @@ backup:
     checksum: true
     target:
       - name: aws_2
-        type: aws_s3
+        type: test_null
         user: JOHNDOE
         pass: qwqe
         bucket: 'some-stuff-goes-here'
