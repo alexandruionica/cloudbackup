@@ -92,7 +92,7 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 			}
 			continue
 		} else {
-			t.Fatalf("Target '%s' exists in the config file but it wasn't found in the DB", backupConfig.Target)
+			t.Fatalf("Target '%s' exists in the config file but it wasn't found in the DB", targetInConfig.Name)
 		}
 	}
 }
@@ -236,7 +236,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 			}
 			continue
 		} else {
-			t.Fatalf("Target '%s' exists in the config file but it wasn't found in the DB", backupConfig.Target)
+			t.Fatalf("Target '%s' exists in the config file but it wasn't found in the DB", targetInConfig.Name)
 		}
 	}
 }
