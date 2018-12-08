@@ -22,7 +22,7 @@ var logger = log.WithFields(log.Fields{
 // performs backup of a file or dir
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
 func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
-	objectStores []objectstore.ObjectStore) (bool, error) {
+	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (bool, error) {
 	select {
 	case <-ctx.Done():
 		{

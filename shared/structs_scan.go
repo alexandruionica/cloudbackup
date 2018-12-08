@@ -44,6 +44,11 @@ func (jobs *DryRunBackupJobsState) IncrementCounter(BackupJobName string, counte
 	}
 }
 
+// we don't need this for a dry run but this function is needed in order to satisfy the interface constrains
+func (jobs *DryRunBackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64) {
+	return
+}
+
 // This will not error if a job having the same name does not exist;
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
 // stopped state

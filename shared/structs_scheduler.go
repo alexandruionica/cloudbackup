@@ -1,12 +1,13 @@
 package shared
 
 import (
+	"cloudbackup/config"
+	"context"
+	"errors"
+	"github.com/paulbellamy/ratecounter"
+	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
-	"cloudbackup/config"
-	log "github.com/sirupsen/logrus"
-	"errors"
-	"context"
 )
 
 const ErrJobAlreadyRunning = "job already running"
@@ -81,16 +82,17 @@ type BackupJobStatus struct {
 	BackupJobId string `json:"job_id,omitempty"`
 	// - makes sense only for $State == "running"
 	StartTime time.Time `json:"start_time,omitempty"`
-	// transmit bandwidth/second used during last 1 minute - makes sense only for $State == "running"
-	TxBandwidth1Min int64 `json:"TxBandwidth1Min,omitempty"`
-	// receive bandwidth/second used during last 1 minute - makes sense only for $State == "running"
-	RxBandwidth1Min int64 `json:"rx_bandwidth_1_min,omitempty"`
-	TxBandwidth5Min int64 `json:"tx_bandwidth_5_min,omitempty"`
-	RxBandwidth5Min int64 `json:"rx_bandwidth_5_min,omitempty"`
-	TxBandwidth15Min int64 `json:"tx_bandwidth_15_min,omitempty"`
-	RxBandwidth15Min int64 `json:"rx_bandwidth_15_min,omitempty"`
-	StatsCounters map[string]uint64 `json:"stats_counters,omitempty"`
-	StatsText map[string]string `json:"stats_text,omitempty"`
+	// bandwidth/second used during last 1/5/15 minute(s) - makes sense only for $State == "running" . This
+	// value is the lower of disk read bandwidth and the upload speed to the backend object store
+	Rate1Min         int64                    `json:"rate_1min,omitempty"`
+	_rate1Min        *ratecounter.RateCounter
+	Rate5Min         int64                    `json:"rate_5min,omitempty"`
+	_rate5Min        *ratecounter.RateCounter
+	Rate15Min        int64                    `json:"rate_15min,omitempty"`
+	_rate15Min       *ratecounter.RateCounter
+	ObjectStoreRates []ObjectStoreRate        `json:"object_store_rates,omitempty"`
+	StatsCounters    map[string]uint64        `json:"stats_counters,omitempty"`
+	StatsText        map[string]string        `json:"stats_text,omitempty"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
 	NextRun time.Time `json:"next_run"`
 	// using this context we signal a Backup job task that it should proceed to shutdown now
@@ -108,10 +110,22 @@ type BackupJobsState struct {
 	// restores are implemented)
 }
 
+type ObjectStoreRate struct {
+	Name string
+	Type string
+	Rate1Min int64 `json:"rate_1_min,omitempty"`
+	_rate1Min *ratecounter.RateCounter
+	Rate5Min int64 `json:"rate_5_min,omitempty"`
+	_rate5Min *ratecounter.RateCounter
+	Rate15Min int64 `json:"rate_15_min,omitempty"`
+	_rate15Min *ratecounter.RateCounter
+}
+
 // this interface is used only for cloudbackup/backup/scan/Scan() in order to be able to pass a different object when doing a
 //  dry run report
 type BackupJobsStateInterface interface {
 	IncrementCounter(BackupJobName string, counterName string)
+	IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64)
 	UpdateStatsText(BackupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
 }
 
@@ -353,6 +367,72 @@ func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName stri
 				job.StatsText[statName] = ""
 			} else {
 				job.StatsText[statName] = statValue
+			}
+			break
+		}
+	}
+}
+
+// increment a rate counter; this will not error if a job having the same name does not exist;
+// CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
+// stopped state
+func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64) {
+	jobs.Lock.Lock()
+	defer func() {
+		jobs.Lock.Unlock()
+	}()
+	for _, job := range jobs.Running {
+		if BackupJobName == job.Name {
+			// if the job rate counters(pointers) are not initilised then init them
+			if job._rate1Min == nil || job._rate5Min == nil || job._rate15Min == nil{
+				job._rate1Min = ratecounter.NewRateCounter(time.Minute * 1)
+				job._rate5Min = ratecounter.NewRateCounter(time.Minute * 5)
+				job._rate15Min = ratecounter.NewRateCounter(time.Minute * 15)
+			}
+			// increment job rate counters
+			job._rate1Min.Incr(IncrementValue)
+			job._rate5Min.Incr(IncrementValue)
+			job._rate15Min.Incr(IncrementValue)
+			// update job rate counters which are retrievable
+			job.Rate1Min = job._rate1Min.Rate() / 60
+			job.Rate5Min = job._rate5Min.Rate() / 300
+			job.Rate15Min = job._rate1Min.Rate() / 900
+
+			// increment backend rate counters - initialise slice if nil
+			if job.ObjectStoreRates == nil {
+				job.ObjectStoreRates = make([]ObjectStoreRate, 0)
+			}
+
+			foundObjectStoreEntry := false
+			for _, objectStore := range job.ObjectStoreRates {
+				if ObjectStoreName == objectStore.Name {
+					foundObjectStoreEntry = true
+					break
+				}
+			}
+			// add entry and init counters
+			if ! foundObjectStoreEntry {
+				job.ObjectStoreRates = append(job.ObjectStoreRates, ObjectStoreRate{
+					Name: ObjectStoreName,
+					Type: ObjectStoreType,
+					_rate1Min: ratecounter.NewRateCounter(time.Minute * 1),
+					_rate5Min: ratecounter.NewRateCounter(time.Minute * 5),
+					_rate15Min: ratecounter.NewRateCounter(time.Minute * 15),
+				})
+			}
+
+			for _, objectStore := range job.ObjectStoreRates {
+				if ObjectStoreName == objectStore.Name {
+					// increment job rate counters for this particular object Store
+					objectStore._rate1Min.Incr(IncrementValue)
+					objectStore._rate5Min.Incr(IncrementValue)
+					objectStore._rate15Min.Incr(IncrementValue)
+					// update job rate counters which are retrievable
+					objectStore.Rate1Min = job._rate1Min.Rate() / 60
+					objectStore.Rate5Min = job._rate5Min.Rate() / 300
+					objectStore.Rate15Min = job._rate1Min.Rate() / 900
+					break
+				}
 			}
 			break
 		}
