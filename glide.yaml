@@ -20,3 +20,5 @@ import:
   - api
 - package: github.com/djherbis/times
   version: d25002f62be22438b4cd804b9d3c8db1231164d0
+- package: github.com/paulbellamy/ratecounter
+  version: ~0.2.0
