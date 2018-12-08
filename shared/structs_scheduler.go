@@ -376,6 +376,7 @@ func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName stri
 // increment a rate counter; this will not error if a job having the same name does not exist;
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
 // stopped state
+// TODO - write unit tests for this function - depends on having the object store "test_null" implemented
 func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64) {
 	jobs.Lock.Lock()
 	defer func() {

@@ -3,6 +3,7 @@ package config
 import (
 	"cloudbackup/utils"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	log "github.com/sirupsen/logrus"
 	"sync"
 	"github.com/jinzhu/configor"
@@ -63,6 +64,7 @@ type Backup struct {
 type Target struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Type string `required:"true" yaml:"type" json:"type"`
+	RateLimit string `default:"0" yaml:"ratelimit" json:"ratelimit"`
 	User string `yaml:"user" json:"user"`
 	Pass string `yaml:"pass" json:"pass"`
 	Bucket string `required:"true" yaml:"bucket" json:"bucket"`
@@ -377,6 +379,28 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 		if strings.ContainsAny(target.Name, ","){
 			msg := fmt.Sprintf("Target '%s' contains a comma in it's name. Commas are now allowed in target " +
 				"names", target.Name)
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+
+		// check ratelimit is valid
+		ratelimit, err := humanize.ParseBytes(target.RateLimit)
+		if err != nil {
+			msg := fmt.Sprintf("Target '%s' for backup '%s' has ratelimit defined as %s could not be " +
+				"translated to a number. While attempting translation the following error was encountered: %s",
+				target.Name, BackupName, target.RateLimit, err)
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+
+		// check ratelimit is not < 0
+		if ratelimit < 0 {
+			msg := fmt.Sprintf("Target '%s' for backup '%s' has ratelimit defined as %d which is a negative " +
+				"number. Only 0 and positive numbers are allowed", target.Name, BackupName, ratelimit)
 			if logError{
 				logger.Error(msg)
 			}

@@ -56,9 +56,12 @@ backup:
     dereference: false
     target:
       - name: aws_1
-        type: aws_s3
+        type: test_null
         user: BLABLA
         pass: zzzz
+        # rate limit uploads to the object store. Specified rate in bytes per second or using a unit like KB/MB/GB etc (Example: 231 KB).
+        # Leave unset or set to 0 to have unlimited rate
+        ratelimit: 101 KB
         bucket: 'myawesome-backup'
         prefix: 'backup/backups-for-server-51'
         storage_class: standard

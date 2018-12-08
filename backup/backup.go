@@ -53,7 +53,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					var encounteredErrorObject error
 					// back up the object to one or more remote object stores
 					for _, objectStore := range objectStores {
-						cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore)
+						cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore, backupJobsState)
 						if err != nil {
 							encounteredError = true
 							encounteredErrorObject = err
@@ -116,7 +116,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				var encounteredErrorObject error
 				// back up the object to one or more remote object stores
 				for _, objectStore := range objectStores {
-					cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore)
+					cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore, backupJobsState)
 					if err != nil {
 						encounteredError = true
 						encounteredErrorObject = err
@@ -300,7 +300,7 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 // for files it uploads both content and metadata
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
 func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,
-	backupConfig config.Backup, objectStores objectstore.ObjectStore) (bool, error) {
+	backupConfig config.Backup, objectStores objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (bool, error) {
 	// TODO - use the context and pass it further down
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", path)
@@ -308,8 +308,16 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 		logger.Debugf("Uploading metadata for '%s' which is of type '%s'", path, newDbRecord.Type)
 	}
 
-
-	// TODO - construct metadata before uploading
+	result, cancelled, err := objectStores.Upload(path, newDbRecord, backupJobsState)
+	if cancelled {
+		return true, err
+	}
+	if err != nil {
+		return false, err
+	}
+	// $result represents the remote path (in the object store) where the object has been backed up
+	storeName, _ := objectStores.GetStoreDetails()
+	logger.Debugf("'%s' successfully uploaded to object store %s at remote location '%s'", path, storeName, result)
 
 	// TODO - add "Target" to DB record and then update record in db
 
