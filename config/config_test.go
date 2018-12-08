@@ -765,6 +765,103 @@ func TestValidate24(t *testing.T) {
 	}
 }
 
+// rate limit < 0
+func TestValidate25(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	result.Config.Backup[0].Target[0].RateLimit = "-100 KB"
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatal("Config file should have failed to load successfully but didn't despite rate limit < 0 which " +
+			"is not allowed")
+	}
+	// validate also individual functions
+	err = ValidateBackup(result.Config.Backup, true)
+	if err == nil {
+		t.Fatal("Config struct should have failed to load successfully but didn't despite rate limit < 0 " +
+			"which is not allowed")
+	}
+	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
+	if err == nil {
+		t.Fatal("Targets config struct should have failed to load successfully but didn't despite rate limit" +
+			" < 0 which is not  allowed")
+	}
+}
+
+// rate limit is not decodable
+func TestValidate26(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	result.Config.Backup[0].Target[0].RateLimit = "101 BB"
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatal("Config file should have failed to load successfully but didn't despite rate limit < 0 which " +
+			"is not allowed")
+	}
+	// validate also individual functions
+	err = ValidateBackup(result.Config.Backup, true)
+	if err == nil {
+		t.Fatal("Config struct should have failed to load successfully but didn't despite rate limit < 0 " +
+			"which is not allowed")
+	}
+	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
+	if err == nil {
+		t.Fatal("Targets config struct should have failed to load successfully but didn't despite rate limit" +
+			" < 0 which is not  allowed")
+	}
+}
+
+
+// rate limit is valid decodable
+func TestValidate27(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	result.Config.Backup[0].Target[0].RateLimit = "703 KB"
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatal("Config file should have loaded successfully but didn't despite rate limit being valid")
+	}
+	// validate also individual functions
+	err = ValidateBackup(result.Config.Backup, true)
+	if err != nil {
+		t.Fatal("Config file should have loaded successfully but didn't despite rate limit being valid")
+	}
+	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
+	if err != nil {
+		t.Fatal("Config file should have loaded successfully but didn't despite rate limit being valid")
+	}
+}
+
 func TestCheckStringIsOnly(t *testing.T) {
 	if CheckStringIsOnly("************", "*") != true {
 		t.Fatal("CheckStringIsOnly() did not return a match as expected")
