@@ -59,7 +59,7 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
 				if ! dryRun {
 					// call to function dealing with backing up individual files
-					cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores)
+					cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState)
 					if cancelled{
 						return true, nil
 					}
@@ -104,7 +104,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 	objectStores []objectstore.ObjectStore) (bool, error) {
 	if ! dryRun {
 		// call to backup the folder entry itself
-		cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores)
+		cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState)
 		if cancelled{
 			return true, nil
 		}
@@ -184,7 +184,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 						"","")
 					if ! dryRun {
 						// call to function dealing with backing up of files
-						cancelled, err := backup.Do(ctx, childPath, fileInfo, backupConfig, dbData, objectStores)
+						cancelled, err := backup.Do(ctx, childPath, fileInfo, backupConfig, dbData, objectStores, backupJobsState)
 						if cancelled{
 							return true, nil
 						}

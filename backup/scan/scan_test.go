@@ -1,21 +1,21 @@
 package scan
 
 import (
+	"cloudbackup/config"
+	"cloudbackup/database"
 	"cloudbackup/database/dbops"
 	"cloudbackup/objectstore"
-	"testing"
-	"cloudbackup/config"
-	"cloudbackup/utils"
-	"cloudbackup/testutils"
-	"os"
-	"sync"
 	"cloudbackup/shared"
+	"cloudbackup/testutils"
+	"cloudbackup/utils"
 	"github.com/satori/go.uuid"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
-	"path/filepath"
-	"io/ioutil"
-	"cloudbackup/database"
+	"sync"
+	"testing"
 )
 
 // test number of examined files as reported by Path() when  dereference=true
