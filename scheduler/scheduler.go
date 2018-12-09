@@ -266,7 +266,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	}
 
 	// get object stores used for backing up files for this job
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)

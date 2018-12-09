@@ -26,6 +26,7 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 	dryRun bool, dbData shared.DbData, objectStores []objectstore.ObjectStore) (bool, error) {
 	globals.Stats.IncrementFunctions("scan.Path")
 	defer globals.Stats.DecrementFunctions("scan.Path")
+
 	var stat os.FileInfo
 	var err error
 	if backupConfig.Dereference {

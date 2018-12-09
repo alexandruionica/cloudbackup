@@ -67,7 +67,7 @@ func TestPath1(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -145,7 +145,7 @@ func TestPath2(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -234,7 +234,7 @@ func TestPath3(t *testing.T) {
 		}
 		dbData := shared.DbData{Db: db, Connected: true}
 
-		objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+		objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 		if err != nil {
 			t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 		}
@@ -317,7 +317,7 @@ func TestPath4(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -399,7 +399,7 @@ func TestPath5(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -484,7 +484,7 @@ func TestPath6(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -579,7 +579,7 @@ func TestPath7(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -667,7 +667,7 @@ func TestPath8(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -747,7 +747,7 @@ func TestPath9(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -827,7 +827,7 @@ func TestPath10(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -907,7 +907,7 @@ func TestPath11(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true, Name: backupConfig.Name}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -987,7 +987,7 @@ func TestPath12(t *testing.T) {
 	}
 	dbData := shared.DbData{Db: db, Connected: true}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
@@ -1076,7 +1076,7 @@ func TestPath13(t *testing.T) {
 		PreparedStatements: preparedStatements,
 	}
 
-	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
