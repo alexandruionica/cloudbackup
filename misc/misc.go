@@ -72,7 +72,7 @@ backup:
         type: aws_s3
         user: AWS_ACCESS_KEY_ID
         pass: AWS_SECRET_ACCESS_KEY
-		# rate limit uploads to the object store. Specified rate in bytes per second or using a unit like KB/MB/GB etc (Example: 231 KB).
+        # rate limit uploads to the object store. Specified rate in bytes per second or using a unit like KB/MB/GB etc (Example: 231 KB).
         # Leave unset or set to 0 to have unlimited rate
         ratelimit: 100 KB
         bucket: 'example-com-us-servers'

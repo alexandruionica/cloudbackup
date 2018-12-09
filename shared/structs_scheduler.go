@@ -17,7 +17,12 @@ const ErrJobNotFoundInRunningState = "no running job with given name and uuid wa
 const ErrJobNotFoundInEvaluatingState = "no evaluating job with given name and uuid was found"
 const ErrCouldNotGenerateJobId = "could not generate a unique id for the job"
 const ErrUnknownJobType = "unknown job type"
-const loggingContext = "structs_scheduler"
+
+const loggingContext = "shared"
+
+var logger = log.WithFields(log.Fields{
+	"context": loggingContext,
+})
 
 type CommWithSchedulerForBackup struct {
 	// this needs to be locked before acquiring the channel to send messages to the scheduler goroutine or read messages
@@ -390,6 +395,8 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				job._rate5Min = ratecounter.NewRateCounter(time.Minute * 5)
 				job._rate15Min = ratecounter.NewRateCounter(time.Minute * 15)
 			}
+			logger.Infof("Incrementing global rate counters with %d while right now values are %d %d %d while " +
+				"reported rate are %d %d %d", IncrementValue, job.Rate1Min, job.Rate5Min, job.Rate15Min, job._rate1Min.Rate(), job._rate5Min.Rate(), job._rate15Min.Rate())
 			// increment job rate counters
 			job._rate1Min.Incr(IncrementValue)
 			job._rate5Min.Incr(IncrementValue)
@@ -398,6 +405,9 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 			job.Rate1Min = job._rate1Min.Rate() / 60
 			job.Rate5Min = job._rate5Min.Rate() / 300
 			job.Rate15Min = job._rate1Min.Rate() / 900
+
+			logger.Infof("global rate counters should be %d %d %d while reported rate before division is %d %d %d",
+				job.Rate1Min, job.Rate5Min, job.Rate15Min, job._rate1Min.Rate(), job._rate5Min.Rate(), job._rate15Min.Rate())
 
 			// increment backend rate counters - initialise slice if nil
 			if job.ObjectStoreRates == nil {

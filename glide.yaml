@@ -24,3 +24,5 @@ import:
   version: ~0.2.0
 - package: github.com/dustin/go-humanize
   version: ^1.0.0
+- package: github.com/juju/ratelimit
+  version: ^1.0.1
