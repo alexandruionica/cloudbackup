@@ -26,3 +26,6 @@ import:
   version: ^1.0.0
 - package: github.com/juju/ratelimit
   version: ^1.0.1
+- package: golang.org/x/time
+  subpackages:
+  - rate

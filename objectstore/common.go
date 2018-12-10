@@ -5,11 +5,8 @@ import (
 	"cloudbackup/shared"
 	"context"
 	"errors"
-	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/juju/ratelimit"
 	log "github.com/sirupsen/logrus"
-	"io"
+	"golang.org/x/time/rate"
 	"os"
 )
 
@@ -29,8 +26,8 @@ type ObjectStore interface {
 type FileReader struct {
 	// we need the original file reader in order to call Close() when we finished reading or want to close the file handle
 	origFileReader *os.File
-	// if rate limiting is not requested than this will be a copy of the above *os.File pointer (io.Reader is an interface)
-	rateLimitedReader io.Reader
+	// if rate limiting is not enabled than this will be a null pointer
+	bucket *rate.Limiter
 	// needed in order to increment the rate counters used for statistics/reporting
 	backupJobsState shared.BackupJobsStateInterface
 	// used for figuring out which stats counter to increment
@@ -39,6 +36,8 @@ type FileReader struct {
 	objectStoreName string
 	// used for figuring out which stats counter to increment
 	objectStoreType string
+	rateLimit uint64
+	burst uint64
 	// used for error messages during file.Close()
 	path string
 }
@@ -46,28 +45,14 @@ type FileReader struct {
 func GetObjectStores (ctx context.Context, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface) ([]ObjectStore, error) {
 	results := make([]ObjectStore, 0)
 	for _, backupTarget := range backupConfig.Target {
-		ratelimit, err := humanize.ParseBytes(backupTarget.RateLimit)
-		if err != nil {
-			return results, errors.New(fmt.Sprintf("While trying to convert the rate limit '%s' to a number " +
-				"the following error was encountered: %s", backupTarget.RateLimit, err))
-		}
-		if ratelimit > 0 {
-			// if rateLimitVal > 9223372036854775807 conversion to int64 from uint64 will return a negative number
-			if ratelimit > 9223372036854775807 {
-				logger.Warningf("Rate is %d which is higher than ~ 9223 petabytes/sec and this would overflow " +
-					"during a conversion from uint64 to int64. Lowering rate to %d", ratelimit, 9223372036854775807)
-				// 9223.something petabytes/sec should be sufficient for the near future
-				ratelimit = 9223372036854775807
-			}
-		}
 
 		switch backupTarget.Type {
 			case "test_null": {
-				results = append(results, InitialiseStoreTestNull(ctx, backupConfig, backupTarget, int64(ratelimit), backupJobsState))
-				if ratelimit > 0 {
-					logger.Infof("Using rate limit %s for target '%s' belonging to backup '%s'",
-						humanize.Bytes(ratelimit), backupTarget.Name, backupConfig.Name)
+				store, err := InitialiseStoreTestNull(ctx, backupConfig, backupTarget, backupTarget.RateLimit, backupJobsState)
+				if err != nil {
+					return results, err
 				}
+				results = append(results, store)
 
 			}
 			// TODO: when implementing aws_s3 backend go back to the config file used for unit tests and add it back there too as it was removed due to tests failing because it was yet to be implemented
@@ -83,28 +68,23 @@ func GetObjectStores (ctx context.Context, backupConfig config.Backup, backupJob
 
 // setup the io.Reader compliant type which records how many bytes were transferred and which also hooks up the
 // rate limiter (if rate limiting is enabled)
-func NewFileReader (path string, bucket *ratelimit.Bucket, backupJobsState shared.BackupJobsStateInterface,
-	BackupJobName string, ObjectStoreName string, ObjectStoreType string)(FileReader, error) {
+func NewFileReader (path string, bucket *rate.Limiter, backupJobsState shared.BackupJobsStateInterface,
+	BackupJobName string, ObjectStoreName string, ObjectStoreType string, rate uint64, burst uint64)(FileReader, error) {
 	fileReader, err := os.Open(path) // #nosec
 	if err != nil {
 		return FileReader{}, err
 	}
 
-	var finalReader io.Reader
-	if bucket != nil {
-		// func Reader(r io.Reader, bucket *Bucket) io.Reader
-		finalReader = ratelimit.Reader(fileReader, bucket)
-	} else {
-		finalReader = fileReader
-	}
-
 	result := FileReader{
 		origFileReader: fileReader,
-		rateLimitedReader: finalReader,
+		bucket: bucket,
 		backupJobsState: backupJobsState,
 		backupJobName: BackupJobName,
 		objectStoreName: ObjectStoreName,
 		objectStoreType: ObjectStoreType,
+		rateLimit:rate,
+		burst: burst,
+		path: path,
 	}
 
 	return result, nil
@@ -112,9 +92,40 @@ func NewFileReader (path string, bucket *ratelimit.Bucket, backupJobsState share
 
 // this reader just request reads from the actual os.file reader and forwards the result to the caller while also incrementing a counter
 func (handle *FileReader) Read(p []byte) (int, error) {
-	readBytes, err := handle.rateLimitedReader.Read(p)
-	handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
-	return readBytes, err
+	if handle.rateLimit == 0 {
+		readBytes, err := handle.origFileReader.Read(p)
+		handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
+		return readBytes, err
+	} else {
+		// bucket.WaitN() allows to read up to burst limit so we need to ensure we don't attempt larger values than burst
+		if uint64(len(p)) <= handle.burst {
+			err := handle.bucket.WaitN(context.Background(), len(p))
+			if err != nil {
+				logger.Warningf("While pausing before attempting to read '%s' the following error was received " +
+					"from the rate limiting token bucket: %s . Proceeding to read content while ignoring the rate limiting", handle.path, err)
+			}
+			readBytes, err := handle.origFileReader.Read(p)
+			handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
+			return readBytes, err
+		} else {
+			// byte slice $p which was passed over is larger than $burst size so we need to read $burst number of bytes and return that
+			tmpP := make([]byte, handle.burst)
+			err := handle.bucket.WaitN(context.Background(), int(handle.burst))
+			if err != nil {
+				logger.Warningf("While pausing before attempting to read '%s' the following error was received " +
+					"from the rate limiting token bucket: %s . Proceeding to read content while ignoring the rate limiting", handle.path, err)
+			}
+			readBytes, err := handle.origFileReader.Read(tmpP)
+			handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
+			// copy read data to the original slice ;  func copy(dst, src []Type) int
+			copiedBytes := copy(p, tmpP)
+			if copiedBytes != len(tmpP) {
+				logger.Errorf("Internal error when reading rate limited file '%s'", handle.path)
+				return copiedBytes, errors.New("internal error when reading rate limited file - tmp slice content was not fully copied to requested slice")
+			}
+			return readBytes, err
+		}
+	}
 }
 
 // close the underlying file handle
