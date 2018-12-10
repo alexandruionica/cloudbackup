@@ -1,5 +1,5 @@
-hash: 7b0b6c4316a8aee1aac01fb9bb2e2bca26961422e43a0799f57b46006c8bd0f5
-updated: 2018-12-10T19:05:59.082532358+11:00
+hash: aba559ff0accfd01b4cf1c8d50a26a465ed2def2a7c85c697b3f468a88ef46bf
+updated: 2018-12-10T22:30:18.423201463+11:00
 imports:
 - name: github.com/bearmini/go-acl
   version: a423b25ba3ef3afa637b85a6222ccf2abffd01c6
@@ -19,8 +19,6 @@ imports:
   version: 96dc06278ce32a0e9d957d590bb987c81ee66407
 - name: github.com/jinzhu/configor
   version: 4edaf76fe18865e36de734d887f4c01bd05707af
-- name: github.com/juju/ratelimit
-  version: 59fac5042749a5afb9af70e813da1dd5474f0167
 - name: github.com/julienschmidt/httprouter
   version: 26a05976f9bf5c3aa992cc20e8588c359418ee58
 - name: github.com/mattn/go-sqlite3
