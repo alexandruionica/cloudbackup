@@ -4,8 +4,11 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
-	"github.com/juju/ratelimit"
+	"errors"
+	"github.com/dustin/go-humanize"
+	"golang.org/x/time/rate"
 	"io"
+	"fmt"
 )
 
 type StoreTestNull struct {
@@ -13,14 +16,47 @@ type StoreTestNull struct {
 	backupName string
 	storeName string
 	storeType string
-	bucket *ratelimit.Bucket
+	bucket *rate.Limiter
+	rateLimit uint64
+	burst uint64
 	backupJobsState shared.BackupJobsStateInterface
 }
 
-func InitialiseStoreTestNull (ctx context.Context, backupConfig config.Backup, target config.Target, rateLimitVal int64, backupJobsState shared.BackupJobsStateInterface) (*StoreTestNull) {
-	var rateLimitBucket *ratelimit.Bucket
-	if rateLimitVal > 0 {
-		rateLimitBucket = ratelimit.NewBucketWithRate(float64(rateLimitVal), rateLimitVal)
+func InitialiseStoreTestNull (ctx context.Context, backupConfig config.Backup, target config.Target, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreTestNull, error) {
+	var rateLimitBucket *rate.Limiter
+
+	ratelimit, err := humanize.ParseBytes(rateLimitStr)
+	if err != nil {
+		return &StoreTestNull{}, errors.New(fmt.Sprintf("While trying to convert the rate limit '%s' to a " +
+			"number the following error was encountered: %s", rateLimitStr, err))
+	}
+	if ratelimit > 0 {
+		// if rateLimitVal > 9223372036854775807 conversion to int64 from uint64 will return a negative number
+		if ratelimit > 9223372036854775807 {
+			logger.Warningf("Rate is %d which is higher than ~ 9223 petabytes/sec and this would overflow " +
+				"during a conversion from uint64 to int64. Lowering rate to %d", ratelimit, 9223372036854775807)
+			// 9223.something petabytes/sec should be sufficient for the near future
+			ratelimit = 9223372036854775807
+		}
+	}
+
+	var burst uint64
+	if ratelimit > 0 {
+		// burst represents how much can be fetched in one iteration
+		burst = ratelimit/10
+		// lower burst to ~2GB if burst is larger that the max positive value of a 32bit integer
+		if burst > 2147483647 {
+			burst = 2147483647
+		}
+		if burst < 1 {
+			burst = 1
+		}
+		rateLimitBucket = rate.NewLimiter(rate.Limit(ratelimit), int(ratelimit/10))
+	}
+
+	if ratelimit > 0 {
+		logger.Infof("Using rate limit %s for target '%s' belonging to backup '%s'",
+			humanize.Bytes(ratelimit), target.Name, backupConfig.Name)
 	}
 
 	result := &StoreTestNull{
@@ -29,17 +65,19 @@ func InitialiseStoreTestNull (ctx context.Context, backupConfig config.Backup, t
 		storeName: target.Name,
 		storeType: target.Type,
 		bucket: rateLimitBucket,
+		rateLimit: ratelimit,
+		burst: burst,
 		backupJobsState: backupJobsState,
 	}
 	// actual backends will also setup the connection client in this section
-	return result
+	return result, nil
 }
 
 // pretend to upload file (actually discarding all read content)
 func (object *StoreTestNull) Upload (path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface)  (result string, cancelled bool, err error) {
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
-		reader, err := NewFileReader(path, object.bucket, object.backupJobsState, object.backupName, object.storeName, object.storeType)
+		reader, err := NewFileReader(path, object.bucket, object.backupJobsState, object.backupName, object.storeName, object.storeType, object.rateLimit, object.burst)
 		if err != nil {
 			return "", false, err
 		}
