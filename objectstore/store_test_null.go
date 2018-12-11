@@ -77,7 +77,7 @@ func InitialiseStoreTestNull (ctx context.Context, backupConfig config.Backup, t
 func (object *StoreTestNull) Upload (path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface)  (result string, cancelled bool, err error) {
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
-		reader, err := NewFileReader(path, object.bucket, object.backupJobsState, object.backupName, object.storeName, object.storeType, object.rateLimit, object.burst)
+		reader, err := NewFileReader(path, object.bucket, object.backupJobsState, object.backupName, object.storeName, object.storeType, object.rateLimit, object.burst, object.ctx)
 		if err != nil {
 			return "", false, err
 		}
@@ -89,14 +89,20 @@ func (object *StoreTestNull) Upload (path string, newDbRecord shared.BackedUpFil
 		for {
 			_, err := reader.Read(p)
 			if err != nil{
+				switch err {
 				// io.Reader reports io.EOF when reaching the end of the file. This is normal and expected
-				if err == io.EOF {
-					break
+					case io.EOF: {
+						break
+					}
+					case context.Canceled: {
+						return "", true, nil
+					}
+					default: {
+						logger.Warningf("While reading '%s' the following error was encountered: %s", path, err)
+						return "", false, err
+					}
 				}
-				logger.Warningf("While reading '%s' the following error was encountered: %s", path, err)
-				return "", false, err
 			}
-
 		}
 		return "test_null_discared:" + path, false, nil
 	} else {
