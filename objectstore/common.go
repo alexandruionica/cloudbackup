@@ -5,6 +5,7 @@ import (
 	"cloudbackup/shared"
 	"context"
 	"errors"
+	"github.com/dustin/go-humanize"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	"os"
@@ -14,6 +15,8 @@ const loggingContext = "objectstore"
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
+
+var CouldNotConvertRate = errors.New("could not convert rate to numeric value")
 
 type ObjectStore interface {
 	Upload (path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface) (result string, cancelled bool, err error)
@@ -146,4 +149,46 @@ func (handle *FileReader) Close() {
 	if err != nil {
 		logger.Warningf("Could not close file descriptor for '%s'", handle.path)
 	}
+}
+
+// sets up a rate limited bucket if $rateLimitStr converts to a value >0
+// returns: pointer to rate limited bucket, converted $ratelimit, burst value, error
+func setupRateLimiterBucket (rateLimitStr string, targetName string, backupConfigName string) (*rate.Limiter, uint64, uint64, error){
+	var rateLimitBucket *rate.Limiter
+
+	ratelimit, err := humanize.ParseBytes(rateLimitStr)
+	if err != nil {
+		logger.Errorf("While trying to convert the rate limit '%s' to a " +
+			"number the following error was encountered: %s", rateLimitStr, err)
+		return rateLimitBucket, 0, 0, CouldNotConvertRate
+	}
+	if ratelimit > 0 {
+		// if rateLimitVal > 9223372036854775807 conversion to int64 from uint64 will return a negative number
+		if ratelimit > 9223372036854775807 {
+			logger.Warningf("Rate is %d which is higher than ~ 9223 petabytes/sec and this would overflow " +
+				"during a conversion from uint64 to int64. Lowering rate to %d", ratelimit, 9223372036854775807)
+			// 9223.something petabytes/sec should be sufficient for the near future
+			ratelimit = 9223372036854775807
+		}
+	}
+
+	var burst uint64
+	if ratelimit > 0 {
+		// burst represents how much can be fetched in one iteration
+		burst = ratelimit/10
+		// lower burst to ~2GB if burst is larger that the max positive value of a 32bit integer
+		if burst > 2147483647 {
+			burst = 2147483647
+		}
+		if burst < 1 {
+			burst = 1
+		}
+		rateLimitBucket = rate.NewLimiter(rate.Limit(ratelimit), int(ratelimit/10))
+	}
+
+	if ratelimit > 0 {
+		logger.Infof("Using rate limit %s for target '%s' belonging to backup '%s'",
+			humanize.Bytes(ratelimit), targetName, backupConfigName)
+	}
+	return rateLimitBucket, ratelimit, burst, nil
 }
