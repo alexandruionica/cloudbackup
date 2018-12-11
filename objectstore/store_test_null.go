@@ -4,11 +4,8 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
-	"errors"
-	"github.com/dustin/go-humanize"
 	"golang.org/x/time/rate"
 	"io"
-	"fmt"
 )
 
 type StoreTestNull struct {
@@ -25,38 +22,9 @@ type StoreTestNull struct {
 func InitialiseStoreTestNull (ctx context.Context, backupConfig config.Backup, target config.Target, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreTestNull, error) {
 	var rateLimitBucket *rate.Limiter
 
-	ratelimit, err := humanize.ParseBytes(rateLimitStr)
+	rateLimitBucket, ratelimit, burst, err := setupRateLimiterBucket(rateLimitStr, target.Name, backupConfig.Name)
 	if err != nil {
-		return &StoreTestNull{}, errors.New(fmt.Sprintf("While trying to convert the rate limit '%s' to a " +
-			"number the following error was encountered: %s", rateLimitStr, err))
-	}
-	if ratelimit > 0 {
-		// if rateLimitVal > 9223372036854775807 conversion to int64 from uint64 will return a negative number
-		if ratelimit > 9223372036854775807 {
-			logger.Warningf("Rate is %d which is higher than ~ 9223 petabytes/sec and this would overflow " +
-				"during a conversion from uint64 to int64. Lowering rate to %d", ratelimit, 9223372036854775807)
-			// 9223.something petabytes/sec should be sufficient for the near future
-			ratelimit = 9223372036854775807
-		}
-	}
-
-	var burst uint64
-	if ratelimit > 0 {
-		// burst represents how much can be fetched in one iteration
-		burst = ratelimit/10
-		// lower burst to ~2GB if burst is larger that the max positive value of a 32bit integer
-		if burst > 2147483647 {
-			burst = 2147483647
-		}
-		if burst < 1 {
-			burst = 1
-		}
-		rateLimitBucket = rate.NewLimiter(rate.Limit(ratelimit), int(ratelimit/10))
-	}
-
-	if ratelimit > 0 {
-		logger.Infof("Using rate limit %s for target '%s' belonging to backup '%s'",
-			humanize.Bytes(ratelimit), target.Name, backupConfig.Name)
+		return &StoreTestNull{}, err
 	}
 
 	result := &StoreTestNull{
@@ -88,11 +56,11 @@ func (object *StoreTestNull) Upload (path string, newDbRecord shared.BackedUpFil
 		// fake work of uploading file - read all bytes and discard them. Report errors
 		for {
 			_, err := reader.Read(p)
-			if err != nil{
+			if err != nil {
 				switch err {
 				// io.Reader reports io.EOF when reaching the end of the file. This is normal and expected
 					case io.EOF: {
-						break
+						return "test_null_discarded:" + path, false, nil
 					}
 					case context.Canceled: {
 						return "", true, nil
@@ -104,14 +72,10 @@ func (object *StoreTestNull) Upload (path string, newDbRecord shared.BackedUpFil
 				}
 			}
 		}
-		return "test_null_discared:" + path, false, nil
 	} else {
 		// TODO - build metadata for dir / symlink and then proceed to discard it
 		return "test_null_discarded_" + newDbRecord.Type + "_" + path, false, nil
 	}
-
-
-
 }
 
 func (object *StoreTestNull) MetadataUpdate (path string, newDbRecord shared.BackedUpFileProperties)  (result string, cancelled bool, err error) {
