@@ -20,9 +20,9 @@ const ErrUnknownJobType = "unknown job type"
 
 const loggingContext = "shared"
 
-var logger = log.WithFields(log.Fields{
-	"context": loggingContext,
-})
+//var logger = log.WithFields(log.Fields{
+//	"context": loggingContext,
+//})
 
 type CommWithSchedulerForBackup struct {
 	// this needs to be locked before acquiring the channel to send messages to the scheduler goroutine or read messages
@@ -89,11 +89,11 @@ type BackupJobStatus struct {
 	StartTime time.Time `json:"start_time,omitempty"`
 	// bandwidth/second used during last 1/5/15 minute(s) - makes sense only for $State == "running" . This
 	// value is the lower of disk read bandwidth and the upload speed to the backend object store
-	Rate1Min         int64                    `json:"rate_1min,omitempty"`
+	Rate1Min         int64                    `json:"rate_1min"`
 	_rate1Min        *ratecounter.RateCounter
-	Rate5Min         int64                    `json:"rate_5min,omitempty"`
+	Rate5Min         int64                    `json:"rate_5min"`
 	_rate5Min        *ratecounter.RateCounter
-	Rate15Min        int64                    `json:"rate_15min,omitempty"`
+	Rate15Min        int64                    `json:"rate_15min"`
 	_rate15Min       *ratecounter.RateCounter
 	ObjectStoreRates []ObjectStoreRate        `json:"object_store_rates,omitempty"`
 	StatsCounters    map[string]uint64        `json:"stats_counters,omitempty"`
@@ -118,11 +118,11 @@ type BackupJobsState struct {
 type ObjectStoreRate struct {
 	Name string
 	Type string
-	Rate1Min int64 `json:"rate_1_min,omitempty"`
+	Rate1Min int64 `json:"rate_1min"`
 	_rate1Min *ratecounter.RateCounter
-	Rate5Min int64 `json:"rate_5_min,omitempty"`
+	Rate5Min int64 `json:"rate_5min"`
 	_rate5Min *ratecounter.RateCounter
-	Rate15Min int64 `json:"rate_15_min,omitempty"`
+	Rate15Min int64 `json:"rate_15min"`
 	_rate15Min *ratecounter.RateCounter
 }
 
@@ -387,35 +387,31 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 	defer func() {
 		jobs.Lock.Unlock()
 	}()
-	for _, job := range jobs.Running {
+	for k, job := range jobs.Running {
 		if BackupJobName == job.Name {
 			// if the job rate counters(pointers) are not initilised then init them
 			if job._rate1Min == nil || job._rate5Min == nil || job._rate15Min == nil{
-				job._rate1Min = ratecounter.NewRateCounter(time.Minute * 1)
-				job._rate5Min = ratecounter.NewRateCounter(time.Minute * 5)
-				job._rate15Min = ratecounter.NewRateCounter(time.Minute * 15)
+				jobs.Running[k]._rate1Min = ratecounter.NewRateCounter(time.Minute * 1)
+				jobs.Running[k]._rate5Min = ratecounter.NewRateCounter(time.Minute * 5)
+				jobs.Running[k]._rate15Min = ratecounter.NewRateCounter(time.Minute * 15)
 			}
-			logger.Infof("Incrementing global rate counters with %d while right now values are %d %d %d while " +
-				"reported rate are %d %d %d", IncrementValue, job.Rate1Min, job.Rate5Min, job.Rate15Min, job._rate1Min.Rate(), job._rate5Min.Rate(), job._rate15Min.Rate())
-			// increment job rate counters
-			job._rate1Min.Incr(IncrementValue)
-			job._rate5Min.Incr(IncrementValue)
-			job._rate15Min.Incr(IncrementValue)
-			// update job rate counters which are retrievable
-			job.Rate1Min = job._rate1Min.Rate() / 60
-			job.Rate5Min = job._rate5Min.Rate() / 300
-			job.Rate15Min = job._rate1Min.Rate() / 900
 
-			logger.Infof("global rate counters should be %d %d %d while reported rate before division is %d %d %d",
-				job.Rate1Min, job.Rate5Min, job.Rate15Min, job._rate1Min.Rate(), job._rate5Min.Rate(), job._rate15Min.Rate())
+			// increment job rate counters
+			jobs.Running[k]._rate1Min.Incr(IncrementValue)
+			jobs.Running[k]._rate5Min.Incr(IncrementValue)
+			jobs.Running[k]._rate15Min.Incr(IncrementValue)
+			// update job rate counters which are retrievable
+			jobs.Running[k].Rate1Min = jobs.Running[k]._rate1Min.Rate() / 60
+			jobs.Running[k].Rate5Min = jobs.Running[k]._rate5Min.Rate() / 300
+			jobs.Running[k].Rate15Min = jobs.Running[k]._rate1Min.Rate() / 900
 
 			// increment backend rate counters - initialise slice if nil
 			if job.ObjectStoreRates == nil {
-				job.ObjectStoreRates = make([]ObjectStoreRate, 0)
+				jobs.Running[k].ObjectStoreRates = make([]ObjectStoreRate, 0)
 			}
 
 			foundObjectStoreEntry := false
-			for _, objectStore := range job.ObjectStoreRates {
+			for _, objectStore := range jobs.Running[k].ObjectStoreRates {
 				if ObjectStoreName == objectStore.Name {
 					foundObjectStoreEntry = true
 					break
@@ -423,7 +419,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 			}
 			// add entry and init counters
 			if ! foundObjectStoreEntry {
-				job.ObjectStoreRates = append(job.ObjectStoreRates, ObjectStoreRate{
+				jobs.Running[k].ObjectStoreRates = append(jobs.Running[k].ObjectStoreRates, ObjectStoreRate{
 					Name: ObjectStoreName,
 					Type: ObjectStoreType,
 					_rate1Min: ratecounter.NewRateCounter(time.Minute * 1),
@@ -432,16 +428,16 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				})
 			}
 
-			for _, objectStore := range job.ObjectStoreRates {
+			for k2, objectStore := range jobs.Running[k].ObjectStoreRates {
 				if ObjectStoreName == objectStore.Name {
 					// increment job rate counters for this particular object Store
-					objectStore._rate1Min.Incr(IncrementValue)
-					objectStore._rate5Min.Incr(IncrementValue)
-					objectStore._rate15Min.Incr(IncrementValue)
+					jobs.Running[k].ObjectStoreRates[k2]._rate1Min.Incr(IncrementValue)
+					jobs.Running[k].ObjectStoreRates[k2]._rate5Min.Incr(IncrementValue)
+					jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Incr(IncrementValue)
 					// update job rate counters which are retrievable
-					objectStore.Rate1Min = job._rate1Min.Rate() / 60
-					objectStore.Rate5Min = job._rate5Min.Rate() / 300
-					objectStore.Rate15Min = job._rate1Min.Rate() / 900
+					jobs.Running[k].ObjectStoreRates[k2].Rate1Min = jobs.Running[k]._rate1Min.Rate() / 60
+					jobs.Running[k].ObjectStoreRates[k2].Rate5Min = jobs.Running[k]._rate5Min.Rate() / 300
+					jobs.Running[k].ObjectStoreRates[k2].Rate15Min = jobs.Running[k]._rate1Min.Rate() / 900
 					break
 				}
 			}
