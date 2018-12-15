@@ -405,7 +405,9 @@ definitions:
       type:
         type: string
         example: aws_s3
-        description: "Backend type (object store) used for storing backups. Must be one of: aws_s3, gcp_storage, azure_blob"
+        description: >-
+          Backend type (object store) used for storing backups. Must be one of:
+          aws_s3, gcp_storage, azure_blob
       user:
         type: string
         example: AWS_ACCESS_KEY_ID
@@ -469,7 +471,7 @@ definitions:
               directories (via the "exclusions" section) do not increment this
               counter.
             example: 23
-          examine_produced_errors:
+          failed_to_examine:
             type: integer
             description: >-
               While examining the properties of files and directories this may
@@ -477,7 +479,9 @@ definitions:
               level ERROR and WARNING produced by context="backup.scan" in order
               to get additional details. Items for which this counter got
               incremented also had one of "examined_files" or
-              "examined_directories" incremented
+              "examined_directories" incremented. An increment of this counter 
+              means that most likely the said file or directory will not get 
+              backed up.
             example: 2
           excluded:
             type: integer
@@ -491,18 +495,18 @@ definitions:
               How many files were uploaded so far during the run of this backup
               job
             example: 230
-          uploaded_directories_metadata:
+          uploaded_non_files:
             type: integer
             description: >-
-              How many directories had their properties uploaded so far during
-              the run of this backup job
+              How many directories and symlinks had their properties uploaded 
+              so far during the run of this backup job
             example: 11
-          upload_produced_errors:
+          failed_to_upload:
             type: integer
             description: >-
-              How many files and directories produced irrecoverable errors so
-              far during the run of this backup job. This implies said files and
-              directories were not successfuly backed up.
+              How many files and directories produced irrecoverable errors 
+              during the upload so far during the run of this backup job. This 
+              implies said files and directories were not successfuly backed up.
             example: 11
       stats_text:
         type: object

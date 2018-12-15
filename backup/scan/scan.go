@@ -36,7 +36,7 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 	}
 	if err != nil {
 		logger.Errorf("While trying to get properties of %s encountered error '%s'", path, err)
-		backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
+		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine")
 		return false, err
 	} else {
 		select {
@@ -123,7 +123,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 	names, topLevelErr := readDirNames(path)
 	if topLevelErr != nil {
 		logger.Warnf("While trying to get directory listing for '%s' encountered error '%s'", path, topLevelErr)
-		backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
+		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine")
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
 			"", topLevelErr.Error())
 	} else {
@@ -147,7 +147,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			if err != nil {
 				logger.Warnf("While trying to check if %s should be excluded from being backed up, the following " +
 					"error was encountered '%s'", childPath, err)
-				backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
+				backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine")
 				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown", childPath, "",
 					err.Error())
 				continue
@@ -168,7 +168,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			}
 			if err != nil {
 				logger.Warnf("While trying to get properties of %s encountered error '%s'", childPath, err)
-				backupJobsState.IncrementCounter(backupConfig.Name, "examine_produced_errors")
+				backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine")
 				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown", childPath,
 					"", err.Error())
 			} else {
