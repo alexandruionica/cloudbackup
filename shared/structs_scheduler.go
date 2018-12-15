@@ -257,13 +257,13 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		StatsCounters: map[string]uint64{
 			"examined_files": 0,
 			"examined_directories": 0,
-			"examine_produced_errors": 0,
+			"failed_to_examine": 0,
 			// excluded files or directories due to matching some exclusion rule provided by the user (in the config)
 			//  excluded don't count against examined_files or examined_directories
 			"excluded": 0,
 			"uploaded_files": 0,
-			"uploaded_directories_metadata": 0,
-			"upload_produced_errors": 0,
+			"uploaded_non_files": 0,
+			"failed_to_upload": 0,
 		},
 		StatsText: map[string]string{
 			"current_directory": "",

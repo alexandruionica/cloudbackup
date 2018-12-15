@@ -81,12 +81,12 @@ func TestPath1(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 11,
 		"examined_files": 16,
 		"excluded": 0,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -159,12 +159,12 @@ func TestPath2(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 7,
 		"examined_files": 12,
 		"excluded": 0,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -248,12 +248,12 @@ func TestPath3(t *testing.T) {
 
 		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		expectedStats := map[string]uint64{
-			"examine_produced_errors": 1,
+			"failed_to_examine": 1,
 			"examined_directories": 6,
 			"examined_files": 9,
 			"excluded": 0,
-			"upload_produced_errors": 0,
-			"uploaded_directories_metadata": 0,
+			"failed_to_upload": 0,
+			"uploaded_non_files": 0,
 			"uploaded_files": 0,
 		}
 		if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -331,12 +331,12 @@ func TestPath4(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 10,
 		"examined_files": 15,
 		"excluded": 2,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -413,12 +413,12 @@ func TestPath5(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 10,
 		"examined_files": 14,
 		"excluded": 1,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -498,12 +498,12 @@ func TestPath6(t *testing.T) {
 	utils.Pp(backupConfig)
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 0,
 		"examined_files": 1,
 		"excluded": 0,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -593,12 +593,12 @@ func TestPath7(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 11,
 		"examined_files": 17,
 		"excluded": 0,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -681,12 +681,12 @@ func TestPath8(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 22,
 		"examined_files": 32,
 		"excluded": 0,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -761,12 +761,12 @@ func TestPath9(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 7,
 		"examined_files": 10,
 		"excluded": 2,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -841,12 +841,12 @@ func TestPath10(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 7,
 		"examined_files": 11,
 		"excluded": 1,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -921,12 +921,12 @@ func TestPath11(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 7,
 		"examined_files": 11,
 		"excluded": 1,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -1001,12 +1001,12 @@ func TestPath12(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 7,
 		"examined_files": 11,
 		"excluded": 1,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
@@ -1090,12 +1090,12 @@ func TestPath13(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"examine_produced_errors": 0,
+		"failed_to_examine": 0,
 		"examined_directories": 11,
 		"examined_files": 16,
 		"excluded": 0,
-		"upload_produced_errors": 0,
-		"uploaded_directories_metadata": 0,
+		"failed_to_upload": 0,
+		"uploaded_non_files": 0,
 		"uploaded_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
