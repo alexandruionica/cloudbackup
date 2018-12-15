@@ -11,6 +11,7 @@ import (
 	"os"
 )
 
+const MaxBufferSize = 20971520 // 20 MiB = 20971520
 const loggingContext = "objectstore"
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
@@ -179,6 +180,10 @@ func setupRateLimiterBucket (rateLimitStr string, targetName string, backupConfi
 		// lower burst to ~2GB if burst is larger that the max positive value of a 32bit integer
 		if burst > 2147483647 {
 			burst = 2147483647
+		}
+		// the value of "burst" will be used to make a byte slice so whatever is the burst size will equal to allocated memory, at runtime
+		if burst > MaxBufferSize {
+			burst = MaxBufferSize
 		}
 		if burst < 1 {
 			burst = 1
