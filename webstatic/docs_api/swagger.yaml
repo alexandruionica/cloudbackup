@@ -444,6 +444,25 @@ definitions:
         description: >-
           A start time of 0001-01-01T00:00:00Z is the equivallent of null time
           and should be ignored for jobs having "state"="stopped"
+      rate_1min:
+        type: integer
+        example: "39282"
+        description: >-
+          Average disk bandwidth per second consumed reading file content during the last 1 minute. This will roughly translate to network bandwidth consumed for uploading the said file content. This excludes any bandwidth used to read file or directory properties.
+      rate_5min:
+        type: integer
+        example: "27321"
+        description: >-
+          Average disk bandwidth per second consumed reading file content during the last 5 minutes. This will roughly translate to network bandwidth consumed for uploading the said file content. This excludes any bandwidth used to read file or directory properties.
+      rate_15min:
+        type: integer
+        example: "21201"
+        description: >-
+          Average disk bandwidth per second consumed reading file content during the last 15 minutes. This will roughly translate to network bandwidth consumed for uploading the said file content. This excludes any bandwidth used to read file or directory properties.
+      object_store_states:
+        type: array
+        items: 
+          $ref: '#/definitions/ObjectStoreRates'
       next_run:
         type: string
         example: '2018-06-03T16:38:55.676712775+10:00'
@@ -507,6 +526,9 @@ definitions:
               How many files and directories produced irrecoverable errors 
               during the upload so far during the run of this backup job. This 
               implies said files and directories were not successfuly backed up.
+              Causes can be lack of access to read file content or failure to 
+              send the file to the remote object store. Check the log file for 
+              details.
             example: 11
       stats_text:
         type: object
@@ -597,6 +619,32 @@ definitions:
           ^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$
     required:
       - name
+  ObjectStoreRates:
+    type: object
+    properties:
+      name:
+        type: string
+        example: aws_1
+        description: The name corresponds to the target name in the config file backup job definition
+      type:
+        type: string
+        example: aws_s3
+        description: Object store type
+      rate_1min:
+        type: integer
+        example: "39282"
+        description: >-
+          Average disk bandwidth per second consumed reading file content during the last 1 minute. This will roughly translate to network bandwidth consumed for uploading the said file content to this particular object store. This excludes any bandwidth used to read file or directory properties.
+      rate_5min:
+        type: integer
+        example: "27321"
+        description: >-
+          Average disk bandwidth per second consumed reading file content during the last 5 minutes. This will roughly translate to network bandwidth consumed for uploading the said file content to this particular object store. This excludes any bandwidth used to read file or directory properties.
+      rate_15min:
+        type: integer
+        example: "21201"
+        description: >-
+          Average disk bandwidth per second consumed reading file content during the last 15 minutes. This will roughly translate to network bandwidth consumed for uploading the said file content to this particular object store. This excludes any bandwidth used to read file or directory properties.     
   ApiResponse:
     type: object
     properties:
