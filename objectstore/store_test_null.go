@@ -51,8 +51,8 @@ func (object *StoreTestNull) Upload (path string, newDbRecord shared.BackedUpFil
 		}
 		defer reader.Close()
 
-		// create a 1 MiB buffer to hold read content
-		p := make([]byte, 1048576)
+		// create a 100 KiB buffer to hold read content
+		p := make([]byte, 102400)
 		// fake work of uploading file - read all bytes and discard them. Report errors
 		for {
 			_, err := reader.Read(p)

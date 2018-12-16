@@ -403,7 +403,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 			// update job rate counters which are retrievable
 			jobs.Running[k].Rate1Min = jobs.Running[k]._rate1Min.Rate() / 60
 			jobs.Running[k].Rate5Min = jobs.Running[k]._rate5Min.Rate() / 300
-			jobs.Running[k].Rate15Min = jobs.Running[k]._rate1Min.Rate() / 900
+			jobs.Running[k].Rate15Min = jobs.Running[k]._rate15Min.Rate() / 900
 
 			// increment backend rate counters - initialise slice if nil
 			if job.ObjectStoreRates == nil {
@@ -429,17 +429,17 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 			}
 
 			for k2, objectStore := range jobs.Running[k].ObjectStoreRates {
+				var increment int64 = 0
 				if ObjectStoreName == objectStore.Name {
-					// increment job rate counters for this particular object Store
-					jobs.Running[k].ObjectStoreRates[k2]._rate1Min.Incr(IncrementValue)
-					jobs.Running[k].ObjectStoreRates[k2]._rate5Min.Incr(IncrementValue)
-					jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Incr(IncrementValue)
-					// update job rate counters which are retrievable
-					jobs.Running[k].ObjectStoreRates[k2].Rate1Min = jobs.Running[k]._rate1Min.Rate() / 60
-					jobs.Running[k].ObjectStoreRates[k2].Rate5Min = jobs.Running[k]._rate5Min.Rate() / 300
-					jobs.Running[k].ObjectStoreRates[k2].Rate15Min = jobs.Running[k]._rate1Min.Rate() / 900
-					break
+					increment = IncrementValue
 				}
+				jobs.Running[k].ObjectStoreRates[k2]._rate1Min.Incr(increment)
+				jobs.Running[k].ObjectStoreRates[k2]._rate5Min.Incr(increment)
+				jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Incr(increment)
+				// update job rate counters which are retrievable
+				jobs.Running[k].ObjectStoreRates[k2].Rate1Min = jobs.Running[k].ObjectStoreRates[k2]._rate1Min.Rate() / 60
+				jobs.Running[k].ObjectStoreRates[k2].Rate5Min = jobs.Running[k].ObjectStoreRates[k2]._rate5Min.Rate() / 300
+				jobs.Running[k].ObjectStoreRates[k2].Rate15Min = jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Rate() / 900
 			}
 			break
 		}
