@@ -192,7 +192,7 @@ func setupRateLimiterBucket (rateLimitStr string, targetName string, backupConfi
 	}
 
 	if ratelimit > 0 {
-		logger.Infof("Using rate limit %s for target '%s' belonging to backup '%s'",
+		logger.Infof("Using rate limit %s/sec for target '%s' belonging to backup '%s'",
 			humanize.Bytes(ratelimit), targetName, backupConfigName)
 	}
 	return rateLimitBucket, ratelimit, burst, nil
