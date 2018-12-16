@@ -54,7 +54,7 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 				}
 				if err != nil {
 					logger.Warnf("While backing up the contents of directory %s the following error was " +
-						"encountered: %s", err)
+						"encountered: %s", path, err)
 				}
 			} else {
 				backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
