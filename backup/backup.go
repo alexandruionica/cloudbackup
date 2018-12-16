@@ -102,6 +102,12 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 									path, encounteredError,  len(objectStores))
 							}
 							return false, encounteredErrorObject
+						} else {
+							if newDbRecord.Type == "file" {
+								backupJobsState.IncrementCounter(backupConfig.Name, "updated_metadata_for_files")
+							} else {
+								backupJobsState.IncrementCounter(backupConfig.Name, "updated_metadata_for_non_files")
+							}
 						}
 
 						// backup successful
