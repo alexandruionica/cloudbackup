@@ -88,6 +88,8 @@ func TestPath1(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -166,6 +168,8 @@ func TestPath2(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -255,6 +259,8 @@ func TestPath3(t *testing.T) {
 			"failed_to_upload": 0,
 			"uploaded_non_files": 0,
 			"uploaded_files": 0,
+			"updated_metadata_for_files": 0,
+			"updated_metadata_for_non_files": 0,
 		}
 		if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -338,6 +344,8 @@ func TestPath4(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -420,6 +428,8 @@ func TestPath5(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -505,6 +515,8 @@ func TestPath6(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -600,6 +612,8 @@ func TestPath7(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -688,6 +702,8 @@ func TestPath8(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -768,6 +784,8 @@ func TestPath9(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -848,6 +866,8 @@ func TestPath10(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -928,6 +948,8 @@ func TestPath11(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -1008,6 +1030,8 @@ func TestPath12(t *testing.T) {
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
 		"uploaded_files": 0,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -1095,8 +1119,10 @@ func TestPath13(t *testing.T) {
 		"examined_files": 16,
 		"excluded": 0,
 		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_non_files": 11,
+		"uploaded_files": 16,
+		"updated_metadata_for_files": 0,
+		"updated_metadata_for_non_files": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",

@@ -264,6 +264,8 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"uploaded_files": 0,
 			"uploaded_non_files": 0,
 			"failed_to_upload": 0,
+			"updated_metadata_for_files": 0,
+			"updated_metadata_for_non_files": 0,
 		},
 		StatsText: map[string]string{
 			"current_directory": "",
