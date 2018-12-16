@@ -67,6 +67,12 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 							logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
 						}
 						return false, encounteredErrorObject
+					} else {
+						if newDbRecord.Type == "file" {
+							backupJobsState.IncrementCounter(backupConfig.Name, "uploaded_files")
+						} else {
+							backupJobsState.IncrementCounter(backupConfig.Name, "uploaded_non_files")
+						}
 					}
 
 					// backup successful
@@ -137,6 +143,12 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 						logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
 					}
 					return false, encounteredErrorObject
+				} else {
+					if newDbRecord.Type == "file" {
+						backupJobsState.IncrementCounter(backupConfig.Name, "uploaded_files")
+					} else {
+						backupJobsState.IncrementCounter(backupConfig.Name, "uploaded_non_files")
+					}
 				}
 
 				// backup successful
