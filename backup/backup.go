@@ -49,20 +49,23 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					return false, err
 				}
 				if contentChanged {
-					encounteredError := false
+					encounteredError := 0
 					var encounteredErrorObject error
 					// back up the object to one or more remote object stores
 					for _, objectStore := range objectStores {
 						cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore, backupJobsState)
 						if err != nil {
-							encounteredError = true
+							encounteredError ++
 							encounteredErrorObject = err
 						}
 						if cancelled {
 							return true, nil
 						}
 					}
-					if encounteredError {
+					if encounteredError > 0 {
+						if len(objectStores) > 1{
+							logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
+						}
 						return false, encounteredErrorObject
 					}
 
@@ -71,7 +74,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 
 				} else {
 					if metadataChanged {
-						encounteredError := false
+						encounteredError := 0
 						var encounteredErrorObject error
 						// back up the object metadata to one or more remote object stores
 						for _, objectStore := range objectStores {
@@ -80,14 +83,18 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 							// back up the object to one or more remote object stores
 							cancelled, err := UpdateObjectMetadata(ctx, path, newDbRecord, backupConfig, objectStore)
 							if err != nil {
-								encounteredError = true
+								encounteredError ++
 								encounteredErrorObject = err
 							}
 							if cancelled {
 								return true, nil
 							}
 						}
-						if encounteredError {
+						if encounteredError > 0 {
+							if len(objectStores) > 1{
+								logger.Warnf("Failed upload metadata changes of of '%s' to %d out of %d targets",
+									path, encounteredError,  len(objectStores))
+							}
 							return false, encounteredErrorObject
 						}
 
@@ -112,20 +119,23 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					return false, err
 				}
 
-				encounteredError := false
+				encounteredError := 0
 				var encounteredErrorObject error
 				// back up the object to one or more remote object stores
 				for _, objectStore := range objectStores {
 					cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore, backupJobsState)
 					if err != nil {
-						encounteredError = true
+						encounteredError ++
 						encounteredErrorObject = err
 					}
 					if cancelled {
 						return true, nil
 					}
 				}
-				if encounteredError {
+				if encounteredError > 0 {
+					if len(objectStores) > 1{
+						logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
+					}
 					return false, encounteredErrorObject
 				}
 
