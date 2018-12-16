@@ -3,6 +3,7 @@ package scan
 import (
 	"cloudbackup/backup"
 	"cloudbackup/objectstore"
+	"cloudbackup/utils"
 	"os"
 	"path/filepath"
 
@@ -57,7 +58,17 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 						"encountered: %s", path, err)
 				}
 			} else {
-				backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
+				switch utils.FileType(stat) {
+				case "file": {
+					backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
+				}
+				case "symlink": {
+					backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks")
+				}
+				default: {
+					backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown")
+				}
+				}
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
 				if ! dryRun {
 					// call to function dealing with backing up individual files
@@ -186,7 +197,17 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
 						"", "")
 				} else {
-					backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
+					switch utils.FileType(fileInfo) {
+					case "file": {
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
+					}
+					case "symlink": {
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks")
+					}
+					default: {
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown")
+					}
+					}
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", childPath,
 						"","")
 					if ! dryRun {

@@ -613,13 +613,23 @@
           "properties": {
             "examined_files": {
               "type": "integer",
-              "description": "How many files had their properties examined. Excluded files (via the \"exclusions\" section) do not increment this counter.",
+              "description": "How many files had their properties examined. Excluded files (via the \"exclusions\" section) do not increment this counter. This counter will not include non regular files like symlinks (or any other non regular types). The only time symlinks are taken into account is when dereference=true in the configuration file as then symlinks will be followed and treated as what their target is.",
               "example": 604
             },
             "examined_directories": {
               "type": "integer",
               "description": "How many directories had their properties examined. Excluded directories (via the \"exclusions\" section) do not increment this counter.",
               "example": 23
+            },
+            "examined_symlinks": {
+              "type": "integer",
+              "description": "How many symlinks had their properties examined. This counter is incremented when dereference=false in the configuration file",
+              "example": 2
+            },
+            "examined_unknown": {
+              "type": "integer",
+              "description": "How may non regular files (excluding symlinks) where examined.",
+              "example": 0
             },
             "failed_to_examine": {
               "type": "integer",
@@ -645,6 +655,15 @@
               "type": "integer",
               "description": "How many files and directories produced irrecoverable errors  during the upload so far during the run of this backup job. This  implies said files and directories were not successfuly backed up. Causes can be lack of access to read file content or failure to  send the file to the remote object store. Check the log file for  details.",
               "example": 11
+            },
+            "updated_metadata_for_files": {
+              "type": "integer",
+              "description": "How many files were detected to have had a properties change but their content itself was not changed so a metadata only updated was done as part of this backup run.",
+              "example": 107
+            },
+            "updated_metadata_for_non_files": {
+              "type": "integer",
+              "description": "How many directories, symlinks and non regular files were detected to have had a properties change so a metadata only updated was done as part of this backup run."
             }
           }
         },
