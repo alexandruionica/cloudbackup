@@ -74,6 +74,64 @@ func List(config clientConfig.Client, jsonOutput bool) {
 	}
 }
 
+func Status(config clientConfig.Client, jsonOutput bool, jobName string, jobId string) {
+	httpClient := &http.Client{}
+	req, err := http.NewRequest("GET", config.Address + ApiPrefix + "/backup/list", nil)
+	if err != nil {
+		fmt.Printf("Error starting the http client: %s\n", err)
+		os.Exit(1)
+	}
+	req.SetBasicAuth(config.Username, config.Password)
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		logger.Debugf("%s %+v", err, resp)
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	body, err := clientCommon.ValidateServerResponse(resp)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(1)
+	}
+	var decodedJson ListResponse
+	err = json.Unmarshal(body, &decodedJson)
+	if err != nil {
+		fmt.Printf("Could not decode the JSON response received from server. Error was: %s\n", err)
+		os.Exit(1)
+	}
+
+	found := false
+	var decodedJob shared.BackupJobStatus
+	for _, jobStatus := range decodedJson.Result {
+		if jobStatus.Name == jobName {
+			if jobId != "" && jobStatus.BackupJobId == jobId {
+				found = true
+				decodedJob = jobStatus
+			}
+			if jobId == "" {
+				found = true
+				decodedJob = jobStatus
+			}
+			break
+		}
+	}
+	if ! found {
+		if jobId != "" {
+			fmt.Printf("No job having name %s and id %s was found\n", jobName, jobId)
+		} else {
+			fmt.Printf("No job having name %s was found\n", jobName)
+		}
+		os.Exit(1)
+	}
+	if jsonOutput {
+		utils.Pp(decodedJob)
+		os.Exit(0)
+	} else {
+		printBackupStatus(decodedJob)
+	}
+}
+
 func Start(config clientConfig.Client, jsonOutput bool, jobName string) {
 	payload := struct{Name string `json:"name"`}{jobName,}
 	encodedPayload, err := json.Marshal(payload)
@@ -308,4 +366,70 @@ func printBackupList(decodedJson ListResponse){
 		}
 		fmt.Printf(tableTemplate, job.Name, job.State, jobId, startTime, nextRun)
 	}
+}
+
+// for a "status" command this formats the result and prints it in a nice way
+func printBackupStatus(decodedJson shared.BackupJobStatus){
+	logger.Debugf("%+v", decodedJson)
+	fmt.Printf("Name: %s\n", decodedJson.Name)
+	fmt.Printf("State: %s\n", decodedJson.State)
+	if decodedJson.State == "running"{
+		fmt.Printf("Job id: %s\n", decodedJson.BackupJobId)
+		fmt.Printf("Start time: %s\n", decodedJson.StartTime.String())
+		if len(decodedJson.ObjectStoreRates) < 2 {
+			fmt.Printf(" 1 minute rate: %d\n", decodedJson.Rate1Min)
+			fmt.Printf(" 5 minute rate: %d\n", decodedJson.Rate5Min)
+			fmt.Printf("15 minute rate: %d\n", decodedJson.Rate15Min)
+		} else {
+			maxFieldLength := 1
+			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
+				if utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate1Min, 10)) > maxFieldLength {
+					maxFieldLength = utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate1Min, 10))
+				}
+				if utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate5Min, 10)) > maxFieldLength {
+					maxFieldLength = utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate5Min, 10))
+				}
+				if utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate15Min, 10)) > maxFieldLength {
+					maxFieldLength = utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate15Min, 10))
+				}
+			}
+			// increment by 1 just to allow for extra growth which per target rates may have as we don't count maxFieldLength there
+			maxFieldLength++
+			fmt.Printf("Global  1 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", decodedJson.Rate1Min)
+			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
+				fmt.Printf("| target %s  1 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", objectStoreRate.Name, objectStoreRate.Rate1Min)
+			}
+			fmt.Println("")
+
+			fmt.Printf("Global  5 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", decodedJson.Rate5Min)
+			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
+				fmt.Printf("| target %s  5 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", objectStoreRate.Name, objectStoreRate.Rate5Min)
+			}
+			fmt.Println("")
+
+			fmt.Printf("Global 15 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", decodedJson.Rate15Min)
+			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
+				fmt.Printf("| target %s 15 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", objectStoreRate.Name, objectStoreRate.Rate15Min)
+			}
+			fmt.Println("")
+		}
+		// counters
+		fmt.Printf("Examined directories: %d\n", decodedJson.StatsCounters["examined_directories"])
+		fmt.Printf("Examined files: %d\n", decodedJson.StatsCounters["examined_files"])
+		fmt.Printf("Files and directories excluded from examination: %d\n", decodedJson.StatsCounters["excluded"])
+		fmt.Printf("Files and directories which could not be examined: %d\n", decodedJson.StatsCounters["failed_to_examine"])
+		fmt.Printf("Files and directories which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload"])
+		fmt.Printf("Files successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_files"])
+		fmt.Printf("Directories and symlinks for which properties where successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_non_files"])
+		// text stats
+		fmt.Printf("Current directory being processed: %s\n", decodedJson.StatsText["current_directory"])
+		fmt.Printf("Current file being processed: %s\n", decodedJson.StatsText["current_file"])
+	}
+	var nextRun string
+	if decodedJson.NextRun.IsZero() {
+		nextRun = "n/a"
+	} else {
+		nextRun = decodedJson.NextRun.String()
+	}
+	fmt.Printf("Next scheduled run for this job: %s\n",nextRun)
 }
