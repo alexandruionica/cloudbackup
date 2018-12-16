@@ -53,7 +53,8 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 					return true, err
 				}
 				if err != nil {
-					return false, err
+					logger.Warnf("While backing up the contents of directory %s the following error was " +
+						"encountered: %s", err)
 				}
 			} else {
 				backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
@@ -65,7 +66,8 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 						return true, nil
 					}
 					if err != nil {
-						return false, err
+						backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_upload")
+						logger.Warnf("While trying to backup '%s' the following error was encountered: %s", path, err)
 					}
 				}
 
@@ -110,7 +112,8 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			return true, nil
 		}
 		if err != nil {
-			return false, err
+			backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_upload")
+			logger.Warnf("While trying to backup '%s' the following error was encountered: %s", path, err)
 		}
 		// if no error was reported and no cancellation was reported either then we continue to process all files and
 		// folders part of the just "backed up" directory
@@ -138,7 +141,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			{
 				logger.Infof("while processing '%s' received request to cancel running backup job '%s'",
 					path, backupConfig.Name)
-				return true, topLevelErr
+				return true, nil
 			}
 		default:
 			childPath := filepath.Join(path, name)
@@ -177,8 +180,11 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 						objectStores) // #nosec
 					// lower level walk() was signalled to exit
 					if exiting {
-						return true, topLevelErr
+						return true, nil
 					}
+					// set current directory back to what we're in right now as the above walk() has set it to $childPath
+					backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
+						"", "")
 				} else {
 					backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", childPath,
@@ -190,7 +196,8 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 							return true, nil
 						}
 						if err != nil {
-							return false, err
+							backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_upload")
+							logger.Warnf("While trying to backup '%s' the following error was encountered: %s", childPath, err)
 						}
 					}
 					// mark current examined file as none as we don't know if the next iteration of the main for loop
@@ -201,7 +208,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			}
 		}
 	}
-	return false, topLevelErr
+	return false, nil
 }
 
 // check if $path is matches any of the Globstar elements of the $exclusions array. If a match is found then true
