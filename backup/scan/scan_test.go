@@ -84,6 +84,8 @@ func TestPath1(t *testing.T) {
 		"failed_to_examine": 0,
 		"examined_directories": 11,
 		"examined_files": 16,
+		"examined_symlinks": 0,
+		"examined_unknown": 0,
 		"excluded": 0,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -163,7 +165,9 @@ func TestPath2(t *testing.T) {
 	expectedStats := map[string]uint64{
 		"failed_to_examine": 0,
 		"examined_directories": 7,
-		"examined_files": 12,
+		"examined_files": 10,
+		"examined_symlinks": 2,
+		"examined_unknown": 0,
 		"excluded": 0,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -254,7 +258,9 @@ func TestPath3(t *testing.T) {
 		expectedStats := map[string]uint64{
 			"failed_to_examine": 1,
 			"examined_directories": 6,
-			"examined_files": 9,
+			"examined_files": 7,
+			"examined_symlinks": 2,
+			"examined_unknown": 0,
 			"excluded": 0,
 			"failed_to_upload": 0,
 			"uploaded_non_files": 0,
@@ -340,6 +346,8 @@ func TestPath4(t *testing.T) {
 		"failed_to_examine": 0,
 		"examined_directories": 10,
 		"examined_files": 15,
+		"examined_symlinks": 0,
+		"examined_unknown": 0,
 		"excluded": 2,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -424,6 +432,8 @@ func TestPath5(t *testing.T) {
 		"failed_to_examine": 0,
 		"examined_directories": 10,
 		"examined_files": 14,
+		"examined_symlinks": 0,
+		"examined_unknown": 0,
 		"excluded": 1,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -511,6 +521,8 @@ func TestPath6(t *testing.T) {
 		"failed_to_examine": 0,
 		"examined_directories": 0,
 		"examined_files": 1,
+		"examined_symlinks": 0,
+		"examined_unknown": 0,
 		"excluded": 0,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -608,6 +620,8 @@ func TestPath7(t *testing.T) {
 		"failed_to_examine": 0,
 		"examined_directories": 11,
 		"examined_files": 17,
+		"examined_symlinks": 0,
+		"examined_unknown": 0,
 		"excluded": 0,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -698,6 +712,8 @@ func TestPath8(t *testing.T) {
 		"failed_to_examine": 0,
 		"examined_directories": 22,
 		"examined_files": 32,
+		"examined_symlinks": 0,
+		"examined_unknown": 0,
 		"excluded": 0,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -779,7 +795,9 @@ func TestPath9(t *testing.T) {
 	expectedStats := map[string]uint64{
 		"failed_to_examine": 0,
 		"examined_directories": 7,
-		"examined_files": 10,
+		"examined_files": 8,
+		"examined_symlinks": 2,
+		"examined_unknown": 0,
 		"excluded": 2,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -861,7 +879,9 @@ func TestPath10(t *testing.T) {
 	expectedStats := map[string]uint64{
 		"failed_to_examine": 0,
 		"examined_directories": 7,
-		"examined_files": 11,
+		"examined_files": 9,
+		"examined_symlinks": 2,
+		"examined_unknown": 0,
 		"excluded": 1,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -943,7 +963,9 @@ func TestPath11(t *testing.T) {
 	expectedStats := map[string]uint64{
 		"failed_to_examine": 0,
 		"examined_directories": 7,
-		"examined_files": 11,
+		"examined_files": 9,
+		"examined_symlinks": 2,
+		"examined_unknown": 0,
 		"excluded": 1,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -1025,7 +1047,9 @@ func TestPath12(t *testing.T) {
 	expectedStats := map[string]uint64{
 		"failed_to_examine": 0,
 		"examined_directories": 7,
-		"examined_files": 11,
+		"examined_files": 9,
+		"examined_symlinks": 2,
+		"examined_unknown": 0,
 		"excluded": 1,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 0,
@@ -1117,6 +1141,8 @@ func TestPath13(t *testing.T) {
 		"failed_to_examine": 0,
 		"examined_directories": 11,
 		"examined_files": 16,
+		"examined_symlinks": 0,
+		"examined_unknown": 0,
 		"excluded": 0,
 		"failed_to_upload": 0,
 		"uploaded_non_files": 11,
@@ -1130,6 +1156,115 @@ func TestPath13(t *testing.T) {
 	}
 	dbops.CloseStatementsAndDb(dbData)
 }
+
+
+// test number of examined files as reported by Path() when  dereference=false and when using an actual DB and a folder is unreadable.Similar to
+// TestPath3 but  dryrun=false and a valid DB
+func TestPath14(t *testing.T) {
+	// skip this test on Windows as  os.Chmod 0000 is not possible on Windows
+	if runtime.GOOS != "windows" {
+		path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+		// remove tmpfile which holds the yaml as the config has been parsed and loaded
+		defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+		result, err := config.Load(path, false, &sync.RWMutex{})
+		if err != nil {
+			t.Fatalf("Could not load fake config file. Error was: %s", err)
+		}
+		utils.Pp(result)
+
+		// folder with some mock files and symlinks
+		backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
+		defer func() {
+			_ = os.Chmod(backupDirPath + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+				string(filepath.Separator) + "dir3", 0700) // #nosec
+			err = os.RemoveAll(backupDirPath) // #nosec
+			if err != nil {
+				t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+			}
+		}()
+
+		// make folder unreadable so it produces an error
+		err = os.Chmod(backupDirPath + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
+			string(filepath.Separator) + "dir3", 0000)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		backupConfig := result.Config.Backup[0]
+		// overwrite whatever was in the mock config with the tmp path we want to test
+		backupConfig.Paths = []string{backupDirPath}
+		// set dereference to false
+		backupConfig.Dereference = false
+		// backupJobState contains the state of all running backup jobs plus it has some handy methods
+		backupJobsState := &shared.BackupJobsState{}
+		backupJobsState.Lock = &sync.RWMutex{}
+		// populate state object with default values
+		jobId := uuid.NewV4().String()
+		err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+		if err != nil {
+			t.Fatalf("Failed to get signalling context. Error was: %s", err)
+		}
+
+		err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
+		if err != nil {
+			t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
+		}
+		db, err := database.Start(result.Config.DataDir, backupConfig.Name)
+		if err != nil {
+			t.Fatalf("database.Start() returned error: '%s'", err)
+		}
+
+		preparedStatements, err := dbops.Prepare(db)
+		if err != nil {
+			t.Fatalf("dbops.Prepare() returned error: '%s'", err)
+			database.CloseDb(db, backupConfig.Name)
+		}
+
+		dbData := shared.DbData{
+			Db:                 db,
+			Connected:          true,
+			PreparedStatements: preparedStatements,
+		}
+
+		objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+		if err != nil {
+			t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+		}
+
+		for _, backupPath := range backupConfig.Paths {
+			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores)
+			if err != nil {
+				t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
+			}
+		}
+
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
+		expectedStats := map[string]uint64{
+			"failed_to_examine": 1,
+			"examined_directories": 6, // 7 in total but the 1 dir in "dir3" is unaccessible due to chmod 000 on dir3
+			"examined_files": 7,
+			"examined_symlinks": 2,
+			"examined_unknown": 0,
+			"excluded": 0,
+			"failed_to_upload": 0,
+			"uploaded_non_files": 8, // 6 directories + 2 symlinks
+			"uploaded_files": 7,
+			"updated_metadata_for_files": 0,
+			"updated_metadata_for_non_files": 0,
+		}
+		if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
+				backupJobsState.Running[0].StatsCounters, expectedStats)
+		}
+		dbops.CloseStatementsAndDb(dbData)
+	}
+}
+
 
 // should not match exclusion
 func TestIsExcluded1(t *testing.T) {

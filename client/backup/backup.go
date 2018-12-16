@@ -416,6 +416,8 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 		// counters
 		fmt.Printf("Examined directories: %d\n", decodedJson.StatsCounters["examined_directories"])
 		fmt.Printf("Examined files: %d\n", decodedJson.StatsCounters["examined_files"])
+		fmt.Printf("Examined symlinks: %d\n", decodedJson.StatsCounters["examined_symlinks"])
+		fmt.Printf("Examined other than regular file types: %d\n", decodedJson.StatsCounters["examined_unknown"])
 		fmt.Printf("Files and directories excluded from examination: %d\n", decodedJson.StatsCounters["excluded"])
 		fmt.Printf("Files and directories which could not be examined: %d\n", decodedJson.StatsCounters["failed_to_examine"])
 		fmt.Printf("Files and directories which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload"])
