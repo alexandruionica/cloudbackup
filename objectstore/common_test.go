@@ -177,7 +177,7 @@ func TestNewFileReader1(t *testing.T) {
 	}
 	fileToOpen := "a_missing_file_" + uuid.NewV4().String()
 	_, err = NewFileReader(fileToOpen, bucket, backupJobsState, result.Config.Backup[0].Name,
-		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst, context.TODO())
+		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst, 1000, context.TODO())
 	if err == nil {
 		t.Fatalf("NewFileReader() was supposed to return an error because file %s should not exist but it didn't return an error", fileToOpen)
 	}
@@ -219,10 +219,15 @@ func TestNewFileReader2(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{tmpPath})
+	statHandle, err := os.Stat(fileToOpen)
+	if err != nil {
+		t.Fatalf("Could not os.Stat() file %s", fileToOpen)
+	}
+	fileSize := statHandle.Size()
 
 	reader, err := NewFileReader(fileToOpen, bucket, backupJobsState, result.Config.Backup[0].Name,
 		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst,
-		context.TODO())
+		fileSize, context.TODO())
 	if err != nil {
 		t.Fatalf("while running NewFileReader() got error: %s ", err)
 	}
@@ -297,9 +302,15 @@ func TestNewFileReader3(t *testing.T) {
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{tmpPath})
 
+	statHandle, err := os.Stat(fileToOpen)
+	if err != nil {
+		t.Fatalf("Could not os.Stat() file %s", fileToOpen)
+	}
+	fileSize := statHandle.Size()
+
 	reader, err := NewFileReader(fileToOpen, bucket, backupJobsState, result.Config.Backup[0].Name,
 		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst,
-		context.TODO())
+		fileSize, context.TODO())
 	if err != nil {
 		t.Fatalf("while running NewFileReader() got error: %s ", err)
 	}
