@@ -44,7 +44,11 @@ type FileReader struct {
 	burst uint64
 	// used for error messages during file.Close()
 	path string
-	//
+	// used to calculate how many bytes can still be requested to be read from the file (makes sense only when rate limiting is in use)
+	fileSize int64
+	// how many bytes where read so far
+	readBytes int64
+	// for cancelling the job
 	ctx context.Context
 }
 
@@ -75,7 +79,7 @@ func GetObjectStores (ctx context.Context, backupConfig config.Backup, backupJob
 // setup the io.Reader compliant type which records how many bytes were transferred and which also hooks up the
 // rate limiter (if rate limiting is enabled)
 func NewFileReader (path string, bucket *rate.Limiter, backupJobsState shared.BackupJobsStateInterface,
-	BackupJobName string, ObjectStoreName string, ObjectStoreType string, rate uint64, burst uint64, ctx context.Context)(FileReader, error) {
+	BackupJobName string, ObjectStoreName string, ObjectStoreType string, rate uint64, burst uint64, fileSize int64, ctx context.Context)(FileReader, error) {
 	fileReader, err := os.Open(path) // #nosec
 	if err != nil {
 		return FileReader{}, err
@@ -91,6 +95,8 @@ func NewFileReader (path string, bucket *rate.Limiter, backupJobsState shared.Ba
 		rateLimit:rate,
 		burst: burst,
 		path: path,
+		fileSize: fileSize,
+		readBytes: 0,
 		ctx: ctx,
 	}
 
@@ -111,8 +117,11 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 				handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
 				return readBytes, err
 			} else {
-				// bucket.WaitN() allows to read up to burst limit so we need to ensure we don't attempt larger values than burst
-				if uint64(len(p)) <= handle.burst {
+				// bucket.WaitN() allows to read up to burst limit so we need to ensure we don't attempt larger values
+				// than burst; we also need to be sure that we're not trying to read more bytes than the file has
+				// because if we do so then the WaitN() will pause for more tokens to be available than needed
+				if uint64(len(p)) <= handle.burst && (handle.fileSize - handle.readBytes) >= int64(len(p)) {
+					// logger.Infof("1. waiting to read %10d for %s", len(p), handle.path)
 					err := handle.bucket.WaitN(context.Background(), len(p))
 					if err != nil {
 						logger.Warningf("While pausing before attempting to read '%s' the following error was received " +
@@ -120,17 +129,47 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					}
 					readBytes, err := handle.origFileReader.Read(p)
 					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
+					handle.readBytes += int64(readBytes)
 					return readBytes, err
 				} else {
+					var newBufSize int64
+					// if we're trying to read more than it remains to be read then we need to adjust to what remains
+					// or otherwise we'll pause for waiting more tokens then needed and slow down the whole backup
+					if (handle.fileSize - handle.readBytes) <= int64(len(p)) {
+						if (handle.fileSize - handle.readBytes) > 0 {
+							newBufSize = handle.fileSize - handle.readBytes
+						} else {
+							// if we got 0 then probably this is the last read() as its going to return io.EOF .Set
+							// to 1 in order to be able to get io.EOF
+							newBufSize = 1
+							// /etc/mtab is a symlink to /proc/self/mounts which is a 0 bytes file but when read it
+							// actually returns content. So for 0 bytes files just attempt to do a 1KB read
+							if handle.fileSize == 0 {
+								newBufSize = 1000
+							} else {
+								if handle.fileSize - handle.readBytes < 0 {
+									logger.Warningf("Remaining bytes to be read for '%s' is reported as %d which signifies a bug", handle.path, handle.fileSize - handle.readBytes)
+								}
+							}
+						}
+					} else {
+						newBufSize = int64(len(p))
+					}
+					// handle.burst is forced somewhere else to be max size of a 32bit unsigned int so the conversion is safe
+					if newBufSize > int64(handle.burst) {
+						newBufSize = int64(handle.burst)
+					}
 					// byte slice $p which was passed over is larger than $burst size so we need to read $burst number of bytes and return that
-					tmpP := make([]byte, handle.burst)
-					err := handle.bucket.WaitN(context.Background(), int(handle.burst))
+					tmpP := make([]byte, newBufSize)
+					// logger.Infof("2. waiting to read %10d for %s", newBufSize, handle.path)
+					err := handle.bucket.WaitN(context.Background(), int(newBufSize))
 					if err != nil {
 						logger.Warningf("While pausing before attempting to read '%s' the following error was received " +
 							"from the rate limiting token bucket: %s . Proceeding to read content while ignoring the rate limiting", handle.path, err)
 					}
 					readBytes, err := handle.origFileReader.Read(tmpP)
 					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
+					handle.readBytes += int64(readBytes)
 					// copy read data to the original slice ;  func copy(dst, src []Type) int
 					copiedBytes := copy(p, tmpP)
 					if copiedBytes != len(tmpP) {

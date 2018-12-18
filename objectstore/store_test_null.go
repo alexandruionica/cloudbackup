@@ -45,17 +45,19 @@ func InitialiseStoreTestNull (ctx context.Context, backupConfig config.Backup, t
 func (object *StoreTestNull) Upload (path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface)  (result string, cancelled bool, err error) {
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
-		reader, err := NewFileReader(path, object.bucket, object.backupJobsState, object.backupName, object.storeName, object.storeType, object.rateLimit, object.burst, object.ctx)
+		reader, err := NewFileReader(path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
+			object.storeType, object.rateLimit, object.burst, newDbRecord.Size, object.ctx)
 		if err != nil {
 			return "", false, err
 		}
 		defer reader.Close()
 
-		// create a 100 KiB buffer to hold read content
+		// create a 1000 KiB buffer to hold read content
 		p := make([]byte, 102400)
 		// fake work of uploading file - read all bytes and discard them. Report errors
 		for {
 			_, err := reader.Read(p)
+			// logger.Infof("read %d bytes for %s", readyBytes, path)
 			if err != nil {
 				switch err {
 				// io.Reader reports io.EOF when reaching the end of the file. This is normal and expected
