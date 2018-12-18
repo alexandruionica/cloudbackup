@@ -422,9 +422,9 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 		fmt.Printf("Files and directories which could not be examined: %d\n", decodedJson.StatsCounters["failed_to_examine"])
 		fmt.Printf("Files and directories which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload"])
 		fmt.Printf("Files successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_files"])
-		fmt.Printf("Directories and symlinks for which properties where successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_non_files"])
+		fmt.Printf("Directories, symlinks and non regular files for which properties where successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_non_files"])
 		fmt.Printf("Files for which metadata only updates took place: %d\n", decodedJson.StatsCounters["updated_metadata_for_files"])
-		fmt.Printf("Directories and symlinks for which metadata only updates took place: %d\n", decodedJson.StatsCounters["updated_metadata_for_files"])
+		fmt.Printf("Directories and symlinks for which metadata only updates took place: %d\n", decodedJson.StatsCounters["updated_metadata_for_non_files"])
 		// text stats
 		fmt.Printf("Current directory being processed: %s\n", decodedJson.StatsText["current_directory"])
 		fmt.Printf("Current file being processed: %s\n", decodedJson.StatsText["current_file"])
