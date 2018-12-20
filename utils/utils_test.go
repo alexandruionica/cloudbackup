@@ -429,7 +429,7 @@ func TestFileType2(t *testing.T) {
 	}
 }
 
-// test with symlink
+// test with symlink and check that both de-referencing and not de-referencing work as expected
 func TestFileType3(t *testing.T) {
 	path, err := SetupTmpFileWithContent([]byte(`some text goes here`), "unittest_utils_test_")
 	if err != nil {
@@ -458,12 +458,23 @@ func TestFileType3(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// do NOT dereference symlinks
 	filestat, err := os.Lstat(symLinkPath)
 	if err != nil {
 		t.Fatalf("os.stat() returned an error despite none being expected: %s", err)
 	}
 	filetype := FileType(filestat)
 	if filetype != "symlink" {
-		t.Fatalf("Was expecting FileType() to return value 'symlink' but it returned '%s'", filetype)
+		t.Fatalf("Was expecting FileType() to return value 'symlink' (due to not de-referencing) but it returned '%s'", filetype)
+	}
+
+	// DO dereference symlinks
+	filestat, err = os.Stat(symLinkPath)
+	if err != nil {
+		t.Fatalf("os.stat() returned an error despite none being expected: %s", err)
+	}
+	filetype = FileType(filestat)
+	if filetype != "file" {
+		t.Fatalf("Was expecting FileType() to return value 'file' (due to de-referencing) but it returned '%s'", filetype)
 	}
 }
