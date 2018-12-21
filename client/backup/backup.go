@@ -1,21 +1,22 @@
 package backup
 
 import (
-	"net/http"
-	"fmt"
-	"os"
-	"unicode/utf8"
-	"strconv"
-	"encoding/json"
 	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/dustin/go-humanize"
+	"net/http"
+	"os"
+	"strconv"
+	"unicode/utf8"
 
-	log "github.com/sirupsen/logrus"
+	"bufio"
+	clientCommon "cloudbackup/client/common"
+	clientConfig "cloudbackup/client/config"
 	"cloudbackup/httpd"
 	"cloudbackup/shared"
 	"cloudbackup/utils"
-	clientConfig "cloudbackup/client/config"
-	clientCommon "cloudbackup/client/common"
-	"bufio"
+	log "github.com/sirupsen/logrus"
 	"io"
 )
 
@@ -377,39 +378,25 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 		fmt.Printf("Job id: %s\n", decodedJson.BackupJobId)
 		fmt.Printf("Start time: %s\n", decodedJson.StartTime.String())
 		if len(decodedJson.ObjectStoreRates) < 2 {
-			fmt.Printf(" 1 minute rate: %d\n", decodedJson.Rate1Min)
-			fmt.Printf(" 5 minute rate: %d\n", decodedJson.Rate5Min)
-			fmt.Printf("15 minute rate: %d\n", decodedJson.Rate15Min)
+			fmt.Printf(" 1 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate1Min)))
+			fmt.Printf(" 5 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate5Min)))
+			fmt.Printf("15 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate15Min)))
 		} else {
-			maxFieldLength := 1
+			fmt.Printf("Global  1 minute rate: %7s ", humanize.Bytes(uint64(decodedJson.Rate1Min)))
 			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-				if utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate1Min, 10)) > maxFieldLength {
-					maxFieldLength = utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate1Min, 10))
-				}
-				if utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate5Min, 10)) > maxFieldLength {
-					maxFieldLength = utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate5Min, 10))
-				}
-				if utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate15Min, 10)) > maxFieldLength {
-					maxFieldLength = utf8.RuneCountInString(strconv.FormatInt(objectStoreRate.Rate15Min, 10))
-				}
-			}
-			// increment by 1 just to allow for extra growth which per target rates may have as we don't count maxFieldLength there
-			maxFieldLength++
-			fmt.Printf("Global  1 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", decodedJson.Rate1Min)
-			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-				fmt.Printf("| target %s  1 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", objectStoreRate.Name, objectStoreRate.Rate1Min)
+				fmt.Printf("| target %s  1 minute rate: %7s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate1Min)))
 			}
 			fmt.Println("")
 
-			fmt.Printf("Global  5 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", decodedJson.Rate5Min)
+			fmt.Printf("Global  5 minute rate: %7s ", humanize.Bytes(uint64(decodedJson.Rate5Min)))
 			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-				fmt.Printf("| target %s  5 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", objectStoreRate.Name, objectStoreRate.Rate5Min)
+				fmt.Printf("| target %s  5 minute rate: %7s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate5Min)))
 			}
 			fmt.Println("")
 
-			fmt.Printf("Global 15 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", decodedJson.Rate15Min)
+			fmt.Printf("Global 15 minute rate: %7s ", humanize.Bytes(uint64(decodedJson.Rate15Min)))
 			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-				fmt.Printf("| target %s 15 minute rate: %" + strconv.Itoa(maxFieldLength) + "d ", objectStoreRate.Name, objectStoreRate.Rate15Min)
+				fmt.Printf("| target %s 15 minute rate: %7s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate15Min)))
 			}
 			fmt.Println("")
 		}
@@ -417,17 +404,25 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 		fmt.Printf("Examined directories: %d\n", decodedJson.StatsCounters["examined_directories"])
 		fmt.Printf("Examined files: %d\n", decodedJson.StatsCounters["examined_files"])
 		fmt.Printf("Examined symlinks: %d\n", decodedJson.StatsCounters["examined_symlinks"])
-		fmt.Printf("Examined other than regular file types: %d\n", decodedJson.StatsCounters["examined_unknown"])
+		fmt.Printf("Examined unordinary files: %d\n", decodedJson.StatsCounters["examined_unknown"])
 		fmt.Printf("Files and directories excluded from examination: %d\n", decodedJson.StatsCounters["excluded"])
 		fmt.Printf("Files and directories which could not be examined: %d\n", decodedJson.StatsCounters["failed_to_examine"])
-		fmt.Printf("Files and directories which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload"])
+		fmt.Printf("Files which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload_files"])
+		fmt.Printf("Directories which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload_directories"])
+		fmt.Printf("Symlinks which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload_symlinks"])
+		fmt.Printf("Unordinary files which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload_unknown"])
 		fmt.Printf("Files successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_files"])
-		fmt.Printf("Directories, symlinks and non regular files for which properties where successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_non_files"])
+		fmt.Printf("Directories for which properties where successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_directories"])
+		fmt.Printf("Symlinks for which properties where successfully uploaded: %d\n", decodedJson.StatsCounters["uploaded_symlinks"])
 		fmt.Printf("Files for which metadata only updates took place: %d\n", decodedJson.StatsCounters["updated_metadata_for_files"])
-		fmt.Printf("Directories and symlinks for which metadata only updates took place: %d\n", decodedJson.StatsCounters["updated_metadata_for_non_files"])
+		fmt.Printf("Directories for which metadata only updates took place: %d\n", decodedJson.StatsCounters["updated_metadata_for_directories"])
+		fmt.Printf("Symlinks for which metadata only updates took place: %d\n", decodedJson.StatsCounters["updated_metadata_for_symlinks"])
+		// how many bytes (file content only) were read from disk
+		fmt.Printf("File content read in order to upload: %s\n", humanize.Bytes(decodedJson.FileContentBytesRead))
 		// text stats
 		fmt.Printf("Current directory being processed: %s\n", decodedJson.StatsText["current_directory"])
 		fmt.Printf("Current file being processed: %s\n", decodedJson.StatsText["current_file"])
+
 	}
 	var nextRun string
 	if decodedJson.NextRun.IsZero() {
