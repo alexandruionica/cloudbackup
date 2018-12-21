@@ -81,17 +81,25 @@ func TestPath1(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 11,
+		"examined_directories": 11, // including top level dir
 		"examined_files": 16,
 		"examined_symlinks": 0,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 0,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -163,17 +171,25 @@ func TestPath2(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 7,
-		"examined_files": 10,
+		"examined_directories": 7, // including top level dir
+		"examined_files": 10, // 10 in total
 		"examined_symlinks": 2,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 0,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -256,17 +272,25 @@ func TestPath3(t *testing.T) {
 
 		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		expectedStats := map[string]uint64{
-			"failed_to_examine": 1,
-			"examined_directories": 6,
-			"examined_files": 7,
+			"examined_directories": 6, // including top level dir - 1 unreadable folder
+			"examined_files": 7, // 10 in total but there is 1 unreadable folder containing 3 files
 			"examined_symlinks": 2,
 			"examined_unknown": 0,
+			"failed_to_examine": 1,
 			"excluded": 0,
-			"failed_to_upload": 0,
-			"uploaded_non_files": 0,
-			"uploaded_files": 0,
+			"uploaded_directories": 0, // none due to dryrun=true
+			"uploaded_files": 0, // none due to dryrun=true
+			"uploaded_symlinks": 0, // none due to dryrun=true
+			"failed_to_upload_directories": 0,
+			"failed_to_upload_files": 0,
+			"failed_to_upload_symlinks": 0,
+			"failed_to_upload_unknown": 0,
 			"updated_metadata_for_files": 0,
-			"updated_metadata_for_non_files": 0,
+			"updated_metadata_for_directories": 0,
+			"updated_metadata_for_symlinks": 0,
+			"failed_to_update_metadata_for_directories": 0,
+			"failed_to_update_metadata_for_files": 0,
+			"failed_to_update_metadata_for_symlinks": 0,
 		}
 		if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -343,17 +367,25 @@ func TestPath4(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 10,
-		"examined_files": 15,
+		"examined_directories": 10, // including top level dir -1 excluded
+		"examined_files": 15, // 16 in total but there is 1 exclusion rule matching 1 file
 		"examined_symlinks": 0,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 2,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -429,17 +461,25 @@ func TestPath5(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 10,
-		"examined_files": 14,
+		"examined_directories": 10, // including top level dir - 1 excluded dir
+		"examined_files": 14, // 16 in total but 2 are in the excluded dir
 		"examined_symlinks": 0,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 1,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -518,17 +558,25 @@ func TestPath6(t *testing.T) {
 	utils.Pp(backupConfig)
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
 		"examined_directories": 0,
 		"examined_files": 1,
 		"examined_symlinks": 0,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 0,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -617,17 +665,25 @@ func TestPath7(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 11,
-		"examined_files": 17,
+		"examined_directories": 11, // including top level dir
+		"examined_files": 17, // 16 + 1 from the 2nd path
 		"examined_symlinks": 0,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 0,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -709,17 +765,25 @@ func TestPath8(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 22,
+		"examined_directories": 22, // including top level dirs
 		"examined_files": 32,
 		"examined_symlinks": 0,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 0,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -793,17 +857,25 @@ func TestPath9(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 7,
-		"examined_files": 8,
+		"examined_directories": 7, // including top level dir
+		"examined_files": 8, // 10 in total but there is 1 exclusion rule matching 2 files
 		"examined_symlinks": 2,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 2,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -877,17 +949,25 @@ func TestPath10(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 7,
-		"examined_files": 9,
+		"examined_directories": 7, // including top level dir
+		"examined_files": 9, // 10 in total but there is 1 exclusion rule matching 1 file
 		"examined_symlinks": 2,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 1,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -961,17 +1041,25 @@ func TestPath11(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 7,
-		"examined_files": 9,
+		"examined_directories": 7, // including top level dir
+		"examined_files": 9, // 10 in total but there is 1 exclusion rule matching 1 file
 		"examined_symlinks": 2,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 1,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -1045,17 +1133,25 @@ func TestPath12(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 7,
-		"examined_files": 9,
+		"examined_directories": 7, // including top level dir
+		"examined_files": 9, // 10 in total but there is 1 exclusion rule matching 1 file
 		"examined_symlinks": 2,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 1,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 0,
-		"uploaded_files": 0,
+		"uploaded_directories": 0, // none due to dryrun=true
+		"uploaded_files": 0, // none due to dryrun=true
+		"uploaded_symlinks": 0, // none due to dryrun=true
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
@@ -1079,10 +1175,10 @@ func TestPath13(t *testing.T) {
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
 	defer func() {
-		err = os.RemoveAll(backupDirPath) // #nosec
-		if err != nil {
-			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
-		}
+		//err = os.RemoveAll(backupDirPath) // #nosec
+		//if err != nil {
+		//	t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		//}
 	}()
 	backupConfig := result.Config.Backup[0]
 	// overwrite whatever was in the mock config with the tmp path we want to test
@@ -1138,21 +1234,34 @@ func TestPath13(t *testing.T) {
 
 	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
-		"failed_to_examine": 0,
-		"examined_directories": 11,
-		"examined_files": 16,
+		"examined_directories": 11, // 11 (including top level) due to 2 symlinks pointing at dirs
+		"examined_files": 16, // 10 in total but 2 symlinks pointing at dirs make it 16 in total
 		"examined_symlinks": 0,
 		"examined_unknown": 0,
+		"failed_to_examine": 0,
 		"excluded": 0,
-		"failed_to_upload": 0,
-		"uploaded_non_files": 11,
+		"uploaded_directories": 11,
 		"uploaded_files": 16,
+		"uploaded_symlinks": 0,
+		"failed_to_upload_directories": 0,
+		"failed_to_upload_files": 0,
+		"failed_to_upload_symlinks": 0,
+		"failed_to_upload_unknown": 0,
 		"updated_metadata_for_files": 0,
-		"updated_metadata_for_non_files": 0,
+		"updated_metadata_for_directories": 0,
+		"updated_metadata_for_symlinks": 0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files": 0,
+		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
+	}
+	// check how many bytes were read
+	var expectedBytesRead uint64 = 260 // 168 bytes total + 46 * 2 for the 2 symlinks pointing at the same dir3 which contains a total of 46 bytes worth of file content
+	if backupJobsState.Running[0].FileContentBytesRead != expectedBytesRead {
+		t.Fatalf("The total file content was expected to be %d bytes but it is actually reported to be %d bytes", expectedBytesRead, backupJobsState.Running[0].FileContentBytesRead)
 	}
 	dbops.CloseStatementsAndDb(dbData)
 }
@@ -1245,22 +1354,36 @@ func TestPath14(t *testing.T) {
 
 		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		expectedStats := map[string]uint64{
-			"failed_to_examine": 1,
 			"examined_directories": 6, // 7 in total but the 1 dir in "dir3" is unaccessible due to chmod 000 on dir3
-			"examined_files": 7,
+			"examined_files": 7, // 10 in total but the 3 dir in "dir3" are unaccessible due to chmod 000 on dir3
 			"examined_symlinks": 2,
 			"examined_unknown": 0,
+			"failed_to_examine": 1,
 			"excluded": 0,
-			"failed_to_upload": 0,
-			"uploaded_non_files": 8, // 6 directories + 2 symlinks
+			"uploaded_directories": 6,
 			"uploaded_files": 7,
+			"uploaded_symlinks": 2,
+			"failed_to_upload_directories": 0,
+			"failed_to_upload_files": 0,
+			"failed_to_upload_symlinks": 0,
+			"failed_to_upload_unknown": 0,
 			"updated_metadata_for_files": 0,
-			"updated_metadata_for_non_files": 0,
+			"updated_metadata_for_directories": 0,
+			"updated_metadata_for_symlinks": 0,
+			"failed_to_update_metadata_for_directories": 0,
+			"failed_to_update_metadata_for_files": 0,
+			"failed_to_update_metadata_for_symlinks": 0,
 		}
 		if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
 			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 				backupJobsState.Running[0].StatsCounters, expectedStats)
 		}
+		// check how many bytes were read
+		var expectedBytesRead uint64 = 122 // 168 bytes total but excluding the files in dir3 then it's 122 bytes
+		if backupJobsState.Running[0].FileContentBytesRead != expectedBytesRead {
+			t.Fatalf("The total file content was expected to be %d bytes but it is actually reported to be %d bytes", expectedBytesRead, backupJobsState.Running[0].FileContentBytesRead)
+		}
+
 		dbops.CloseStatementsAndDb(dbData)
 	}
 }

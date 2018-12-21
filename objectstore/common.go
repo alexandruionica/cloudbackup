@@ -114,7 +114,9 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 		{
 			if handle.rateLimit == 0 {
 				readBytes, err := handle.origFileReader.Read(p)
+				// update statistics
 				handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
+				handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 				return readBytes, err
 			} else {
 				// bucket.WaitN() allows to read up to burst limit so we need to ensure we don't attempt larger values
@@ -130,6 +132,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					readBytes, err := handle.origFileReader.Read(p)
 					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
 					handle.readBytes += int64(readBytes)
+					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 					return readBytes, err
 				} else {
 					var newBufSize int64
@@ -170,6 +173,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					readBytes, err := handle.origFileReader.Read(tmpP)
 					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
 					handle.readBytes += int64(readBytes)
+					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 					// copy read data to the original slice ;  func copy(dst, src []Type) int
 					copiedBytes := copy(p, tmpP)
 					if copiedBytes != len(tmpP) {

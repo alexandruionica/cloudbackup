@@ -34,6 +34,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 		{
 			dbEntryFound, dbRecordProperties, err := getBackedupObjectPropertiesFromDb(path, dbData)
 			if err != nil {
+				updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
 				return false, err
 			}
 			// if a db entry is found then this object has been previously backed up so it needs to be verified if the
@@ -46,10 +47,16 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				if err != nil {
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
 					// backup this file
+					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
 					return false, err
 				}
 				if contentChanged {
 					encounteredError := 0
+					if newDbRecord.Type == "unknown" {
+						updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type,
+							path, errors.New("unsupported file type"))
+						return false, errors.New("unsupported file type")
+					}
 					var encounteredErrorObject error
 					// back up the object to one or more remote object stores
 					for _, objectStore := range objectStores {
@@ -66,20 +73,21 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 						if len(objectStores) > 1{
 							logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
 						}
+						updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, encounteredErrorObject)
 						return false, encounteredErrorObject
-					} else {
-						if newDbRecord.Type == "file" {
-							backupJobsState.IncrementCounter(backupConfig.Name, "uploaded_files")
-						} else {
-							backupJobsState.IncrementCounter(backupConfig.Name, "uploaded_non_files")
-						}
 					}
 
 					// backup successful
+					updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, nil)
 					return false, nil
 
 				} else {
 					if metadataChanged {
+						if newDbRecord.Type == "unknown" {
+							// report it as a "failed_to_upload_unknown" instead of updated_metadata as we don't support "unknown" files but we want to report somehow this issue
+							updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, errors.New("unsupported file type"))
+							return false, errors.New("unsupported file type")
+						}
 						encounteredError := 0
 						var encounteredErrorObject error
 						// back up the object metadata to one or more remote object stores
@@ -101,16 +109,11 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 								logger.Warnf("Failed upload metadata changes of of '%s' to %d out of %d targets",
 									path, encounteredError,  len(objectStores))
 							}
+							updateCounters(backupJobsState, backupConfig.Name, "update", newDbRecord.Type, path, encounteredErrorObject)
 							return false, encounteredErrorObject
-						} else {
-							if newDbRecord.Type == "file" {
-								backupJobsState.IncrementCounter(backupConfig.Name, "updated_metadata_for_files")
-							} else {
-								backupJobsState.IncrementCounter(backupConfig.Name, "updated_metadata_for_non_files")
-							}
 						}
-
 						// backup successful
+						updateCounters(backupJobsState, backupConfig.Name, "update", newDbRecord.Type, path, nil)
 						return false, nil
 					}
 				}
@@ -127,8 +130,14 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
 				if err != nil {
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
-					// backup this file
+					// backup this file.
+					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
 					return false, err
+				}
+				if newDbRecord.Type == "unknown" {
+					updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path,
+						errors.New("unsupported file type"))
+					return false, errors.New("unsupported file type")
 				}
 
 				encounteredError := 0
@@ -148,16 +157,12 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					if len(objectStores) > 1{
 						logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
 					}
+					updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, encounteredErrorObject)
 					return false, encounteredErrorObject
-				} else {
-					if newDbRecord.Type == "file" {
-						backupJobsState.IncrementCounter(backupConfig.Name, "uploaded_files")
-					} else {
-						backupJobsState.IncrementCounter(backupConfig.Name, "uploaded_non_files")
-					}
 				}
 
 				// backup successful
+				updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, nil)
 				return false, nil
 			}
 		}
@@ -367,4 +372,74 @@ func UpdateObjectMetadata(ctx context.Context, path string, newDbRecord shared.B
 
 
 	return false, nil
+}
+
+// update counters in the backup job state struct. Params: $backupJobsState is the shared struct (pointer to it)
+// where all the state is kept; $backupName corresponds to the name of the backup job as defined in the configuration
+// file; $operationType must be one of "upload" or "update"; fileType is one of: "file", "dir", "symlink" or "unknown";
+// $path os used only for logging errors and it represents the full path of the file/dir/symlink being backed up; if
+// $err != nil then the counter to be updated will be one of "failure" type and otherwise its a "success" one
+func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName string, operationType string, fileType string, path string, err error) {
+	switch operationType {
+		case "upload": {
+			if err != nil {
+				switch fileType {
+					case "file":
+						backupJobsState.IncrementCounter(backupName, "failed_to_upload_files")
+					case "dir":
+						backupJobsState.IncrementCounter(backupName, "failed_to_upload_directories")
+					case "symlink":
+						backupJobsState.IncrementCounter(backupName, "failed_to_upload_symlinks")
+					default: {
+						backupJobsState.IncrementCounter(backupName, "failed_to_upload_unknown")
+						logger.Warningf("'%s' is of an unknown type. Only directories, regular files and " +
+							"symlinks are supported for backup. Consider excluding this file from backup in order " +
+							"to prevent future warnings.", path)
+					}
+				}
+			} else {
+				switch fileType {
+					case "file":
+						backupJobsState.IncrementCounter(backupName, "uploaded_files")
+					case "dir":
+						backupJobsState.IncrementCounter(backupName, "uploaded_directories")
+					case "symlink":
+						backupJobsState.IncrementCounter(backupName, "uploaded_symlinks")
+					default:
+						logger.Warningf("Tried to increment 'uploaded' counter for '%s' of type: '%s'. " +
+							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
+					}
+			}
+		}
+		case "update": {
+			if err != nil {
+				switch fileType {
+					case "file":
+						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_files")
+					case "dir":
+						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_directories")
+					case "symlink":
+						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_symlinks")
+					default:
+						logger.Warningf("Tried to increment 'failed_to_update_metadata' counter for '%s' of type: '%s'. " +
+							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
+				}
+			} else {
+				switch fileType {
+					case "file":
+						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_files")
+					case "dir":
+						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_directories")
+					case "symlink":
+						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_symlinks")
+					default:
+						logger.Warningf("Tried to increment 'updated_metadata' counter for '%s' of type: '%s'. " +
+							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
+				}
+			}
+		}
+		default:
+			logger.Errorf("Tried to update counters for operation of type '%s' during a backup having name '%s' " +
+				"for object '%s'. This is bug, please report it.", operationType, backupName, path)
+	}
 }

@@ -77,7 +77,6 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 						return true, nil
 					}
 					if err != nil {
-						backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_upload")
 						logger.Warnf("While trying to backup '%s' the following error was encountered: %s", path, err)
 					}
 				}
@@ -123,7 +122,6 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			return true, nil
 		}
 		if err != nil {
-			backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_upload")
 			logger.Warnf("While trying to backup '%s' the following error was encountered: %s", path, err)
 		}
 		// if no error was reported and no cancellation was reported either then we continue to process all files and
@@ -217,7 +215,6 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 							return true, nil
 						}
 						if err != nil {
-							backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_upload")
 							logger.Warnf("While trying to backup '%s' the following error was encountered: %s", childPath, err)
 						}
 					}
