@@ -446,27 +446,41 @@ definitions:
           and should be ignored for jobs having "state"="stopped"
       file_content_bytes_read:
         type: integer
-        example: "39282"
+        example: '39282'
         description: >-
-          So far during this backup run this many bytes of file content were read in order to be backed up. This implies that the file was detected to not have been backed up or to have had a change which requires it to be backed up. If more than one backup targets are used then this counter will increment multiple times for a given files as the content is read multiple times and uploaded to each object store.
+          So far during this backup run this many bytes of file content were
+          read in order to be backed up. This implies that the file was detected
+          to not have been backed up or to have had a change which requires it
+          to be backed up. If more than one backup targets are used then this
+          counter will increment multiple times for a given files as the content
+          is read multiple times and uploaded to each object store.
       rate_1min:
         type: integer
-        example: "39282"
+        example: '39282'
         description: >-
-          Average disk bandwidth per second consumed reading file content during the last 1 minute. This will roughly translate to network bandwidth consumed for uploading the said file content. This excludes any bandwidth used to read file or directory properties.
+          Average disk bandwidth per second consumed reading file content during
+          the last 1 minute. This will roughly translate to network bandwidth
+          consumed for uploading the said file content. This excludes any
+          bandwidth used to read file or directory properties.
       rate_5min:
         type: integer
-        example: "27321"
+        example: '27321'
         description: >-
-          Average disk bandwidth per second consumed reading file content during the last 5 minutes. This will roughly translate to network bandwidth consumed for uploading the said file content. This excludes any bandwidth used to read file or directory properties.
+          Average disk bandwidth per second consumed reading file content during
+          the last 5 minutes. This will roughly translate to network bandwidth
+          consumed for uploading the said file content. This excludes any
+          bandwidth used to read file or directory properties.
       rate_15min:
         type: integer
-        example: "21201"
+        example: '21201'
         description: >-
-          Average disk bandwidth per second consumed reading file content during the last 15 minutes. This will roughly translate to network bandwidth consumed for uploading the said file content. This excludes any bandwidth used to read file or directory properties.
+          Average disk bandwidth per second consumed reading file content during
+          the last 15 minutes. This will roughly translate to network bandwidth
+          consumed for uploading the said file content. This excludes any
+          bandwidth used to read file or directory properties.
       object_store_states:
         type: array
-        items: 
+        items:
           $ref: '#/definitions/ObjectStoreRates'
       next_run:
         type: string
@@ -486,7 +500,11 @@ definitions:
             type: integer
             description: >-
               How many files had their properties examined. Excluded files (via
-              the "exclusions" section) do not increment this counter. This counter will not include non regular files like symlinks (or any other non regular types). The only time symlinks are taken into account is when dereference=true in the configuration file as then symlinks will be followed and treated as what their target is.
+              the "exclusions" section) do not increment this counter. This
+              counter will not include non regular files like symlinks (or any
+              other non regular types). The only time symlinks are taken into
+              account is when dereference=true in the configuration file as then
+              symlinks will be followed and treated as what their target is.
             example: 604
           examined_directories:
             type: integer
@@ -497,13 +515,16 @@ definitions:
             example: 23
           examined_symlinks:
             type: integer
-            description: >- 
-              How many symlinks had their properties examined. This counter is incremented when dereference=false in the configuration file
+            description: >-
+              How many symlinks had their properties examined. This counter is
+              incremented when dereference=false in the configuration file
             example: 2
           examined_unknown:
             type: integer
             description: >-
-              How may non regular files (excluding symlinks and directories) where examined. Example of non regular files are sockets, device drivers (/dev/sda1), etc.
+              How may non regular files (excluding symlinks and directories)
+              where examined. Example of non regular files are sockets, device
+              drivers (/dev/sda1), etc.
             example: 0
           failed_to_examine:
             type: integer
@@ -532,87 +553,94 @@ definitions:
           uploaded_directories:
             type: integer
             description: >-
-              How many directories had their properties uploaded 
-              so far during the run of this backup job
+              How many directories had their properties uploaded  so far during
+              the run of this backup job
             example: 11
           uploaded_symlinks:
             type: integer
             description: >-
-              How many symlinks had their properties uploaded 
-              so far during the run of this backup job
+              How many symlinks had their properties uploaded  so far during the
+              run of this backup job
             example: 11
           failed_to_upload_files:
             type: integer
             description: >-
-              How many files produced irrecoverable errors 
-              during the upload so far during the run of this backup job. This 
-              implies said files were not successfuly backed up.
-              Causes can be lack of access to read file content or failure to 
-              send the file to the remote object store. Check the log file for 
-              details.
+              How many files produced irrecoverable errors  during the upload so
+              far during the run of this backup job. This  implies said files
+              were not successfuly backed up. Causes can be lack of access to
+              read file content or failure to  send the file to the remote
+              object store. Check the log file for  details.
             example: 11
           failed_to_upload_directories:
             type: integer
             description: >-
-              How many directories produced irrecoverable errors 
-              during the upload so far during the run of this backup job. This 
-              implies said directories were not successfuly backed up. Generally, for directories this means that the directory's properties were not backed up but its files could potentially still be backed up successfully.
-              Causes can be failure to 
-              send the file to the remote object store. Check the log file for 
-              details.
+              How many directories produced irrecoverable errors  during the
+              upload so far during the run of this backup job. This  implies
+              said directories were not successfuly backed up. Generally, for
+              directories this means that the directory's properties were not
+              backed up but its files could potentially still be backed up
+              successfully. Causes can be failure to  send the file to the
+              remote object store. Check the log file for  details.
             example: 11
           failed_to_upload_symlinks:
             type: integer
             description: >-
-              How many symlinks produced irrecoverable errors 
-              during the upload so far during the run of this backup job. This 
-              implies said symlinks were not successfuly backed up. 
-              Causes can be failure to 
-              send the file to the remote object store. Check the log file for 
-              details.
+              How many symlinks produced irrecoverable errors  during the upload
+              so far during the run of this backup job. This  implies said
+              symlinks were not successfuly backed up.  Causes can be failure
+              to  send the file to the remote object store. Check the log file
+              for  details.
             example: 11
           failed_to_upload_unknown:
             type: integer
             description: >-
-              How many unordinary files produced irrecoverable errors 
-              during the upload so far during the run of this backup job. This 
-              implies said unordinary were not successfuly backed up. An attempt to backup an unordinary file will always lead to a failure to upload. Examples of unoridinary files are sockets, device files (/dev/zero), etc.
-              Unoridinary files should be excluded from backup. Check the logs in order to find out which files were found.
-            example: 11  
+              How many unordinary files produced irrecoverable errors  during
+              the upload so far during the run of this backup job. This  implies
+              said unordinary were not successfuly backed up. An attempt to
+              backup an unordinary file will always lead to a failure to upload.
+              Examples of unoridinary files are sockets, device files
+              (/dev/zero), etc. Unoridinary files should be excluded from
+              backup. Check the logs in order to find out which files were
+              found.
+            example: 11
           updated_metadata_for_files:
             type: integer
             description: >-
-              How many files were detected to have had a properties change but their content itself was not changed so a metadata only updated was done as part of this backup run.
+              How many files were detected to have had a properties change but
+              their content itself was not changed so a metadata only updated
+              was done as part of this backup run.
             example: 107
           updated_metadata_for_directories:
             type: integer
             description: >-
-              How many directories were detected to have had a properties change so a metadata only updated was done as part of this backup run.
+              How many directories were detected to have had a properties change
+              so a metadata only updated was done as part of this backup run.
           updated_metadata_for_symlinks:
             type: integer
             description: >-
-              How many symlinks were detected to have had a properties change so a metadata only updated was done as part of this backup run. 
+              How many symlinks were detected to have had a properties change so
+              a metadata only updated was done as part of this backup run. 
           failed_to_update_metadata_for_files:
             type: integer
             description: >-
-              How many files which were detected to have a properties change only, produced irrecoverable errors 
-              during the backup of the said change . Check the log file for 
-              details.
+              How many files which were detected to have a properties change
+              only, produced irrecoverable errors  during the backup of the said
+              change . Check the log file for  details.
             example: 11
           failed_to_update_metadata_for_directories:
             type: integer
             description: >-
-              How many directories which were detected to have a properties change only, produced irrecoverable errors 
-              during the backup of the said change . Check the log file for 
-              details.
-            example: 11 
+              How many directories which were detected to have a properties
+              change only, produced irrecoverable errors  during the backup of
+              the said change . Check the log file for  details.
+            example: 11
           failed_to_update_metadata_for_symlinks:
             type: integer
             description: >-
-              How many symlinks which were detected to have a properties change only, produced irrecoverable errors 
-              during the backup of the said change . Check the log file for 
-              details.
-            example: 11   
+              How many symlinks which were detected to have a properties change
+              only, produced irrecoverable errors  during the backup of the said
+              change . Check the log file for  details.
+            example: 11
       stats_text:
         type: object
         description: >-
@@ -708,26 +736,40 @@ definitions:
       name:
         type: string
         example: aws_1
-        description: The name corresponds to the target name in the config file backup job definition
+        description: >-
+          The name corresponds to the target name in the config file backup job
+          definition
       type:
         type: string
         example: aws_s3
         description: Object store type
       rate_1min:
         type: integer
-        example: "39282"
+        example: '39282'
         description: >-
-          Average disk bandwidth per second consumed reading file content during the last 1 minute. This will roughly translate to network bandwidth consumed for uploading the said file content to this particular object store. This excludes any bandwidth used to read file or directory properties.
+          Average disk bandwidth per second consumed reading file content during
+          the last 1 minute. This will roughly translate to network bandwidth
+          consumed for uploading the said file content to this particular object
+          store. This excludes any bandwidth used to read file or directory
+          properties.
       rate_5min:
         type: integer
-        example: "27321"
+        example: '27321'
         description: >-
-          Average disk bandwidth per second consumed reading file content during the last 5 minutes. This will roughly translate to network bandwidth consumed for uploading the said file content to this particular object store. This excludes any bandwidth used to read file or directory properties.
+          Average disk bandwidth per second consumed reading file content during
+          the last 5 minutes. This will roughly translate to network bandwidth
+          consumed for uploading the said file content to this particular object
+          store. This excludes any bandwidth used to read file or directory
+          properties.
       rate_15min:
         type: integer
-        example: "21201"
+        example: '21201'
         description: >-
-          Average disk bandwidth per second consumed reading file content during the last 15 minutes. This will roughly translate to network bandwidth consumed for uploading the said file content to this particular object store. This excludes any bandwidth used to read file or directory properties.     
+          Average disk bandwidth per second consumed reading file content during
+          the last 15 minutes. This will roughly translate to network bandwidth
+          consumed for uploading the said file content to this particular object
+          store. This excludes any bandwidth used to read file or directory
+          properties.     
   ApiResponse:
     type: object
     properties:
