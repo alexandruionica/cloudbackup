@@ -183,16 +183,17 @@ func GetFileMD5Sum(path string)(string, error){
 
 // checks if the given "stat" is one of: file, symlink, directory. It is expected that only objects of those types are
 // passed but if this not the case then anything else will be labeled as "unknown"
-func FileType(stat os.FileInfo) (string) {
+// CHANGING THIS FUNCTION has deep implications as the types: "symlink", "dir", "file" and "unknown" are tested for in
+// many other places and it's expected only these 4 types exist
+func FileType(stat os.FileInfo) string {
 	if stat.Mode()&os.ModeSymlink == os.ModeSymlink {
 		return "symlink"
 	}
 	if stat.IsDir() {
 		return "dir"
 	}
-	// Not a symlink
-	if stat.Mode().IsRegular() != true {
-		return "unknown"
+	if stat.Mode().IsRegular() == true {
+		return "file"
 	}
-	return "file"
+	return "unknown"
 }

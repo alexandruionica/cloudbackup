@@ -89,15 +89,16 @@ type BackupJobStatus struct {
 	StartTime time.Time `json:"start_time,omitempty"`
 	// bandwidth/second used during last 1/5/15 minute(s) - makes sense only for $State == "running" . This
 	// value is the lower of disk read bandwidth and the upload speed to the backend object store
-	Rate1Min         int64                    `json:"rate_1min"`
-	_rate1Min        *ratecounter.RateCounter
-	Rate5Min         int64                    `json:"rate_5min"`
-	_rate5Min        *ratecounter.RateCounter
-	Rate15Min        int64                    `json:"rate_15min"`
-	_rate15Min       *ratecounter.RateCounter
-	ObjectStoreRates []ObjectStoreRate        `json:"object_store_rates,omitempty"`
-	StatsCounters    map[string]uint64        `json:"stats_counters,omitempty"`
-	StatsText        map[string]string        `json:"stats_text,omitempty"`
+	Rate1Min             int64                    `json:"rate_1min"`
+	_rate1Min            *ratecounter.RateCounter
+	Rate5Min             int64                    `json:"rate_5min"`
+	_rate5Min            *ratecounter.RateCounter
+	Rate15Min            int64                    `json:"rate_15min"`
+	_rate15Min           *ratecounter.RateCounter
+	FileContentBytesRead uint64					  `json:"file_content_bytes_read"`
+	ObjectStoreRates     []ObjectStoreRate        `json:"object_store_rates,omitempty"`
+	StatsCounters        map[string]uint64        `json:"stats_counters,omitempty"`
+	StatsText            map[string]string        `json:"stats_text,omitempty"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
 	NextRun time.Time `json:"next_run"`
 	// using this context we signal a Backup job task that it should proceed to shutdown now
@@ -129,6 +130,7 @@ type ObjectStoreRate struct {
 // this interface is used only for cloudbackup/backup/scan/Scan() in order to be able to pass a different object when doing a
 //  dry run report
 type BackupJobsStateInterface interface {
+	AddBytesRead (BackupJobName string, bytesRead uint64)
 	IncrementCounter(BackupJobName string, counterName string)
 	IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64)
 	UpdateStatsText(BackupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
@@ -264,10 +266,19 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			//  excluded don't count against examined_files or examined_directories
 			"excluded": 0,
 			"uploaded_files": 0,
-			"uploaded_non_files": 0,
-			"failed_to_upload": 0,
+			"uploaded_directories": 0,
+			"uploaded_symlinks": 0,
+			"failed_to_upload_files": 0,
+			"failed_to_upload_directories": 0,
+			"failed_to_upload_symlinks": 0,
+			// this counter will always increment whenever we encounter an object different from "file", "dir", "symlink" types
+			"failed_to_upload_unknown": 0,
 			"updated_metadata_for_files": 0,
-			"updated_metadata_for_non_files": 0,
+			"updated_metadata_for_directories": 0,
+			"updated_metadata_for_symlinks": 0,
+			"failed_to_update_metadata_for_files": 0,
+			"failed_to_update_metadata_for_directories": 0,
+			"failed_to_update_metadata_for_symlinks": 0,
 		},
 		StatsText: map[string]string{
 			"current_directory": "",
@@ -450,6 +461,22 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 	}
 }
 
+// add to *BackupJobsState.FileContentBytesRead of a given backup job a number of bytes which were read(represents file contents)
+func (jobs *BackupJobsState) AddBytesRead (BackupJobName string, bytesRead uint64) {
+	if bytesRead == 0 {
+		return
+	}
+	jobs.Lock.Lock()
+	defer func() {
+		jobs.Lock.Unlock()
+	}()
+	for k, job := range jobs.Running {
+		if BackupJobName == job.Name {
+			jobs.Running[k].FileContentBytesRead += bytesRead
+			break
+		}
+	}
+}
 
 // return the cancel function for a particular Running job with a particular uuid (or if uuid="" then match on
 //    name only)
