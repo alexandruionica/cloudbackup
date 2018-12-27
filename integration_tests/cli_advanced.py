@@ -107,6 +107,64 @@ class TestCliAdvanced(unittest.TestCase):
                 found_expected_error = True
         self.assertTrue(found_expected_error)
 
+    # TODO - start a backup and then check that the output of "cloudbackup client backup list" matches expectations in
+    #  both plain and --json output
+
+    # ./cloudbackup client backup status first_backup -c client_config.yaml returns 3 lines
+    def test_cmd_client_backup_status1(self):
+        result = run_shell_cmd(self.cmd + " client backup status first_backup -c " + self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        # output is at least 3 lines long
+        line_num = 0
+        for line in result['result'].stdout.decode("utf-8").split('\n'):
+            line_num += 1
+        self.assertGreater(line_num, 3, "Expected output from {} to be at least 3 lines long. Command output object: "
+                                        "{}".format(cmd_default, result))
+
+    # ./cloudbackup client backup status first_backup -c client_config.yaml --json returns 1 job which matches the name
+    #  we expect
+    def test_cmd_client_backup_status2(self):
+        result = run_shell_cmd(self.cmd + " client backup status first_backup -c " + self.client_config_file_path + " --json")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        # output is JSON
+        decoded = json.loads(result['result'].stdout.decode("utf-8"))
+        # check elements match expectation
+        expected_result = {
+            "name": "first_backup",
+            "state": "stopped",
+            "start_time": "0001-01-01T00:00:00Z",
+            "rate_1min": 0,
+            "rate_5min": 0,
+            "rate_15min": 0,
+            "file_content_bytes_read": 0,
+            "next_run": "0001-01-01T00:00:00Z"
+        }
+        self.assertEqual(decoded, expected_result, "Result from command doesn't match expected JSON output")
+
+    # ./cloudbackup client backup status first_backup -c client_config.yaml returns exit code 1 when server is offline
+    def test_cmd_client_backup_status3(self):
+        self.daemon.kill()
+        result = run_shell_cmd(self.cmd + " client backup status first_backup -c " + self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+    # ./cloudbackup client backup status first_backup -c client_config.yaml -u INVALID_USER returns exit code 1 and
+    # expected error msg
+    def test_cmd_client_backup_status4(self):
+        result = run_shell_cmd(self.cmd + " client backup status first_backup -c " + self.client_config_file_path + " -u INVALID_USER")
+        self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        found_expected_error = False
+        for line in result['result'].stdout.decode("utf-8").split('\n'):
+            if 'Invalid username or password'.lower() in line.lower():
+                found_expected_error = True
+        self.assertTrue(found_expected_error)
+
+    # TODO - start a backup and then check that the output of "cloudbackup client backup status" matches expectations in
+    #  both plain and --json output
+
     # ./cloudbackup client backup start first_backup -c client_config.yaml works
     def test_cmd_client_backup_start_stop(self):
         result = run_shell_cmd(self.cmd + " client backup start first_backup -c " + self.client_config_file_path)
