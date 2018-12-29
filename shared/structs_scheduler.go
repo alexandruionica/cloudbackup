@@ -117,8 +117,8 @@ type BackupJobsState struct {
 }
 
 type ObjectStoreRate struct {
-	Name string
-	Type string
+	Name string `json:"name"`
+	Type string `json:"type"`
 	Rate1Min int64 `json:"rate_1min"`
 	_rate1Min *ratecounter.RateCounter
 	Rate5Min int64 `json:"rate_5min"`
