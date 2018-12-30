@@ -99,6 +99,8 @@ type BackupJobStatus struct {
 	ObjectStoreRates     []ObjectStoreRate        `json:"object_store_rates,omitempty"`
 	StatsCounters        map[string]uint64        `json:"stats_counters,omitempty"`
 	StatsText            map[string]string        `json:"stats_text,omitempty"`
+	// used for keeping track of messages when sending real time upload status to connected clients
+	sequence	uint64
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
 	NextRun time.Time `json:"next_run"`
 	// using this context we signal a Backup job task that it should proceed to shutdown now
@@ -114,11 +116,20 @@ type BackupJobsState struct {
 	// TODO - when implementing the "restoring" field also adjust the MarkRunning (and probably the MarkRestoring to
 	// be created) in order to check also that a restore isn't running for the same backup name (to implement when
 	// restores are implemented)
+
+	// The watch multiplexer listens on this chan and for each received message it sends it to any connected clients
+	// which have requested to watch backup/restore progress for that given job name and job id
+	WatchMsgReceiver chan WatchMessage
+	// The struct of the multiplexer. This is the component which takes care of forwarding messages about files
+	// being backedup/restored to connected clients
+	Watcher *WatchMultiplexer
 }
 
 type ObjectStoreRate struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
+	// this one is used only for the current file and reset to 0 whenever a new one starts being uploaded.
+	_currentFileRate  *ratecounter.RateCounter
 	Rate1Min int64 `json:"rate_1min"`
 	_rate1Min *ratecounter.RateCounter
 	Rate5Min int64 `json:"rate_5min"`
@@ -132,7 +143,8 @@ type ObjectStoreRate struct {
 type BackupJobsStateInterface interface {
 	AddBytesRead (BackupJobName string, bytesRead uint64)
 	IncrementCounter(BackupJobName string, counterName string)
-	IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64)
+	IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool)
+	IncrementSequence (BackupJobName string)
 	UpdateStatsText(BackupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
 }
 
@@ -397,14 +409,15 @@ func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName stri
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
 // stopped state
 // TODO - write unit tests for this function - depends on having the object store "test_null" implemented
-func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64) {
+func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool) {
 	jobs.Lock.Lock()
 	defer func() {
 		jobs.Lock.Unlock()
 	}()
 	for k, job := range jobs.Running {
 		if BackupJobName == job.Name {
-			// if the job rate counters(pointers) are not initilised then init them
+
+			// if the job rate counters(pointers) are not initialised then init them
 			if job._rate1Min == nil || job._rate5Min == nil || job._rate15Min == nil{
 				jobs.Running[k]._rate1Min = ratecounter.NewRateCounter(time.Minute * 1)
 				jobs.Running[k]._rate5Min = ratecounter.NewRateCounter(time.Minute * 5)
@@ -437,6 +450,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				jobs.Running[k].ObjectStoreRates = append(jobs.Running[k].ObjectStoreRates, ObjectStoreRate{
 					Name: ObjectStoreName,
 					Type: ObjectStoreType,
+					_currentFileRate: ratecounter.NewRateCounter(time.Second * 10),
 					_rate1Min: ratecounter.NewRateCounter(time.Minute * 1),
 					_rate5Min: ratecounter.NewRateCounter(time.Minute * 5),
 					_rate15Min: ratecounter.NewRateCounter(time.Minute * 15),
@@ -448,6 +462,11 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				if ObjectStoreName == objectStore.Name {
 					increment = IncrementValue
 				}
+				// whenever a new file starts being uploaded, reset this Rate as this is file specific only
+				if NewItem {
+					jobs.Running[k].ObjectStoreRates[k2]._currentFileRate = ratecounter.NewRateCounter(time.Second * 10)
+				}
+				jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Incr(increment)
 				jobs.Running[k].ObjectStoreRates[k2]._rate1Min.Incr(increment)
 				jobs.Running[k].ObjectStoreRates[k2]._rate5Min.Incr(increment)
 				jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Incr(increment)
@@ -455,6 +474,22 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				jobs.Running[k].ObjectStoreRates[k2].Rate1Min = jobs.Running[k].ObjectStoreRates[k2]._rate1Min.Rate() / 60
 				jobs.Running[k].ObjectStoreRates[k2].Rate5Min = jobs.Running[k].ObjectStoreRates[k2]._rate5Min.Rate() / 300
 				jobs.Running[k].ObjectStoreRates[k2].Rate15Min = jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Rate() / 900
+				// send message to multiplexer so it can forwarder to connected clients
+				if increment > 0 {
+					msg := WatchMessage{
+						Sequence:        job.sequence,
+						JobType:         "backup",
+						JobName:         BackupJobName,
+						JobId:           job.BackupJobId,
+						Path:            Path,
+						PercentDone:     PercentDone,
+						Rate:            jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Rate()/10,
+						ObjectStoreName: ObjectStoreName,
+						ObjectStoreType: ObjectStoreType,
+						Completed:       false,
+					}
+					SendMsgToWatcher(msg, jobs.WatchMsgReceiver)
+				}
 			}
 			break
 		}
@@ -473,6 +508,20 @@ func (jobs *BackupJobsState) AddBytesRead (BackupJobName string, bytesRead uint6
 	for k, job := range jobs.Running {
 		if BackupJobName == job.Name {
 			jobs.Running[k].FileContentBytesRead += bytesRead
+			break
+		}
+	}
+}
+
+
+// increments *BackupJobsState.sequence of a given backup job. The sequence is used when sending messages to clients
+// about objects being uploaded
+func (jobs *BackupJobsState) IncrementSequence (BackupJobName string) {
+	jobs.Lock.Lock()
+	defer jobs.Lock.Unlock()
+	for k, job := range jobs.Running {
+		if BackupJobName == job.Name {
+			jobs.Running[k].sequence += 1
 			break
 		}
 	}

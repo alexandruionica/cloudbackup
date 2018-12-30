@@ -45,7 +45,13 @@ func (jobs *DryRunBackupJobsState) IncrementCounter(BackupJobName string, counte
 }
 
 // we don't need this for a dry run but this function is needed in order to satisfy the interface constrains
-func (jobs *DryRunBackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64) {
+func (jobs *DryRunBackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string,
+	ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool) {
+	return
+}
+
+// we don't need this for a dry run but this function is needed in order to satisfy the interface constrains
+func (jobs *DryRunBackupJobsState) IncrementSequence (BackupJobName string) {
 	return
 }
 

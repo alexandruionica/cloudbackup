@@ -111,7 +111,7 @@ func (srv *SrvData) Start() {
 
 // shutdown gracefully the http server using 30 sec timeout
 func (srv *SrvData) Stop(){
-	logger.Info("Shutting down the http server...")
+	logger.Debug("Shutting down the http server...")
 	srv.Mutex.Lock()
 	srv.serverExiting = true
 	srv.Mutex.Unlock()
