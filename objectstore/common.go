@@ -103,6 +103,18 @@ func NewFileReader (path string, bucket *rate.Limiter, backupJobsState shared.Ba
 	return result, nil
 }
 
+// given a file size and how many bytes were read so far return a percent (as an int) for how much was read
+func calculatePercentRead (fileSize int64, readBytes int64) uint {
+	if fileSize == 0 {
+		return 100
+	}
+	if readBytes == 0 {
+		return 0
+	} else {
+		return uint((readBytes * 100)/fileSize)
+	}
+}
+
 // this reader just request reads from the actual os.file reader and forwards the result to the caller while also incrementing a counter
 func (handle *FileReader) Read(p []byte) (int, error) {
 	select {
@@ -112,10 +124,17 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 	}
 	default:
 		{
+			newFile := false
+			if handle.readBytes == 0 {
+				newFile = true
+			}
 			if handle.rateLimit == 0 {
 				readBytes, err := handle.origFileReader.Read(p)
 				// update statistics
-				handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
+				handle.readBytes += int64(readBytes)
+				handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+					handle.objectStoreType, int64(readBytes), handle.path,
+					calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
 				handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 				return readBytes, err
 			} else {
@@ -130,8 +149,10 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 							"from the rate limiting token bucket: %s . Proceeding to read content while ignoring the rate limiting", handle.path, err)
 					}
 					readBytes, err := handle.origFileReader.Read(p)
-					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
 					handle.readBytes += int64(readBytes)
+					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+						handle.objectStoreType, int64(readBytes), handle.path,
+						calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
 					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 					return readBytes, err
 				} else {
@@ -171,8 +192,10 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 							"from the rate limiting token bucket: %s . Proceeding to read content while ignoring the rate limiting", handle.path, err)
 					}
 					readBytes, err := handle.origFileReader.Read(tmpP)
-					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName, handle.objectStoreType, int64(readBytes))
 					handle.readBytes += int64(readBytes)
+					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+						handle.objectStoreType, int64(readBytes), handle.path,
+						calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
 					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 					// copy read data to the original slice ;  func copy(dst, src []Type) int
 					copiedBytes := copy(p, tmpP)

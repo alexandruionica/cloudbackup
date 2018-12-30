@@ -8,11 +8,13 @@ import (
 	"cloudbackup/database/dbops"
 	"cloudbackup/objectstore"
 	"cloudbackup/shared"
+	"cloudbackup/watcher"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"sync"
 	"time"
 )
 
@@ -22,9 +24,22 @@ var logger = log.WithFields(log.Fields{
 })
 
 
+// initialise struct which holds jobs state
+func NewJobsState () *shared.BackupJobsState {
+	msgChan := make(chan shared.WatchMessage, 50)
+ return &shared.BackupJobsState {
+ 	Lock: &sync.RWMutex{},
+ 	WatchMsgReceiver: msgChan,
+ 	Watcher: watcher.New(msgChan),
+ }
+}
+
 func Start (cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
 	backupJobsState *shared.BackupJobsState, configuration *config.RuntimeConfig) {
+	// start component which listens for messages from http handlers and starts / stops backups & restores according to requests
 	go eventProcessor(cfgChange, SchedulerCommBackup, backupJobsState, configuration)
+	// components which relays to clients real time info about the file/dir/symlink currently being backed up or restores
+	go watcher.Start(backupJobsState.Watcher)
 	return
 }
 
@@ -33,7 +48,7 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 	globals.Stats.IncrementRoutines("other")
 	defer globals.Stats.DecrementRoutines("other")
 
-	logger.Info("Starting scheduling component")
+	logger.Debug("Starting scheduling component")
 	//const SleepSec = 1
 	var receivedBackupCommand = shared.ReceiveBackupCommand{}
 	// infinite loop
@@ -41,13 +56,16 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 		select {
 		case _ = <-SchedulerCommBackup.Shutdown:
 			{
-				logger.Info("Scheduler requested to stop any running backups or restores and then exit")
+				logger.Debug("Scheduler requested to stop any running backups or restores and then exit")
 				// TODO - add code to stop restores too (right now only backups are stopped)
 				// while a copy, some of the data is pointers so locking is still needed
 				serverConfigCopy := configuration.GetCopyWithLock(loggingContext + ".eventProcessor")
 				stopAllBackups(backupJobsState, serverConfigCopy)
+				// stop watcher (real time message multiplexer about file/dir/symlink currently being backedup/restored)
+				backupJobsState.Watcher.Stop()
 				// Signal back on the same channel that scheduler is done cleaning up
 				SchedulerCommBackup.Shutdown <- true
+				logger.Debug("Scheduler completed cleanup and is exiting.")
 				return
 			}
 		case _ = <-cfgChange:
@@ -375,7 +393,7 @@ func stopAllBackups (backupJobsState *shared.BackupJobsState, serverConfigCopy c
 		" reading the backup jobs struct")
 
 	waitForAllBackupToBeStopped(backupJobsState)
-	logger.Info("All running backup jobs have exited, as requested.")
+	logger.Debug("All running backup jobs have exited, as requested.")
 }
 
 // wait until the list of running backups has 0 length
