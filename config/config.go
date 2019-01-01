@@ -125,15 +125,14 @@ type RuntimeConfig struct {
 // return a copy of the config struct. Lock while reading the struct. logContext is used for passing the caller's
 // logging context as to make it clear where the call is coming from
 func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
-	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying server config" +
-		" struct")
+	// log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying server config struct")
 	cfg.Mutex.RLock()
 	defer func() {
 		cfg.Mutex.RUnlock()
-		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying server " +
-			"config struct")
+		//log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying server " +
+		//	"config struct")
 	}()
-	log.WithFields(log.Fields{"context": logContext}).Debug("Read lock for copying server config acquired")
+	//log.WithFields(log.Fields{"context": logContext}).Debug("Read lock for copying server config acquired")
 	cfgCopy := cfg.Config
 
 	// we need to manually copy slices because by default a pointer to the slice is copied
@@ -174,13 +173,13 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 		return &RuntimeConfig{}, err
 	}
 
-	logger.Debug("Acquiring read lock before reading config file")
+	//logger.Debug("Acquiring read lock before reading config file")
 	mutex.RLock()
 	defer func() {
 		mutex.RUnlock()
-		logger.Debug("Read lock released after reading config file")
+		//logger.Debug("Read lock released after reading config file")
 		}()
-	logger.Debug("Acquired read lock for reading config file")
+	//logger.Debug("Acquired read lock for reading config file")
 	// if debug then also adjust logging level of configor library (set library to Verbose not Debug as
 	// Verbose is actually what we expect when using  "debug")
 	if debug {

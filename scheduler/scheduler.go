@@ -63,6 +63,8 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 				stopAllBackups(backupJobsState, serverConfigCopy)
 				// stop watcher (real time message multiplexer about file/dir/symlink currently being backedup/restored)
 				backupJobsState.Watcher.Stop()
+				// give the multiplexer a bit of time to get the signal and clean up
+				time.Sleep(100 * time.Millisecond)
 				// Signal back on the same channel that scheduler is done cleaning up
 				SchedulerCommBackup.Shutdown <- true
 				logger.Debug("Scheduler completed cleanup and is exiting.")

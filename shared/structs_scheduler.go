@@ -153,13 +153,13 @@ type BackupJobsStateInterface interface {
 func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string) []BackupJobStatus {
 	result := make([]BackupJobStatus, 0)
 	runningList := map[string]string{}
-	log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Acquiring read lock before reading running " +
-		"backup jobs struct")
+	//log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Acquiring read lock before reading running " +
+	//	"backup jobs struct")
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
-		log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Read lock released after reading running " +
-			"backup jobs struct")
+		//log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Read lock released after reading running " +
+		//	"backup jobs struct")
 	}()
 	// add state of running jobs
 	for _, job := range jobs.Running {
@@ -197,13 +197,13 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 // checks if a given job is running. Returns true if running, false otherwise
 // ("stopping" state is considered running too)
 func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext string) bool {
-	log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Acquiring read lock before reading running " +
-		"backup jobs struct")
+	//log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Acquiring read lock before reading running " +
+	//	"backup jobs struct")
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
-		log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Read lock released after reading running " +
-			"backup jobs struct")
+		//log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Read lock released after reading running " +
+		//	"backup jobs struct")
 	}()
 	for _, job := range jobs.Running {
 		if name == job.Name {
@@ -222,13 +222,13 @@ func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext str
 
 // checks if a given job is stopping. Returns true if stopping, false otherwise
 func (jobs *BackupJobsState) IsStopping(name string, JobId string, logContext string) bool {
-	log.WithFields(log.Fields{"context": logContext + ".IsStopping"}).Debug("Acquiring read lock before reading running " +
-		"backup jobs struct")
+	//log.WithFields(log.Fields{"context": logContext + ".IsStopping"}).Debug("Acquiring read lock before reading running " +
+	//	"backup jobs struct")
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
-		log.WithFields(log.Fields{"context": logContext + ".IsStopping"}).Debug("Read lock released after reading running " +
-			"backup jobs struct")
+		//log.WithFields(log.Fields{"context": logContext + ".IsStopping"}).Debug("Read lock released after reading running " +
+		//	"backup jobs struct")
 	}()
 	for _, job := range jobs.Running {
 		if name == job.Name {
@@ -530,14 +530,14 @@ func (jobs *BackupJobsState) IncrementSequence (BackupJobName string) {
 // return the cancel function for a particular Running job with a particular uuid (or if uuid="" then match on
 //    name only)
 func (jobs *BackupJobsState) GetCancelFunctionForJob(BackupJobName string, BackupJobId string) (context.CancelFunc, error) {
-	log.WithFields(log.Fields{"context": loggingContext + ".GetCancelFunctionForJob"}).Debug("Acquiring read lock " +
-		"before reading the backup jobs struct")
+	//log.WithFields(log.Fields{"context": loggingContext + ".GetCancelFunctionForJob"}).Debug("Acquiring read lock " +
+	//	"before reading the backup jobs struct")
 	jobs.Lock.RLock()
 
 	defer func() {
 		jobs.Lock.RUnlock()
-		log.WithFields(log.Fields{"context": loggingContext + ".GetCancelFunctionForJob"}).Debug("Read lock " +
-			"released after reading the backup jobs struct")
+		//log.WithFields(log.Fields{"context": loggingContext + ".GetCancelFunctionForJob"}).Debug("Read lock " +
+		//	"released after reading the backup jobs struct")
 	}()
 
 	var CancelFunction context.CancelFunc
@@ -569,13 +569,13 @@ func (jobs *BackupJobsState) GetCancelFunctionForJob(BackupJobName string, Backu
 // return the context for a particular Running job with a particular uuid (or if uuid="" then match on
 //    name only)
 func (jobs *BackupJobsState) GetContextForJob(BackupJobName string, BackupJobId string) (context.Context, error) {
-	log.WithFields(log.Fields{"context": loggingContext + ".GetContextForJob"}).Debug("Acquiring read lock " +
-		"before reading the backup jobs struct")
+	//log.WithFields(log.Fields{"context": loggingContext + ".GetContextForJob"}).Debug("Acquiring read lock " +
+	//	"before reading the backup jobs struct")
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
-		log.WithFields(log.Fields{"context": loggingContext + ".GetContextForJob"}).Debug("Read lock " +
-			"released after reading the backup jobs struct")
+		//log.WithFields(log.Fields{"context": loggingContext + ".GetContextForJob"}).Debug("Read lock " +
+		//	"released after reading the backup jobs struct")
 	}()
 
 	var ctx context.Context
@@ -607,13 +607,9 @@ func (jobs *BackupJobsState) GetContextForJob(BackupJobName string, BackupJobId 
 // gets the start time of a backup job
 // returns: time of start ; error if encountered and error
 func (jobs *BackupJobsState) GetStartTime(name string, JobId string, logContext string) (time.Time, error) {
-	log.WithFields(log.Fields{"context": logContext + ".GetStartTime"}).Debug("Acquiring read lock before " +
-		"reading running backup jobs struct")
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
-		log.WithFields(log.Fields{"context": logContext + ".GetStartTime"}).Debug("Read lock released after " +
-			"reading running backup jobs struct")
 	}()
 	for _, job := range jobs.Running {
 		if name == job.Name {
@@ -628,4 +624,19 @@ func (jobs *BackupJobsState) GetStartTime(name string, JobId string, logContext 
 		}
 	}
 	return time.Time{}, errors.New(ErrJobNotFoundInRunningState)
+}
+
+// gets the jobid of a running job
+// returns: job id ; error if no running job has the same job name
+func (jobs *BackupJobsState) GetRunningBackupJobId(name string, logContext string) (string, error) {
+	jobs.Lock.RLock()
+	defer func() {
+		jobs.Lock.RUnlock()
+	}()
+	for _, job := range jobs.Running {
+		if name == job.Name {
+			return job.BackupJobId, nil
+		}
+	}
+	return "", errors.New("no running job was found matching supplied job name")
 }
