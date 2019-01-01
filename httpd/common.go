@@ -61,15 +61,15 @@ type SrvData struct {
 }
 
 func (srv *SrvData) GetCopyWithLock(logContext string) SrvData {
-	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying HTTPD config " +
-		"struct")
+	//log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying HTTPD config " +
+	//	"struct")
 	srv.Mutex.RLock()
 	defer func() {
 		srv.Mutex.RUnlock()
-		log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying HTTPD " +
-			"config struct")
+		//log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying HTTPD " +
+		//	"config struct")
 	}()
-	log.WithFields(log.Fields{"context": logContext}).Debug("Read lock for copying HTTPD config acquired")
+	//log.WithFields(log.Fields{"context": logContext}).Debug("Read lock for copying HTTPD config acquired")
 	cfgCopy := *srv
 	return cfgCopy
 }

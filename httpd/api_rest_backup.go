@@ -1,6 +1,7 @@
 package httpd
 
 import (
+	"context"
 	"net/http"
 	"github.com/julienschmidt/httprouter"
 	"encoding/json"
@@ -371,4 +372,123 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 
 	//JSONSuccessWithResult(w, "success", "success",
 	//	srvCopy.backupJobsState.Get(configCopy, loggingContext + ".handlerGetBackupList"))
+}
+
+
+
+// for a given backup job name (and optional job id) show real time progress
+func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
+		return
+	}
+	var decodedJson BackupJob
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if decodedJson.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
+			" is needed in order to know what backup job you're requesting to watch"))
+		return
+	}
+
+	// while a copy, some of the data is pointers so locking is still needed
+	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostBackupDryRun")
+
+	if srvCopy.backupJobsState.IsRunning(decodedJson.Name, decodedJson.JobId , loggingContext + ".handlerPostBackupWatch") == false {
+		var errorMsg string
+		if decodedJson.JobId != "" && srvCopy.backupJobsState.IsRunning(decodedJson.Name, "", loggingContext + ".handlerPostBackupWatch") {
+			errorMsg = fmt.Sprintf("Backup for job having name '%s' and a backup job id of '%s' is not " +
+				"running so it can't be watched. There is a running backup job for the same name but with a " +
+				"different job id", decodedJson.Name, decodedJson.JobId)
+		} else {
+			errorMsg = fmt.Sprintf("Backup for job having " + "name '%s' is not running.", decodedJson.Name)
+		}
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, errorMsg)
+		return
+	}
+
+	// check if job already stopping
+	if srvCopy.backupJobsState.IsStopping(decodedJson.Name, decodedJson.JobId , loggingContext + ".handlerPostBackupStart") {
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Backup for job having " +
+			"name '%s' is stopping so it can't be watched any more.", decodedJson.Name))
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		logger.Debugf("HTTP2 Streaming unsupported in handlerPostBackupDryRun()")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	//
+	// currentPath := ""
+	// Sequence number of the object (file) for which the last message was received. A jump of more than 1 means
+	// messages were lost about files. Rate limiting makes it likely messages will be skipped for the current file but
+	// lost messages means that not even 1 message was received for some file(s) and rate limiting will not prevent that
+	// var currentSequence uint64 = 0
+
+	// prepare all data need to register the new client
+	jobid := ""
+	if decodedJson.JobId != "" {
+		jobid = decodedJson.JobId
+	} else {
+		jobid, err = srvCopy.backupJobsState.GetRunningBackupJobId(decodedJson.Name, loggingContext + ".handlerPostBackupStart")
+		// the GetRunningBackupJobId() function returns an error only if the job name can't be found in the list of running jobs
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Backup for job having " +
+				"name '%s' has started stopping so it can't be watched any more.", decodedJson.Name))
+			return
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	// buffer up to 100 messages before discarding if the http client is too slow to receive
+    commChan := make(chan shared.WatchMessage, 100)
+	clientUUID := uuid.NewV4().String()
+	srvCopy.backupJobsState.Watcher.AddConsumer("backup", decodedJson.Name, jobid, commChan, ctx, cancel,
+		r.RemoteAddr, clientUUID)
+
+	for {
+		select {
+		// backup server is shutting down
+		case <-ctx.Done(): {
+			srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
+			_, _ = fmt.Fprintf(w, "data: %s\n", "Backup server has been requested to exit. All running " +
+				"backups are being stopped.") // #nosec
+			return
+		}
+		// client disconnected
+		case <- r.Context().Done(): {
+			srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
+			return
+		}
+		case message := <- commChan: {
+			// Write to the ResponseWriter
+			// Server Sent Events compatible
+			jsonMsg, err := json.Marshal(message)
+			if err != nil {
+				logger.Warnf("Could not json encode message received from backup job live status. Error was: '%s'", err)
+			} else {
+				_, _ = fmt.Fprintf(w, "data: %s\n", jsonMsg) // #nosec
+				// Flush the data immediately instead of buffering it for later.
+				flusher.Flush()
+			}
+			// if this is the last message then remove the consumer from the consumer list and close this http connection
+			if message.Completed {
+				srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
+				_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job has completed.") // #nosec
+				return
+			}
+		}
+		}
+	}
+
 }
