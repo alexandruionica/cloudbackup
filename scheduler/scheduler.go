@@ -19,6 +19,8 @@ import (
 )
 
 const loggingContext = "scheduler"
+// 1000 seems to be a good value to allow for fluctuations
+const watcherChanSize = 1000
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -26,7 +28,7 @@ var logger = log.WithFields(log.Fields{
 
 // initialise struct which holds jobs state
 func NewJobsState () *shared.BackupJobsState {
-	msgChan := make(chan shared.WatchMessage, 50)
+	msgChan := make(chan shared.WatchMessage, watcherChanSize)
  return &shared.BackupJobsState {
  	Lock: &sync.RWMutex{},
  	WatchMsgReceiver: msgChan,
