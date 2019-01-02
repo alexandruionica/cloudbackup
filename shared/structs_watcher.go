@@ -90,7 +90,8 @@ func SendMsgToWatcher(msg WatchMessage, WatchMsgReceiver chan <-WatchMessage) {
 	case WatchMsgReceiver <- msg:
 		return
 	default:
-		logger.Debug("Watcher's receive channel is full, discarding message")
+		// Watcher's receive channel is full, discarding message. Avoid permanently logging stuff here as this is a
+		// performance sensitive bit as any slowdown will case FileIO to be slower too
 	}
 }
 
@@ -110,7 +111,8 @@ func (multiplexer *WatchMultiplexer) AddConsumer (JobType string, JobName string
 		// rate limit to max 5 updates per second for a given file (actually 6 per second in case it reaches 100%
 		// upload during interval). Given multiple files in a 1 second interval then this limit will both be breached
 		// and we could also get less than 5 updates during the interval for a given file
-		Limiter: rate.NewLimiter(5, 1),
+		// Burst is set tp =2 as when having burst=1 for unknown reasons the limiter would choke randomly and stop working
+		Limiter: rate.NewLimiter(5, 2),
 		CurrentPath: "",
 	}
 	multiplexer.Mutex.Lock()

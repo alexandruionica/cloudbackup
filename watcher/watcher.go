@@ -3,9 +3,8 @@ package watcher
 import (
 	"cloudbackup/shared"
 	"context"
-	"sync"
-
 	log "github.com/sirupsen/logrus"
+	"sync"
 )
 
 
