@@ -70,9 +70,8 @@ func sendMsgToClients(multiplexer *shared.WatchMultiplexer, msg shared.WatchMess
 					continue
 				default:
 					// do nothing if channel is full and continue to next iteration
-					logger.Debugf("Watcher (message multiplexer) can't send message on channel belonging to client" +
-						" '%s' as the channel is full. Discarding the message for this client as the client may be too " +
-						"slow to keep up with the server", client.Identifier)
+					// avoid logging here as this is a performance sensitive step and slowdowns would lead to the
+					// multiplexer being slower at forwarding messages
 					continue
 				}
 			} else {
@@ -126,3 +125,6 @@ func clientSendAllowed (ctx context.Context, client *shared.WatchConsumer, msg s
 	}
 	return sendAllowed
 }
+
+
+// TODO - write function to tell consumers backup run is completed

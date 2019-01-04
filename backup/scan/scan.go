@@ -30,6 +30,7 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 
 	var stat os.FileInfo
 	var err error
+	backupJobsState.IncrementSequence(backupConfig.Name)
 	if backupConfig.Dereference {
 		stat, err = os.Stat(path)
 	} else {
@@ -37,7 +38,8 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 	}
 	if err != nil {
 		logger.Errorf("While trying to get properties of %s encountered error '%s'", path, err)
-		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine")
+		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine", path, "unknown",
+			"examine", err.Error())
 		return false, err
 	} else {
 		select {
@@ -60,13 +62,16 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 			} else {
 				switch utils.FileType(stat) {
 				case "file": {
-					backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
+					backupJobsState.IncrementCounter(backupConfig.Name, "examined_files", path,
+						"file", "examine","")
 				}
 				case "symlink": {
-					backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks")
+					backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks", path,
+						"symlink", "examine","")
 				}
 				default: {
-					backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown")
+					backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown", path,
+						"unknown", "examine","")
 				}
 				}
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
@@ -130,12 +135,14 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 
 	// set current file examined to empty as otherwise output will look inconsistent if we descend a different folder
 	backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", "", "", "")
-	backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories")
+	backupJobsState.IncrementCounter(backupConfig.Name, "examined_directories", path, "dir",
+		"examine", "")
 	logger.Debugf("Getting list of files and directories part of %s", path)
 	names, topLevelErr := readDirNames(path)
 	if topLevelErr != nil {
 		logger.Warnf("While trying to get directory listing for '%s' encountered error '%s'", path, topLevelErr)
-		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine")
+		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine", path, "unknown",
+			"examine", topLevelErr.Error())
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
 			"", topLevelErr.Error())
 	} else {
@@ -153,13 +160,15 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 				return true, nil
 			}
 		default:
+			backupJobsState.IncrementSequence(backupConfig.Name)
 			childPath := filepath.Join(path, name)
 			logger.Debugf("Getting details for %s", childPath)
 			excluded, excludedExpr, err := isExcluded(backupConfig.Exclusions, childPath)
 			if err != nil {
 				logger.Warnf("While trying to check if %s should be excluded from being backed up, the following " +
 					"error was encountered '%s'", childPath, err)
-				backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine")
+				backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine", childPath,
+					"unknown", "examine", err.Error())
 				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown", childPath, "",
 					err.Error())
 				continue
@@ -168,7 +177,8 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 				logger.Debugf("Skipping from backup %s as it is excluded by expression %s", childPath, excludedExpr)
 				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown",
 					childPath, excludedExpr, "")
-				backupJobsState.IncrementCounter(backupConfig.Name, "excluded")
+				backupJobsState.IncrementCounter(backupConfig.Name, "excluded", childPath,
+					"unknown", "examine", "")
 				continue
 			}
 
@@ -180,7 +190,8 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			}
 			if err != nil {
 				logger.Warnf("While trying to get properties of %s encountered error '%s'", childPath, err)
-				backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine")
+				backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine", childPath,
+					"unknown", "examine", err.Error())
 				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown", childPath,
 					"", err.Error())
 			} else {
@@ -197,13 +208,16 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 				} else {
 					switch utils.FileType(fileInfo) {
 					case "file": {
-						backupJobsState.IncrementCounter(backupConfig.Name, "examined_files")
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_files", childPath,
+							"file", "examine", "")
 					}
 					case "symlink": {
-						backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks")
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks", childPath,
+							"symlink", "examine", "")
 					}
 					default: {
-						backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown")
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown", childPath,
+							"unknown", "examine", "")
 					}
 					}
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", childPath,

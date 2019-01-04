@@ -25,12 +25,19 @@ type WatchMessage struct {
 	JobId string `json:"-"`
 	// object being backed up or restored
 	Path string `json:"path"`
-	// for a given object, shows progress
+	// for a given object, shows progress.
 	PercentDone uint `json:"percent_done"`
-	// one minute rate in bytes per second for given $Path
+	// one minute rate in bytes per second for given $Path . Will always have 0 value for $ObjectType != "file"
 	Rate            int64  `json:"rate"`
+	// one of: file, dir, symlink, unknown
+	ObjectType		string `json:"object_type"`
 	ObjectStoreName string `json:"object_store_name"`
 	ObjectStoreType string `json:"object_store_type"`
+	// one of "examine", "upload" or "metadata" depicting if the message represents an examination of an object in
+	// order to determine if a backup is needed, content upload and metadata upload/update
+	OperationType	string `json:"operation_type"`
+	// if non empty then
+	Error 			string `json:"error"`
 	// if set to true then it means that the job has finished (not that it succeeded but that it finished its run)
 	// and that the client should not expect any further messages
 	Completed bool `json:"-"`
@@ -48,9 +55,9 @@ type WatchConsumer struct {
 	// the multiplexer sends messages for the consumption of the client
 	CommChan chan <-WatchMessage
 	// when the channel Ctx.Done is closed then tell the consumer that the server is shutting down
-	Ctx context.Context `json:"-"`
+	Ctx context.Context
 	// cancel function produced when above context is created. This is needed in order to actually issue the cancel
-	Cancel context.CancelFunc `json:"-"`
+	Cancel context.CancelFunc
 	// a string giving some details about the consumer (like src ip + src port) to be used for logging messages (debugging mainly)
 	Identifier string
 	// consumer id is a uuid and is used when deregistering a consumer

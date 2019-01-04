@@ -88,6 +88,7 @@ type ArgsCommandClientBackup struct {
 	Stop  ArgsCommandClientBackupStop `command:"stop" description:"Stop a running backup job"`
 	List  ArgsCommandClientBackupList `command:"list" description:"List all backup jobs and a brief status for each of them"`
 	Status  ArgsCommandClientBackupStatus `command:"status" description:"Show details about a specific backup job."`
+	Watch  ArgsCommandClientBackupWatch `command:"watch" description:"Continuously watches a specific backup job in order to show file, directory and symlinks backup progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces too many events per second or if the client can't receive quickly enough events produced by the server.'"`
 	DryRun ArgsCommandClientBackupDryRun `command:"dryrun" description:"Dry run a backup job in order to see what files and directories get evaluated"`
 
 }
@@ -98,6 +99,7 @@ type ArgsCommandClientBackupStart struct {
 	Job struct {
 		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
+	Watch bool `short:"w" long:"watch" description:"If the backup is successfully started then watch the backup job in order to show progress. Please see the description of the command 'client backup watch' for more details."`
 }
 
 type ArgsCommandClientBackupStop struct {
@@ -107,6 +109,16 @@ type ArgsCommandClientBackupStop struct {
 		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
 	JobId string `short:"i" long:"job-id" description:"Id of the job to stop. Using this ensures that only a particular job is stopped. If the job id doesn't match the id of the running job having the same name then the stop operation will not proceed"`
+}
+
+type ArgsCommandClientBackupWatch struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation is successful then print JSON responses as they are received from server. If this option is not specified then the response is processed and the output is a plaintext table."`
+	Job struct {
+		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
+	JobId string `short:"i" long:"job-id" description:"Id of the job to watch. Using this ensures that only a particular job is watched. If the job id doesn't match the id of the running job having the same name then the watch operation will not proceed"`
+
 }
 
 type ArgsCommandClientBackupDryRun struct {
@@ -301,7 +313,7 @@ func (command *ArgsCommandClientBackupStart) Execute(args []string) error {
 			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
 		os.Exit(1)
 	}
-	clientBackup.Start(clConfig, command.Json, command.Job.Name)
+	clientBackup.Start(clConfig, command.Json, command.Job.Name, command.Watch)
 	return nil
 }
 
@@ -320,6 +332,24 @@ func (command *ArgsCommandClientBackupStop) Execute(args []string) error {
 		os.Exit(1)
 	}
 	clientBackup.Stop(clConfig, command.Json, command.Job.Name, command.JobId)
+	return nil
+}
+
+func (command *ArgsCommandClientBackupWatch) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientBackup.Watch(clConfig, command.Json, command.Job.Name, command.JobId)
 	return nil
 }
 

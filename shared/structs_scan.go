@@ -31,7 +31,9 @@ type ScanEvalItemReport struct {
 	Error string `json:"error"`
 }
 
-func (jobs *DryRunBackupJobsState) IncrementCounter(BackupJobName string, counterName string) {
+// $Path string, $fileType string, $OperationType string, $Error string  are defined only to satisfy interface requirements
+func (jobs *DryRunBackupJobsState) IncrementCounter(BackupJobName string, counterName string, Path string,
+	fileType string, OperationType string, Error string) {
 	jobs.Lock.Lock()
 	defer func() {
 		jobs.Lock.Unlock()

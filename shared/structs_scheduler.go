@@ -142,7 +142,7 @@ type ObjectStoreRate struct {
 //  dry run report
 type BackupJobsStateInterface interface {
 	AddBytesRead (BackupJobName string, bytesRead uint64)
-	IncrementCounter(BackupJobName string, counterName string)
+	IncrementCounter(BackupJobName string, counterName string, Path string, fileType string, OperationType string, Error string)
 	IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool)
 	IncrementSequence (BackupJobName string)
 	UpdateStatsText(BackupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
@@ -298,6 +298,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		},
 		Ctx: ctx,
 		Cancel: cancel,
+		sequence: 0,
 		// TODO - init metadata for Bandwidth usage (also several new fields are needed in order to note when the last update was
 		// TODO - add NextRun
 	})
@@ -362,14 +363,52 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 // increment a statistics counter; this will not error if a job having the same name does not exist;
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
 // stopped state
-func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName string) {
+func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName string, Path string, fileType string, OperationType string, Error string) {
 	jobs.Lock.Lock()
 	defer func() {
 		jobs.Lock.Unlock()
 	}()
+
+	MainLoop:
 	for _, job := range jobs.Running {
 		if BackupJobName == job.Name {
 			job.StatsCounters[counterName] +=1
+
+
+			// don't send a message to the multiplexer for the below $counterName
+			switch counterName {
+				case
+					"examined_files", "examined_directories", "examined_symlinks",  "examined_unknown":
+						break MainLoop
+			}
+			// if this is a file, and no errors were encountered and this was a content upload then don't send a
+			// message to the multiplexer (because IncrementRateCounter() does it).
+			if Error == "" && fileType == "file" && OperationType == "upload" {
+				break
+			}
+
+			var PercentDone uint = 0
+			// if no error then the operation was successful (metadata operations are either 0% done ore 100% done)
+			if Error == "" {
+				PercentDone = 100
+			}
+			msg := WatchMessage{
+				Sequence:        job.sequence,
+				JobType:         "backup",
+				JobName:         BackupJobName,
+				JobId:           job.BackupJobId,
+				Path:            Path,
+				PercentDone:     PercentDone,
+				Rate:            0,
+				ObjectType:		 fileType,
+				ObjectStoreName: "",
+				ObjectStoreType: "",
+				OperationType: 	 OperationType,
+				Error: 			 Error,
+				Completed:       false,
+			}
+			SendMsgToWatcher(msg, jobs.WatchMsgReceiver)
+
 			break
 		}
 	}
@@ -475,21 +514,21 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				jobs.Running[k].ObjectStoreRates[k2].Rate5Min = jobs.Running[k].ObjectStoreRates[k2]._rate5Min.Rate() / 300
 				jobs.Running[k].ObjectStoreRates[k2].Rate15Min = jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Rate() / 900
 				// send message to multiplexer so it can forwarder to connected clients
-				if increment > 0 {
-					msg := WatchMessage{
-						Sequence:        job.sequence,
-						JobType:         "backup",
-						JobName:         BackupJobName,
-						JobId:           job.BackupJobId,
-						Path:            Path,
-						PercentDone:     PercentDone,
-						Rate:            jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Rate()/10,
-						ObjectStoreName: ObjectStoreName,
-						ObjectStoreType: ObjectStoreType,
-						Completed:       false,
-					}
-					SendMsgToWatcher(msg, jobs.WatchMsgReceiver)
+				msg := WatchMessage{
+					Sequence:        job.sequence,
+					JobType:         "backup",
+					JobName:         BackupJobName,
+					JobId:           job.BackupJobId,
+					Path:            Path,
+					PercentDone:     PercentDone,
+					Rate:            jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Rate()/10,
+					ObjectType:		 "file",
+					ObjectStoreName: ObjectStoreName,
+					ObjectStoreType: ObjectStoreType,
+					OperationType: 	 "upload",
+					Completed:       false,
 				}
+				SendMsgToWatcher(msg, jobs.WatchMsgReceiver)
 			}
 			break
 		}

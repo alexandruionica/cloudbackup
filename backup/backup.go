@@ -337,7 +337,6 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 	// TODO - use the context and pass it further down
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", path)
-		backupJobsState.IncrementSequence(backupConfig.Name)
 	} else {
 		logger.Debugf("Uploading metadata for '%s' which is of type '%s'", path, newDbRecord.Type)
 	}
@@ -349,6 +348,7 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 	if err != nil {
 		return false, err
 	}
+
 	// $result represents the remote path (in the object store) where the object has been backed up
 	storeName, _ := objectStores.GetStoreDetails()
 	logger.Debugf("'%s' successfully uploaded to object store %s at remote location '%s'", path, storeName, result)
@@ -385,13 +385,13 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 			if err != nil {
 				switch fileType {
 					case "file":
-						backupJobsState.IncrementCounter(backupName, "failed_to_upload_files")
+						backupJobsState.IncrementCounter(backupName, "failed_to_upload_files", path, fileType, "upload", err.Error())
 					case "dir":
-						backupJobsState.IncrementCounter(backupName, "failed_to_upload_directories")
+						backupJobsState.IncrementCounter(backupName, "failed_to_upload_directories", path, fileType, "metadata", err.Error())
 					case "symlink":
-						backupJobsState.IncrementCounter(backupName, "failed_to_upload_symlinks")
+						backupJobsState.IncrementCounter(backupName, "failed_to_upload_symlinks", path, fileType, "metadata", err.Error())
 					default: {
-						backupJobsState.IncrementCounter(backupName, "failed_to_upload_unknown")
+						backupJobsState.IncrementCounter(backupName, "failed_to_upload_unknown", path, fileType, "metadata", err.Error())
 						logger.Warningf("'%s' is of an unknown type. Only directories, regular files and " +
 							"symlinks are supported for backup. Consider excluding this file from backup in order " +
 							"to prevent future warnings.", path)
@@ -400,11 +400,11 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 			} else {
 				switch fileType {
 					case "file":
-						backupJobsState.IncrementCounter(backupName, "uploaded_files")
+						backupJobsState.IncrementCounter(backupName, "uploaded_files", path, fileType, "upload","")
 					case "dir":
-						backupJobsState.IncrementCounter(backupName, "uploaded_directories")
+						backupJobsState.IncrementCounter(backupName, "uploaded_directories", path, fileType, "metadata","")
 					case "symlink":
-						backupJobsState.IncrementCounter(backupName, "uploaded_symlinks")
+						backupJobsState.IncrementCounter(backupName, "uploaded_symlinks", path, fileType, "metadata","")
 					default:
 						logger.Warningf("Tried to increment 'uploaded' counter for '%s' of type: '%s'. " +
 							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
@@ -415,11 +415,11 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 			if err != nil {
 				switch fileType {
 					case "file":
-						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_files")
+						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_files", path, fileType, "metadata",err.Error())
 					case "dir":
-						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_directories")
+						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_directories", path, fileType, "metadata", err.Error())
 					case "symlink":
-						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_symlinks")
+						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_symlinks", path, fileType, "metadata", err.Error())
 					default:
 						logger.Warningf("Tried to increment 'failed_to_update_metadata' counter for '%s' of type: '%s'. " +
 							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
@@ -427,11 +427,11 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 			} else {
 				switch fileType {
 					case "file":
-						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_files")
+						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_files", path, fileType, "metadata","")
 					case "dir":
-						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_directories")
+						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_directories", path, fileType, "metadata","")
 					case "symlink":
-						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_symlinks")
+						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_symlinks", path, fileType, "metadata","")
 					default:
 						logger.Warningf("Tried to increment 'updated_metadata' counter for '%s' of type: '%s'. " +
 							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
