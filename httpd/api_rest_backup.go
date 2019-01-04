@@ -463,11 +463,15 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 			srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
 			_, _ = fmt.Fprintf(w, "data: %s\n", "Backup server has been requested to exit. All running " +
 				"backups are being stopped.") // #nosec
+			// close channel to avoid memory leaks
+			close(commChan)
 			return
 		}
 		// client disconnected
 		case <- r.Context().Done(): {
 			srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
+			// close channel to avoid memory leaks
+			close(commChan)
 			return
 		}
 		case message := <- commChan: {
@@ -484,7 +488,9 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 			// if this is the last message then remove the consumer from the consumer list and close this http connection
 			if message.Completed {
 				srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
-				_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job has completed.") // #nosec
+				_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job has finished.") // #nosec
+				// close channel to avoid memory leaks
+				close(commChan)
 				return
 			}
 		}

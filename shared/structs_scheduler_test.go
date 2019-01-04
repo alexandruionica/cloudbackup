@@ -196,7 +196,7 @@ func TestIncrementCounterAndGet(t *testing.T) {
 		t.Fatal("Was expecting that isRunning() reports true for the job but instead we got 'false'")
 	}
 
-	backupJobsState.IncrementCounter(jobName, counterName)
+	backupJobsState.IncrementCounter(jobName, counterName, "/another/path", "file", "examine", "")
 	AllJobsStatus := backupJobsState.Get(serverConfigCopy, logContext)
 
 	found := false

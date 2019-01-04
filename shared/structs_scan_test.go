@@ -101,7 +101,7 @@ func TestIncrementCounter(t *testing.T) {
 			"state '%s'", jobName, backupJobsState.DryRunning[0].State)
 	}
 
-	backupJobsState.IncrementCounter(jobName, counterName)
+	backupJobsState.IncrementCounter(jobName, counterName, "/a/random/path", "file", "examine", "")
 
 	jobStats, err := backupJobsState.GetStats(jobName)
 	if err != nil {
