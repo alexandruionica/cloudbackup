@@ -247,7 +247,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// the backup can not run as we can't initialise/connect to the database
 	if err != nil {
 		// TODO - mark the backup as failed (failed to/during? start)
-		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData, false, err)
 		return
 	} else {
 		dbData.Connected = true
@@ -259,7 +259,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// comparing/adding/updating entries about files
 	if err != nil {
 		// TODO - mark the backup as failed (failed to/during? start)
-		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData, false, err)
 		return
 	}
 
@@ -267,7 +267,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	dbData.PreparedStatements, err = dbops.Prepare(dbData.Db)
 	if err != nil {
 		// TODO - mark the backup as failed (failed to/during? start)
-		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData, false, err)
 		return
 	}
 
@@ -275,7 +275,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	jobStartTime, err := backupJobsState.GetStartTime(name, jobUuid, loggingContext + ".runBackup")
 	if err != nil {
 		// TODO - mark the backup as failed (failed to/during? start)
-		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData, false, err)
 		return
 	}
 
@@ -283,7 +283,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	err = dbops.AddJobDetails(dbData.Db, jobUuid, "backup", jobStartTime)
 	if err != nil {
 		// TODO - mark the backup as failed (failed to/during? start)
-		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData, false, err)
 		return
 	}
 
@@ -291,7 +291,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
 		// TODO - mark the backup as failed (failed to/during? start)
-		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData, false, err)
 		return
 	}
 
@@ -305,9 +305,9 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		default:
 			// backupJobsState MUST be a pointer
-			exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData, objectStores)
+			cancelled, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData, objectStores)
 			// Examine FIRST $exit and then $err
-			if exiting {
+			if cancelled {
 				// TODO - mark backup as interrupted
 				break
 			}
@@ -319,12 +319,12 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 		}
 	}
 
-	cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData)
+	cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData, false, nil)
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
 func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
-	backupJobsState *shared.BackupJobsState, dbData shared.DbData){
+	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error){
 	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then
 	//  it will leak at least a channel. Calling it for an already cancelled backup will not cause any issue
 	cancel, err := backupJobsState.GetCancelFunctionForJob(name, jobUuid)
@@ -343,7 +343,11 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 	_ = backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup", jobUuid, false) // #nosec
 
 	// tell any connected Watch clients to exit
-	watcher.TellClientsJobComplete("backup", name, jobUuid, backupJobsState.WatchMsgReceiver)
+	backupFailed := false
+	if backupError != nil {
+		backupFailed = true
+	}
+	watcher.TellClientsJobFinished("backup", name, jobUuid, backupJobsState.WatchMsgReceiver, cancelled, backupFailed)
 
 	// TODO - before MarkStopped(stopped=true) copy report (state) somewhere
 

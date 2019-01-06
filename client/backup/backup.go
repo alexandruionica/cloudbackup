@@ -330,7 +330,7 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 					if decodedJsonMessage.Error != "" {
 						errorField = "ERROR: " + decodedJsonMessage.Error
 					}
-					fmt.Printf(fmtPrefix + "%3d%% %7s/sec %" + strconv.Itoa(maxLenghtObjectStoreType) + "s %7s %8s %s %s", decodedJsonMessage.PercentDone,
+					fmt.Printf(fmtPrefix + "%3d%% %7s/sec %" + strconv.Itoa(maxLenghtObjectStoreType) + "s %9s %8s %s %s", decodedJsonMessage.PercentDone,
 						humanize.Bytes(uint64(decodedJsonMessage.Rate)), decodedJsonMessage.ObjectStoreType ,
 						decodedJsonMessage.ObjectType, decodedJsonMessage.OperationType, decodedJsonMessage.Path,
 						errorField)

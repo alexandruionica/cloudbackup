@@ -24,15 +24,16 @@ type WatchMessage struct {
 	// uuid of job
 	JobId string `json:"-"`
 	// object being backed up or restored
-	Path string `json:"path"`
+	Path string `json:"name"`
 	// for a given object, shows progress.
 	PercentDone uint `json:"percent_done"`
-	// one minute rate in bytes per second for given $Path . Will always have 0 value for $ObjectType != "file"
+	// 10 second rate in bytes per second for given $Path . Will always have 0 value for $ObjectType != "file"
 	Rate            int64  `json:"rate"`
-	// one of: file, dir, symlink, unknown
-	ObjectType		string `json:"object_type"`
-	ObjectStoreName string `json:"object_store_name"`
-	ObjectStoreType string `json:"object_store_type"`
+	// one of: file, dir, symlink, unknown .It's up to the http handler to replace "dir" with "directory"
+	// in order to make the output nicer for clients which will consume it.
+	ObjectType		string `json:"type"`
+	ObjectStoreName string `json:"store_name"`
+	ObjectStoreType string `json:"store_type"`
 	// one of "excluded", "examine", "upload" or "metadata" depicting if the message represents an examination of an
 	// object in order to determine if a backup is needed, content upload and metadata upload/update
 	OperationType	string `json:"operation_type"`
@@ -40,7 +41,14 @@ type WatchMessage struct {
 	Error 			string `json:"error"`
 	// if set to true then it means that the job has finished (not that it succeeded but that it finished its run)
 	// and that the client connection should be closed. Also when this is true then the rest of the fields should be ignored.
-	Completed bool `json:"-"`
+	JobCompleted bool `json:"-"`
+	// Set to true if the backup job was cancelled while it was running. This means the client connection should be
+	// closed. Also when this is true then the rest of the fields should be ignored.
+	JobAborted bool `json:"-"`
+	// Set to true if the backup job failed. Failure means that it didn't get to the stage where it attempts to backup
+	// files as some kind of initialisation error was encountered. This means the client connection should be
+	// closed. Also when this is true then the rest of the fields should be ignored except the "Error" field.
+	JobFailed bool `json:"-"`
 }
 
 // each consumer will have a struct like below and the Multiplexer routine will walk a slice of structs and send

@@ -400,12 +400,12 @@ func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName 
 				Path:            Path,
 				PercentDone:     PercentDone,
 				Rate:            0,
-				ObjectType:		 fileType,
+				ObjectType:      fileType,
 				ObjectStoreName: "",
 				ObjectStoreType: "",
-				OperationType: 	 OperationType,
-				Error: 			 Error,
-				Completed:       false,
+				OperationType:   OperationType,
+				Error:           Error,
+				JobCompleted:    false,
 			}
 			SendMsgToWatcher(msg, jobs.WatchMsgReceiver)
 
@@ -522,11 +522,11 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 					Path:            Path,
 					PercentDone:     PercentDone,
 					Rate:            jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Rate()/10,
-					ObjectType:		 "file",
+					ObjectType:      "file",
 					ObjectStoreName: ObjectStoreName,
 					ObjectStoreType: ObjectStoreType,
-					OperationType: 	 "upload",
-					Completed:       false,
+					OperationType:   "upload",
+					JobCompleted:    false,
 				}
 				SendMsgToWatcher(msg, jobs.WatchMsgReceiver)
 			}
