@@ -238,7 +238,7 @@ paths:
         Response codes != 200 will be regular json while response code 200 will 
         be followed by http2 SSE. Each received event for the 200 status code 
         will be in the format "data: {json object}" except the last line at the 
-        end of the input which will start with "data: Completed run:".
+        end of the input which will start with "data: Completed run".
         Unfortunatelly  Swagger doesn't allow proper documentation of SSE so the
         response object  definition is the actual {json object} to be expected
         after the "data: "  field.
@@ -261,6 +261,62 @@ paths:
           x-produces: text/event-stream
           schema:
             $ref: '#/definitions/ApiResponseBackupDryRun'
+        '401':
+          description: Basic authentication required
+          x-produces: application/json
+          schema:
+            $ref: '#/definitions/ApiResponse'
+        '404':
+          description: No backup job matches the provided name
+          x-produces: application/json
+          schema:
+            $ref: '#/definitions/ApiResponse'
+        '500':
+          description: Internal Server Error
+          x-produces: application/json
+          schema:
+            $ref: '#/definitions/ApiResponse'
+      security: []
+  /backup/watch:
+    post:
+      tags:
+        - backup
+      summary: Watch a live backup job.
+      description: >-
+        Continuously watches a specific backup job in order to show file,
+        directory and symlinks backup progress. This is a best effort operation
+        meaning that events will get discarded and not sent to the client if
+        either the server produces more events per second than it can handle or
+        if the client can't receive quickly enough events produced by the
+        server. The response is http2 Server Side Events and requires a client
+        capable of consuming it. Response codes != 200 will be regular json
+        while response code 200 will be followed by http2 SSE. Each received
+        event for the 200 status code  will be in the format "data: {json
+        object}" except the last line at the end of the input which will be one
+        of "data: Backup job has finished" or "data: Backup job failed to start.
+        Check sever logs for details" or "Backup job was cancelled while it was
+        running". Unfortunatelly  Swagger doesn't allow proper documentation of
+        SSE so the response object  definition is the actual {json object} to be
+        expected after the "data: "  field.
+      operationId: BackupWatch
+      produces:
+        - text/event-stream
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: name of the backup to start
+          required: true
+          schema:
+            $ref: '#/definitions/BackupJobName'
+      responses:
+        '200':
+          description: successful operation
+          x-produces: text/event-stream
+          schema:
+            $ref: '#/definitions/ApiResponseBackupWatch'
         '401':
           description: Basic authentication required
           x-produces: application/json
@@ -670,14 +726,16 @@ definitions:
         description: Name of the file or directory being reported
       type:
         type: string
-        example: running
+        example: file
         pattern: ^(file|directory|unknown)$
         description: >-
           Unknown is reported when the file was excluded by an exclusion rule as
           then its properties aren't fetched so it can't be determined if it was
           a file or directory. Unknown is also reported when an error was
           encountered when trying to get the properties so again it can't be
-          established if it is a file or a directory
+          established if it is a file or a directory. The "dryrun" function does
+          not report separately symlinks, meaning they will be reported as of
+          type "file".
       excluded:
         type: boolean
         example: true
@@ -698,6 +756,87 @@ definitions:
         description: >-
           Empty string if no error was encountered and otherwise the error
           message produced when trying to get the file or directory properties
+  ResultBackupJobWatch:
+    type: object
+    properties:
+      sequence:
+        type: integer
+        example: 1753
+        description: >-
+          Incremented for each item being backed up. This is used in order to
+          determine if messages were droppe due to the communication channel
+          between the http server and the client being full. For each object at
+          least one message will be sent and given size and other details it can
+          be that many messages will be sent for one particular object. A jump
+          of more than one for $sequence means that all the messages for one or
+          more objects were lost. If at least one message is received by a
+          client for a particular object then its impossible to tell if some of
+          the messages for that particular sequence number were lost (the
+          $percent_done field may offer additional clues in some cases).
+      name:
+        type: string
+        example: /var/www/web-data/file0.dat
+        description: 'Name of the file, symlink or directory being reported.'
+      percent_done:
+        type: integer
+        example: 31
+        description: >-
+          For a given object, shows upload progress. For directories and
+          symlinks the only two possible values are 0 and 100.
+      rate:
+        type: integer
+        example: 1340212
+        description: >-
+          Upload speed in bytes per second for a given file. For directories and
+          symlinks this will always have a values of 0.
+      type:
+        type: string
+        example: file
+        pattern: ^(file|directory|symlink|unknown)$
+        description: >-
+          Object currently being backed up: on of file, dir, symlink, unknown.
+          Unknown is reported when an error was encountered while trying to get
+          the properties so it can't be established if it is a file, directory
+          or symlink. Another case for unknown is when the object is a non
+          standard file (socket, unix pipe, etc).
+      store_name:
+        type: string
+        example: my_aws_s3_bucket
+        description: >-
+          Object store name (as defined in the configuration file) to which the
+          files/directories and symlinks are being backed up to.
+      store_type:
+        type: string
+        example: aws_s3
+        description: >-
+          Object store type to which the files/directories and symlinks are
+          being backed up to.
+      operation_type:
+        type: string
+        example: upload
+        pattern: ^(excluded|examine|upload|metadata)$
+        description: >-
+          One of "excluded", "examine", "upload" or "metadata" depicting if the
+          message represents an examination of an object in order to determine
+          if a backup is needed, content upload and metadata upload/update. The
+          "excluded" value is reported only for excluded from backup
+          objects(those are items which are located within the paths selected
+          for backup but for which a configuration file entry has been set to
+          purposely exclude them from the backup). The "examine" value is
+          reported only when an error was produced during the examination step
+          as otherwise a message won't be produced if this step is successful.
+          The "upload" value is reported only for file content upload. The
+          "metadata" value is reported when a properties change was detected for
+          an already known (to be previously backed up) object or when a
+          directory or symlink is backed up (as only properties and not actual
+          content is uploaded for those).
+      error:
+        type: string
+        example: 'open /etc/ssl/private: permission denied'
+        description: >-
+          Empty string if no error was encountered and otherwise the error
+          message produced. An error means that most likely the object in
+          question was not backed up successfully.
   ResultBackupJobStart:
     type: object
     properties:
@@ -816,6 +955,8 @@ definitions:
         $ref: '#/definitions/ResultBackupJobStart'
   ApiResponseBackupDryRun:
     $ref: '#/definitions/ResultBackupJobDryRun'
+  ApiResponseBackupWatch:
+    $ref: '#/definitions/ResultBackupJobWatch'
 externalDocs:
   description: Find out more about Swagger
   url: 'http://swagger.io'

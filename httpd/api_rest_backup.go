@@ -348,7 +348,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 			{
 				logger.Debug("scan.Path() triggered by handlerPostBackupDryRun() has completed its run so the " +
 				"http handler will exit now")
-				finalMsg := "Completed run"
+				finalMsg := "JobCompleted run"
 				result, err := backupJobsState.GetStats(decodedJson.Name)
 				if err != nil {
 					logger.Warnf("Received error while trying to get stats at the final of Dry Run job '%s'. " +
@@ -479,15 +479,26 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 			// Server Sent Events compatible
 
 			// if this is the last message then remove the consumer from the consumer list and close this http connection
-			// this message should be ignored as only the .Completed field is valid and the rest is filled in with garbage.
-			if message.Completed {
+			if message.JobCompleted && message.JobAborted && message.JobFailed {
 				srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
-				_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job has finished.") // #nosec
+				if message.JobAborted {
+					_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job was cancelled while it was running") // #nosec
+				}
+				// this message should be ignored as only the .JobCompleted field is valid and the rest is filled in with garbage.
+				if message.JobFailed {
+					_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job failed to start. Check sever logs for details") // #nosec
+				}
+				if message.JobCompleted {
+					_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job has finished") // #nosec
+				}
 				// close channel to avoid memory leaks
 				close(commChan)
 				return
 			}
-
+			// make output more human readable and keep in line with what "dryrun" operation also reports
+			if message.ObjectType == "dir" {
+				message.ObjectType = "directory"
+			}
 			jsonMsg, err := json.Marshal(message)
 			if err != nil {
 				logger.Warnf("Could not json encode message received from backup job live status. Error was: '%s'", err)

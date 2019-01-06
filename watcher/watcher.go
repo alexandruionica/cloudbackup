@@ -56,9 +56,10 @@ func tellClientsToExit(multiplexer *shared.WatchMultiplexer) {
 }
 
 
-// Tells watch clients that a particular job is complete so they should cleanup and exit
-// $JobType must be one of "backup" or "restore"
-func TellClientsJobComplete(JobType string, JobName string, JobId string, WatchMsgReceiver chan <-shared.WatchMessage) {
+// Tells watch clients that a particular job has finished so they should cleanup and exit
+// $JobType must be one of "backup" or "restore". If cancelled == true then it means the job was cancelled while
+// running (and before it completed)
+func TellClientsJobFinished(JobType string, JobName string, JobId string, WatchMsgReceiver chan <-shared.WatchMessage, JobCancelled bool, JobFailed bool) {
 	msg := shared.WatchMessage{
 		Sequence:        0,
 		JobType:         JobType,
@@ -67,12 +68,17 @@ func TellClientsJobComplete(JobType string, JobName string, JobId string, WatchM
 		Path:            "",
 		PercentDone:     100,
 		Rate:            0,
-		ObjectType:		 "unknown",
+		ObjectType:      "unknown",
 		ObjectStoreName: "",
 		ObjectStoreType: "",
-		OperationType: 	 "",
-		Error: 			 "",
-		Completed:       true,
+		OperationType:   "",
+		Error:           "",
+		JobAborted:      JobCancelled,
+		JobFailed:       JobFailed,
+	}
+	// if JobFailed then it means the backup job failed to start
+	if JobFailed == false && JobCancelled == false {
+		msg.JobCompleted = true
 	}
 	shared.SendMsgToWatcher(msg, WatchMsgReceiver)
 }

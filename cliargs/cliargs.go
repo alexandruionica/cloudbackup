@@ -88,7 +88,7 @@ type ArgsCommandClientBackup struct {
 	Stop  ArgsCommandClientBackupStop `command:"stop" description:"Stop a running backup job"`
 	List  ArgsCommandClientBackupList `command:"list" description:"List all backup jobs and a brief status for each of them"`
 	Status  ArgsCommandClientBackupStatus `command:"status" description:"Show details about a specific backup job."`
-	Watch  ArgsCommandClientBackupWatch `command:"watch" description:"Continuously watches a specific backup job in order to show file, directory and symlinks backup progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces too many events per second or if the client can't receive quickly enough events produced by the server.'"`
+	Watch  ArgsCommandClientBackupWatch `command:"watch" description:"Continuously watches a specific backup job in order to show file, directory and symlinks backup progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces more events per second than it can handle or if the client can't receive quickly enough events produced by the server.'"`
 	DryRun ArgsCommandClientBackupDryRun `command:"dryrun" description:"Dry run a backup job in order to see what files and directories get evaluated"`
 
 }
