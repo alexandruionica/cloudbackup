@@ -285,6 +285,8 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 
 	var seq uint64 = 0
 	reader := bufio.NewReader(resp.Body)
+	//
+	maxLenghtObjectStoreType := 3
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
@@ -307,9 +309,12 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 						if seq + 1 < decodedJsonMessage.Sequence {
 							fmt.Printf("Before attaching %d files, directories and symlinks were processed\n", decodedJsonMessage.Sequence - (seq + 1))
 						}
-						fmt.Printf( "Percent     Rate   Store Type OpType Path Error\n")
-						fmt.Printf( "------- --------  ------ ---- ------ ---- -----\n")
+						fmt.Printf( "Percent     Rate   Store    Type   OpType Path Error\n")
+						fmt.Printf( "------- -------- ------- ------- -------- ---- -----\n")
 						seq = decodedJsonMessage.Sequence
+					}
+					if utf8.RuneCountInString(decodedJsonMessage.ObjectStoreType) > maxLenghtObjectStoreType {
+						maxLenghtObjectStoreType = utf8.RuneCountInString(decodedJsonMessage.ObjectStoreType)
 					}
 					fmtPrefix := "\n"
 					if seq == decodedJsonMessage.Sequence {
@@ -325,7 +330,7 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 					if decodedJsonMessage.Error != "" {
 						errorField = "ERROR: " + decodedJsonMessage.Error
 					}
-					fmt.Printf(fmtPrefix + "%3d%% %7s/sec  %s %s %s %s %s", decodedJsonMessage.PercentDone,
+					fmt.Printf(fmtPrefix + "%3d%% %7s/sec %" + strconv.Itoa(maxLenghtObjectStoreType) + "s %7s %8s %s %s", decodedJsonMessage.PercentDone,
 						humanize.Bytes(uint64(decodedJsonMessage.Rate)), decodedJsonMessage.ObjectStoreType ,
 						decodedJsonMessage.ObjectType, decodedJsonMessage.OperationType, decodedJsonMessage.Path,
 						errorField)

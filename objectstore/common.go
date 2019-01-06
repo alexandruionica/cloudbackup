@@ -132,10 +132,16 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 				readBytes, err := handle.origFileReader.Read(p)
 				// update statistics
 				handle.readBytes += int64(readBytes)
-				handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
-					handle.objectStoreType, int64(readBytes), handle.path,
-					calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
-				handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
+				// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
+				// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
+				// messages to be sent to watch clients
+				if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+						handle.objectStoreType, int64(readBytes), handle.path,
+						calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
+					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
+				}
+
 				return readBytes, err
 			} else {
 				// bucket.WaitN() allows to read up to burst limit so we need to ensure we don't attempt larger values
@@ -150,10 +156,15 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					}
 					readBytes, err := handle.origFileReader.Read(p)
 					handle.readBytes += int64(readBytes)
-					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
-						handle.objectStoreType, int64(readBytes), handle.path,
-						calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
-					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
+					// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
+					// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
+					// messages to be sent to watch clients
+					if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+							handle.objectStoreType, int64(readBytes), handle.path,
+							calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
+						handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
+					}
 					return readBytes, err
 				} else {
 					var newBufSize int64
@@ -193,10 +204,15 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					}
 					readBytes, err := handle.origFileReader.Read(tmpP)
 					handle.readBytes += int64(readBytes)
-					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
-						handle.objectStoreType, int64(readBytes), handle.path,
-						calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
-					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
+					// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
+					// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
+					// messages to be sent to watch clients
+					if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+							handle.objectStoreType, int64(readBytes), handle.path,
+							calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
+						handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
+					}
 					// copy read data to the original slice ;  func copy(dst, src []Type) int
 					copiedBytes := copy(p, tmpP)
 					if copiedBytes != len(tmpP) {

@@ -178,7 +178,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 				backupJobsState.UpdateStatsText(backupConfig.Name, "unknown",
 					childPath, excludedExpr, "")
 				backupJobsState.IncrementCounter(backupConfig.Name, "excluded", childPath,
-					"unknown", "examine", "")
+					"unknown", "excluded", "")
 				continue
 			}
 

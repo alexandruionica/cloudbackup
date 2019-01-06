@@ -451,7 +451,7 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	// buffer up to 100 messages before discarding if the http client is too slow to receive
-    commChan := make(chan shared.WatchMessage, 100)
+    commChan := make(chan shared.WatchMessage, 500)
 	clientUUID := uuid.NewV4().String()
 	srvCopy.backupJobsState.Watcher.AddConsumer("backup", decodedJson.Name, jobid, commChan, ctx, cancel,
 		r.RemoteAddr, clientUUID)
@@ -477,6 +477,17 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 		case message := <- commChan: {
 			// Write to the ResponseWriter
 			// Server Sent Events compatible
+
+			// if this is the last message then remove the consumer from the consumer list and close this http connection
+			// this message should be ignored as only the .Completed field is valid and the rest is filled in with garbage.
+			if message.Completed {
+				srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
+				_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job has finished.") // #nosec
+				// close channel to avoid memory leaks
+				close(commChan)
+				return
+			}
+
 			jsonMsg, err := json.Marshal(message)
 			if err != nil {
 				logger.Warnf("Could not json encode message received from backup job live status. Error was: '%s'", err)
@@ -484,14 +495,6 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 				_, _ = fmt.Fprintf(w, "data: %s\n", jsonMsg) // #nosec
 				// Flush the data immediately instead of buffering it for later.
 				flusher.Flush()
-			}
-			// if this is the last message then remove the consumer from the consumer list and close this http connection
-			if message.Completed {
-				srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
-				_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job has finished.") // #nosec
-				// close channel to avoid memory leaks
-				close(commChan)
-				return
 			}
 		}
 		}
