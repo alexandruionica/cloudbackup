@@ -55,8 +55,32 @@ func tellClientsToExit(multiplexer *shared.WatchMultiplexer) {
 	}
 }
 
+
+// Tells watch clients that a particular job is complete so they should cleanup and exit
+// $JobType must be one of "backup" or "restore"
+func TellClientsJobComplete(JobType string, JobName string, JobId string, WatchMsgReceiver chan <-shared.WatchMessage) {
+	msg := shared.WatchMessage{
+		Sequence:        0,
+		JobType:         JobType,
+		JobName:         JobName,
+		JobId:           JobId,
+		Path:            "",
+		PercentDone:     100,
+		Rate:            0,
+		ObjectType:		 "unknown",
+		ObjectStoreName: "",
+		ObjectStoreType: "",
+		OperationType: 	 "",
+		Error: 			 "",
+		Completed:       true,
+	}
+	shared.SendMsgToWatcher(msg, WatchMsgReceiver)
+}
+
 // send message to each http handler which in turn will send then to their connect client
 func sendMsgToClients(multiplexer *shared.WatchMultiplexer, msg shared.WatchMessage) {
+	// avoid logging in this function as this is a performance sensitive step and slowdowns would lead to the
+	// multiplexer being slower at forwarding messages
 	multiplexer.Mutex.RLock()
 	defer multiplexer.Mutex.RUnlock()
 	for k, client := range multiplexer.Consumers {
@@ -68,11 +92,23 @@ func sendMsgToClients(multiplexer *shared.WatchMultiplexer, msg shared.WatchMess
 				// the receiver is a buffered channel
 				case client.CommChan <- msg:
 					continue
+				// if client channel is full then try to remove the first message available for consumption and append
+				// the current event which could not be sent. Basically act like a ring buffer.
 				default:
-					// do nothing if channel is full and continue to next iteration
-					// avoid logging here as this is a performance sensitive step and slowdowns would lead to the
-					// multiplexer being slower at forwarding messages
-					continue
+					select {
+						case _ = <- client.CommChan:
+							select {
+								// try to send again the message to the client
+								case client.CommChan <- msg:
+									continue
+								// discard message if channel is still full
+								default:
+									continue
+							}
+						// if a message can't be fetched from the client channel then abort and discard the new message
+						default:
+							continue
+					}
 				}
 			} else {
 				continue

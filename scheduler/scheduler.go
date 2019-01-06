@@ -342,6 +342,8 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 	//  via the API but stop can also be triggered due to SIGTERM/SIGINT being received
 	_ = backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup", jobUuid, false) // #nosec
 
+	// tell any connected Watch clients to exit
+	watcher.TellClientsJobComplete("backup", name, jobUuid, backupJobsState.WatchMsgReceiver)
 
 	// TODO - before MarkStopped(stopped=true) copy report (state) somewhere
 

@@ -33,13 +33,13 @@ type WatchMessage struct {
 	ObjectType		string `json:"object_type"`
 	ObjectStoreName string `json:"object_store_name"`
 	ObjectStoreType string `json:"object_store_type"`
-	// one of "examine", "upload" or "metadata" depicting if the message represents an examination of an object in
-	// order to determine if a backup is needed, content upload and metadata upload/update
+	// one of "excluded", "examine", "upload" or "metadata" depicting if the message represents an examination of an
+	// object in order to determine if a backup is needed, content upload and metadata upload/update
 	OperationType	string `json:"operation_type"`
 	// if non empty then
 	Error 			string `json:"error"`
 	// if set to true then it means that the job has finished (not that it succeeded but that it finished its run)
-	// and that the client should not expect any further messages
+	// and that the client connection should be closed. Also when this is true then the rest of the fields should be ignored.
 	Completed bool `json:"-"`
 }
 
@@ -53,7 +53,7 @@ type WatchConsumer struct {
 	// uuid of the ob
 	JobId string
 	// the multiplexer sends messages for the consumption of the client
-	CommChan chan <-WatchMessage
+	CommChan chan WatchMessage
 	// when the channel Ctx.Done is closed then tell the consumer that the server is shutting down
 	Ctx context.Context
 	// cancel function produced when above context is created. This is needed in order to actually issue the cancel
@@ -104,7 +104,7 @@ func SendMsgToWatcher(msg WatchMessage, WatchMsgReceiver chan <-WatchMessage) {
 
 // appends a new consumer(client) to the slice of clients
 func (multiplexer *WatchMultiplexer) AddConsumer (JobType string, JobName string, JobId string,
-	CommChan chan <-WatchMessage,  Ctx context.Context, Cancel context.CancelFunc, ClientIdentifier string,
+	CommChan chan WatchMessage,  Ctx context.Context, Cancel context.CancelFunc, ClientIdentifier string,
 	ClientUuid string){
 	NewClient := &WatchConsumer{
 		JobType: JobType,
