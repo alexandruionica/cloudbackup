@@ -348,7 +348,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 			{
 				logger.Debug("scan.Path() triggered by handlerPostBackupDryRun() has completed its run so the " +
 				"http handler will exit now")
-				finalMsg := "JobCompleted run"
+				finalMsg := "Completed run"
 				result, err := backupJobsState.GetStats(decodedJson.Name)
 				if err != nil {
 					logger.Warnf("Received error while trying to get stats at the final of Dry Run job '%s'. " +
