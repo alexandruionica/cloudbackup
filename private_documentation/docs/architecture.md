@@ -56,9 +56,14 @@ When running in daemon mode, there are several important GO routines (called com
 - scheduler (starts / stops backup and restore jobs):
     - receives manual commands (backup start / stop ; restore start / stop) via the `http server`
     - receives "scheduled" job commands from the `cron` component
-    - starts the `cron` component and when it receives a "shutdown/exit" or "configuration reload" it notifies the `cron` component 
+    - starts the `cron` component and when it receives a "shutdown/exit" or "configuration reload" it notifies the `cron` component
+    - starts and stops the `watcher` component 
 - cron:
     - requests backup jobs to be started based on the schedule mentioned in the configuration file
+- watcher:
+    - receives file/dir/symlink upload progress (and error messages) and multiplexes them to connected clients
+    - clients connect to the http server using the http API and then receive HTTP2 Server-Sent Events for the specific backup or restore job they have requested
+    - if either the multiplexer can't keep up with the amount of messages generated or if the client can't keep up then messages will be discarded as part of normal operation
 
 # Database
 
