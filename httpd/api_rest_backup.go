@@ -248,8 +248,6 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 			" is needed in order to know what backup job you're requesting to be started"))
 		return
 	}
-	// get notified if the client closes the connection
-	notify := w.(http.CloseNotifier).CloseNotify()
 
 	// while a copy, some of the data is pointers so locking is still needed
 	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostBackupDryRun")
@@ -322,7 +320,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 	for {
 		select {
 		// if the client closed the connection then exit
-		case _ = <-notify:
+		case <- r.Context().Done():
 			logger.Debug("Client closed connection so we're exiting. Sending signal to scan.Path() so " +
 				"dryRunBackupPaths() exits")
 			// signal scan.Path() to exit; this is a non blocking call, it may take a lot longer for it to exit
