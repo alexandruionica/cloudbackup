@@ -141,11 +141,18 @@ Help Options:
 <li>scheduler (starts / stops backup and restore jobs):<ul>
 <li>receives manual commands (backup start / stop ; restore start / stop) via the <code>http server</code></li>
 <li>receives "scheduled" job commands from the <code>cron</code> component</li>
-<li>starts the <code>cron</code> component and when it receives a "shutdown/exit" or "configuration reload" it notifies the <code>cron</code> component </li>
+<li>starts the <code>cron</code> component and when it receives a "shutdown/exit" or "configuration reload" it notifies the <code>cron</code> component</li>
+<li>starts and stops the <code>watcher</code> component </li>
 </ul>
 </li>
 <li>cron:<ul>
 <li>requests backup jobs to be started based on the schedule mentioned in the configuration file</li>
+</ul>
+</li>
+<li>watcher:<ul>
+<li>receives file/dir/symlink upload progress (and error messages) and multiplexes them to connected clients</li>
+<li>clients connect to the http server using the http API and then receive HTTP2 Server-Sent Events for the specific backup or restore job they have requested</li>
+<li>if either the multiplexer can't keep up with the amount of messages generated or if the client can't keep up then messages will be discarded as part of normal operation</li>
 </ul>
 </li>
 </ul>
