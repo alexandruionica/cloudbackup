@@ -167,6 +167,3 @@ func clientSendAllowed (ctx context.Context, client *shared.WatchConsumer, msg s
 	}
 	return sendAllowed
 }
-
-
-// TODO - write function to tell consumers backup run is completed

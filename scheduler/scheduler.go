@@ -295,6 +295,8 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 		return
 	}
 
+	// give "watch" clients a chance to connect before the backup starts emitting events
+	time.Sleep(1 * time.Second)
 	// examine each path listed and backup contained files/directories if needed
 	for _, path := range backupConfig.Paths {
 		select {
@@ -335,12 +337,13 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 		cancel()
 	}
 
-	// TODO - implement stop; in the mean time sleep for 20 seconds and then mark job as stopped
-	time.Sleep(20 * time.Second)
-
 	// set state to "stopping"; ignore any errors (job may be set to state "stopping" already if stop was requested
 	//  via the API but stop can also be triggered due to SIGTERM/SIGINT being received
 	_ = backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup", jobUuid, false) // #nosec
+
+	// sleep for 1 second - cheap way to get tests a chance to verify things or otherwise a new config parameter
+	// would be needed for end to end tests
+	time.Sleep(1 * time.Second)
 
 	// tell any connected Watch clients to exit
 	backupFailed := false
@@ -411,6 +414,7 @@ func waitForAllBackupToBeStopped(backupJobsState *shared.BackupJobsState) {
 	for {
 		backupJobsState.Lock.RLock()
 		if len(backupJobsState.Running) == 0 {
+			backupJobsState.Lock.RUnlock()
 			break
 		}
 		backupJobsState.Lock.RUnlock()
