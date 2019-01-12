@@ -121,7 +121,8 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 	backupJobsState shared.BackupJobsStateInterface, dryRun bool, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore) (bool, error) {
 	if ! dryRun {
-		// call to backup the folder entry itself
+		// call to backup the folder entry itself (this can lead to a scenario where the directory entry itself is
+		// backed up but when attempting to walk the directory an error could be triggered)
 		cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState)
 		if cancelled{
 			return true, nil
@@ -141,7 +142,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 	names, topLevelErr := readDirNames(path)
 	if topLevelErr != nil {
 		logger.Warnf("While trying to get directory listing for '%s' encountered error '%s'", path, topLevelErr)
-		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine", path, "unknown",
+		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine", path, "dir",
 			"examine", topLevelErr.Error())
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
 			"", topLevelErr.Error())

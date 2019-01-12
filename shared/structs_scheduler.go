@@ -100,7 +100,7 @@ type BackupJobStatus struct {
 	StatsCounters        map[string]uint64        `json:"stats_counters,omitempty"`
 	StatsText            map[string]string        `json:"stats_text,omitempty"`
 	// used for keeping track of messages when sending real time upload status to connected clients
-	sequence	uint64
+	Sequence uint64 `json:"-"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
 	NextRun time.Time `json:"next_run"`
 	// using this context we signal a Backup job task that it should proceed to shutdown now
@@ -296,9 +296,9 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"current_directory": "",
 			"current_file": "",
 		},
-		Ctx: ctx,
-		Cancel: cancel,
-		sequence: 0,
+		Ctx:      ctx,
+		Cancel:   cancel,
+		Sequence: 0,
 		// TODO - init metadata for Bandwidth usage (also several new fields are needed in order to note when the last update was
 		// TODO - add NextRun
 	})
@@ -393,7 +393,7 @@ func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName 
 				PercentDone = 100
 			}
 			msg := WatchMessage{
-				Sequence:        job.sequence,
+				Sequence:        job.Sequence,
 				JobType:         "backup",
 				JobName:         BackupJobName,
 				JobId:           job.BackupJobId,
@@ -515,7 +515,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				jobs.Running[k].ObjectStoreRates[k2].Rate15Min = jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Rate() / 900
 				// send message to multiplexer so it can forwarder to connected clients
 				msg := WatchMessage{
-					Sequence:        job.sequence,
+					Sequence:        job.Sequence,
 					JobType:         "backup",
 					JobName:         BackupJobName,
 					JobId:           job.BackupJobId,
@@ -553,14 +553,14 @@ func (jobs *BackupJobsState) AddBytesRead (BackupJobName string, bytesRead uint6
 }
 
 
-// increments *BackupJobsState.sequence of a given backup job. The sequence is used when sending messages to clients
+// increments *BackupJobsState.Sequence of a given backup job. The Sequence is used when sending messages to clients
 // about objects being uploaded
 func (jobs *BackupJobsState) IncrementSequence (BackupJobName string) {
 	jobs.Lock.Lock()
 	defer jobs.Lock.Unlock()
 	for k, job := range jobs.Running {
 		if BackupJobName == job.Name {
-			jobs.Running[k].sequence += 1
+			jobs.Running[k].Sequence += 1
 			break
 		}
 	}

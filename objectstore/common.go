@@ -103,8 +103,8 @@ func NewFileReader (path string, bucket *rate.Limiter, backupJobsState shared.Ba
 	return result, nil
 }
 
-// given a file size and how many bytes were read so far return a percent (as an int) for how much was read
-func calculatePercentRead (fileSize int64, readBytes int64) uint {
+// given a file size and how many bytes were read(or written) so far return a percent (as an int)
+func calculatePercent(fileSize int64, readBytes int64) uint {
 	if fileSize == 0 {
 		return 100
 	}
@@ -138,7 +138,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 				if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
 					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 						handle.objectStoreType, int64(readBytes), handle.path,
-						calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
+						calculatePercent(handle.fileSize, handle.readBytes), newFile)
 					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 				}
 
@@ -162,7 +162,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
 						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 							handle.objectStoreType, int64(readBytes), handle.path,
-							calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
+							calculatePercent(handle.fileSize, handle.readBytes), newFile)
 						handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 					}
 					return readBytes, err
@@ -210,7 +210,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
 						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 							handle.objectStoreType, int64(readBytes), handle.path,
-							calculatePercentRead(handle.fileSize, handle.readBytes), newFile)
+							calculatePercent(handle.fileSize, handle.readBytes), newFile)
 						handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 					}
 					// copy read data to the original slice ;  func copy(dst, src []Type) int
