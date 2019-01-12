@@ -399,3 +399,42 @@ func TestGetObjectStores2(t *testing.T) {
 			" but no error was returned")
 	}
 }
+
+func TestCalculatePercent1(t *testing.T) {
+	result := calculatePercent(100,10)
+	if result != 10 {
+		t.Fatalf("Was expecting a result of '10' from calculatePercent() but got %d", result)
+	}
+
+	result = calculatePercent(100,100)
+	if result != 100 {
+		t.Fatalf("1. Was expecting a result of '100' from calculatePercent() but got %d", result)
+	}
+
+	// if we pass in a read value larger than $filesize, we should get 100 as a result
+	result = calculatePercent(100,200)
+	if result != 200 {
+		t.Fatalf("2. Was expecting a result of '200' from calculatePercent() but got %d", result)
+	}
+
+	result = calculatePercent(100,0)
+	if result != 0 {
+		t.Fatalf("Was expecting a result of '0' from calculatePercent() but got %d", result)
+	}
+
+	result = calculatePercent(0,0)
+	if result != 100 {
+		t.Fatalf("1. Was expecting a result of '100' from calculatePercent() but got %d", result)
+	}
+
+	// this is an actual scenario (on Linux some special files have 0 size but attempting to read them may return content)
+	result = calculatePercent(0,20)
+	if result != 100 {
+		t.Fatalf("2. Was expecting a result of '100' from calculatePercent() but got %d", result)
+	}
+
+	result = calculatePercent(101101,101100)
+	if result != 99 {
+		t.Fatalf("Was expecting a result of '99' from calculatePercent() but got %d", result)
+	}
+}

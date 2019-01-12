@@ -28,7 +28,6 @@ func TestPath1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -79,7 +78,6 @@ func TestPath1(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 11, // including top level dir
 		"examined_files": 16,
@@ -102,6 +100,7 @@ func TestPath1(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -118,7 +117,6 @@ func TestPath2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -169,7 +167,6 @@ func TestPath2(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 7, // including top level dir
 		"examined_files": 10, // 10 in total
@@ -192,6 +189,7 @@ func TestPath2(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -210,7 +208,6 @@ func TestPath3(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not load fake config file. Error was: %s", err)
 		}
-		utils.Pp(result)
 
 		// folder with some mock files and symlinks
 		backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -270,7 +267,6 @@ func TestPath3(t *testing.T) {
 			}
 		}
 
-		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		expectedStats := map[string]uint64{
 			"examined_directories": 6, // including top level dir - 1 unreadable folder
 			"examined_files": 7, // 10 in total but there is 1 unreadable folder containing 3 files
@@ -293,6 +289,7 @@ func TestPath3(t *testing.T) {
 			"failed_to_update_metadata_for_symlinks": 0,
 		}
 		if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+			utils.Pp(backupJobsState.Running[0].StatsCounters)
 			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 				backupJobsState.Running[0].StatsCounters, expectedStats)
 		}
@@ -310,7 +307,6 @@ func TestPath4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -365,7 +361,6 @@ func TestPath4(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 10, // including top level dir -1 excluded
 		"examined_files": 15, // 16 in total but there is 1 exclusion rule matching 1 file
@@ -388,6 +383,7 @@ func TestPath4(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -405,7 +401,6 @@ func TestPath5(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -459,7 +454,6 @@ func TestPath5(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 10, // including top level dir - 1 excluded dir
 		"examined_files": 14, // 16 in total but 2 are in the excluded dir
@@ -482,6 +476,7 @@ func TestPath5(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -498,7 +493,6 @@ func TestPath6(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder to contain the 1 mock file
 	backupDirPath := utils.SetupTmpDir("unittest_backup_scan_path", t)
@@ -555,8 +549,6 @@ func TestPath6(t *testing.T) {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
 	}
-	utils.Pp(backupConfig)
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 0,
 		"examined_files": 1,
@@ -579,6 +571,7 @@ func TestPath6(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -596,7 +589,6 @@ func TestPath7(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -663,7 +655,6 @@ func TestPath7(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 11, // including top level dir
 		"examined_files": 17, // 16 + 1 from the 2nd path
@@ -686,6 +677,7 @@ func TestPath7(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -703,7 +695,6 @@ func TestPath8(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -763,7 +754,6 @@ func TestPath8(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 22, // including top level dirs
 		"examined_files": 32,
@@ -786,6 +776,7 @@ func TestPath8(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -803,7 +794,6 @@ func TestPath9(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -855,7 +845,6 @@ func TestPath9(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 7, // including top level dir
 		"examined_files": 8, // 10 in total but there is 1 exclusion rule matching 2 files
@@ -878,6 +867,7 @@ func TestPath9(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -895,7 +885,6 @@ func TestPath10(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -947,7 +936,6 @@ func TestPath10(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 7, // including top level dir
 		"examined_files": 9, // 10 in total but there is 1 exclusion rule matching 1 file
@@ -970,6 +958,7 @@ func TestPath10(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -987,7 +976,6 @@ func TestPath11(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -1039,7 +1027,6 @@ func TestPath11(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 7, // including top level dir
 		"examined_files": 9, // 10 in total but there is 1 exclusion rule matching 1 file
@@ -1062,6 +1049,7 @@ func TestPath11(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -1079,7 +1067,6 @@ func TestPath12(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -1131,7 +1118,6 @@ func TestPath12(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 7, // including top level dir
 		"examined_files": 9, // 10 in total but there is 1 exclusion rule matching 1 file
@@ -1154,6 +1140,7 @@ func TestPath12(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -1170,7 +1157,6 @@ func TestPath13(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	utils.Pp(result)
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -1186,8 +1172,10 @@ func TestPath13(t *testing.T) {
 	// set dereference to True
 	backupConfig.Dereference = true
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{}
-	backupJobsState.Lock = &sync.RWMutex{}
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock: &sync.RWMutex{},
+	}
 	// populate state object with default values
 	jobId := uuid.NewV4().String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
@@ -1232,7 +1220,6 @@ func TestPath13(t *testing.T) {
 		}
 	}
 
-	utils.Pp(backupJobsState.Running[0].StatsCounters)
 	expectedStats := map[string]uint64{
 		"examined_directories": 11, // 11 (including top level) due to 2 symlinks pointing at dirs
 		"examined_files": 16, // 10 in total but 2 symlinks pointing at dirs make it 16 in total
@@ -1255,6 +1242,7 @@ func TestPath13(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks": 0,
 	}
 	if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
@@ -1263,12 +1251,137 @@ func TestPath13(t *testing.T) {
 	if backupJobsState.Running[0].FileContentBytesRead != expectedBytesRead {
 		t.Fatalf("The total file content was expected to be %d bytes but it is actually reported to be %d bytes", expectedBytesRead, backupJobsState.Running[0].FileContentBytesRead)
 	}
+
+	// check that the sequence is the sum of all examined_ stats
+	sumExamined := backupJobsState.Running[0].StatsCounters["examined_directories"] + backupJobsState.Running[0].StatsCounters["examined_files"] +
+		backupJobsState.Running[0].StatsCounters["examined_symlinks"] + backupJobsState.Running[0].StatsCounters["examined_unknown"]
+	if sumExamined != backupJobsState.Running[0].Sequence {
+		// dump all messages on the channel in order to use them for understanding what went wrong
+		OUTERLOOP:
+		for {
+			select {
+			case msg := <- backupJobsState.WatchMsgReceiver: {
+				t.Logf("%+v", msg)
+			}
+			default: break OUTERLOOP
+			}
+		}
+		t.Fatalf("Sequence has value %d and it doesn't match the sum of examined_directories + examined_files + " +
+			"examined_symlinks +  examined_unknown; map containig those is: %+v",
+			backupJobsState.Running[0].Sequence, backupJobsState.Running[0].StatsCounters)
+	}
+	
+	// loop over the Watcher channel and see if messages match expectations
+	previousMsg := shared.WatchMessage{Sequence: 0}
+	var examinedDirectories, examinedFiles, examinedSymlinks, examinedUnknown, failedToExamine uint64 = 0, 0, 0, 0, 0
+	OUTERLOOP2:
+	for {
+		select {
+		case msg := <- backupJobsState.WatchMsgReceiver: {
+			if msg.OperationType == "examine" && msg.Error != "" {
+				failedToExamine += 1
+			}
+			if previousMsg.Sequence != 0  {
+				if previousMsg.Path != msg.Path && previousMsg.PercentDone != 100 && previousMsg.Error == ""{
+					t.Fatalf("For each file/dir/symlink we should get a 100%% done message (unless an error" +
+						" is encountred) but for %+v we didn't get one", previousMsg)
+				}
+				if previousMsg.Path == msg.Path && previousMsg.PercentDone == 100 && msg.PercentDone == 100{
+					t.Fatalf("For each file/dir/symlink we should get ONLY a 100%% done message but for %s" +
+						" we got at least two: %+v \nand\n %+v", previousMsg.Path, previousMsg, msg)
+				}
+			}
+			switch msg.ObjectType {
+			case "dir": {
+				if msg.Error == "" {
+					examinedDirectories += 1
+				}
+				if msg.PercentDone != 100 && msg.Error == "" {
+					t.Fatalf("For watch() message %+v reported percent done is %d which != 100 . If no " +
+						"error was encountered then we should always have 1 message for directories and it should" +
+						" always report 100%% percent done", msg, msg.PercentDone)
+				}
+				if previousMsg.Sequence != 0  {
+					if previousMsg.Path == msg.Path && msg.Error == "" {
+						t.Fatalf("Only one message should be sent for type 'dir' (unless an error is " +
+							"encountered when attempting to walk a dir) but we got two: %+v\n and \n%+v", previousMsg, msg)
+					}
+
+				}
+			}
+			case "symlink": {
+				if msg.Error == "" {
+					examinedSymlinks += 1
+				}
+				if msg.PercentDone != 100 && msg.Error == "" {
+					t.Fatalf("For watch() message %+v reported percent done is %d which != 100 . If no " +
+						"error was encountered then we should always have 1 message for symlink and it should" +
+						" always report 100%% percent done", msg, msg.PercentDone)
+				}
+				if previousMsg.Sequence != 0  {
+					if previousMsg.Path == msg.Path {
+						t.Fatalf("Only one message should be sent for type 'symlink' but we got two: %+v\n " +
+							"and \n%+v", previousMsg, msg)
+					}
+
+				}
+			}
+			case "file": {
+				if previousMsg.Sequence != 0 && msg.Error == "" && previousMsg.Path != msg.Path {
+					examinedFiles += 1
+				} else {
+					if msg.PercentDone == 100 {
+						examinedFiles += 1
+					}
+				}
+			}
+			case "unknown": {
+				if msg.OperationType == "examine" {
+					examinedUnknown += 1
+				}
+			}
+			default: {
+				t.Fatalf("Unexpected type %s for watch() msg: %+v", msg.ObjectType, msg)
+
+			}
+			}
+			previousMsg = msg
+		}
+		default: break OUTERLOOP2
+		}
+	}
+	if backupJobsState.Running[0].StatsCounters["examined_directories"] != examinedDirectories {
+		t.Fatalf("examined_directories reported by stats_counters is %d but examined_directories as " +
+			"counted from watch() messages is %d and it should be a equal",
+			backupJobsState.Running[0].StatsCounters["examined_directories"], examinedDirectories)
+	}
+	if backupJobsState.Running[0].StatsCounters["examined_files"] != examinedFiles {
+		t.Fatalf("examined_files reported by stats_counters is %d but examined_files as " +
+			"counted from watch() messages is %d and it should be a equal",
+			backupJobsState.Running[0].StatsCounters["examined_files"], examinedFiles)
+	}
+	if backupJobsState.Running[0].StatsCounters["examined_symlinks"] != examinedSymlinks {
+		t.Fatalf("examined_symlinks reported by stats_counters is %d but examined_symlinks as " +
+			"counted from watch() messages is %d and it should be a equal",
+			backupJobsState.Running[0].StatsCounters["examined_symlinks"], examinedSymlinks)
+	}
+	if backupJobsState.Running[0].StatsCounters["examined_unknown"] != examinedUnknown {
+		t.Fatalf("examined_unknown reported by stats_counters is %d but examined_unknown as " +
+			"counted from watch() messages is %d and it should be a equal",
+			backupJobsState.Running[0].StatsCounters["examined_unknown"], examinedUnknown)
+	}
+	if backupJobsState.Running[0].StatsCounters["failed_to_examine"] != failedToExamine {
+		t.Fatalf("failed_to_examine reported by stats_counters is %d but failed_to_examine as " +
+			"counted from watch() messages is %d and it should be a equal",
+			backupJobsState.Running[0].StatsCounters["failed_to_examine"], failedToExamine)
+	}
+
 	dbops.CloseStatementsAndDb(dbData)
 }
 
 
 // test number of examined files as reported by Path() when  dereference=false and when using an actual DB and a folder is unreadable.Similar to
-// TestPath3 but  dryrun=false and a valid DB
+// TestPath3 but  dryrun=false and a valid DB . Also test all sorts of Jobstate related stats
 func TestPath14(t *testing.T) {
 	// skip this test on Windows as  os.Chmod 0000 is not possible on Windows
 	if runtime.GOOS != "windows" {
@@ -1280,7 +1393,6 @@ func TestPath14(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not load fake config file. Error was: %s", err)
 		}
-		utils.Pp(result)
 
 		// folder with some mock files and symlinks
 		backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -1306,8 +1418,10 @@ func TestPath14(t *testing.T) {
 		// set dereference to false
 		backupConfig.Dereference = false
 		// backupJobState contains the state of all running backup jobs plus it has some handy methods
-		backupJobsState := &shared.BackupJobsState{}
-		backupJobsState.Lock = &sync.RWMutex{}
+		backupJobsState := &shared.BackupJobsState{
+			WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+			Lock: &sync.RWMutex{},
+		}
 		// populate state object with default values
 		jobId := uuid.NewV4().String()
 		err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
@@ -1352,7 +1466,6 @@ func TestPath14(t *testing.T) {
 			}
 		}
 
-		utils.Pp(backupJobsState.Running[0].StatsCounters)
 		expectedStats := map[string]uint64{
 			"examined_directories": 6, // 7 in total but the 1 dir in "dir3" is unaccessible due to chmod 000 on dir3
 			"examined_files": 7, // 10 in total but the 3 dir in "dir3" are unaccessible due to chmod 000 on dir3
@@ -1375,6 +1488,7 @@ func TestPath14(t *testing.T) {
 			"failed_to_update_metadata_for_symlinks": 0,
 		}
 		if ! reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+			utils.Pp(backupJobsState.Running[0].StatsCounters)
 			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 				backupJobsState.Running[0].StatsCounters, expectedStats)
 		}
@@ -1382,6 +1496,131 @@ func TestPath14(t *testing.T) {
 		var expectedBytesRead uint64 = 122 // 168 bytes total but excluding the files in dir3 then it's 122 bytes
 		if backupJobsState.Running[0].FileContentBytesRead != expectedBytesRead {
 			t.Fatalf("The total file content was expected to be %d bytes but it is actually reported to be %d bytes", expectedBytesRead, backupJobsState.Running[0].FileContentBytesRead)
+		}
+
+		// check that the Sequence is the sum of all examined_ stats
+		sumExamined := backupJobsState.Running[0].StatsCounters["examined_directories"] + backupJobsState.Running[0].StatsCounters["examined_files"] +
+			backupJobsState.Running[0].StatsCounters["examined_symlinks"] + backupJobsState.Running[0].StatsCounters["examined_unknown"]
+		if sumExamined  != backupJobsState.Running[0].Sequence{
+			// dump all messages on the channel in order to use them for understanding what went wrong
+			OUTERLOOP:
+			for {
+				select {
+				case msg := <- backupJobsState.WatchMsgReceiver: {
+					t.Logf("%+v", msg)
+				}
+				default: break OUTERLOOP
+				}
+			}
+
+			t.Fatalf("Sequence has value %d and it doesn't match the sum of examined_directories + " +
+				"examined_files + examined_symlinks +  examined_unknown; map containig those " +
+				"is: %+v", backupJobsState.Running[0].Sequence, backupJobsState.Running[0].StatsCounters)
+		}
+
+		// loop over the Watcher channel and see if messages match expectations
+		previousMsg := shared.WatchMessage{Sequence: 0}
+		var examinedDirectories, examinedFiles, examinedSymlinks, examinedUnknown, failedToExamine uint64 = 0, 0, 0, 0, 0
+		OUTERLOOP2:
+		for {
+			select {
+			case msg := <- backupJobsState.WatchMsgReceiver: {
+				if msg.OperationType == "examine" && msg.Error != "" {
+					failedToExamine += 1
+				}
+				if previousMsg.Sequence != 0  {
+					if previousMsg.Path != msg.Path && previousMsg.PercentDone != 100 && previousMsg.Error == ""{
+						t.Fatalf("For each file/dir/symlink we should get a 100%% done message (unless an error" +
+							" is encountred) but for %+v we didn't get one", previousMsg)
+					}
+					if previousMsg.Path == msg.Path && previousMsg.PercentDone == 100 && msg.PercentDone == 100{
+						t.Fatalf("For each file/dir/symlink we should get ONLY a 100%% done message but for %s" +
+							" we got at least two: %+v \nand\n %+v", previousMsg.Path, previousMsg, msg)
+					}
+				}
+				switch msg.ObjectType {
+				case "dir": {
+					if msg.Error == "" {
+						examinedDirectories += 1
+					}
+					if msg.PercentDone != 100 && msg.Error == "" {
+						t.Fatalf("For watch() message %+v reported percent done is %d which != 100 . If no " +
+							"error was encountered then we should always have 1 message for directories and it should" +
+							" always report 100%% percent done", msg, msg.PercentDone)
+					}
+					if previousMsg.Sequence != 0  {
+						if previousMsg.Path == msg.Path && msg.Error == "" {
+							t.Fatalf("Only one message should be sent for type 'dir' (unless an error is " +
+								"encountered when attempting to walk a dir) but we got two: %+v\n and \n%+v", previousMsg, msg)
+						}
+
+					}
+				}
+				case "symlink": {
+					if msg.Error == "" {
+						examinedSymlinks += 1
+					}
+					if msg.PercentDone != 100 && msg.Error == "" {
+						t.Fatalf("For watch() message %+v reported percent done is %d which != 100 . If no " +
+							"error was encountered then we should always have 1 message for symlink and it should" +
+							" always report 100%% percent done", msg, msg.PercentDone)
+					}
+					if previousMsg.Sequence != 0  {
+						if previousMsg.Path == msg.Path {
+							t.Fatalf("Only one message should be sent for type 'symlink' but we got two: %+v\n " +
+								"and \n%+v", previousMsg, msg)
+						}
+
+					}
+				}
+				case "file": {
+					if previousMsg.Sequence != 0 && msg.Error == "" && previousMsg.Path != msg.Path {
+						examinedFiles += 1
+					} else {
+						if msg.PercentDone == 100 {
+							examinedFiles += 1
+						}
+					}
+				}
+				case "unknown": {
+					if msg.OperationType == "examine" {
+						examinedUnknown += 1
+					}
+				}
+				default: {
+					t.Fatalf("Unexpected type %s for watch() msg: %+v", msg.ObjectType, msg)
+
+				}
+				}
+				previousMsg = msg
+			}
+			default: break OUTERLOOP2
+			}
+		}
+		if backupJobsState.Running[0].StatsCounters["examined_directories"] != examinedDirectories {
+			t.Fatalf("examined_directories reported by stats_counters is %d but examined_directories as " +
+				"counted from watch() messages is %d and it should be a equal",
+				backupJobsState.Running[0].StatsCounters["examined_directories"], examinedDirectories)
+		}
+		if backupJobsState.Running[0].StatsCounters["examined_files"] != examinedFiles {
+			t.Fatalf("examined_files reported by stats_counters is %d but examined_files as " +
+				"counted from watch() messages is %d and it should be a equal",
+				backupJobsState.Running[0].StatsCounters["examined_files"], examinedFiles)
+		}
+		if backupJobsState.Running[0].StatsCounters["examined_symlinks"] != examinedSymlinks {
+			t.Fatalf("examined_symlinks reported by stats_counters is %d but examined_symlinks as " +
+				"counted from watch() messages is %d and it should be a equal",
+				backupJobsState.Running[0].StatsCounters["examined_symlinks"], examinedSymlinks)
+		}
+		if backupJobsState.Running[0].StatsCounters["examined_unknown"] != examinedUnknown {
+			t.Fatalf("examined_unknown reported by stats_counters is %d but examined_unknown as " +
+				"counted from watch() messages is %d and it should be a equal",
+				backupJobsState.Running[0].StatsCounters["examined_unknown"], examinedUnknown)
+		}
+		if backupJobsState.Running[0].StatsCounters["failed_to_examine"] != failedToExamine {
+			t.Fatalf("failed_to_examine reported by stats_counters is %d but failed_to_examine as " +
+				"counted from watch() messages is %d and it should be a equal",
+				backupJobsState.Running[0].StatsCounters["failed_to_examine"], failedToExamine)
 		}
 
 		dbops.CloseStatementsAndDb(dbData)

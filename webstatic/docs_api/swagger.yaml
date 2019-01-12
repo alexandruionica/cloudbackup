@@ -782,7 +782,7 @@ definitions:
         example: 31
         description: >-
           For a given object, shows upload progress. For directories and
-          symlinks the only two possible values are 0 and 100.
+          symlinks the only two possible values are 0 and 100. In the case of directories, percent done 100 just means that the details about the directory (owner, group, etc) were backed up but this excludes actual files, directories and symlinks contained within said directory as those will each be separately reported. This also leads to the situation of getting a report of 100% percent done for a directory and then the next message being that it failed to examine the directory because the contents of the directory itself could not be enumerated.
       rate:
         type: integer
         example: 1340212
