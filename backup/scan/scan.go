@@ -142,8 +142,8 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 	names, topLevelErr := readDirNames(path)
 	if topLevelErr != nil {
 		logger.Warnf("While trying to get directory listing for '%s' encountered error '%s'", path, topLevelErr)
-		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine", path, "dir",
-			"examine", topLevelErr.Error())
+		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_enumerate", path, "dir",
+			"enumerate", topLevelErr.Error())
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
 			"", topLevelErr.Error())
 	} else {

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"bufio"
@@ -286,7 +287,7 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 	var seq uint64 = 0
 	reader := bufio.NewReader(resp.Body)
 	//
-	maxLenghtObjectStoreType := 3
+	maxLenghtObjectStoreType := 5
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
@@ -328,9 +329,16 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 					}
 					errorField := ""
 					if decodedJsonMessage.Error != "" {
-						errorField = "ERROR: " + decodedJsonMessage.Error
+						errorField = "ERROR =====> " + decodedJsonMessage.Error
+						// if we got an error then decodedJsonMessage.ObjectStoreType is empty so we'll add "ERROR" to it to make it clear there was an errror
+						decodedJsonMessage.ObjectStoreType = "ERROR"
 					}
-					fmt.Printf(fmtPrefix + "%3d%% %7s/sec %" + strconv.Itoa(maxLenghtObjectStoreType) + "s %9s %8s %s %s", decodedJsonMessage.PercentDone,
+					//
+					// pad with spaces the ObjectStoreType (when empty) to align things nicely
+					if decodedJsonMessage.ObjectStoreType == "" {
+						decodedJsonMessage.ObjectStoreType = strings.Repeat(" ", maxLenghtObjectStoreType)
+					}
+					fmt.Printf(fmtPrefix + "%3d%% %7s/sec %" + strconv.Itoa(maxLenghtObjectStoreType) + "s %9s %9s %s %s", decodedJsonMessage.PercentDone,
 						humanize.Bytes(uint64(decodedJsonMessage.Rate)), decodedJsonMessage.ObjectStoreType ,
 						decodedJsonMessage.ObjectType, decodedJsonMessage.OperationType, decodedJsonMessage.Path,
 						errorField)
@@ -508,6 +516,7 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 		fmt.Printf("Examined unordinary files: %d\n", decodedJson.StatsCounters["examined_unknown"])
 		fmt.Printf("Files and directories excluded from examination: %d\n", decodedJson.StatsCounters["excluded"])
 		fmt.Printf("Files and directories which could not be examined: %d\n", decodedJson.StatsCounters["failed_to_examine"])
+		fmt.Printf("Directories for which a full listing of contents could not be done: %d\n", decodedJson.StatsCounters["failed_to_enumerate"])
 		fmt.Printf("Files which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload_files"])
 		fmt.Printf("Directories which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload_directories"])
 		fmt.Printf("Symlinks which got marked for upload and failed to upload: %d\n", decodedJson.StatsCounters["failed_to_upload_symlinks"])
