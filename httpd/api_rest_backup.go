@@ -355,7 +355,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 					finalMsg += fmt.Sprintf(": %d examined files, %d examined directories, %d excluded files " +
 						"or directories, %d errors encountered", result.StatsCounters["examined_files"],
 						result.StatsCounters["examined_directories"], result.StatsCounters["excluded"],
-						result.StatsCounters["failed_to_examine"])
+						result.StatsCounters["failed_to_examine"] + result.StatsCounters["failed_to_enumerate"])
 				}
 
 				_, _ = fmt.Fprintf(w, "data: %s\n", finalMsg) // #nosec
@@ -451,8 +451,15 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 	// buffer up to 100 messages before discarding if the http client is too slow to receive
     commChan := make(chan shared.WatchMessage, 500)
 	clientUUID := uuid.NewV4().String()
-	srvCopy.backupJobsState.Watcher.AddConsumer("backup", decodedJson.Name, jobid, commChan, ctx, cancel,
+	err = srvCopy.backupJobsState.Watcher.AddConsumer("backup", decodedJson.Name, jobid, commChan, ctx, cancel,
 		r.RemoteAddr, clientUUID)
+	// as of this writing, the only possible error is that the Multiplexer is already shutting down
+	if err != nil {
+		_, _ = fmt.Fprintf(w, "data: %s\n", err.Error()) // #nosec
+		// close channel to avoid memory leaks
+		close(commChan)
+		return
+	}
 
 	for {
 		select {

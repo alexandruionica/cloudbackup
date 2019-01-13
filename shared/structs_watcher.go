@@ -2,6 +2,7 @@ package shared
 
 import (
 	"context"
+	"errors"
 	"golang.org/x/time/rate"
 	"sync"
 
@@ -11,6 +12,8 @@ import (
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
+
+const MultiplexerNotReady = "watch message multiplexer hasn't started up yet or is shutting down"
 
 // this type will be sent to clients watching in real time a particular backup or restore job
 type WatchMessage struct {
@@ -87,7 +90,7 @@ type WatchMultiplexer struct {
 	// cancel function produced when above context is created. This is needed in order to actually issue the cancel
 	Cancel context.CancelFunc `json:"-"`
 	// the Multiplexer sets this to "true" once it's ready to receive messages and should set it to "false" when it
-	// prepares to exit. Http handlers should check this == true before attempting to register a new client
+	// prepares to exit. This should == true before attempting to register a new client
 	Running bool
 	// For each registered consumer there should be an entry in this slice
 	Consumers []*WatchConsumer
@@ -113,7 +116,7 @@ func SendMsgToWatcher(msg WatchMessage, WatchMsgReceiver chan <-WatchMessage) {
 // appends a new consumer(client) to the slice of clients
 func (multiplexer *WatchMultiplexer) AddConsumer (JobType string, JobName string, JobId string,
 	CommChan chan WatchMessage,  Ctx context.Context, Cancel context.CancelFunc, ClientIdentifier string,
-	ClientUuid string){
+	ClientUuid string) error {
 	NewClient := &WatchConsumer{
 		JobType: JobType,
 		JobName: JobName,
@@ -132,9 +135,15 @@ func (multiplexer *WatchMultiplexer) AddConsumer (JobType string, JobName string
 	}
 	multiplexer.Mutex.Lock()
 	defer multiplexer.Mutex.Unlock()
-	multiplexer.Consumers = append(multiplexer.Consumers, NewClient)
-	logger.Debugf("Added entry for watch consumer '%s' having uuid '%s' for %s job '%s' having id '%s'",
-		ClientIdentifier, ClientUuid, JobType, JobName, JobId)
+	if multiplexer.Running {
+		multiplexer.Consumers = append(multiplexer.Consumers, NewClient)
+		logger.Debugf("Added entry for watch consumer '%s' having uuid '%s' for %s job '%s' having id '%s'",
+			ClientIdentifier, ClientUuid, JobType, JobName, JobId)
+		return nil
+	} else {
+		return errors.New(MultiplexerNotReady)
+	}
+
 }
 
 

@@ -38,33 +38,10 @@ func compareWithWatchMessages(t *testing.T, backupJobsState *shared.BackupJobsSt
 			"examined_files + examined_symlinks +  examined_unknown; map containig those " +
 			"is: %+v", backupJobsState.Running[0].Sequence, backupJobsState.Running[0].StatsCounters)
 	}
-/*
-		expectedStats := map[string]uint64{
-			"examined_directories": 6, // 7 in total but the 1 dir in "dir3" is unaccessible due to chmod 000 on dir3
-			"examined_files": 7, // 10 in total but the 3 dir in "dir3" are unaccessible due to chmod 000 on dir3
-			"examined_symlinks": 2,
-			"examined_unknown": 0,
-			"failed_to_examine": 0,
-			"failed_to_enumerate": 1,
-			"excluded": 0,
-			"uploaded_directories": 6,
-			"uploaded_files": 7,
-			"uploaded_symlinks": 2,
-			"failed_to_upload_directories": 0,
-			"failed_to_upload_files": 0,
-			"failed_to_upload_symlinks": 0,
-			"failed_to_upload_unknown": 0,
-			"updated_metadata_for_files": 0,
-			"updated_metadata_for_directories": 0,
-			"updated_metadata_for_symlinks": 0,
-			"failed_to_update_metadata_for_directories": 0,
-			"failed_to_update_metadata_for_files": 0,
-			"failed_to_update_metadata_for_symlinks": 0,
-		}
- */
 	// loop over the Watcher channel and see if messages match expectations
 	previousMsg := shared.WatchMessage{Sequence: 0}
 	var examinedDirectories, examinedFiles, examinedSymlinks, examinedUnknown, failedToExamine, failedToEnumerate uint64 = 0, 0, 0, 0, 0, 0
+	var uploadedDirectories, uploadedFiles, uploadedSymlinks uint64 = 0, 0, 0
 	OUTERLOOP2:
 	for {
 		select {
@@ -101,6 +78,9 @@ func compareWithWatchMessages(t *testing.T, backupJobsState *shared.BackupJobsSt
 				if msg.OperationType == "enumerate" && msg.Error != "" {
 					failedToEnumerate += 1
 				}
+				if msg.PercentDone == 100 && msg.Error == "" {
+					uploadedDirectories += 1
+				}
 			}
 			case "symlink": {
 				if msg.Error == "" {
@@ -118,6 +98,9 @@ func compareWithWatchMessages(t *testing.T, backupJobsState *shared.BackupJobsSt
 					}
 
 				}
+				if msg.PercentDone == 100 && msg.Error == "" {
+					uploadedSymlinks += 1
+				}
 			}
 			case "file": {
 				if previousMsg.Sequence != 0 && msg.Error == "" && previousMsg.Path != msg.Path {
@@ -126,6 +109,9 @@ func compareWithWatchMessages(t *testing.T, backupJobsState *shared.BackupJobsSt
 					if msg.PercentDone == 100 {
 						examinedFiles += 1
 					}
+				}
+				if msg.PercentDone == 100 && msg.Error == "" {
+					uploadedFiles += 1
 				}
 			}
 			case "unknown": {
@@ -172,6 +158,21 @@ func compareWithWatchMessages(t *testing.T, backupJobsState *shared.BackupJobsSt
 		t.Fatalf("failed_to_enumerate reported by stats_counters is %d but failed_to_enumerate as " +
 			"counted from watch() messages is %d and it should be equal",
 			backupJobsState.Running[0].StatsCounters["failed_to_enumerate"], failedToEnumerate)
+	}
+	if backupJobsState.Running[0].StatsCounters["uploaded_directories"] != uploadedDirectories {
+		t.Fatalf("uploaded_directories reported by stats_counters is %d but uploaded_directories as " +
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["uploaded_directories"], uploadedDirectories)
+	}
+	if backupJobsState.Running[0].StatsCounters["uploaded_symlinks"] != uploadedSymlinks {
+		t.Fatalf("uploaded_symlinks reported by stats_counters is %d but uploaded_symlinks as " +
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["uploaded_symlinks"], uploadedSymlinks)
+	}
+	if backupJobsState.Running[0].StatsCounters["uploaded_files"] != uploadedFiles {
+		t.Fatalf("uploaded_files reported by stats_counters is %d but uploaded_files as " +
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["uploaded_files"], uploadedFiles)
 	}
 }
 
