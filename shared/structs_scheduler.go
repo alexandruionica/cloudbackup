@@ -274,6 +274,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"examined_symlinks": 0,
 			"examined_unknown": 0,
 			"failed_to_examine": 0,
+			"failed_to_enumerate": 0,
 			// excluded files or directories due to matching some exclusion rule provided by the user (in the config)
 			//  excluded don't count against examined_files or examined_directories
 			"excluded": 0,

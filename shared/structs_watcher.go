@@ -34,7 +34,7 @@ type WatchMessage struct {
 	ObjectType		string `json:"type"`
 	ObjectStoreName string `json:"store_name"`
 	ObjectStoreType string `json:"store_type"`
-	// one of "excluded", "examine", "upload" or "metadata" depicting if the message represents an examination of an
+	// one of "excluded", "examine", "enumerate", "upload" or "metadata" depicting if the message represents an examination of an
 	// object in order to determine if a backup is needed, content upload and metadata upload/update
 	OperationType	string `json:"operation_type"`
 	// if non empty then

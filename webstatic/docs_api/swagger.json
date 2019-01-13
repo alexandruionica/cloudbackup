@@ -697,8 +697,13 @@
             },
             "failed_to_examine": {
               "type": "integer",
-              "description": "While examining the properties of files and directories this may errors were encountered. Please get the logs for messages with level ERROR and WARNING produced by context=\"backup.scan\" in order to get additional details. Items for which this counter got incremented also had one of \"examined_files\" or \"examined_directories\" incremented. An increment of this counter  means that most likely the said file or directory will not get  backed up.",
+              "description": "While examining the properties of files or directories this many produced errors. Please get the logs for messages with level ERROR and WARNING produced by context=\"backup.scan\" in order to get additional details. Items for which this counter got incremented also had one of \"examined_files\" or \"examined_directories\" incremented. An increment of this counter  means that most likely the said file or directory will not get  backed up.",
               "example": 2
+            },
+            "failed_to_enumerate": {
+              "type": "integer",
+              "description": "While listing the contents of directories this many produced errors. An error means a partial or complete failure to list the contents of a directory. Please get the logs for messages with level ERROR and WARNING produced by context=\"backup.scan\" in order to get additional details. Items for which this counter got incremented also had one\n \"examined_directories\" incremented. An increment of this counter \nmeans that most likely the contents of the said directory will not get  backed up.",
+              "example": 1
             },
             "excluded": {
               "type": "integer",
@@ -707,17 +712,17 @@
             },
             "uploaded_files": {
               "type": "integer",
-              "description": "How many files were uploaded so far during the run of this backup job",
+              "description": "How many files were uploaded so far during the run of this backup job.",
               "example": 230
             },
             "uploaded_directories": {
               "type": "integer",
-              "description": "How many directories had their properties uploaded  so far during the run of this backup job",
+              "description": "How many directories had their properties uploaded  so far during the run of this backup job. This excludes uploading of files and directories contained within this directory.",
               "example": 11
             },
             "uploaded_symlinks": {
               "type": "integer",
-              "description": "How many symlinks had their properties uploaded  so far during the run of this backup job",
+              "description": "How many symlinks had their properties uploaded  so far during the run of this backup job.",
               "example": 11
             },
             "failed_to_upload_files": {
