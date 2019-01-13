@@ -477,7 +477,7 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 			// Server Sent Events compatible
 
 			// if this is the last message then remove the consumer from the consumer list and close this http connection
-			if message.JobCompleted && message.JobAborted && message.JobFailed {
+			if message.JobCompleted || message.JobAborted || message.JobFailed {
 				srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
 				if message.JobAborted {
 					_, _ = fmt.Fprintf(w, "data: %s\n", "Backup job was cancelled while it was running") // #nosec
