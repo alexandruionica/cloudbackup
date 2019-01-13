@@ -128,11 +128,13 @@ func sendMsgToClients(multiplexer *shared.WatchMultiplexer, msg shared.WatchMess
 // Given that this function makes changes on $client it is MANDATORY THAT THE CALLER DOES LOCKING on the parent []*shared.WatchConsumer
 func clientSendAllowed (ctx context.Context, client *shared.WatchConsumer, msg shared.WatchMessage) bool {
 	sendAllowed := false
-	// if this is the first message sent to this client then send it
-	if client.CurrentPath == "" {
+	// if this is the first message sent to this client then send it or if we got an error then forward it to the client and ignore rate limiting
+	if client.CurrentPath == "" || msg.Error != "" {
 		sendAllowed = true
 		// init path
-		client.CurrentPath = msg.Path
+		if client.CurrentPath == "" {
+			client.CurrentPath = msg.Path
+		}
 	} else {
 		// as previous messages have been sent for this object then decide if rate limiting allows us to send a message
 		if client.CurrentPath == msg.Path {
