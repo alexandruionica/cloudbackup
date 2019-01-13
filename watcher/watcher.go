@@ -28,11 +28,19 @@ func New (msgReceiver <- chan shared.WatchMessage) *shared.WatchMultiplexer {
 // this should be started as go routine by the caller
 func Start(multiplexer *shared.WatchMultiplexer) {
 	logger.Debug("Watcher (message multiplexer) is starting")
+	multiplexer.Mutex.Lock()
+	multiplexer.Running = true
+	multiplexer.Mutex.Unlock()
 	for {
 		select {
 		case <-multiplexer.Ctx.Done():
 			{
 				logger.Debug("Watcher (message multiplexer) is shutting down")
+				// ensure new clients are no longer added
+				multiplexer.Mutex.Lock()
+				multiplexer.Running = false
+				multiplexer.Mutex.Unlock()
+				//
 				tellClientsToExit(multiplexer)
 				return
 			}
