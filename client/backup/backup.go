@@ -329,7 +329,7 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 					}
 					errorField := ""
 					if decodedJsonMessage.Error != "" {
-						errorField = "ERROR =====> " + decodedJsonMessage.Error
+						errorField = "#ERROR =====> " + decodedJsonMessage.Error
 						// if we got an error then decodedJsonMessage.ObjectStoreType is empty so we'll add "ERROR" to it to make it clear there was an errror
 						decodedJsonMessage.ObjectStoreType = "ERROR"
 					}
