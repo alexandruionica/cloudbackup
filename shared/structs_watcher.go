@@ -14,6 +14,8 @@ var logger = log.WithFields(log.Fields{
 })
 
 const MultiplexerNotReady = "watch message multiplexer hasn't started up yet or is shutting down"
+const WatchClientRateLimit = 5
+const WatchClientRateLimitBurst = 2
 
 // this type will be sent to clients watching in real time a particular backup or restore job
 type WatchMessage struct {
@@ -101,6 +103,8 @@ type WatchMultiplexer struct {
 // sends message to shutdown the multiplexer  by cancelling the context
 func (multiplexer *WatchMultiplexer) Stop (){
 	multiplexer.Cancel()
+	// DO NOT close the channel used to receive messages as it will end with a panic the next time another component
+	// writes to it
 }
 
 func SendMsgToWatcher(msg WatchMessage, WatchMsgReceiver chan <-WatchMessage) {
@@ -130,7 +134,7 @@ func (multiplexer *WatchMultiplexer) AddConsumer (JobType string, JobName string
 		// upload during interval). Given multiple files in a 1 second interval then this limit will both be breached
 		// and we could also get less than 5 updates during the interval for a given file
 		// Burst is set tp =2 as when having burst=1 for unknown reasons the limiter would choke randomly and stop working
-		Limiter: rate.NewLimiter(5, 2),
+		Limiter: rate.NewLimiter(WatchClientRateLimit, WatchClientRateLimitBurst),
 		CurrentPath: "",
 	}
 	multiplexer.Mutex.Lock()
