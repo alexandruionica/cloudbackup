@@ -444,6 +444,87 @@ class TestRestAPIBackup(unittest.TestCase):
         self.assertEqual(2, excluded_files_or_dirs)
         self.assertEqual(0, errors_encountered)
 
+    # starts and watches a backup job ; examines the whole reply in a non-streaming mode
+    def test_backup_job_watch1(self):
+        # fetch list of jobs and start the first one
+        url = self.base_url + self.api_root + '/backup/list'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        job_name = response['result'][0]['name']
+        logging.info("Starting backup for job: {}".format(job_name))
+
+        req = {"name": job_name}
+        # attempt to start backup with user having correct privileges
+        url = self.base_url + self.api_root + '/backup/start'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        # check response has expected keys
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertIn("name", response['result'], "For {} response['result'] is missing the 'name' key. Response was:"
+                                                  " {}".format(url, r.text))
+        self.assertIn("job_id", response['result'], "For {} response['result'] is missing the 'job_id' key. Response "
+                                                    "was: {}".format(url, r.text))
+        job_id = response['result']['job_id']
+
+        logging.info("Watching backup for job: {} having id: {}".format(job_name, job_id))
+        # attempt to dryrun backup using a user having only read-only access (should be able to dryrun backup)
+        req = {"name": job_name, "job_id": job_id}
+        url = self.base_url + self.api_root + '/backup/watch'
+        r = requests.post(url=url, auth=(self.username2, self.password2), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        r.encoding = 'utf-8'
+
+        num_files, num_dirs = 0, 0
+        for fname in self.filelist:
+            if self.filelist[fname] == "dir":
+                num_dirs += 1
+            elif self.filelist[fname] == "file":
+                num_files += 1
+        last_line = r.text.split('\n')[-2]
+        self.assertEqual(last_line, "data: Backup job has finished")
+
+        # decode output except last line
+        watched = []
+        not_decoded = 0
+        for line in r.text.split('\n'):
+            try:
+                # a line looks like:
+                #  data: {'sequence': 1, 'name': '/tmp/integration_test_gtuc9mlz', 'percent_done': 100, 'rate': 0,
+                #    'type': 'directory', 'store_name': '', 'store_type': '', 'operation_type': 'metadata', 'error': ''}
+                # so we will ignore the first 6 characters
+                decoded = json.loads(line[5:])
+                watched.append(decoded)
+            except json.decoder.JSONDecodeError:
+                not_decoded += 1
+                continue
+        self.assertEqual(2, not_decoded,
+                         "More than two lines in the response could not be json decoded. It is expected"
+                         " that the line 'data: Backup job has finished' and the last (empty) line can't"
+                         " be json decoded")
+        watch_examined = {}
+        for item in watched:
+            if item["error"] != "":
+                continue
+            if item["operation_type"] == "excluded":
+                continue
+            if item["type"] == "directory":
+                watch_examined[item["name"]] = "dir"
+            else:
+                watch_examined[item["name"]] = item["type"]
+        filelist_copy = copy.copy(self.filelist)
+        # add to the list of generated files also the top level dir. This because the dryrun will include it
+        filelist_copy[self.tmpdir] = 'dir'
+        # dir5 and file9,txt are set to be excluded so let's remove them from the comparison
+        for entry in self.filelist:
+            if "dir5" in entry or "file9.txt" in entry:
+                filelist_copy.pop(entry)
+        # in case the dicts don't match, show the full diff
+        self.maxDiff = None
+        self.assertDictEqual(filelist_copy, watch_examined)
+
 
 def get_args():
     """ Get arguments from CLI """
