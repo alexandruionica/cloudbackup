@@ -374,7 +374,7 @@
             "description": "name of the backup to start",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/BackupJobName"
+              "$ref": "#/definitions/BackupJobNameAndId"
             }
           }
         ],
