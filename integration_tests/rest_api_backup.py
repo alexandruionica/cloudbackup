@@ -505,15 +505,23 @@ class TestRestAPIBackup(unittest.TestCase):
                          " that the line 'data: Backup job has finished' and the last (empty) line can't"
                          " be json decoded")
         watch_examined = {}
+        examined_files, excluded_files_or_dirs, examined_directories, errors_encountered = 0, 0, 0, 0
         for item in watched:
             if item["error"] != "":
+                errors_encountered += 1
                 continue
             if item["operation_type"] == "excluded":
+                excluded_files_or_dirs += 1
                 continue
             if item["type"] == "directory":
                 watch_examined[item["name"]] = "dir"
+                examined_directories += 1
+                continue
             else:
+                if item["type"] == "file":
+                    examined_files += 1
                 watch_examined[item["name"]] = item["type"]
+                continue
         filelist_copy = copy.copy(self.filelist)
         # add to the list of generated files also the top level dir. This because the dryrun will include it
         filelist_copy[self.tmpdir] = 'dir'
@@ -524,6 +532,18 @@ class TestRestAPIBackup(unittest.TestCase):
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
         self.assertDictEqual(filelist_copy, watch_examined)
+
+        # we've excluded 1 folder containing 2 files and also separately excluded 1 file so we know for sure 3 less
+        #   files should have been reported
+        self.assertEqual(num_files - 3, examined_files)
+        # top level dir counts too so we increment with 1 the initial list of directories
+        # we've excluded 1 folder containing so we know for sure 1 less folder should have been reported
+        self.assertEqual(num_dirs + 1 - 1, examined_directories)
+        # we've excluded 1 folder containing 2 files and also separately excluded 1 file. The below counter should
+        # not be 4 but 2 because the 2 files contained within the excluded directory  ever got looked at because
+        # the folder which was excluded wasn't descended into
+        self.assertEqual(2, excluded_files_or_dirs)
+        self.assertEqual(0, errors_encountered)
 
 
 def get_args():
