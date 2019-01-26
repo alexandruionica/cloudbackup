@@ -237,14 +237,14 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 }
 
 // adds a new record in the "jobs" table for a new job
-func AddJobDetails(db *sql.DB, jobId string, jobType string, startTime time.Time) error {
+func AddJobDetails(db *sql.DB, jobId string, jobName string, jobType string, startTime time.Time) error {
 	/*
 		CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
 	processed_files INTEGER, processed_dirs INTEGER);
 	 */
-	_, err := db.Exec("INSERT INTO jobs (id, type, start_time, end_time, state, processed_files, processed_dirs) " +
+	_, err := db.Exec("INSERT INTO jobs (id, name, type, start_time, end_time, state, report) " +
 		"VALUES " +
-		"(?, ?, ?, ?, ?, ?, ?)", jobId, jobType, startTime, "", "started", 0, 0)
+		"(?, ?, ?, ?, ?, ?, ?)", jobId, jobName, jobType, startTime, "", "started", "")
 	if err != nil {
 		logger.Errorf("While trying to add information about %s job having id '%s' to the database, the "+
 			"following error was encountered: '%s'", jobType, jobId, err)

@@ -23,6 +23,7 @@ const loggingContext = "config"
 const SecretReplace = "****************"
 // used for looking up environment variables holding configuration data
 const EnvPrefix = "CLOUDBACKUP"
+var NotificationTypes = []string{"started", "finished", "failed", "cancelled", "crashed"}
 // allowed backup target types (this is used in a validation function below). If this is updated then please also
 // update the Swagger file
 var BackupTargetTypes = [...]string{"aws_s3", "gcp_storage", "azure_blob"}
@@ -97,15 +98,43 @@ type Https struct {
 	SslKeyPath string `yaml:"ssl_key_path" json:"ssl_key_path"`
 }
 
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+type Notification struct {
+	Email  []NotificationEmail  `yaml:"email,omitempty" json:"email,omitempty"`
+	Script []NotificationScript `yaml:"script,omitempty" json:"script,omitempty"`
+}
+
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+type NotificationEmail struct {
+	Server string `required:"true" yaml:"server" json:"server"`
+	User string `yaml:"user,omitempty" json:"user,omitempty"`
+	Pass string `yaml:"pass,omitempty" json:"pass,omitempty"`
+	Port string `yaml:"port" json:"port" default:"25"`
+	From string `yaml:"from,omitempty" json:"from,omitempty"`
+	To string `required:"true" yaml:"to" json:"to"`
+	CC []string `yaml:"cc,omitempty" json:"cc,omitempty"`
+	// type is one of: started, finished, failed, cancelled, crashed
+	Type []string `yaml:"type" json:"type" default:"[failed,crashed]"`
+}
+
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// IF ANY NEW notification mechanism is added here then you MUST updated the function notifications.GetNumNotificators()
+type NotificationScript struct {
+	Path string `required:"true" yaml:"path" json:"path"`
+	// type is one of: started, finished, failed, cancelled, crashed
+	Type []string `yaml:"type" json:"type" default:"[failed,crashed]"`
+}
+
 // this is the "master" struct which keeps all of the config settings (as specified in the config file + env vars)
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type CfgTemplate struct {
-	DataDir string `required:"true" yaml:"data_dir" json:"data_dir"`
-	HtmlDir string `default:"webstatic" yaml:"html_dir" json:"html_dir"`
-	User []User `yaml:"user" json:"user"`
-	Http Http `yaml:"http" json:"http"`
-	Https Https `yaml:"https" json:"https"`
-	Backup []Backup `yaml:"backup" json:"backup"`
+	DataDir       string       `required:"true" yaml:"data_dir" json:"data_dir"`
+	HtmlDir       string       `default:"webstatic" yaml:"html_dir" json:"html_dir"`
+	User          []User       `yaml:"user" json:"user"`
+	Http          Http         `yaml:"http" json:"http"`
+	Https         Https        `yaml:"https" json:"https"`
+	Backup        []Backup     `yaml:"backup" json:"backup"`
+	Notifications Notification `yaml:"notification,omitempty" json:"notification,omitempty"`
 	// the mutex is used for locking mainly only when we deal with copies of this struct (which may not have the parent
 	// RuntimeConfig struct containing this struct)
 	Mutex *sync.RWMutex `yaml:"-" json:"-"`
@@ -140,6 +169,12 @@ func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
 	copy(cfgCopy.User, cfg.Config.User)
 	cfgCopy.Backup = make([]Backup, len(cfg.Config.Backup))
 	copy(cfgCopy.Backup, cfg.Config.Backup)
+	// deepcopy the Notification.Email
+	cfgCopy.Notifications.Email = make([]NotificationEmail, len(cfg.Config.Notifications.Email))
+	copy(cfgCopy.Notifications.Email, cfg.Config.Notifications.Email)
+	// deepcopy the Notification.Script
+	cfgCopy.Notifications.Script = make([]NotificationScript, len(cfg.Config.Notifications.Script))
+	copy(cfgCopy.Notifications.Script, cfg.Config.Notifications.Script)
 	// deepcopy various slices part of the Backup{} struct
 	for i := 0; i < len(cfg.Config.Backup); i++ {
 		// deepcopy the []Target slice
@@ -256,6 +291,12 @@ func Validate(config CfgTemplate, hiddenPass bool) error {
 	if err := ValidateUser(config, true, hiddenPass); err != nil {
 		return err
 	}
+	// validate "Notification" section of the config
+	if err := ValidateNotification(config.Notifications, true); err != nil {
+		return err
+	}
+
+	// if we got here than all was fine
 	return nil
 }
 
@@ -431,6 +472,115 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 	return nil
 }
 
+// check Notification.Email and Notification.Script config sections
+func ValidateNotification(notifications Notification, logError bool) error {
+	err := ValidateNotificationCommand(notifications.Script, logError)
+	if err != nil {
+		return err
+	}
+
+	err = ValidateNotificationEmail(notifications.Email, logError)
+	if err != nil {
+		return err
+	}
+
+	// if we got here than all was fine
+	return nil
+}
+
+
+func ValidateNotificationCommand(commands []NotificationScript, logError bool) error {
+	for _, notificationCommand := range commands {
+		// check supplied file path at least exists (if it's executable is a different story which also may be
+		// platform dependent
+		if _, err := utils.FileExists(notificationCommand.Path, true); err != nil {
+			msg := fmt.Sprintf("When validating the existence of notification command '%s' " +
+				"the following error ocurred: %s", notificationCommand.Path, err)
+			if logError{
+				logger.Error(msg)
+			}
+			return err
+		}
+		// check "Type" entry is valid
+		for _, entryType := range notificationCommand.Type {
+			foundMatch := false
+			for _, allowed := range NotificationTypes {
+				if entryType == allowed {
+					foundMatch = true
+					break
+				}
+			}
+			if foundMatch {
+				continue
+			} else {
+				msg := fmt.Sprintf("Notification command '%s' has mentioned a notification event type of '%s' " +
+					"which is not an allowed value. Allowed values are: %+v", notificationCommand.Path, entryType,
+					NotificationTypes)
+				if logError{
+					logger.Error(msg)
+				}
+				return errors.New("chosen notification type value is not valid")
+			}
+		}
+	}
+	return nil
+}
+
+func ValidateNotificationEmail(emails []NotificationEmail, logError bool) error {
+	for _, notificationEmail := range emails {
+		// check that we're using authentication if not connecting to the localhost SMTP server
+		if notificationEmail.User == "" && notificationEmail.Pass == "" && ! isLocalhost(notificationEmail.Server) {
+			msg := fmt.Sprintf("Notification email entry has 'user' and 'pass' fields empty (or not defined) " +
+				"but the specified " +
+				"email(SMTP) server is '%s' and not one of 'localhost', '127.0.0.1' and '::1' which means " +
+				"authentication is mandatory. Please fill in the User and Pass fields", notificationEmail.Server)
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+		// if either the Pass or User field are filled in then require the other one too
+		if notificationEmail.User != "" && notificationEmail.Pass == "" {
+			msg := fmt.Sprintf("Notification email entry has 'user' field filled in but the 'pass' field isn't. " +
+				"Please fill in also the 'pass' field")
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+		if notificationEmail.User == "" && notificationEmail.Pass != "" {
+			msg := fmt.Sprintf("Notification email entry has 'pass' field filled in but the 'user' field isn't. " +
+				"Please fill in also the 'user' field")
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+		// check "Type" entry is valid
+		for _, entryType := range notificationEmail.Type {
+			foundMatch := false
+			for _, allowed := range NotificationTypes {
+				if entryType == allowed {
+					foundMatch = true
+					break
+				}
+			}
+			if foundMatch {
+				continue
+			} else {
+				msg := fmt.Sprintf("Notification email entry has mentioned a notification event type of '%s' " +
+					"which is not an allowed value. Allowed values are: %+v", entryType, NotificationTypes)
+				if logError{
+					logger.Error(msg)
+				}
+				return errors.New(msg)
+			}
+		}
+	}
+	return nil
+
+}
+
 // Validate directory path
 func ValidateDir(dir string, paramName string, logError bool) error {
 	_, err := utils.DirExists(dir, true)
@@ -553,6 +703,12 @@ func SanitizeCfgTemplate (config CfgTemplate) CfgTemplate {
 			}
 		}
 	}
+	// overwrite notifications.[]Email.Pass
+	for i := 0; i < len(config.Notifications.Email); i++ {
+		if config.Notifications.Email[i].Pass != "" {
+			config.Notifications.Email[i].Pass = SecretReplace
+		}
+	}
 	return config
 }
 
@@ -581,6 +737,9 @@ func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) e
 	if err != nil {
 		return err
 	}
+
+	// compared config.Notification.Email.Pass entries
+	err = CopyPasswordsFromOldConfigNotificationsEmails(newConfig.Notifications.Email, oldConfig.Notifications.Email)
 
 	return nil
 }
@@ -615,6 +774,39 @@ func CopyPasswordsFromOldConfigUser(newConfigUser []User, oldConfigUser []User) 
 	return nil
 }
 
+// reads passwords from the old config.Notification.Email.User type entries.
+// If the new config has an entry which matches (meaning both have the same User name & the same server address)
+// one from the old config and in the new config this entry has a password of "*****" (more or less stars) then copy
+// Returns an error if one or more **** based passwords don't have a counterpart in the old config so the old password
+// can't be extracted
+//
+// a slice is a kind of pointer hence we don't pass in "newConfigUser" as a pointer
+func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []NotificationEmail, oldNotificationsEmail []NotificationEmail) error {
+	// compare Notification.Email.Pass entries
+	for i := 0; i < len(newNotificationsEmail); i++ {
+		if CheckStringIsOnly(newNotificationsEmail[i].Pass, "*") {
+			foundMatch := false
+			// search for a match in the old(active) config. Because as opposed to other places where we do this,
+			// here we don't have a unique field per entry, we consider the $server to be this (despite the fact that
+			// we don't enforce uniqueness or imply it)
+			for j := 0; j < len(oldNotificationsEmail); j++ {
+				if oldNotificationsEmail[j].Server == newNotificationsEmail[i].Server && oldNotificationsEmail[j].User == newNotificationsEmail[i].User {
+					foundMatch = true
+					newNotificationsEmail[i].Pass = oldNotificationsEmail[j].Pass
+					break
+				}
+			}
+			if foundMatch != true {
+				return errors.New(fmt.Sprintf("In the notifications section, username '%s' configured for " +
+					"email(SMTP) server '%s' has a password " +
+					"of '%s' which implies the password should be copied from the current(active) configuration but no " +
+					"such username + server address was found in the current configuration",
+					newNotificationsEmail[i].User, newNotificationsEmail[i].Server, oldNotificationsEmail[i].Pass))
+			}
+		}
+	}
+	return nil
+}
 
 // reads passwords from the old config Backup type entries.
 // If the new config has an entry which matches (meaning both have the same name)
@@ -700,4 +892,8 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup 
 		}
 	}
 	return nil
+}
+
+func isLocalhost(name string) bool {
+	return name == "localhost" || name == "127.0.0.1" || name == "::1"
 }

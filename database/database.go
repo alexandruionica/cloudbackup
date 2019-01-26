@@ -29,8 +29,8 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 
 	CREATE TABLE targets (name TEXT NOT NULL PRIMARY KEY, backup_name TEXT, type TEXT, date_added TEXT);
 
-	CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, type TEXT, start_time TEXT, end_time TEXT, state TEXT, 
-	processed_files INTEGER, processed_dirs INTEGER);
+	CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT, 
+	report TEXT);
 
 	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target TEXT, 
 	upload_date TEXT, job_id TEXT, current INTEGER , delete_marker INTEGER, version TEXT, src_os TEXT, type TEXT, 
