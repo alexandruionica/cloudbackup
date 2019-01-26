@@ -394,7 +394,7 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
 	}
 
-	err = AddJobDetails(db, jobid, "backup", time.Now())
+	err = AddJobDetails(db, jobid, "first_backup", "backup", time.Now())
 	if err != nil {
 		t.Fatalf("AddJobDetails() wasn't supposed to return an error but did return: '%s'", err)
 	}

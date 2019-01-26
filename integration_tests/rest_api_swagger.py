@@ -46,6 +46,7 @@ class TestRestAPISwagger(unittest.TestCase):
     #     extra_headers = {
     #         "Authorization": 'Basic dGVzdHVzZXIxOkhWfUgveT88OSRdWjVONE4='
     #     }
+    #     swagger_test(app_url=self.base_url, extra_headers=extra_headers)
     #     stopped, _, _ = self.daemon.stop()
     #     self.assertTrue(stopped, "Backup daemon already stopped. Something must have gone wrong")
 

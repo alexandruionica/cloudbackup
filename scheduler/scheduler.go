@@ -280,7 +280,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	}
 
 	// add entry to "jobs" DB table
-	err = dbops.AddJobDetails(dbData.Db, jobUuid, "backup", jobStartTime)
+	err = dbops.AddJobDetails(dbData.Db, jobUuid, name, "backup", jobStartTime)
 	if err != nil {
 		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, backupJobsState, dbData, false, err)

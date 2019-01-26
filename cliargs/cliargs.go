@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	clientConfig "cloudbackup/client/config"
 	clientBackup "cloudbackup/client/backup"
+	clientNotification "cloudbackup/client/notification"
 	"cloudbackup/config"
 	"cloudbackup/daemon"
 	"cloudbackup/misc"
@@ -65,6 +66,7 @@ type ArgsCommandMiscHash struct {
 type ArgsCommandClient struct {
 	Config ArgsCommandClientConfig `command:"config" description:"Client configuration file related options"`
 	Backup ArgsCommandClientBackup `command:"backup" description:"Interact with backup jobs (start/stop/status)"`
+	Notification ArgsCommandClientNotification `command:"notification" description:"Interact with server generated notifications"`
 }
 
 type ArgsCommandClientConfig struct {
@@ -152,6 +154,15 @@ type ArgsCommandClientConfigDump struct {
 }
 
 type ArgsCommandClientConfigExample struct {
+}
+
+type ArgsCommandClientNotification struct {
+	Test ArgsCommandClientNotificationTest `command:"test" description:"Trigger a test of each notification defined on the backup server"`
+}
+
+type ArgsCommandClientNotificationTest struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
 }
 
 func (command *ArgsCommandServerConfigValidate) Execute(args []string) error {
@@ -374,5 +385,23 @@ func (command *ArgsCommandClientBackupDryRun) Execute(args []string) error {
 func (command *ArgsCommandClientConfigExample) Execute(args []string) error {
 	fmt.Println(misc.SampleClientYamlConfig)
 	os.Exit(0)
+	return nil
+}
+
+func (command *ArgsCommandClientNotificationTest) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientNotification.Test(clConfig, command.Json)
 	return nil
 }

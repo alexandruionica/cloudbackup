@@ -410,6 +410,46 @@
         },
         "security": []
       }
+    },
+    "/report/notification/test": {
+      "post": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Test the notifications setup",
+        "description": "Tests the notifiation setup by sending an event for each notification entry. If there are no notification entries defined in the configuration file then no action will be taken.",
+        "operationId": "getNotifications",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponse"
+            }
+          }
+        },
+        "security": []
+      }
     }
   },
   "securityDefinitions": {
@@ -447,6 +487,9 @@
           "items": {
             "$ref": "#/definitions/Backup"
           }
+        },
+        "notification": {
+          "$ref": "#/definitions/Notification"
         }
       }
     },
@@ -503,6 +546,111 @@
         "enabled",
         "ssl_cert_path",
         "ssl_key_path"
+      ]
+    },
+    "Notification": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/NotificationEmail"
+          }
+        },
+        "script": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/NotificationScript"
+          }
+        }
+      }
+    },
+    "NotificationEmail": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "string",
+          "example": "127.0.0.1",
+          "description": "Hostname or IP address of the SMTP server which is to be used in order to send emails."
+        },
+        "port": {
+          "type": "integer",
+          "default": 25,
+          "example": 25,
+          "description": "Port of the SMTP server to connect to. Defaults to 25"
+        },
+        "user": {
+          "type": "string",
+          "example": "backupsrv",
+          "description": "Username to be used in order to authenticate to the SMTP server in the case that the SMTP server requires authentication"
+        },
+        "pass": {
+          "type": "string",
+          "example": "sdi@W409Q24fd^",
+          "description": "Password in plain text"
+        },
+        "from": {
+          "type": "string",
+          "example": "backupsrv231@foobar.com",
+          "description": "Email address to appear in the From field of emails"
+        },
+        "to": {
+          "type": "string",
+          "example": "someone@foobar.com",
+          "description": "Email recipient address. Provide only one address."
+        },
+        "cc": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": [
+            "john@foobar.com",
+            "smith@foobar.com"
+          ],
+          "description": "Carbon copy email addresses"
+        },
+        "type": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": [
+            "crashed",
+            "failed",
+            "cancelled"
+          ],
+          "description": "For which type of events to send a notification. Valid options are one or more of started, finished, failed, cancelled and crashed. Defaults to \"failed\" and \"crashed\"."
+        }
+      },
+      "required": [
+        "server",
+        "to"
+      ]
+    },
+    "NotificationScript": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "example": "/usr/local/bin/trigger_monitoring.sh",
+          "description": "Path of script to run. The script must exist or otherwise the backup server will refuse to start."
+        },
+        "type": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": [
+            "crashed",
+            "failed",
+            "cancelled"
+          ],
+          "description": "For which type of events to send a notification. Valid options are one or more of started, finished, failed, cancelled and crashed. Defaults to \"failed\" and \"crashed\"."
+        }
+      },
+      "required": [
+        "path"
       ]
     },
     "Backup": {
