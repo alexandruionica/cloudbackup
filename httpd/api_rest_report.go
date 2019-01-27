@@ -23,12 +23,12 @@ func (srvSrc SrvData) handlerPostNotificationTest(w http.ResponseWriter, r *http
 		return
 	}
 
-	err := notifications.Execute(configCopy, "", "backup", "test", "notifications test", "")
+	err := notifications.Execute(configCopy, "", "backup", "test", "notifications test", "", "")
 	if err != nil {
 		JSONError(w, 500, HttpErrInternalServerError, err.Error())
 		return
 	}
 
-	JSONSuccess(w, "success", "Test started successfully")
+	JSONSuccess(w, "success", "Test completed successfully")
 	return
 }

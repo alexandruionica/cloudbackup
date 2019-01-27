@@ -1,5 +1,5 @@
-hash: aba559ff0accfd01b4cf1c8d50a26a465ed2def2a7c85c697b3f468a88ef46bf
-updated: 2018-12-10T22:30:18.423201463+11:00
+hash: 658bdc80698dbfddb8dd7688c6bdf57adfd85b3dc2ac92ee548427acb4e02c65
+updated: 2019-01-27T11:02:40.078216395+11:00
 imports:
 - name: github.com/bearmini/go-acl
   version: a423b25ba3ef3afa637b85a6222ccf2abffd01c6
@@ -19,6 +19,8 @@ imports:
   version: 96dc06278ce32a0e9d957d590bb987c81ee66407
 - name: github.com/jinzhu/configor
   version: 4edaf76fe18865e36de734d887f4c01bd05707af
+- name: github.com/jordan-wright/email
+  version: 94ae17dedda217a49e3b47d68f1b54b3c946e16b
 - name: github.com/julienschmidt/httprouter
   version: 26a05976f9bf5c3aa992cc20e8588c359418ee58
 - name: github.com/mattn/go-sqlite3
@@ -32,17 +34,17 @@ imports:
   subpackages:
   - hooks/test
 - name: golang.org/x/crypto
-  version: 505ab145d0a99da450461ae2c1a9f6cd10d1f447
+  version: 057139ce5d2bdbe6fe73c53679e24e9cf007f637
   subpackages:
   - bcrypt
   - blowfish
   - ssh/terminal
 - name: golang.org/x/exp
-  version: 68cc7b1f272e93e048c7a32efa6e190d898afeca
+  version: c74c464bbbf2425793dda2a0044770271fc009c7
   subpackages:
   - utf8string
 - name: golang.org/x/sys
-  version: 2a47403f2ae58167c4d75973960ccc62b28cb0d8
+  version: b90733256f2e882e81d52f9126de08df5615afd9
   subpackages:
   - unix
   - windows

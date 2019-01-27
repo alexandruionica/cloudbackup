@@ -494,7 +494,7 @@ func ValidateNotificationCommand(commands []NotificationScript, logError bool) e
 		// check supplied file path at least exists (if it's executable is a different story which also may be
 		// platform dependent
 		if _, err := utils.FileExists(notificationCommand.Path, true); err != nil {
-			msg := fmt.Sprintf("When validating the existence of notification command '%s' " +
+			msg := fmt.Sprintf("When validating the existence of notification script '%s' " +
 				"the following error ocurred: %s", notificationCommand.Path, err)
 			if logError{
 				logger.Error(msg)
@@ -513,7 +513,7 @@ func ValidateNotificationCommand(commands []NotificationScript, logError bool) e
 			if foundMatch {
 				continue
 			} else {
-				msg := fmt.Sprintf("Notification command '%s' has mentioned a notification event type of '%s' " +
+				msg := fmt.Sprintf("Notification script '%s' has mentioned a notification event type of '%s' " +
 					"which is not an allowed value. Allowed values are: %+v", notificationCommand.Path, entryType,
 					NotificationTypes)
 				if logError{
