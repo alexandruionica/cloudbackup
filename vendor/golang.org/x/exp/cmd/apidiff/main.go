@@ -27,6 +27,12 @@ func main() {
 		fmt.Fprintf(w, "   where OLD and NEW are either import paths or files of export data\n")
 		fmt.Fprintf(w, "apidiff -w FILE IMPORT_PATH\n")
 		fmt.Fprintf(w, "   writes export data of the package at IMPORT_PATH to FILE\n")
+		fmt.Fprintf(w, "   NOTE: In a GOPATH-less environment, this option consults the\n")
+		fmt.Fprintf(w, "   module cache by default, unless used in the directory that\n")
+		fmt.Fprintf(w, "   contains the go.mod module definition that IMPORT_PATH belongs\n")
+		fmt.Fprintf(w, "   to. In most cases users want the latter behavior, so be sure\n")
+		fmt.Fprintf(w, "   to cd to the exact directory which contains the module\n")
+		fmt.Fprintf(w, "   definition of IMPORT_PATH.\n")
 		flag.PrintDefaults()
 	}
 
@@ -34,6 +40,7 @@ func main() {
 	if *exportDataOutfile != "" {
 		if len(flag.Args()) != 1 {
 			flag.Usage()
+			os.Exit(2)
 		}
 		pkg := mustLoadPackage(flag.Arg(0))
 		if err := writeExportData(pkg, *exportDataOutfile); err != nil {
@@ -42,6 +49,7 @@ func main() {
 	} else {
 		if len(flag.Args()) != 2 {
 			flag.Usage()
+			os.Exit(2)
 		}
 		oldpkg := mustLoadOrRead(flag.Arg(0))
 		newpkg := mustLoadOrRead(flag.Arg(1))
@@ -49,7 +57,7 @@ func main() {
 		report := apidiff.Changes(oldpkg, newpkg)
 		var err error
 		if *incompatibleOnly {
-			err = report.TextIncompatible(os.Stdout)
+			err = report.TextIncompatible(os.Stdout, false)
 		} else {
 			err = report.Text(os.Stdout)
 		}
@@ -85,6 +93,9 @@ func loadPackage(importPath string) (*packages.Package, error) {
 	pkgs, err := packages.Load(cfg, importPath)
 	if err != nil {
 		return nil, err
+	}
+	if len(pkgs) == 0 {
+		return nil, fmt.Errorf("found no packages for import %s", importPath)
 	}
 	if len(pkgs[0].Errors) > 0 {
 		return nil, pkgs[0].Errors[0]
