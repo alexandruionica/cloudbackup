@@ -27,3 +27,5 @@ import:
 - package: golang.org/x/time
   subpackages:
   - rate
+- package: github.com/jordan-wright/email
+  version: ^3.0.0
