@@ -1,15 +1,20 @@
 #!/usr/bin/env python
+import asyncore
 import hashlib
 import logging
 import platform
-import requests
 import os
+import re
+import requests
+import smtpd
 import socket
 import shlex
 import subprocess
+import threading
 import time
 import tempfile
-from pprint import pprint
+import quopri
+
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
@@ -378,11 +383,56 @@ def setup_dir_with_tmp_files():
 # sets up a server config file to be used for various tests
 # returns: path to config file; array of paths to delete (config file path, various temporary directories which may
 # be needed)
-def setup_tmp_config_file_and_tmp_dirs(suffix):
+def setup_tmp_config_file_and_tmp_dirs(suffix, config_file_content=working_server_config_file_content):
     tmphandle, config_file_path = tempfile.mkstemp(suffix=suffix + '__config.yaml')
     data_dir = tempfile.mkdtemp(suffix=suffix + '__datadir')
-    server_config = working_server_config_file_content.replace("data_dir: ./tmp/", "data_dir: " + data_dir, 1)
+    server_config = config_file_content.replace("data_dir: ./tmp/", "data_dir: " + data_dir, 1)
     tmpfile = os.fdopen(tmphandle, "w")
     tmpfile.write(server_config)
     tmpfile.close()
     return config_file_path, [config_file_path, data_dir]
+
+
+# mock smtp server, initial code taken from
+# https://notepad.mmakowski.com/Tech/E-mail%20Testing%20with%20Mock%20SMTP%20Server
+class MockSMTPServer(smtpd.SMTPServer, threading.Thread):
+    '''
+    A mock SMTP server. Runs in a separate thread so can be started from
+    existing test code.
+    '''
+    def __init__(self, hostname, port):
+        self.socket_map = {}
+        threading.Thread.__init__(self)
+        smtpd.SMTPServer.__init__(self, (hostname, port), None, map=self.socket_map)
+        self.daemon = True
+        self.received_messages = []
+        self.start()
+
+    def run(self):
+        # put a really short timeout of 0.1 seconds (default is 30sec) as we want to exit as soon as possible when
+        # stopsmtpsrv() is called
+        asyncore.loop(timeout=0.1, map=self.socket_map)
+
+    # stop the smtp server
+    def stopsmtpsrv(self):
+        self.close()
+        self.join()
+
+    def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
+        self.received_messages.append(data)
+        return None
+
+    def reset(self):
+        self.received_messages = []
+
+    # helper methods for assertions in test cases
+    def received_message_matching(self, template):
+        for message in self.received_messages:
+            decoded_quoted_printable = quopri.decodestring(message)
+            decoded = decoded_quoted_printable.decode('utf-8')
+            if re.search(template, decoded):
+                return True, decoded
+        return False, decoded
+
+    def received_messages_count(self):
+        return len(self.received_messages)

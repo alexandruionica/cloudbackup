@@ -114,8 +114,13 @@ func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType strin
 		}
 	}
 
-	err := e.Send(emailEntry.Server + ":" + emailEntry.Port, smtp.PlainAuth("", emailEntry.User,
-		emailEntry.Pass, emailEntry.Server))
+	var err error
+	if emailEntry.User == "" {
+		err = e.Send(emailEntry.Server + ":" + emailEntry.Port, nil)
+	} else {
+		err = e.Send(emailEntry.Server + ":" + emailEntry.Port, smtp.PlainAuth("", emailEntry.User,
+			emailEntry.Pass, emailEntry.Server))
+	}
 	if err != nil {
 		logger.Errorf("While trying to send a notification via email to '%s', the following error was " +
 			"encountered: %s", emailEntry.To, err)
