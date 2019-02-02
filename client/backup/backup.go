@@ -491,21 +491,21 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 			fmt.Printf(" 5 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate5Min)))
 			fmt.Printf("15 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate15Min)))
 		} else {
-			fmt.Printf("Global  1 minute rate: %7s ", humanize.Bytes(uint64(decodedJson.Rate1Min)))
+			fmt.Printf("Global  1 minute rate: %7s/s ", humanize.Bytes(uint64(decodedJson.Rate1Min)))
 			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-				fmt.Printf("| target %s  1 minute rate: %7s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate1Min)))
+				fmt.Printf("| target %s  1 minute rate: %7s/s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate1Min)))
 			}
 			fmt.Println("")
 
-			fmt.Printf("Global  5 minute rate: %7s ", humanize.Bytes(uint64(decodedJson.Rate5Min)))
+			fmt.Printf("Global  5 minute rate: %7s/s ", humanize.Bytes(uint64(decodedJson.Rate5Min)))
 			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-				fmt.Printf("| target %s  5 minute rate: %7s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate5Min)))
+				fmt.Printf("| target %s  5 minute rate: %7s/s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate5Min)))
 			}
 			fmt.Println("")
 
-			fmt.Printf("Global 15 minute rate: %7s ", humanize.Bytes(uint64(decodedJson.Rate15Min)))
+			fmt.Printf("Global 15 minute rate: %7s/s ", humanize.Bytes(uint64(decodedJson.Rate15Min)))
 			for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-				fmt.Printf("| target %s 15 minute rate: %7s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate15Min)))
+				fmt.Printf("| target %s 15 minute rate: %7s/s ", objectStoreRate.Name, humanize.Bytes(uint64(objectStoreRate.Rate15Min)))
 			}
 			fmt.Println("")
 		}

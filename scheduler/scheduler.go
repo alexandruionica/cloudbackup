@@ -11,6 +11,7 @@ import (
 	"cloudbackup/shared"
 	"cloudbackup/watcher"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
@@ -326,7 +327,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 }
 
 // TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
-func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup, serverConfig config.CfgTemplate,
+func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup, serverConfigCopy config.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error){
 	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then
 	//  it will leak at least a channel. Calling it for an already cancelled backup will not cause any issue
@@ -353,22 +354,41 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 	}
 	watcher.TellClientsJobFinished("backup", name, jobUuid, backupJobsState.WatchMsgReceiver, cancelled, backupFailed)
 
-	// TODO - before MarkStopped(stopped=true) copy report (state) somewhere
+	backupJobsStateCopy := backupJobsState.Get(serverConfigCopy, loggingContext + ".cleanupAfterBackup")
+	var jobStateCopy shared.BackupJobStatus
+	for _, j := range backupJobsStateCopy {
+		if name == j.Name {
+			jobStateCopy = j
+			break
+		}
+	}
 
-	jobstate := "finished"
+	jobStateCopy.State = "finished"
 	if cancelled {
-		jobstate = "cancelled"
+		jobStateCopy.State = "cancelled"
 	}
 	if backupError != nil {
-		jobstate = "failed"
+		jobStateCopy.State = "failed"
 	}
+	// TODO - figure out when a job is "CRASHED" and set $jobStatus accordingly - probably doesn't make sense to do it
+	//  from this function but rather a function which runs at server startup and examines the state of the DB
+	jobReport := ""
+		b, err := json.Marshal(jobStateCopy)
+		if err != nil {
+			logger.Warningf("Could not json encode the state of the just finished backup job. This means that " +
+				"if any notifications are configured to be sent then they will not contain a detailed report. The " +
+				"encountered error was: %s", err)
+		} else {
+			jobReport = string(b)
+		}
+	// TODO - before MarkStopped(stopped=true) save $jobStateCopy from above to the DB
+
 	backupJobErrorMsg := ""
 	if backupError != nil {
 		backupJobErrorMsg = backupError.Error()
 	}
 
-	// TODO - json encoded report state (jobstatus) in case jobstate == "finished"
-	err = notifications.Execute(serverConfig, jobUuid, "backup", jobstate, name, "", backupJobErrorMsg)
+	err = notifications.Execute(serverConfigCopy, jobUuid, "backup", jobStateCopy.State, name, jobReport, backupJobErrorMsg)
 	if err != nil {
 		logger.Warningf("At least an error was encountered while trying to send notifications: %s", err)
 	}

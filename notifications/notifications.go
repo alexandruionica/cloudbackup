@@ -2,12 +2,16 @@ package notifications
 
 import (
 	"cloudbackup/config"
+	"cloudbackup/shared"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"github.com/jordan-wright/email"
 	log "github.com/sirupsen/logrus"
 	"net/smtp"
 	"os"
+	"strings"
 )
 
 const loggingContext = "client.notification"
@@ -54,7 +58,11 @@ func Execute(config config.CfgTemplate, JobId string, JobType string, JobState s
 	return nil
 }
 
-func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
+// Sends one email ...
+// see description of Execute() for most of parameters except $emailEntry which represents email configuration as
+// described in the configuration file
+func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType string, JobState string, JobName string,
+	JobReport string, JobError string) error {
 	logger.Debug("Sending email notification")
 
 	e := email.NewEmail()
@@ -66,26 +74,46 @@ func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType strin
 	e.To = []string{emailEntry.To}
 	e.Cc = emailEntry.CC
 	e.Subject = fmt.Sprintf("%s job \"%s\" has %s", JobType, JobName, JobState)
-	e.Text = []byte(fmt.Sprintf("Check backup server logs for more details"))
+	var emailText []string
+	emailText = append(emailText, fmt.Sprintf("%s job \"%s\" having id %s has %s", JobType, JobName, JobId,
+		JobState))
+	emailText = append(emailText, "Check backup server logs for more details")
 	switch JobState {
 	case "test":
 		e.Subject = "Notification test"
+		e.Text = []byte("Receiving this email proves that the backup server's SMTP(email) settings are correct")
 	case "cancelled":
 		e.Subject = fmt.Sprintf("%s job \"%s\" has been %s", JobType, JobName, JobState)
+		emailText = []string{fmt.Sprintf("%s job \"%s\" having id %s has been %s", JobType, JobName, JobId, JobState)}
+		emailText = append(emailText, "Check backup server logs for more details")
+		e.Text = []byte(strings.Join(emailText,"\n"))
 	case "failed": {
 		if JobError != "" {
 			e.Text = []byte(fmt.Sprintf("Job failed with error: %s\nCheck backup server logs for more details",
 				JobError))
 		}
-		e.Text = []byte(fmt.Sprintf("Check backup server logs for more details"))
 	}
 	case "crashed":
-		e.Text = []byte(fmt.Sprintf("When a job is marked as crashed it means that there is a record of the job" +
+		emailText = append(emailText,"When a job is marked as crashed it means that there is a record of the job" +
 			" starting but not record of it finishing, failing or being cancelled and the job is no longer running. " +
 			"A potential scenario for this is " +
 			"that the server got restarted, it crashed itself or the backup software encountered an issue and crashed. " +
-			"For the last scenario, check backup server logs for more details"))
+			"For the last scenario, check backup server logs for more details")
+	default:
+		e.Text = []byte(strings.Join(emailText,"\n"))
 	}
+
+	if JobType == "backup" && JobReport != "" {
+		var decodedJson shared.BackupJobStatus
+		err := json.Unmarshal([]byte(JobReport), &decodedJson)
+		if err != nil {
+			logger.Debugf("While trying to json decode the job report, encountered error: %s", err)
+		} else {
+			// add html body to the email
+			e.HTML = []byte(prepareHtmlEmail(emailText, decodedJson))
+		}
+	}
+
 	err := e.Send(emailEntry.Server + ":" + emailEntry.Port, smtp.PlainAuth("", emailEntry.User,
 		emailEntry.Pass, emailEntry.Server))
 	if err != nil {
@@ -116,4 +144,112 @@ func prepareFromAddress () string {
 		hostname = "unknown"
 	}
 	return "cloudbackup@" + hostname
+}
+
+
+// produces a HTML body which will be the Email body (if clients can read html)
+// $emailTextBody represents the plaintext variant of the email; decodedJson represents the last state of the job
+func prepareHtmlEmail (emailTextBody []string, decodedJson shared.BackupJobStatus) (result string) {
+	tdStyle := `style="border:1px solid #ddd;padding:3px;"`
+	td := "<td " + tdStyle + " >"
+	tr := "<tr>" + td
+	header := `<html>
+<head>
+<style>
+#report {
+  border-collapse: collapse;
+}
+#report td, #report th {
+  border: 1px solid #ddd;
+  padding: 3px;
+}
+#report tr:nth-child(even){background-color: #f2f2f2;}
+#report tr:hover {background-color: #ddd;}
+#report th {
+  padding-top: 7px;
+  padding-bottom: 7px;
+  text-align: left;
+  background-color: #4CAF50;
+  color: white;
+}
+</style></head><body>` + fmt.Sprintf("\n")
+	result = header + "<b>" + strings.Join(emailTextBody,"<br>") +
+		fmt.Sprintf("</b>\n<hr>\n<table id='report' style='border-collapse:collapse;'\n")
+
+	if len(decodedJson.ObjectStoreRates) < 2 {
+		result += tr + "1 minute rate:" + td  + humanize.Bytes(uint64(decodedJson.Rate1Min)) + "/s" + fmt.Sprintf("\n")
+		result += tr + "5 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate5Min)) + "/s" + fmt.Sprintf("\n")
+		result += tr + "15 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate15Min)) + "/s" + fmt.Sprintf("\n")
+	} else {
+		result += tr + "Global 1 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate1Min)) + "/s"
+		for _, objectStoreRate := range decodedJson.ObjectStoreRates {
+			result += td + fmt.Sprintf("target %s 1 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate1Min)) + "/s" + fmt.Sprintf("\n")
+		}
+
+		result += tr + "Global 5 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate5Min)) + "/s"
+		for _, objectStoreRate := range decodedJson.ObjectStoreRates {
+			result += td + fmt.Sprintf("target %s 5 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate5Min)) + "/s" + fmt.Sprintf("\n")
+		}
+
+		result += tr + "Global 15 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate15Min)) + "/s"
+		for _, objectStoreRate := range decodedJson.ObjectStoreRates {
+			result += td + fmt.Sprintf("target %s 15 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate15Min)) + "/s" + fmt.Sprintf("\n")
+		}
+	}
+	var tdTmp string
+	// counters
+	result += tr + "Examined directories" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["examined_directories"])
+	if tdTmp = td; decodedJson.StatsCounters["examined_files"] == 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Examined files" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["examined_files"])
+	result += tr + "Examined symlinks" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["examined_symlinks"])
+	if tdTmp = td; decodedJson.StatsCounters["examined_unknown"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Examined unordinary files" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["examined_unknown"])
+
+	result += tr + "Files and directories excluded from examination" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["excluded"])
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_examine"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Files and directories which could not be examined" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["failed_to_examine"])
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_enumerate"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Directories for which a full listing of contents could not be done" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["failed_to_enumerate"])
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_upload_files"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Files which got marked for upload and failed to upload" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["failed_to_upload_files"])
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_upload_directories"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Directories which got marked for upload and failed to upload" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["failed_to_upload_directories"])
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_upload_symlinks"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Symlinks which got marked for upload and failed to upload" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["failed_to_upload_symlinks"])
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_upload_unknown"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Unordinary files which got marked for upload and failed to upload" + tdTmp + fmt.Sprintf(" %d\n", decodedJson.StatsCounters["failed_to_upload_unknown"])
+	result += tr + "Files successfully uploaded" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["uploaded_files"])
+	result += tr + "Directories for which properties where successfully uploaded" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["uploaded_directories"])
+	result += tr + "Symlinks for which properties where successfully uploaded" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["uploaded_symlinks"])
+	result += tr + "Files for which metadata only updates took place" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["updated_metadata_for_files"])
+	result += tr + "Directories for which metadata only updates took place" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["updated_metadata_for_directories"])
+	result += tr + "Symlinks for which metadata only updates took place" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["updated_metadata_for_symlinks"])
+	// how many bytes (file content only) were read from disk
+	result += tr + "File content read in order to upload" + td + fmt.Sprintf("%s\n", humanize.Bytes(decodedJson.FileContentBytesRead))
+	// text stats
+	if decodedJson.StatsText["current_directory"] != "" {
+		result += tr + "Last directory processed" + td + fmt.Sprintf("%s\n", decodedJson.StatsText["current_directory"])
+	}
+	if decodedJson.StatsText["current_file"] != "" {
+		result += tr + "Last file processed" + td + fmt.Sprintf("%s\n", decodedJson.StatsText["current_file"])
+	}
+
+	result += "</table></body></html>"
+	return result
 }
