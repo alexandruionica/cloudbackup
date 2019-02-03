@@ -1,5 +1,6 @@
 coverage.out
 cloudbackup
+cloudbackup.exe
 tmp/
 .idea/
 integration_tests/.venv
