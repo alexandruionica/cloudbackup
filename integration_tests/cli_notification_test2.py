@@ -43,8 +43,9 @@ class TestCliNotification2(unittest.TestCase):
             parsed['backup'][0]['exclusions'] = [""]
         with open(self.server_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
-        # start SMTP server
-        self.mock_server = MockSMTPServer("localhost", 25025)
+        # start SMTP server on Linux only as it doesn't work on other platforms
+        if platform.system().lower() == 'linux':
+            self.mock_server = MockSMTPServer("localhost", 25025)
         # start server
         self.base_url = "http://127.0.0.1:8080"
         self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url)
@@ -62,12 +63,16 @@ class TestCliNotification2(unittest.TestCase):
             os.remove(self.client_config_file_path)
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
-        self.mock_server.stopsmtpsrv()
+        if platform.system().lower() == 'linux':
+            self.mock_server.stopsmtpsrv()
 
     # ./cloudbackup client notification test -c client_config.yaml     works
     def test_cmd_client_notification_test1(self):
-        # with open(self.server_config_file_path, 'r') as fin:
-        #     logging.error(fin.read())
+        # unfortunately the mock SMTP server we use runs only on Linux so we can't run the tests on other platforms
+        if platform.system().lower() != 'linux':
+            logging.warn("SKIPPING SMTP related tests as they can't run on other platforms than Linux as the SMTP "
+                         "server used is working only on Linux.")
+            return
         result = run_shell_cmd(self.cmd + " client notification test -c " + self.client_config_file_path)
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))

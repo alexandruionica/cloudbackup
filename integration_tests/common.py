@@ -18,7 +18,7 @@ import quopri
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
-if platform.system() == 'Windows':
+if platform.system().lower() == 'windows':
     cmd_default = ".\cloudbackup.exe"
 else:
     cmd_default = "./cloudbackup"
