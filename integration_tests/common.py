@@ -429,7 +429,7 @@ class MockSMTPServer(smtpd.SMTPServer, threading.Thread):
     def received_message_matching(self, template):
         for message in self.received_messages:
             decoded_quoted_printable = quopri.decodestring(message)
-            decoded = decoded_quoted_printable.decode('utf-8')
+            decoded = decoded_quoted_printable.decode('utf-8', errors='replace')
             if re.search(template, decoded):
                 return True, decoded
         return False, decoded
