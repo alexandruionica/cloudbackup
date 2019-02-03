@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# CLI Tests which require a server to be running as a prerequisite of the test
+# API Tests which require a server to be running as a prerequisite of the test
 #
 #
 import argparse
