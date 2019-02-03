@@ -28,7 +28,7 @@ class TestCliNotification2(unittest.TestCase):
         self.complete_server_cfg = working_server_config_file_content + self.extra_server_cfg
         # server - config file
         self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
-            suffix='_integration_tests_cli_backup_dryrun_', config_file_content=self.complete_server_cfg)
+            suffix='_integration_tests_cli_notification2_', config_file_content=self.complete_server_cfg)
         # client - config file
         tmphandle, self.client_config_file_path = tempfile.mkstemp(suffix='_integration_tests_client_config_file.yaml')
         tmpfile = os.fdopen(tmphandle, "w")

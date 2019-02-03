@@ -20,7 +20,7 @@ class TestCliNotification1(unittest.TestCase):
         self.password2 = 'Oonaawai8Eep]eethe8eefa$'
         # server - config file
         self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
-            suffix='_integration_tests_cli_backup_dryrun_')
+            suffix='_integration_tests_cli_notification1_')
         # client - config file
         tmphandle, self.client_config_file_path = tempfile.mkstemp(suffix='_integration_tests_client_config_file.yaml')
         tmpfile = os.fdopen(tmphandle, "w")
