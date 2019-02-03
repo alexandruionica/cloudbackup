@@ -111,7 +111,34 @@ backup:
     # defaults to 0 which means unlimited number of versions
     versions_max_num: 10
     # defaults to 0 which means unlimited age
-    versions_max_age: 6w`
+    versions_max_age: 6w
+# The notification section is optional. Notification will be sent for various events like a backup job has failed 
+notification:
+  # if the "email" block is specified then at least one entry needs to exist
+  email:
+      # SMTP server address. If using Gmail directly then you may be limited (by Gmail) to 99 emails per day per account
+    - server: smtp.gmail.com
+      # if unspecified, it defaults to "25"
+      port: 587
+      # email recipient, only one address is allowed
+      to: someone@gmail.com
+      # CC section is optional, multiple addresses can be specified
+      cc:
+        - someone@bar.com
+        - soneome.else@bar.com
+      # for what events to send notifications (for this email definition block; other blocks can have different settings)
+      # If unspecified, it defaults to "failed" and "crashed"
+      type:
+        - started
+        - finished
+        - failed
+        - cancelled
+        - crashed
+      # Username to use when authenticating to the SMTP server. If the SMTP server address is "127.0.0.1" or 
+      #  "localhost" then the "user"" and "pass"" fields can be skipped as generally speaking local SMTP doesn't 
+      #   require authentication 
+      user: my.backup.email27@gmail.com
+      pass: 'A_HARD_TO_GUESS_PASSWORD'`
 
 const SampleClientYamlConfig = `---
 username: testuser1
