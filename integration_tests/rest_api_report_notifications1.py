@@ -23,16 +23,6 @@ class TestRestAPIReportNotification1(unittest.TestCase):
         # server - config file
         self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
             suffix='_integration_tests_rest_api_report_notification1_')
-        # tmp files for tests
-        self.tmpdir, self.filelist = setup_dir_with_tmp_files()
-        # adjust server config for job to include above tmpdir
-        with open(self.server_config_file_path) as fd:
-            parsed = yaml.load(fd)
-            parsed['backup'][0]['paths'] = [self.tmpdir]
-            parsed['backup'][0]['exclusions'] = [self.tmpdir + os.sep + "dir1" + os.sep + "dir5", '**' + os.sep +
-                                                 'file9.txt']
-        with open(self.server_config_file_path, "w") as fd:
-            fd.write(yaml.dump(parsed))
         self.base_url = "http://127.0.0.1:8080"
         if platform.system() == 'Windows':
             _, self.inttestlog = tempfile.mkstemp(prefix="integration_test_log_")
@@ -53,8 +43,6 @@ class TestRestAPIReportNotification1(unittest.TestCase):
                     shutil.rmtree(entry)
                 else:
                     os.remove(entry)
-        if os.path.exists(self.tmpdir):
-            shutil.rmtree(self.tmpdir)
         # for some reason the below fails despite the cloudbackup.exe process supposed to be killed and the above
         # succeeding, for now just abandoning this as a non issue and leaving log files behind
         # if platform.system() == 'Windows':
