@@ -141,8 +141,6 @@ class TestRestAPIReportNotification4(unittest.TestCase):
         # verify that the message has been received
         self.assertEqual(self.mock_server.received_messages_count(), 1, "Was expecting exactly 1 email message to have "
                                                                         "been received")
-        # verify that the message matches From: expectations
-        hostname = socket.gethostname()
         try:
             matches, email_msg = self.mock_server.received_message_matching(".*From: smith@bar.com*")
         except UnicodeDecodeError:
