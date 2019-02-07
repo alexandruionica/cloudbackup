@@ -3,6 +3,7 @@ package notifications
 import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
+	"cloudbackup/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/smtp"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -81,7 +83,8 @@ func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType strin
 	switch JobState {
 	case "test":
 		e.Subject = "Notification test"
-		e.Text = []byte("Receiving this email proves that the backup server's SMTP(email) settings are correct")
+		e.Text = []byte(fmt.Sprintf("Receiving this email proves that the backup server's SMTP(email) settings" +
+			" are correct.\nNotification test job having id '%s' has completed successfully.", JobId))
 	case "cancelled":
 		e.Subject = fmt.Sprintf("%s job \"%s\" has been %s", JobType, JobName, JobState)
 		emailText = []string{fmt.Sprintf("%s job \"%s\" having id %s has been %s", JobType, JobName, JobId, JobState)}
@@ -135,8 +138,25 @@ func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType strin
 	return nil
 }
 
+// runs a Notification script
 func runScript (scriptEntry config.NotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
 	logger.Debugf("Running notification script '%s'", scriptEntry.Path)
+	reportFile, err := utils.SetupTmpFileWithContent([]byte(JobReport),"cloudbackup_job_report_notification_")
+	if err != nil {
+		reportFile = ""
+		logger.Warningf("While trying to setup a temporary file to hold the job report which would be passed " +
+			"to notification script '%s', the following error was encountered: %s", scriptEntry.Path, err)
+	}
+	logger.Debugf("Running (without the single quotes): '%s' '%s' '%s' '%s' '%s' '%s' '%s'", scriptEntry.Path,
+		JobType, JobName, JobId, JobState, JobError, reportFile)
+	cmd := exec.Command(scriptEntry.Path, JobType, JobName, JobId, JobState, JobError, reportFile) // #nosec
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		msg := fmt.Sprintf("While trying to execute notification script '%s', encountered error: %s\nScript " +
+			"output was: %s", scriptEntry.Path, err, stdoutStderr)
+		logger.Error(msg)
+		return errors.New(msg)
+	}
 	// if we got here, all was good
 	return nil
 }

@@ -3,7 +3,9 @@ package httpd
 import (
 	"cloudbackup/daemon/globals"
 	"cloudbackup/notifications"
+	"fmt"
 	"github.com/julienschmidt/httprouter"
+	"github.com/satori/go.uuid"
 	"net/http"
 )
 
@@ -23,12 +25,13 @@ func (srvSrc SrvData) handlerPostNotificationTest(w http.ResponseWriter, r *http
 		return
 	}
 
-	err := notifications.Execute(configCopy, "", "backup", "test", "notifications test", "", "")
+	jobId := uuid.NewV4().String()
+	err := notifications.Execute(configCopy, jobId, "backup", "test", "notifications_test", "", "")
 	if err != nil {
 		JSONError(w, 500, HttpErrInternalServerError, err.Error())
 		return
 	}
 
-	JSONSuccess(w, "success", "Test completed successfully")
+	JSONSuccess(w, "success", fmt.Sprintf("Test completed successfully for job id '%s'", jobId))
 	return
 }

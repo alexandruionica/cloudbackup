@@ -501,6 +501,16 @@ func ValidateNotificationCommand(commands []NotificationScript, logError bool) e
 			}
 			return err
 		}
+
+		err := isExecutable(notificationCommand.Path)
+		if err != nil {
+			msg := fmt.Sprintf("Encountered the following error when checking if notification script '%s' " +
+				"is executable: %s", notificationCommand.Path, err)
+			if logError{
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
 		// check "Type" entry is valid
 		for _, entryType := range notificationCommand.Type {
 			foundMatch := false
