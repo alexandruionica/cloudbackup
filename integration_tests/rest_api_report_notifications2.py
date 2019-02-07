@@ -107,7 +107,7 @@ class TestRestAPIReportNotification2(unittest.TestCase):
         self.assertIn("code", response, "Response is missing the 'code' key. Response was: {}".format(r.text))
         self.assertIn("message", response, "Response is missing the 'message' key. Response was: {}".format(r.text))
         self.assertEqual(response["code"], "success")
-        self.assertEqual(response["message"], "Test completed successfully")
+        self.assertIn("Test completed successfully", response["message"])
 
         # verify that the message has been received
         self.assertEqual(self.mock_server.received_messages_count(), 1, "Was expecting exactly 1 email message to have "
