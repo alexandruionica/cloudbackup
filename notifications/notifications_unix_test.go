@@ -8,8 +8,6 @@ import (
 	"cloudbackup/utils"
 	"github.com/satori/go.uuid"
 	"os"
-	"os/exec"
-	"runtime"
 	"testing"
 )
 
@@ -55,32 +53,73 @@ func TestRunScript1(t *testing.T) {
 	if err == nil {
 		t.Fatal("Running the notification script did not return an error despite the script not being executable")
 	}
+}
 
-	// for some reason os.Chmod leads to an unreadable file on FreeBSD
-	if runtime.GOOS == "freebsd" {
-		// use Exec() function
-		cmd := exec.Command("chmod", "+x", scriptPath)
-		out, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("running command 'chmod' returned error: %s \nand output\n: %s", err, out)
-		}
-	} else {
-		err = os.Chmod(scriptPath, 0700)
-		if err != nil {
-			t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
-		}
+func TestRunScript2(t *testing.T) {
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
+	if err != nil {
+		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
 	}
-
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+	scriptEntry := config.NotificationScript{
+		Path: scriptPath,
+		Type: []string{"finished"},
+	}
+	jobId := uuid.NewV4().String()
+	err = os.Chmod(scriptPath, 0700)
+	if err != nil {
+		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
+	}
 	// leave some fields unpopulated
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 	if err != nil {
-		t.Fatalf("1. Running the notification script returned error: %s", err)
+		t.Fatalf("Running the notification script returned error: %s", err)
+	}
+}
+
+func TestRunScript3(t *testing.T) {
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
+	if err != nil {
+		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+	scriptEntry := config.NotificationScript{
+		Path: scriptPath,
+		Type: []string{"finished"},
+	}
+	jobId := uuid.NewV4().String()
+	err = os.Chmod(scriptPath, 0700)
+	if err != nil {
+		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
 	}
 
 	//  make sure all fields are populated
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "some report", "bla bla asdasd")
 	if err != nil {
 		t.Fatalf("2. Running the notification script returned error: %s", err)
+	}
+
+	//  test script should fail because the JobId value is not one of "backup", "restore", "purge"
+	err = runScript(scriptEntry, jobId, "somethingElse", "finished", "a_test_job", "some report", "bla bla asdasd")
+	if err == nil {
+		t.Fatal("Script should have failed but it didn't")
+	}
+}
+
+func TestRunScript4(t *testing.T) {
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
+	if err != nil {
+		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+	scriptEntry := config.NotificationScript{
+		Path: scriptPath,
+		Type: []string{"finished"},
+	}
+	jobId := uuid.NewV4().String()
+	err = os.Chmod(scriptPath, 0700)
+	if err != nil {
+		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
 	}
 
 	//  test script should fail because the JobId value is not one of "backup", "restore", "purge"
