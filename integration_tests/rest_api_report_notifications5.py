@@ -14,9 +14,9 @@ import requests
 import yaml
 from common import *
 
-UNIX_SCRIPT = """#!/bin/bash
+UNIX_SCRIPT = """#!/bin/sh
 # arguments are supposed to be JobType, JobName, JobId, JobState, JobError, reportFile
-if [[ $# -ne 6 ]]; then
+if [ $# -ne 6 ]; then
     echo "expected 6 arguments but got $#"
     echo -n "received arguments were: "
     for var in "$@"; do
@@ -31,12 +31,12 @@ case $1 in
         FOUND=1
         ;;
 esac
-if [[ FOUND -ne 1 ]]; then
+if [ $FOUND -ne 1 ]; then
     echo "First argument must be one of  backup | restore | purge  but it was: $1"
     exit 2
 fi
 
-if [[ ! -f $6 ]]; then
+if [ ! -f "$6" ]; then
     echo "The sixth argument is supposed to be a regular file but in this case it isn't. The argument is: $6"
     exit 3
 fi"""
