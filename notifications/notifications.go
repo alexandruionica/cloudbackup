@@ -139,7 +139,7 @@ func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType strin
 }
 
 // runs a Notification script
-func runScript (scriptEntry config.NotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
+func runScript(scriptEntry config.NotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
 	logger.Debugf("Running notification script '%s'", scriptEntry.Path)
 	reportFile, err := utils.SetupTmpFileWithContent([]byte(JobReport),"cloudbackup_job_report_notification_")
 	if err != nil {
