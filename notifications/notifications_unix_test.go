@@ -39,7 +39,7 @@ if [[ ! -f $6 ]]; then
 fi`
 
 func TestRunScript1(t *testing.T) {
-	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_scheduler_GenerateJobUuid_")
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
 	if err != nil {
 		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
 	}
@@ -54,7 +54,7 @@ func TestRunScript1(t *testing.T) {
 		t.Fatal("Running the notification script did not return an error despite the script not being executable")
 	}
 
-	err = os.Chmod(scriptPath, 0777)
+	err = os.Chmod(scriptPath, 0700)
 	if err != nil {
 		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
 	}
