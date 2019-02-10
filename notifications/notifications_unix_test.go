@@ -6,8 +6,11 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
+	"fmt"
 	"github.com/satori/go.uuid"
+	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -36,7 +39,8 @@ fi
 if [ ! -f "$6" ]; then
     echo "The sixth argument is supposed to be a regular file but in this case it isn't. The argument is: $6"
     exit 3
-fi`
+fi
+`
 
 func TestRunScript1(t *testing.T) {
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
@@ -56,7 +60,11 @@ func TestRunScript1(t *testing.T) {
 }
 
 func TestRunScript2(t *testing.T) {
-	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
+	// adjust test shell script to create a file if it was successful
+	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
+	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
+	testScript2 := testScript + fmt.Sprintf("echo $3 > %s", resultsFile)
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
 	if err != nil {
 		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
 	}
@@ -75,14 +83,32 @@ func TestRunScript2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Running the notification script returned error: %s", err)
 	}
+
+	_, err = os.Stat(resultsFile)
+	if err != nil {
+		t.Fatalf("Results file '%s' does not exist. Test shell script did not execute as expected", resultsFile)
+	}
+	result, err := ioutil.ReadFile(resultsFile)
+	if err != nil {
+		t.Fatalf("Could no read contents of results file '%s'", resultsFile)
+	}
+	if strings.TrimSpace(string(result)) != jobId {
+		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
+			resultsFile, jobId, strings.TrimSpace(string(result)))
+	}
 }
 
 func TestRunScript3(t *testing.T) {
-	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
+	// adjust test shell script to create a file if it was successful
+	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
+	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
+	testScript2 := testScript + fmt.Sprintf("echo $3 > %s", resultsFile)
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
 	if err != nil {
 		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+
 	scriptEntry := config.NotificationScript{
 		Path: scriptPath,
 		Type: []string{"finished"},
@@ -96,13 +122,20 @@ func TestRunScript3(t *testing.T) {
 	//  make sure all fields are populated
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "some report", "bla bla asdasd")
 	if err != nil {
-		t.Fatalf("2. Running the notification script returned error: %s", err)
+		t.Fatalf("Running the notification script returned error: %s", err)
 	}
 
-	//  test script should fail because the JobId value is not one of "backup", "restore", "purge"
-	err = runScript(scriptEntry, jobId, "somethingElse", "finished", "a_test_job", "some report", "bla bla asdasd")
-	if err == nil {
-		t.Fatal("Script should have failed but it didn't")
+	_, err = os.Stat(resultsFile)
+	if err != nil {
+		t.Fatalf("Results file '%s' does not exist. Test shell script did not execute as expected", resultsFile)
+	}
+	result, err := ioutil.ReadFile(resultsFile)
+	if err != nil {
+		t.Fatalf("Could no read contents of results file '%s'", resultsFile)
+	}
+	if strings.TrimSpace(string(result)) != jobId {
+		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
+			resultsFile, jobId, strings.TrimSpace(string(result)))
 	}
 }
 

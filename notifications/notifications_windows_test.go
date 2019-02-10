@@ -6,8 +6,11 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
+	"fmt"
 	"github.com/satori/go.uuid"
+	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -44,10 +47,11 @@ IF NOT EXIST "%6" (
 )
 
 echo end
-@echo on`
+@echo on
+`
 
 func TestRunScript1(t *testing.T) {
-	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_scheduler_GenerateJobUuid_")
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
 	if err != nil {
 		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
 	}
@@ -61,6 +65,24 @@ func TestRunScript1(t *testing.T) {
 	if err == nil {
 		t.Fatal("Running the notification script did not return an error despite the script not having the '.bat' file extension")
 	}
+}
+
+func TestRunScript2(t *testing.T) {
+	// adjust test shell script to create a file if it was successful
+	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
+	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
+	testScript2 := testScript + fmt.Sprintf("echo %%3 > %s", resultsFile)
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
+	if err != nil {
+		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+	scriptEntry := config.NotificationScript{
+		Path: scriptPath,
+		Type: []string{"finished"},
+	}
+	jobId := uuid.NewV4().String()
+	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
 	err = os.Rename(scriptPath, scriptPath + ".bat")
@@ -73,14 +95,88 @@ func TestRunScript1(t *testing.T) {
 	// leave some fields unpopulated
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 	if err != nil {
-		t.Fatalf("1. Running the notification script returned error: %s", err)
+		t.Fatalf("Running the notification script returned error: %s", err)
 	}
+
+	_, err = os.Stat(resultsFile)
+	if err != nil {
+		t.Fatalf("Results file '%s' does not exist. Test shell script did not execute as expected", resultsFile)
+	}
+	result, err := ioutil.ReadFile(resultsFile)
+	if err != nil {
+		t.Fatalf("Could no read contents of results file '%s'", resultsFile)
+	}
+	if strings.TrimSpace(string(result)) != jobId {
+		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
+			resultsFile, jobId, strings.TrimSpace(string(result)))
+	}
+}
+
+func TestRunScript3(t *testing.T) {
+	// adjust test shell script to create a file if it was successful
+	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
+	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
+	testScript2 := testScript + fmt.Sprintf("echo %%3 > %s", resultsFile)
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
+	if err != nil {
+		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+	scriptEntry := config.NotificationScript{
+		Path: scriptPath,
+		Type: []string{"finished"},
+	}
+	jobId := uuid.NewV4().String()
+	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
+
+	// ensure the file extension is .bat or otherwise execution will fail on windows
+	err = os.Rename(scriptPath, scriptPath + ".bat")
+	if err != nil {
+		t.Fatalf("Could not rename '%s' to '%s.bat'", scriptPath, scriptPath)
+	}
+	scriptPath = scriptPath + ".bat"
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
 	//  make sure all fields are populated
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "some report", "bla bla asdasd")
 	if err != nil {
-		t.Fatalf("2. Running the notification script returned error: %s", err)
+		t.Fatalf("Running the notification script returned error: %s", err)
 	}
+
+	_, err = os.Stat(resultsFile)
+	if err != nil {
+		t.Fatalf("Results file '%s' does not exist. Test shell script did not execute as expected", resultsFile)
+	}
+	result, err := ioutil.ReadFile(resultsFile)
+	if err != nil {
+		t.Fatalf("Could no read contents of results file '%s'", resultsFile)
+	}
+	if strings.TrimSpace(string(result)) != jobId {
+		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
+			resultsFile, jobId, strings.TrimSpace(string(result)))
+	}
+}
+
+func TestRunScript4(t *testing.T) {
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
+	if err != nil {
+		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+	scriptEntry := config.NotificationScript{
+		Path: scriptPath,
+		Type: []string{"finished"},
+	}
+	jobId := uuid.NewV4().String()
+	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
+
+	// ensure the file extension is .bat or otherwise execution will fail on windows
+	err = os.Rename(scriptPath, scriptPath + ".bat")
+	if err != nil {
+		t.Fatalf("Could not rename '%s' to '%s.bat'", scriptPath, scriptPath)
+	}
+	scriptPath = scriptPath + ".bat"
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
 	//  test script should fail because the JobId value is not one of "backup", "restore", "purge"
 	err = runScript(scriptEntry, jobId, "somethingElse", "finished", "a_test_job", "some report", "bla bla asdasd")
