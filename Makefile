@@ -15,12 +15,14 @@ COVERAGE_FILE=coverage.out
 
 # !!!! TABs MUST be tabs and not spaces; make does not like spaces instead of tabs !!!!
 all: test build
-build: 
+build:
+	@$(GOCMD) version
 	$(GOCMD) build -v
 test: testcp gotest gotestrace
 alltest: test build inttest
 # test coding practices
 testcp:
+	@$(GOCMD) version
 	@echo "############ Running: go vet - checking for suspicious constructs ############"
 	$(GOCMD) vet ./...
 	@echo "############ Running: errcheck - checking unhandled errors ############"
