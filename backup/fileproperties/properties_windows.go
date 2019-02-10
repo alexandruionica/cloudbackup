@@ -154,7 +154,7 @@ func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 
 	if dAcl == nil {
 		// debugmsg
-		logger.Info("'%s' doesn't have a DACL\n", path)
+		logger.Infof("'%s' doesn't have a DACL\n", path)
 		jsonPayload, err := json.Marshal(filePerm)
 		if err !=nil {
 			return filePerm.Owner.Name, "", ErrCouldNotJsonEncode
