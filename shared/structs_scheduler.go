@@ -89,6 +89,8 @@ type BackupJobStatus struct {
 	BackupJobId string `json:"job_id,omitempty"`
 	// - makes sense only for $State == "running"
 	StartTime time.Time `json:"start_time,omitempty"`
+	// time when job finished (or got cancelled, or failed)
+	EndTime time.Time `json:"end_time,omitempty"`
 	// bandwidth/second used during last 1/5/15 minute(s) - makes sense only for $State == "running" . This
 	// value is the lower of disk read bandwidth and the upload speed to the backend object store
 	Rate1Min             int64                    `json:"rate_1min"`

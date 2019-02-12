@@ -132,6 +132,7 @@ class TestCliAdvanced(unittest.TestCase):
         decoded = json.loads(result['result'].stdout.decode("utf-8"))
         # check elements match expectation
         expected_result = {
+            "end_time": "0001-01-01T00:00:00Z",
             "name": "first_backup",
             "state": "stopped",
             "start_time": "0001-01-01T00:00:00Z",
