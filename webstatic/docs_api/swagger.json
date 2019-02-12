@@ -767,7 +767,7 @@
         "prefix"
       ]
     },
-    "ResultBackupJobList": {
+    "ResultBackupJobStatus": {
       "type": "object",
       "properties": {
         "name": {
@@ -782,7 +782,12 @@
         "start_time": {
           "type": "string",
           "example": "2018-06-02T16:38:55.676712775+10:00",
-          "description": "A start time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored for jobs having \"state\"=\"stopped\""
+          "description": "A start time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored for jobs having \"state\"==\"stopped\""
+        },
+        "end_time": {
+          "type": "string",
+          "example": "0001-01-01T00:00:00Z",
+          "description": "An end time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored for jobs having \"state\"==\"stopped\" or \"state\"==\"running\""
         },
         "file_content_bytes_read": {
           "type": "integer",
@@ -812,7 +817,8 @@
         },
         "next_run": {
           "type": "string",
-          "example": "2018-06-03T16:38:55.676712775+10:00"
+          "example": "2018-06-03T16:38:55.676712775+10:00",
+          "description": "An end time time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored."
         },
         "job_id": {
           "type": "string",
@@ -1140,7 +1146,7 @@
         "result": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/ResultBackupJobList"
+            "$ref": "#/definitions/ResultBackupJobStatus"
           }
         }
       }

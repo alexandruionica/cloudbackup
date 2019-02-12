@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 const loggingContext = "client.notification"
@@ -200,6 +201,9 @@ func prepareHtmlEmail (emailTextBody []string, decodedJson shared.BackupJobStatu
 </style></head><body>` + fmt.Sprintf("\n")
 	result = header + "<b>" + strings.Join(emailTextBody,"<br>") +
 		fmt.Sprintf("</b>\n<hr>\n<table id='report' style='border-collapse:collapse;'\n")
+
+	result += tr + "Start time" + td + fmt.Sprintf("%s\n", decodedJson.StartTime)
+	result += tr + "Duration" + td + fmt.Sprintf("%s\n", decodedJson.EndTime.Sub(decodedJson.StartTime).Round(time.Second))
 
 	if len(decodedJson.ObjectStoreRates) < 2 {
 		result += tr + "1 minute rate:" + td  + humanize.Bytes(uint64(decodedJson.Rate1Min)) + "/s" + fmt.Sprintf("\n")

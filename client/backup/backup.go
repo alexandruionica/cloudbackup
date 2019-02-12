@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"bufio"
@@ -486,6 +487,7 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 	if decodedJson.State == "running"{
 		fmt.Printf("Job id: %s\n", decodedJson.BackupJobId)
 		fmt.Printf("Start time: %s\n", decodedJson.StartTime.String())
+		fmt.Printf("Duration so far: %s\n", time.Now().Sub(decodedJson.StartTime).Round(time.Second))
 		if len(decodedJson.ObjectStoreRates) < 2 {
 			fmt.Printf(" 1 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate1Min)))
 			fmt.Printf(" 5 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate5Min)))

@@ -363,6 +363,8 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 		}
 	}
 
+	jobStateCopy.EndTime = time.Now()
+
 	jobStateCopy.State = "finished"
 	if cancelled {
 		jobStateCopy.State = "cancelled"
