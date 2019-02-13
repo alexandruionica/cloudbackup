@@ -504,7 +504,7 @@ definitions:
         type: string
         example: /usr/local/bin/trigger_monitoring.sh
         description: >-
-          Path of script to run. The script must exist or otherwise the backup server will refuse to start.
+          Path of script to run. The script must exist or otherwise the backup server will refuse to start. On Unix like operating systems the user executing the script must have execute rights on the script (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply the path to an executable instead of a script. The script (or executable) will be passed the following six parameters: JobType, JobName, JobId, JobState, JobError, reportFile . The last parameter will be a path to a  plain text file containing a JSON encoded string. For a full description of the JSON structure please check the "ResultBackupJobStatus" model.
       type:
         type: array
         items:
