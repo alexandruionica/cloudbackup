@@ -139,23 +139,23 @@ notification:
       #   require authentication 
       user: my.backup.email27@gmail.com
       pass: 'A_HARD_TO_GUESS_PASSWORD'
-  # if the "script" block is specified then at least one entry needs to exist
-  script:
-      # absolute path to script. On Unix like operating systems the user executing the script must have execute rights 
-      #  on the script (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply 
-      #  the path to an executable instead of a script. The script (or executable) will be passed the following six 
-      #  parameters: JobType, JobName, JobId, JobState, JobError, reportFile . The last parameter will be a path to a 
-      #  plain text file containing a JSON encoded string. For a full description of the JSON structure please check 
-      #  the documentation for the HTTP API and look at the "ResultBackupJobStatus" model.
-    - path: /usr/local/bin/custom_hook.sh
-      # for what events to call the script (for this script definition block; other blocks can have different settings)
-      # If unspecified, it defaults to "failed" and "crashed"
-      type:
-        - started
-        - finished
-        - failed
-        - cancelled
-        - crashed
+#  # if the "script" block is specified then at least one entry needs to exist
+#  script:
+#      # absolute path to script. On Unix like operating systems the user executing the script must have execute rights 
+#      #  on the script (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply 
+#      #  the path to an executable instead of a script. The script (or executable) will be passed the following six 
+#      #  parameters: JobType, JobName, JobId, JobState, JobError, reportFile . The last parameter will be a path to a 
+#      #  plain text file containing a JSON encoded string. For a full description of the JSON structure please check 
+#      #  the documentation for the HTTP API and look at the "ResultBackupJobStatus" model.
+#    - path: /usr/local/bin/custom_hook.sh
+#      # for what events to call the script (for this script definition block; other blocks can have different settings)
+#      # If unspecified, it defaults to "failed" and "crashed"
+#      type:
+#        - started
+#        - finished
+#        - failed
+#        - cancelled
+#        - crashed
 `
 
 const SampleClientYamlConfig = `---
