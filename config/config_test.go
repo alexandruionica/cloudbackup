@@ -1,12 +1,13 @@
 package config
 
 import (
-	"testing"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"os"
 	"reflect"
+	"runtime"
 	"sync"
+	"testing"
 )
 
 // test loading config file with regular reporting from configor library
@@ -859,6 +860,232 @@ func TestValidate27(t *testing.T) {
 	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
 	if err != nil {
 		t.Fatal("Config file should have loaded successfully but didn't despite rate limit being valid")
+	}
+}
+
+
+// PostRunScript fails because the script doesn't exist
+func TestValidate28(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	scriptPath := testutils.GenerateTmpFilePath("TestValidate28_missing_file_", ".sh")
+	result.Config.Backup[0].PostRunScript = scriptPath
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatalf("Validate() reports that config file loaded successfully; but shouldn't have because " +
+			"'PostRunScript' '%s' does not exist", scriptPath)
+	}
+
+	err = ValidateBackup(result.Config.Backup, true)
+	if err == nil {
+		t.Fatalf("ValidateBackup() reports that config file loaded successfully; but shouldn't have because " +
+			"'PostRunScript' '%s' does not exist", scriptPath)
+	}
+
+	err = ValidatePrePostRunScript(scriptPath, "post", "test_backup", true)
+	if err == nil {
+		t.Fatalf("ValidatePrePostRunScript() reports that '%s' exists despite it not", scriptPath)
+	}
+
+	err = isExecutable(scriptPath)
+	if runtime.GOOS != "windows" {
+		if err == nil {
+			t.Fatalf("isExecutable() reports that '%s' is executable despite it not even existing", scriptPath)
+		}
+	}
+}
+
+// PreRunScript fails because the script doesn't exist
+func TestValidate29(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	scriptPath := testutils.GenerateTmpFilePath("TestValidate29_missing_file_", ".sh")
+	result.Config.Backup[0].PreRunScript = scriptPath
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatalf("Validate() reports that config file loaded successfully; but shouldn't have because " +
+			"'PreRunScript' '%s' does not exist", scriptPath)
+	}
+
+	err = ValidateBackup(result.Config.Backup, true)
+	if err == nil {
+		t.Fatalf("ValidateBackup() reports that config file loaded successfully; but shouldn't have because " +
+			"'PreRunScript' '%s' does not exist", scriptPath)
+	}
+
+	err = ValidatePrePostRunScript(scriptPath, "pre", "test_backup", true)
+	if err == nil {
+		t.Fatalf("ValidatePrePostRunScript() reports that '%s' exists despite it not", scriptPath)
+	}
+
+	err = isExecutable(scriptPath)
+	if runtime.GOOS != "windows" {
+		if err == nil {
+			t.Fatalf("isExecutable() reports that '%s' is executable despite it not even existing", scriptPath)
+		}
+	}
+}
+
+// PostRunScript fails because the script doesn't exist
+func TestValidate30(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	var scriptPath string
+	if runtime.GOOS == "windows" {
+		scriptPath = testutils.GenerateTmpFilePath("TestValidate30_existing_file_", ".ps1")
+	} else {
+		scriptPath = testutils.GenerateTmpFilePath("TestValidate30_existing_file_", ".sh")
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+
+	f, err := os.Create(scriptPath)
+	if err != nil {
+		t.Fatalf("Could not create file %s", scriptPath)
+	}
+	defer func(){
+		_ = f.Close() // #nosec
+	}()
+	if _, err := f.Write([]byte("some content")); err != nil {
+		t.Fatalf("Could not write to %s", scriptPath)
+	}
+
+	err = isExecutable(scriptPath)
+	if runtime.GOOS != "windows" {
+		if err == nil {
+			t.Fatalf("isExecutable() should have reported an error as %s is not executable; but it didn't",
+				scriptPath)
+		}
+	}
+
+	// make ScriptPath executable and repeat test; on Windows it's not needed (or supported to make executable)
+	if runtime.GOOS != "windows" {
+		err = os.Chmod(scriptPath, 0700)
+		if err != nil {
+			t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
+		}
+	}
+	err = isExecutable(scriptPath)
+	if err != nil {
+		t.Fatalf("isExecutable() produced error while evaluation %s but it was expected to have the execute bit" +
+			" set. The reported error was: %s", scriptPath, err)
+	}
+
+	result.Config.Backup[0].PostRunScript = scriptPath
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatalf("Validate() reports that config file did not load successfully due to err: %s", err)
+	}
+
+	err = ValidateBackup(result.Config.Backup, true)
+	if err != nil {
+		t.Fatalf("ValidateBackup() reports that config file did not load successfully due to err: %s", err)
+	}
+
+	err = ValidatePrePostRunScript(scriptPath, "post", "test_backup", true)
+	if err != nil {
+		t.Fatalf("ValidatePrePostRunScript() errored with: %s", err)
+	}
+}
+
+// PreRunScript fails because the script doesn't exist
+func TestValidate31(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result , err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+	var scriptPath string
+	if runtime.GOOS == "windows" {
+		scriptPath = testutils.GenerateTmpFilePath("TestValidate31_existing_file_", ".ps1")
+	} else {
+		scriptPath = testutils.GenerateTmpFilePath("TestValidate31_existing_file_", ".sh")
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+
+	f, err := os.Create(scriptPath)
+	if err != nil {
+		t.Fatalf("Could not create file %s", scriptPath)
+	}
+	defer func(){
+		_ = f.Close() // #nosec
+	}()
+	if _, err := f.Write([]byte("some content")); err != nil {
+		t.Fatalf("Could not write to %s", scriptPath)
+	}
+
+	err = isExecutable(scriptPath)
+	if runtime.GOOS != "windows" {
+		if err == nil {
+			t.Fatalf("isExecutable() should have reported an error as %s is not executable; but it didn't",
+				scriptPath)
+		}
+	}
+
+	// make ScriptPath executable and repeat test; on Windows it's not needed (or supported to make executable)
+	if runtime.GOOS != "windows" {
+		err = os.Chmod(scriptPath, 0700)
+		if err != nil {
+			t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
+		}
+	}
+
+	err = isExecutable(scriptPath)
+	if err != nil {
+		t.Fatalf("isExecutable() produced error while evaluation %s but it was expected to have the execute bit" +
+			" set. The reported error was: %s", scriptPath, err)
+	}
+
+	result.Config.Backup[0].PreRunScript = scriptPath
+	err = Validate(result.Config, false)
+	if err != nil {
+		t.Fatalf("Validate() reports that config file did not load successfully due to err: %s", err)
+	}
+
+	err = ValidateBackup(result.Config.Backup, true)
+	if err != nil {
+		t.Fatalf("ValidateBackup() reports that config file did not load successfully due to err: %s", err)
+	}
+
+	err = ValidatePrePostRunScript(scriptPath, "pre", "test_backup", true)
+	if err != nil {
+		t.Fatalf("ValidatePrePostRunScript() errored with: %s", err)
 	}
 }
 

@@ -92,7 +92,7 @@ func TestRunScript2(t *testing.T) {
 	}
 	result, err := ioutil.ReadFile(resultsFile)
 	if err != nil {
-		t.Fatalf("Could no read contents of results file '%s'", resultsFile)
+		t.Fatalf("Could not read contents of results file '%s'", resultsFile)
 	}
 	if strings.TrimSpace(string(result)) != jobId {
 		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
@@ -134,7 +134,7 @@ func TestRunScript3(t *testing.T) {
 	}
 	result, err := ioutil.ReadFile(resultsFile)
 	if err != nil {
-		t.Fatalf("Could no read contents of results file '%s'", resultsFile)
+		t.Fatalf("Could not read contents of results file '%s'", resultsFile)
 	}
 	if strings.TrimSpace(string(result)) != jobId {
 		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
@@ -142,7 +142,7 @@ func TestRunScript3(t *testing.T) {
 	}
 }
 
-// test we properly pass the JobType paramter to the script (and that it fails when we send it garbage instead of a JobType)
+// test we properly pass the JobType parameter to the script (and that it fails when we send it garbage instead of a JobType)
 func TestRunScript4(t *testing.T) {
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
 	if err != nil {

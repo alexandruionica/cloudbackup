@@ -104,7 +104,7 @@ func TestRunScript2(t *testing.T) {
 	}
 	result, err := ioutil.ReadFile(resultsFile)
 	if err != nil {
-		t.Fatalf("Could no read contents of results file '%s'", resultsFile)
+		t.Fatalf("Could not read contents of results file '%s'", resultsFile)
 	}
 	if strings.TrimSpace(string(result)) != jobId {
 		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
@@ -149,7 +149,7 @@ func TestRunScript3(t *testing.T) {
 	}
 	result, err := ioutil.ReadFile(resultsFile)
 	if err != nil {
-		t.Fatalf("Could no read contents of results file '%s'", resultsFile)
+		t.Fatalf("Could not read contents of results file '%s'", resultsFile)
 	}
 	if strings.TrimSpace(string(result)) != jobId {
 		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
