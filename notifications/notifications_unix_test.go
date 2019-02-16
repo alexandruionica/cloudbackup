@@ -42,6 +42,7 @@ if [ ! -f "$6" ]; then
 fi
 `
 
+// test with script which has not the execute bit set (should fail)
 func TestRunScript1(t *testing.T) {
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
 	if err != nil {
@@ -59,6 +60,7 @@ func TestRunScript1(t *testing.T) {
 	}
 }
 
+// test with script having execute bit set (should work) ; leave some fields unpopulated when calling the script
 func TestRunScript2(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
 	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
@@ -98,6 +100,7 @@ func TestRunScript2(t *testing.T) {
 	}
 }
 
+// test with script having execute bit set (should work) ; ensure all fields are populated when calling the script
 func TestRunScript3(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
 	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
@@ -139,6 +142,7 @@ func TestRunScript3(t *testing.T) {
 	}
 }
 
+// test we properly pass the JobType paramter to the script (and that it fails when we send it garbage instead of a JobType)
 func TestRunScript4(t *testing.T) {
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
 	if err != nil {
@@ -155,7 +159,7 @@ func TestRunScript4(t *testing.T) {
 		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
 	}
 
-	//  test script should fail because the JobId value is not one of "backup", "restore", "purge"
+	//  test script should fail because the JobType value is not one of "backup", "restore", "purge"
 	err = runScript(scriptEntry, jobId, "somethingElse", "finished", "a_test_job", "some report", "bla bla asdasd")
 	if err == nil {
 		t.Fatal("Script should have failed but it didn't")

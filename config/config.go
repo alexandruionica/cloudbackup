@@ -1,22 +1,20 @@
 package config
 
 import (
+	"cloudbackup/database"
 	"cloudbackup/utils"
+	"errors"
 	"fmt"
 	"github.com/dustin/go-humanize"
-	log "github.com/sirupsen/logrus"
-	"sync"
 	"github.com/jinzhu/configor"
-	"errors"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/utf8string"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
-    "unicode/utf8"
-	yaml "gopkg.in/yaml.v2"
-	"io/ioutil"
-	"cloudbackup/database"
-    "golang.org/x/exp/utf8string"
-
-
+	"sync"
+	"unicode/utf8"
 )
 
 const loggingContext = "config"
@@ -55,6 +53,9 @@ type Backup struct {
 	VersionsMaxNum uint `default:"0" yaml:"versions_max_num" json:"versions_max_num"`
 	// 0 means unlimited number of age
 	VersionsMaxAge string `default:"0" yaml:"versions_max_age" json:"versions_max_age"`
+	//
+	PreRunScript string  `yaml:"pre_run_script" json:"pre_run_script"`
+	PostRunScript string `yaml:"post_run_script" json:"post_run_script"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
@@ -349,12 +350,51 @@ func ValidateBackup(backups []Backup, logError bool) error {
 			//return errors.New(msg)
 		}
 
+		if backup.PreRunScript != "" {
+			err := ValidatePrePostRunScript(backup.PreRunScript, "pre", backup.Name, logError)
+			if err != nil {
+				return err
+			}
+		}
+
+		if backup.PostRunScript != "" {
+			err := ValidatePrePostRunScript(backup.PostRunScript, "post", backup.Name, logError)
+			if err != nil {
+				return err
+			}
+		}
+
 		err := ValidateBackupTarget(backup.Target, logError, backup.Name)
 		if err != nil {
 			return err
 		}
 		i+=1
 	}
+	return nil
+}
+
+// checks if a mentioned script (or binary) file exists and on Unixes also that it's executable
+// $scriptType is expected to be one of "pre" or "post" (for PreRun and PostRun script)
+func ValidatePrePostRunScript(path string, scriptType string, backupName string, logError bool) error {
+	if _, err := utils.FileExists(path, true); err != nil {
+		msg := fmt.Sprintf("When validating the existence of %s run script '%s' belonging to backup job '%s' " +
+			"the following error ocurred: %s", scriptType, path, backupName, err)
+		if logError{
+			logger.Error(msg)
+		}
+		return err
+	}
+
+	err := isExecutable(path)
+	if err != nil {
+		msg := fmt.Sprintf("Encountered the following error when checking if %s run script '%s', belonging to " +
+			"backup job '%s' is executable: %s", scriptType, path, backupName, err)
+		if logError{
+			logger.Error(msg)
+		}
+		return errors.New(msg)
+	}
+
 	return nil
 }
 
