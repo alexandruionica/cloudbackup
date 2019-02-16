@@ -153,7 +153,7 @@ func runScript(scriptEntry config.NotificationScript, JobId string, JobType stri
 	cmd := exec.Command(scriptEntry.Path, JobType, JobName, JobId, JobState, JobError, reportFile) // #nosec
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
-		msg := fmt.Sprintf("While trying to execute notification script '%s', encountered error: %s\nScript " +
+		msg := fmt.Sprintf("While executing notification script '%s', encountered error: %s\nScript " +
 			"output was: %s", scriptEntry.Path, err, stdoutStderr)
 		logger.Error(msg)
 		return errors.New(msg)

@@ -8,8 +8,10 @@ import (
 	"cloudbackup/utils"
 	"context"
 	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
+	"os/exec"
 	"time"
 )
 
@@ -442,4 +444,20 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 			logger.Errorf("Tried to update counters for operation of type '%s' during a backup having name '%s' " +
 				"for object '%s'. This is bug, please report it.", operationType, backupName, path)
 	}
+}
+
+// runs a PreRunScript or a PostRunScript
+func RunPrePostScript(path string, scriptType string, backupName string, jobId string) error {
+	logger.Debugf("Running %s_run_script '%s'", scriptType, path)
+	logger.Debugf("Running (without the single quotes): '%s' '%s'", path, jobId)
+	cmd := exec.Command(path, jobId) // #nosec
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		msg := fmt.Sprintf("While executing %s_run_script '%s', encountered error: %s\nScript " +
+			"output was: %s", scriptType, path, err, stdoutStderr)
+		logger.Error(msg)
+		return errors.New(msg)
+	}
+	// if we got here, all was good
+	return nil
 }
