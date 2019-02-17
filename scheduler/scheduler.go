@@ -213,7 +213,7 @@ func processBackupCommand (receivedBackupCommand shared.ReceiveBackupCommand, ba
 	}
 }
 
-// TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
+// TODO - figure out how to deal with the SQL connection sharing
 func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	backupJobsState *shared.BackupJobsState){
 	globals.Stats.IncrementRoutines("runBackup")
@@ -225,13 +225,12 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	serverConfigCopy.Mutex.RLock()
 	for _, backup := range serverConfigCopy.Backup {
 		if backup.Name == name{
-			backupConfig = backup
+			// deep copy
+			backupConfig = config.CopyBackupStruct(backup)
 			break
 		}
 	}
 	serverConfigCopy.Mutex.RUnlock()
-
-	// TODO - update some status report object and pass it to scan.Path()
 
 	ctx, err := backupJobsState.GetContextForJob(name, jobUuid)
 	// if we got an error than something else has already marked the backup job as != "running"
@@ -248,7 +247,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	dbData.Db, err = database.Start(serverConfigCopy.DataDir, name)
 	// the backup can not run as we can't initialise/connect to the database
 	if err != nil {
-		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
 	} else {
@@ -260,7 +258,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// the backup can not run as we can't ensure the database has the needed data before we commence
 	// comparing/adding/updating entries about files
 	if err != nil {
-		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
 	}
@@ -268,7 +265,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// get DB prepared statements for the most common operations
 	dbData.PreparedStatements, err = dbops.Prepare(dbData.Db)
 	if err != nil {
-		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
 	}
@@ -276,7 +272,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// get Job start time
 	jobStartTime, err := backupJobsState.GetStartTime(name, jobUuid, loggingContext + ".runBackup")
 	if err != nil {
-		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
 	}
@@ -284,7 +279,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// add entry to "jobs" DB table
 	err = dbops.AddJobDetails(dbData.Db, jobUuid, name, "backup", jobStartTime)
 	if err != nil {
-		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
 	}
@@ -292,7 +286,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// get object stores used for backing up files for this job
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
-		// TODO - mark the backup as failed (failed to/during? start)
 		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
 	}
