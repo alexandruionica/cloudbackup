@@ -303,6 +303,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		StatsText: map[string]string{
 			"current_directory": "",
 			"current_file": "",
+			"current_operation": "",
 		},
 		Ctx:      ctx,
 		Cancel:   cancel,

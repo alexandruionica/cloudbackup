@@ -566,6 +566,14 @@ definitions:
       versions_max_age:
         type: string
         example: 10w
+      pre_run_script:
+        type: string
+        example: "/usr/local/bin/create_database_snapshot.sh"
+        description: Script to run before commencing to backup files. The script must exist or otherwise the backup server will refuse to start. On Unix like operating systems the user executing the script must have execute rights on the script (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply the path to an executable instead of a script. The script (or executable) will be passed only one argument, the job id (which is an uuid). If the script has an exit code different than 0 then it will be considered to have failed and the whole backup job will be cancelled and considered failed. Also an error will be logged together with the combined standard output and standard error of the said script. You should keep in mind that the standard output and standard error of the scripts are gathered by the backup server so if their output is large, it will increase memory usage.
+      post_run_script:
+        type: string
+        example: "/usr/local/bin/remove_volume_shadow_copy.ps1"
+        description: Script to run after backing up of files is done. The script must exist or otherwise the backup server will refuse to start. On Unix like operating systems the user executing the script must have execute rights on the script (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply the path to an executable instead of a script. The script (or executable) will be passed only one argument, the job id (which is an uuid). If the script has an exit code different than 0 then it will be considered to have failed and an error will be logged together with the combined standard output and standard error of the said script. You should keep in mind that the standard output and standard error of the scripts are gathered by the backup server so if their output is large, it will increase memory usage.
     required:
       - name
       - paths
