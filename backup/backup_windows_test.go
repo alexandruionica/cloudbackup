@@ -26,7 +26,14 @@ IF /I "%argC%" NEQ "1" (
 @echo on
 `
 
-// test PreRunScript having execute bit set (should work)
+const testScript2 = `if ( $args.Count -ne 1 ) {
+    Write-Host "You passed $($args.Count) arguments but only 1 was expected. Arguments passed(one per line):"
+    $args | Write-Host
+    exit 1
+}
+`
+
+// test PreRunScript with a Windows Batch file
 func TestRunPrePostScript1(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
 	resultsFile := testutils.GenerateTmpFilePath("unittest_backup_", "")
@@ -39,7 +46,7 @@ func TestRunPrePostScript1(t *testing.T) {
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
 	jobId := uuid.NewV4().String()
-	// ensure the file extension is .bat or otherwise execution will fail on windows
+	// ensure the file extension is .bat or otherwise execution will fail on Windows
 	err = os.Rename(scriptPath, scriptPath + ".bat")
 	if err != nil {
 		t.Fatalf("Could not rename '%s' to '%s.bat'", scriptPath, scriptPath)
@@ -67,12 +74,12 @@ func TestRunPrePostScript1(t *testing.T) {
 	}
 }
 
-// test PostRunScript having execute bit set (should work)
+// test PostRunScript with a Powershell script
 func TestRunPrePostScript2(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
 	resultsFile := testutils.GenerateTmpFilePath("unittest_backup_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
-	testScript2 := testScript + fmt.Sprintf("echo %%1 > %s", resultsFile)
+	testScript2 := testScript2 + fmt.Sprintf("$args[0] | Out-File -Encoding ASCII -FilePath %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
 	if err != nil {
 		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
@@ -80,12 +87,12 @@ func TestRunPrePostScript2(t *testing.T) {
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
 	jobId := uuid.NewV4().String()
-	// ensure the file extension is .bat or otherwise execution will fail on windows
-	err = os.Rename(scriptPath, scriptPath + ".bat")
+	// ensure the file extension is .ps1 or otherwise execution will fail on Windows
+	err = os.Rename(scriptPath, scriptPath + ".ps1")
 	if err != nil {
-		t.Fatalf("Could not rename '%s' to '%s.bat'", scriptPath, scriptPath)
+		t.Fatalf("Could not rename '%s' to '%s.ps1'", scriptPath, scriptPath)
 	}
-	scriptPath = scriptPath + ".bat"
+	scriptPath = scriptPath + ".ps1"
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
 	err = RunPrePostScript(scriptPath, "post", "backup1", jobId)
