@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"cloudbackup/backup"
 	"cloudbackup/backup/scan"
 	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
@@ -16,6 +17,7 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"strings"
 	"sync"
 	"time"
 )
@@ -223,10 +225,10 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	// extract config for this backup job only
 	var backupConfig config.Backup
 	serverConfigCopy.Mutex.RLock()
-	for _, backup := range serverConfigCopy.Backup {
-		if backup.Name == name{
+	for _, backupObject := range serverConfigCopy.Backup {
+		if backupObject.Name == name{
 			// deep copy
-			backupConfig = config.CopyBackupStruct(backup)
+			backupConfig = config.CopyBackupStruct(backupObject)
 			break
 		}
 	}
@@ -292,6 +294,21 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 
 	// give "watch" clients a chance to connect before the backup starts emitting events
 	time.Sleep(1 * time.Second)
+	// run pre-backup script
+	if strings.TrimSpace(backupConfig.PreRunScript) != "" {
+		// TODO - send an event over to the watchers that the script is running (will have to implement it probably
+		//  in UpdateStatsText()
+		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation",
+			fmt.Sprintf("Running pre_run_script %s", backupConfig.PreRunScript), "", "")
+		err := backup.RunPrePostScript(backupConfig.PreRunScript, "pre", backupConfig.Name, jobUuid)
+		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
+		if err != nil {
+			cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
+			// TODO - increment some counter when the script failed
+			return
+		}
+	}
+	backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "Examining and backing up", "", "")
 	// examine each path listed and backup contained files/directories if needed
 	for _, path := range backupConfig.Paths {
 		select {
@@ -316,6 +333,16 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		}
 	}
+	// run post-backup script
+	if strings.TrimSpace(backupConfig.PostRunScript) != "" {
+		// TODO - send an event over to the watchers that the script is running (will have to implement it probably
+		//  in UpdateStatsText()
+		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation",
+			fmt.Sprintf("Running post_run_script %s", backupConfig.PostRunScript), "", "")
+		_ = backup.RunPrePostScript(backupConfig.PostRunScript, "post", backupConfig.Name, jobUuid) // #nosec
+		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
+		// TODO - increment some counter when the script failed
+	}
 	cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, nil)
 }
 
@@ -331,6 +358,8 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 	} else {
 		cancel()
 	}
+
+	backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
 
 	// set state to "stopping"; ignore any errors (job may be set to state "stopping" already if stop was requested
 	//  via the API but stop can also be triggered due to SIGTERM/SIGINT being received
@@ -423,8 +452,8 @@ func stopAllBackups (backupJobsState *shared.BackupJobsState, serverConfigCopy c
 		serverConfigCopy.Mutex.RLock()
 		log.WithFields(log.Fields{"context": loggingContext + ".stopAllBackups"}).Debug("Acquiring read lock " +
 			"before reading the copy of the server config struct")
-		for _, backup := range serverConfigCopy.Backup {
-			if backup.Name == job.Name{
+		for _, backupObject := range serverConfigCopy.Backup {
+			if backupObject.Name == job.Name{
 				// this is a non blocking call
 				signalBackupToStop(job.Cancel, job.Name, job.BackupJobId)
 				break
