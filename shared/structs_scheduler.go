@@ -274,7 +274,8 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		State: "running",
 		BackupJobId: BackupJobId,
 		StartTime: time.Now(),
-		// init statistics related fields
+		// init statistics related fields ; IF ANY NEW ENTRY IS ADDED BELOW THEN REVISIT AT LEAST METHOD
+		// IncrementCounter() AND SEE IF SAID ADDITION NEEDS TO BE EXCLUDED FROM BEING SEND TO WATCHERS
 		StatsCounters: map[string]uint64{
 			"examined_files": 0,
 			"examined_directories": 0,
@@ -299,6 +300,8 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"failed_to_update_metadata_for_files": 0,
 			"failed_to_update_metadata_for_directories": 0,
 			"failed_to_update_metadata_for_symlinks": 0,
+			// pre_run / post_run scripts which have failed will each increment once this counter
+			"scripts_failed": 0,
 		},
 		StatsText: map[string]string{
 			"current_directory": "",
@@ -387,7 +390,7 @@ func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName 
 			// don't send a message to the multiplexer for the below $counterName
 			switch counterName {
 				case
-					"examined_files", "examined_directories", "examined_symlinks",  "examined_unknown":
+					"examined_files", "examined_directories", "examined_symlinks",  "examined_unknown", "scripts_failed":
 						break MainLoop
 			}
 			// if this is a file, and no errors were encountered and this was a content upload then don't send a
