@@ -909,6 +909,11 @@
               "description": "How many unordinary files produced irrecoverable errors  during the upload so far during the run of this backup job. This  implies said unordinary were not successfuly backed up. An attempt to backup an unordinary file will always lead to a failure to upload. Examples of unoridinary files are sockets, device files (/dev/zero), etc. Unoridinary files should be excluded from backup. Check the logs in order to find out which files were found.",
               "example": 11
             },
+            "scripts_failed": {
+              "type": "integer",
+              "description": "How many user supplied scripts failed. This includes pre_run_script, post_run_script and notification scripts and for each of those failing the counter will be incremented. A failure means that the script had a non 0 exit status. In notification reports (sent via e-mail or passed to notification scripts) the value of this counter will exclude any failures raised by notification scripts themselves.",
+              "example": 0
+            },
             "updated_metadata_for_files": {
               "type": "integer",
               "description": "How many files were detected to have had a properties change but their content itself was not changed so a metadata only updated was done as part of this backup run.",

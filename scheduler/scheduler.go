@@ -410,9 +410,15 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 		backupJobErrorMsg = backupError.Error()
 	}
 
-	err = notifications.Execute(serverConfigCopy, jobUuid, "backup", jobStateCopy.State, name, jobReport, backupJobErrorMsg)
+	failedScripts, err := notifications.Execute(serverConfigCopy, jobUuid, "backup", jobStateCopy.State, name, jobReport, backupJobErrorMsg)
 	if err != nil {
 		logger.Warningf("At least an error was encountered while trying to send notifications: %s", err)
+	}
+	if failedScripts > 0 {
+		jobStateCopy.StatsCounters["scripts_failed"] += uint64(failedScripts)
+		for i := 0; i < failedScripts; i++ {
+			backupJobsState.IncrementCounter(backupConfig.Name, "scripts_failed", "", "", "", "")
+		}
 	}
 	// set state to "stopped"
 	err = backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup",

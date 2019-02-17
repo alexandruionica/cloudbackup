@@ -33,8 +33,9 @@ func GetNumNotificators (notificationDefs config.Notification) int {
 // "crashed" and "test" ("test" is supposed to be used only when it is tested that notifications deliver as expected)
 // $JobName will be non empty only for backup jobs and it represents the name of the job corresponding to the "backup"
 // entry in the config file; JobReport is a JSON encoded string specific to each job type
-func Execute(config config.CfgTemplate, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
-	numErrors, numNotificators := 0, 0
+// Returns: the number of scripts which failed to run; an error object
+func Execute(config config.CfgTemplate, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) (int, error) {
+	numErrors, numNotificators, failedScripts := 0, 0, 0
 	totalErrors := ""
 	for _, emailEntry := range config.Notifications.Email {
 		numNotificators += 1
@@ -50,15 +51,16 @@ func Execute(config config.CfgTemplate, JobId string, JobType string, JobState s
 		err := runScript(scriptEntry, JobId, JobType, JobState, JobName, JobReport, JobError)
 		if err != nil {
 			numErrors += 1
+			failedScripts += 1
 			totalErrors = totalErrors + err.Error() + "; "
 		}
 	}
 	if numErrors > 0 {
-		return errors.New(fmt.Sprintf("%d notification definitions were run and %d encountered errors. The " +
-			"errors were: %s", numNotificators, numErrors, totalErrors))
+		return failedScripts, errors.New(fmt.Sprintf("%d notification definitions were run and %d encountered " +
+			"errors. The errors were: %s", numNotificators, numErrors, totalErrors))
 	}
 	// if we got here then all was good
-	return nil
+	return failedScripts, nil
 }
 
 // Sends one email ...

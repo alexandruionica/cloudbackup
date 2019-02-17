@@ -26,7 +26,7 @@ func (srvSrc SrvData) handlerPostNotificationTest(w http.ResponseWriter, r *http
 	}
 
 	jobId := uuid.NewV4().String()
-	err := notifications.Execute(configCopy, jobId, "backup", "test", "notifications_test", "", "")
+	_, err := notifications.Execute(configCopy, jobId, "backup", "test", "notifications_test", "", "")
 	if err != nil {
 		JSONError(w, 500, HttpErrInternalServerError, err.Error())
 		return

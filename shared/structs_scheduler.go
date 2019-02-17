@@ -78,7 +78,7 @@ func (comm *CommWithSchedulerForBackup) Init () {
 	comm.Shutdown = make(chan bool)
 }
 
-// any changes to this struct may need also an update in *BackupJobsState.Get() method as this does a deep copy like
+// ANY CHANGES TO THIS STRUCT MAY NEED ALSO AN UPDATE in *BackupJobsState.Get() method as this does a deep copy like
 // operation (without reflection so manual care needs to be taken in order to update the method)
 type BackupJobStatus struct {
 	// name of the backup job as it was defined in the configuration file at job start (things may have changed after)
@@ -178,6 +178,10 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 		for k,v := range job.StatsText {
 			jobCopy.StatsText[k] = v
 		}
+		// copy ObjectStore rate slice
+		jobCopy.ObjectStoreRates = make([]ObjectStoreRate, len(job.ObjectStoreRates))
+		copy(jobCopy.ObjectStoreRates, job.ObjectStoreRates)
+		//
 		result = append(result, jobCopy)
 		runningList[job.Name] = job.Name
 		// copy ObjectStoreRates slice - unexported struct members should not cause issues with uses of the copy
