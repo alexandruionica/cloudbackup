@@ -13,6 +13,8 @@ import (
 	"net/smtp"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -152,7 +154,15 @@ func runScript(scriptEntry config.NotificationScript, JobId string, JobType stri
 	}
 	logger.Debugf("Running (without the single quotes): '%s' '%s' '%s' '%s' '%s' '%s' '%s'", scriptEntry.Path,
 		JobType, JobName, JobId, JobState, JobError, reportFile)
-	cmd := exec.Command(scriptEntry.Path, JobType, JobName, JobId, JobState, JobError, reportFile) // #nosec
+	var cmd *exec.Cmd
+	// on Windows, to run Powershell scripts, you need to call powershell.exe itself
+	if strings.ToLower(filepath.Ext(scriptEntry.Path)) == ".ps1" && runtime.GOOS == "windows" {
+		cmd = exec.Command("powershell.exe", "-File", scriptEntry.Path, JobType, JobName, JobId, JobState,
+			JobError, reportFile) // #nosec
+	} else {
+		cmd = exec.Command(scriptEntry.Path, JobType, JobName, JobId, JobState, JobError, reportFile) // #nosec
+	}
+
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		msg := fmt.Sprintf("While executing notification script '%s', encountered error: %s\nScript " +

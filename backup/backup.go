@@ -12,6 +12,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -450,7 +453,13 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 func RunPrePostScript(path string, scriptType string, backupName string, jobId string) error {
 	logger.Debugf("Running %s_run_script '%s'", scriptType, path)
 	logger.Debugf("Running (without the single quotes): '%s' '%s'", path, jobId)
-	cmd := exec.Command(path, jobId) // #nosec
+	var cmd *exec.Cmd
+	// on Windows, to run Powershell scripts, you need to call powershell.exe itself
+	if strings.ToLower(filepath.Ext(path)) == ".ps1" && runtime.GOOS == "windows" {
+		cmd = exec.Command("powershell.exe", "-File", path, jobId) // #nosec
+	} else {
+		cmd = exec.Command(path, jobId) // #nosec
+	}
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		msg := fmt.Sprintf("While executing %s_run_script '%s', encountered error: %s\nScript " +

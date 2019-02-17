@@ -50,6 +50,13 @@ echo end
 @echo on
 `
 
+const testScriptPowershell = `if ( $args.Count -ne 6 ) {
+    Write-Host "You passed $($args.Count) arguments but only 6 were expected. Arguments passed(one per line):"
+    $args | Write-Host
+    exit 1
+}
+`
+
 func TestRunScript1(t *testing.T) {
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript), "unittest_notifications_")
 	if err != nil {
@@ -82,7 +89,6 @@ func TestRunScript2(t *testing.T) {
 		Type: []string{"finished"},
 	}
 	jobId := uuid.NewV4().String()
-	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
 	err = os.Rename(scriptPath, scriptPath + ".bat")
@@ -127,7 +133,6 @@ func TestRunScript3(t *testing.T) {
 		Type: []string{"finished"},
 	}
 	jobId := uuid.NewV4().String()
-	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
 	err = os.Rename(scriptPath, scriptPath + ".bat")
@@ -168,7 +173,6 @@ func TestRunScript4(t *testing.T) {
 		Type: []string{"finished"},
 	}
 	jobId := uuid.NewV4().String()
-	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
 	err = os.Rename(scriptPath, scriptPath + ".bat")
@@ -182,5 +186,50 @@ func TestRunScript4(t *testing.T) {
 	err = runScript(scriptEntry, jobId, "somethingElse", "finished", "a_test_job", "some report", "bla bla asdasd")
 	if err == nil {
 		t.Fatal("Script should have failed but it didn't")
+	}
+}
+
+func TestRunScript5(t *testing.T) {
+	// adjust test shell script to create a file if it was successful
+	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_powershell_script_", "")
+	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
+	testScript2 := testScriptPowershell + fmt.Sprintf("$args[2] | Out-File -Encoding ASCII -FilePath %s", resultsFile)
+	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
+	if err != nil {
+		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+	scriptEntry := config.NotificationScript{
+		Path: scriptPath,
+		Type: []string{"finished"},
+	}
+	jobId := uuid.NewV4().String()
+
+	// ensure the file extension is .bat or otherwise execution will fail on windows
+	err = os.Rename(scriptPath, scriptPath + ".ps1")
+	if err != nil {
+		t.Fatalf("Could not rename '%s' to '%s.ps1'", scriptPath, scriptPath)
+	}
+	scriptPath = scriptPath + ".ps1"
+	scriptEntry.Path = scriptPath
+	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
+
+	// leave some fields unpopulated
+	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
+	if err != nil {
+		t.Fatalf("Running the notification script returned error: %s", err)
+	}
+
+	_, err = os.Stat(resultsFile)
+	if err != nil {
+		t.Fatalf("Results file '%s' does not exist. Test shell script did not execute as expected", resultsFile)
+	}
+	result, err := ioutil.ReadFile(resultsFile)
+	if err != nil {
+		t.Fatalf("Could not read contents of results file '%s'", resultsFile)
+	}
+	if strings.TrimSpace(string(result)) != jobId {
+		t.Fatalf("Was expecting to find in the results file '%s' uuid '%s' but instead found '%s'",
+			resultsFile, jobId, strings.TrimSpace(string(result)))
 	}
 }
