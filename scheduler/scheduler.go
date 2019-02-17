@@ -296,15 +296,13 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	time.Sleep(1 * time.Second)
 	// run pre-backup script
 	if strings.TrimSpace(backupConfig.PreRunScript) != "" {
-		// TODO - send an event over to the watchers that the script is running (will have to implement it probably
-		//  in UpdateStatsText()
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation",
 			fmt.Sprintf("Running pre_run_script %s", backupConfig.PreRunScript), "", "")
 		err := backup.RunPrePostScript(backupConfig.PreRunScript, "pre", backupConfig.Name, jobUuid)
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
 		if err != nil {
+			backupJobsState.IncrementCounter(backupConfig.Name, "scripts_failed", "", "", "", "")
 			cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
-			// TODO - increment some counter when the script failed
 			return
 		}
 	}
@@ -335,18 +333,18 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	}
 	// run post-backup script
 	if strings.TrimSpace(backupConfig.PostRunScript) != "" {
-		// TODO - send an event over to the watchers that the script is running (will have to implement it probably
-		//  in UpdateStatsText()
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation",
 			fmt.Sprintf("Running post_run_script %s", backupConfig.PostRunScript), "", "")
-		_ = backup.RunPrePostScript(backupConfig.PostRunScript, "post", backupConfig.Name, jobUuid) // #nosec
+		err = backup.RunPrePostScript(backupConfig.PostRunScript, "post", backupConfig.Name, jobUuid) // #nosec
+		if err != nil {
+			backupJobsState.IncrementCounter(backupConfig.Name, "scripts_failed", "", "", "", "")
+		}
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
-		// TODO - increment some counter when the script failed
 	}
 	cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, nil)
 }
 
-// TODO - add actual implementation; also figure out how to deal with the SQL connection sharing
+// TODO - figure out how to deal with the SQL connection sharing
 func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup, serverConfigCopy config.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error){
 	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then
