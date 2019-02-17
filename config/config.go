@@ -178,18 +178,7 @@ func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
 	copy(cfgCopy.Notifications.Script, cfg.Config.Notifications.Script)
 	// deepcopy various slices part of the Backup{} struct
 	for i := 0; i < len(cfg.Config.Backup); i++ {
-		// deepcopy the []Target slice
-		cfgCopy.Backup[i].Target = make([]Target, len(cfg.Config.Backup[i].Target))
-		copy(cfgCopy.Backup[i].Target, cfg.Config.Backup[i].Target)
-		// deepcopy the []Path slice
-		cfgCopy.Backup[i].Paths = make([]string, len(cfg.Config.Backup[i].Paths))
-		copy(cfgCopy.Backup[i].Paths, cfg.Config.Backup[i].Paths)
-		// deepcopy the []Exclusions slice
-		cfgCopy.Backup[i].Exclusions = make([]string, len(cfg.Config.Backup[i].Exclusions))
-		copy(cfgCopy.Backup[i].Exclusions, cfg.Config.Backup[i].Exclusions)
-		// deepcopy the []Schedule slice
-		cfgCopy.Backup[i].Schedule = make([]string, len(cfg.Config.Backup[i].Schedule))
-		copy(cfgCopy.Backup[i].Schedule, cfg.Config.Backup[i].Schedule)
+		cfgCopy.Backup[i] = CopyBackupStruct(cfg.Config.Backup[i])
 	}
 	// new mutex for locking
 	cfgCopy.Mutex = &sync.RWMutex{}
@@ -946,4 +935,22 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup 
 
 func isLocalhost(name string) bool {
 	return name == "localhost" || name == "127.0.0.1" || name == "::1"
+}
+
+// makes a deep copy of a Backup struct
+func CopyBackupStruct(source Backup) Backup{
+	result := source
+	result.Paths = make([]string, len(source.Paths))
+	copy(result.Paths, source.Paths)
+
+	result.Exclusions = make([]string, len(source.Exclusions))
+	copy(result.Exclusions, source.Exclusions)
+
+	result.Schedule = make([]string, len(source.Schedule))
+	copy(result.Schedule, source.Schedule)
+
+	result.Target = make([]Target, len(source.Target))
+	copy(result.Target, source.Target)
+
+	return result
 }
