@@ -78,6 +78,23 @@ backup:
         bucket: 'example-com-us-servers'
         prefix: 'backup/backups-for-server-51'
         storage_class: standard
+	# Script to run before commencing to backup files. The script must exist or otherwise the backup server will refuse
+	# to start. On Unix like operating systems the user executing the script must have execute rights on the script
+	# (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply the path to an 
+	# executable instead of a script. The script (or executable) will be passed only one argument, the job id 
+	# (which is an uuid). If the script has an exit code different than 0 then it will be considered to have failed 
+	# and the whole backup job will be cancelled and considered failed. Also an error will be logged together with the 
+	# combined standard output and standard error of the said script. You should keep in mind that the standard output 
+	# and standard error of the scripts are gathered by the backup server so if their output is large, it will increase
+	# memory usage. If a pre run script is already started then cancelling a running backup job will still wait for the
+	# script to complete its run and will not attempt to stop it or any of its children processes.
+	#
+	#pre_run_script: /usr/local/bin/take_db_snapshot.sh
+	#
+	# Similar to the above with the difference that it will be ran after a backup and it will be ran no matter if the 
+	# backup completed, failed or was cancelled
+	#
+	#post_run_script: c:\\remove_volume_shadow_copy.ps1
     schedule:
       - '05 01 * * *'
   - name: http_logs
