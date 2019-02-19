@@ -149,6 +149,8 @@ class TestRestAPIReportNotification5(unittest.TestCase):
         # if platform.system() == 'Windows':
         #     if os.path.exists(self.inttestlog):
         #         os.remove(self.inttestlog)
+        if os.path.exists(self.script_path):
+            os.remove(self.script_path)
 
     def ValidatedAndDecodeResponse(self, r, url):
         """
