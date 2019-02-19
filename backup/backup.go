@@ -451,7 +451,7 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 
 // runs a PreRunScript or a PostRunScript
 func RunPrePostScript(path string, scriptType string, backupName string, jobId string) error {
-	logger.Debugf("Running %s_run_script '%s'", scriptType, path)
+	logger.Infof("Running %s_run_script '%s'", scriptType, path)
 	logger.Debugf("Running (without the single quotes): '%s' '%s'", path, jobId)
 	var cmd *exec.Cmd
 	// on Windows, to run Powershell scripts, you need to call powershell.exe itself

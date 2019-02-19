@@ -573,7 +573,7 @@ definitions:
       post_run_script:
         type: string
         example: "/usr/local/bin/remove_volume_shadow_copy.ps1"
-        description: Script to run after backing up of files is done. The script must exist or otherwise the backup server will refuse to start. On Unix like operating systems the user executing the script must have execute rights on the script (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply the path to an executable instead of a script. The script (or executable) will be passed only one argument, the job id (which is an uuid). If the script has an exit code different than 0 then it will be considered to have failed and an error will be logged together with the combined standard output and standard error of the said script. You should keep in mind that the standard output and standard error of the scripts are gathered by the backup server so if their output is large, it will increase memory usage. If a post run script is already started then cancelling a running backup job will still wait for the script to complete its run and will not attempt to stop it or any of its children processes.
+        description: Script to run after backing up of files is done. The script must exist or otherwise the backup server will refuse to start. On Unix like operating systems the user executing the script must have execute rights on the script (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply the path to an executable instead of a script. The script (or executable) will be passed only one argument, the job id (which is an uuid). If the script has an exit code different than 0 then it will be considered to have failed and an error will be logged together with the combined standard output and standard error of the said script. You should keep in mind that the standard output and standard error of the scripts are gathered by the backup server so if their output is large, it will increase memory usage. If a post run script is already started then cancelling a running backup job will still wait for the script to complete its run and will not attempt to stop it or any of its children processes. This script will be ran even if the backup fails or if the backup is cancelled (before the script started).
     required:
       - name
       - paths
@@ -810,6 +810,10 @@ definitions:
           scripts_failed:
             type: integer
             description: How many user supplied scripts failed. This includes pre_run_script, post_run_script and notification scripts and for each of those failing the counter will be incremented. A failure means that the script had a non 0 exit status. In notification reports (sent via e-mail or passed to notification scripts) the value of this counter will exclude any failures raised by notification scripts themselves.
+            example: 0
+          scripts_ran:
+            type: integer
+            description: How many user supplied scripts were started. This includes pre_run_script, post_run_script and notification scripts and for each of those being started the counter will be incremented. An increment of this counter does not mean the script succeeded, just that it was started. In notification reports (sent via e-mail or passed to notification scripts) the value of this counter will exclude any notification scripts which were started (but job reports will include them).
             example: 0
           updated_metadata_for_files:
             type: integer

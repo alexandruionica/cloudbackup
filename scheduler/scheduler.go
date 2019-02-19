@@ -300,6 +300,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			fmt.Sprintf("Running pre_run_script %s", backupConfig.PreRunScript), "", "")
 		err := backup.RunPrePostScript(backupConfig.PreRunScript, "pre", backupConfig.Name, jobUuid)
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
+		backupJobsState.IncrementCounter(backupConfig.Name, "scripts_ran", "", "", "", "")
 		if err != nil {
 			backupJobsState.IncrementCounter(backupConfig.Name, "scripts_failed", "", "", "", "")
 			cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
@@ -331,16 +332,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		}
 	}
-	// run post-backup script
-	if strings.TrimSpace(backupConfig.PostRunScript) != "" {
-		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation",
-			fmt.Sprintf("Running post_run_script %s", backupConfig.PostRunScript), "", "")
-		err = backup.RunPrePostScript(backupConfig.PostRunScript, "post", backupConfig.Name, jobUuid) // #nosec
-		if err != nil {
-			backupJobsState.IncrementCounter(backupConfig.Name, "scripts_failed", "", "", "", "")
-		}
-		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
-	}
 	cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, nil)
 }
 
@@ -355,6 +346,18 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 			"was encountered. This will leak some memory.", name, jobUuid, err )
 	} else {
 		cancel()
+	}
+
+	// run post-backup script
+	if strings.TrimSpace(backupConfig.PostRunScript) != "" {
+		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation",
+			fmt.Sprintf("Running post_run_script %s", backupConfig.PostRunScript), "", "")
+		backupJobsState.IncrementCounter(backupConfig.Name, "scripts_ran", "", "", "", "")
+		err = backup.RunPrePostScript(backupConfig.PostRunScript, "post", backupConfig.Name, jobUuid) // #nosec
+		if err != nil {
+			backupJobsState.IncrementCounter(backupConfig.Name, "scripts_failed", "", "", "", "")
+		}
+		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
 	}
 
 	backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation", "", "", "")
