@@ -485,6 +485,7 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 	fmt.Printf("Name: %s\n", decodedJson.Name)
 	fmt.Printf("State: %s\n", decodedJson.State)
 	if decodedJson.State == "running"{
+		fmt.Printf("Current operation: %s\n", decodedJson.StatsText["current_operation"])
 		fmt.Printf("Job id: %s\n", decodedJson.BackupJobId)
 		fmt.Printf("Start time: %s\n", decodedJson.StartTime.String())
 		fmt.Printf("Duration so far: %s\n", time.Now().Sub(decodedJson.StartTime).Round(time.Second))
@@ -531,6 +532,9 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 		fmt.Printf("Symlinks for which metadata only updates took place: %d\n", decodedJson.StatsCounters["updated_metadata_for_symlinks"])
 		// how many bytes (file content only) were read from disk
 		fmt.Printf("File content read in order to upload: %s\n", humanize.Bytes(decodedJson.FileContentBytesRead))
+		fmt.Printf("User provided scripts number/ran/failed: %d/%d/%d\n",
+			decodedJson.StatsCounters["scripts_num"], decodedJson.StatsCounters["scripts_ran"],
+			decodedJson.StatsCounters["scripts_failed"])
 		// text stats
 		fmt.Printf("Current directory being processed: %s\n", decodedJson.StatsText["current_directory"])
 		fmt.Printf("Current file being processed: %s\n", decodedJson.StatsText["current_file"])

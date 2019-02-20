@@ -809,11 +809,14 @@ definitions:
             example: 11
           scripts_failed:
             type: integer
-            description: How many user supplied scripts failed. This includes pre_run_script, post_run_script and notification scripts and for each of those failing the counter will be incremented. A failure means that the script had a non 0 exit status. In notification reports (sent via e-mail or passed to notification scripts) the value of this counter will exclude any failures raised by notification scripts themselves.
+            description: How many user supplied scripts failed. This includes pre_run_script and post_run_script but excludes notification scripts. For each of those failing the counter will be incremented. A failure means that the script had a non 0 exit status.
             example: 0
           scripts_ran:
             type: integer
-            description: How many user supplied scripts were started. This includes pre_run_script, post_run_script and notification scripts and for each of those being started the counter will be incremented. An increment of this counter does not mean the script succeeded, just that it was started. In notification reports (sent via e-mail or passed to notification scripts) the value of this counter will exclude any notification scripts which were started (but job reports will include them).
+            description: How many user supplied scripts were started. This includes pre_run_script and post_run_script but excludes notification scripts. For each of those being started the counter will be incremented. An increment of this counter does not mean the script succeeded, just that it was started.
+          scripts_num:
+            type: integer
+            description: How many user supplied scripts are defined. This includes pre_run_script and post_run_script but excludes notification scripts. For each of those the counter will be incremented. An increment of this counter does not mean the script ran, or that it ran successfully, just that it is defined in the configuration file.  
             example: 0
           updated_metadata_for_files:
             type: integer

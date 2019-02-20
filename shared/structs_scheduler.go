@@ -305,9 +305,13 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"failed_to_update_metadata_for_directories": 0,
 			"failed_to_update_metadata_for_symlinks": 0,
 			// pre_run / post_run scripts which have failed will each increment once this counter
+			// (excludes notification scripts)
 			"scripts_failed": 0,
 			// pre_run / post_run scripts which have started will each increment once this counter
+			// (excludes notification scripts)
 			"scripts_ran": 0,
+			// how many user supplied scripts are defined (excludes notification scripts)
+			"scripts_num": 0,
 		},
 		StatsText: map[string]string{
 			"current_directory": "",
