@@ -239,10 +239,11 @@ func prepareHtmlEmail (emailTextBody []string, decodedJson shared.BackupJobStatu
 	}
 	var tdTmp string
 	// counters
-	if tdTmp = td; decodedJson.StatsCounters["scripts_failed"] > 0 {
+	if tdTmp = td; decodedJson.StatsCounters["scripts_failed"] > 0 && decodedJson.StatsCounters["scripts_num"] > decodedJson.StatsCounters["scripts_ran"] {
 		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
 	}
-	result += tr + "How many user supplied scripts failed" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["scripts_failed"])
+	result += tr + "User supplied scripts number / executed / failed" + tdTmp + fmt.Sprintf("%d / %d / %d\n",
+		decodedJson.StatsCounters["scripts_num"], decodedJson.StatsCounters["scripts_ran"], decodedJson.StatsCounters["scripts_failed"])
 
 	result += tr + "Examined directories" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["examined_directories"])
 	if tdTmp = td; decodedJson.StatsCounters["examined_files"] == 0 {

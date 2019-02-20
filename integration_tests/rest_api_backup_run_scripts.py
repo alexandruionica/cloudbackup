@@ -280,6 +280,9 @@ if ( $found -ne 1 ) {{
                         self.assertEqual(1, backup['stats_counters']["scripts_ran"],
                                          "Status should report 1 script ran but it reports that {} scripts "
                                          "ran".format(backup['stats_counters']["scripts_ran"]))
+                        self.assertEqual(1, backup['stats_counters']["scripts_num"],
+                                         "Status should report 1 script exists but it reports that {} scripts "
+                                         "exist".format(backup['stats_counters']["scripts_num"]))
                         break
                 if backup['name'] == self.job_name and backup['state'] != 'running':
                     pprint(backup)
@@ -471,6 +474,9 @@ if ( $found -ne 1 ) {{
                         self.assertEqual(1, backup['stats_counters']["scripts_ran"],
                                          "Status should report 1 script ran but it reports that {} scripts "
                                          "ran".format(backup['stats_counters']["scripts_ran"]))
+                        self.assertEqual(1, backup['stats_counters']["scripts_num"],
+                                         "Status should report 1 script exists but it reports that {} scripts "
+                                         "exist".format(backup['stats_counters']["scripts_num"]))
                         break
             if script_is_running:
                 break
@@ -517,7 +523,224 @@ if ( $found -ne 1 ) {{
         self.assertEqual(job_id, file_content.rstrip(), "The file produced by the script should have as "
                                                         "content the job id, but it doesn't ")
 
-    # TODO - test that cancelling a running job still leads to the post job script being ran
+    # starts a backup which has a post_run script configured and tests that it runs as expected despite the backup
+    # being cancelled
+    def test_backup_job_start_stop_scripts3(self):
+        # fetch config
+        r = requests.get(self.base_url + self.api_root + '/config', auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, "Expected status code 200 for GET "
+                                             "{}".format(self.base_url + self.api_root + '/config'))
+        # check if response can be JSON decoded
+        response = r.json()
+        # adjust first backup so it has the new script path
+        job_index = 0
+        found = False
+        for index, value in enumerate(response['result']['backup']):
+            if value['name'] == self.job_name:
+                job_index = index
+                found = True
+        self.assertTrue(found, "Did not find any backup job having name \"{}\"".format(self.job_name))
+
+        # adjust cfg contents
+        response['result']['backup'][job_index]['post_run_script'] = self.script_path
+        response['result']['backup'][job_index]['target'][0]['ratelimit'] = "10"
+
+        # send to server updated config
+        logging.info("Adjusting service config via the API")
+        r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username, self.password),
+                          json=response['result'])
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertNotEqual(r.json()['message'], "The supplied configuration matches the existing one so no actual "
+                                                 "changes are going to take effect")
+
+        # start backup job
+        logging.info("Starting backup for job: {}".format(self.job_name))
+
+        # attempt to start backup
+        req = {"name": self.job_name}
+        url = self.base_url + self.api_root + '/backup/start'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        # check response has expected keys
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertIn("name", response['result'], "For {} response['result'] is missing the 'name' key. Response was:"
+                                                  " {}".format(url, r.text))
+        self.assertIn("job_id", response['result'], "For {} response['result'] is missing the 'job_id' key. Response "
+                                                    "was: {}".format(url, r.text))
+        job_id = response['result']['job_id']
+
+        logging.info("Checking if backup job is running")
+        # fetch again list of jobs and check that status of job is now "running"
+        url = self.base_url + self.api_root + '/backup/list'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        is_running = False
+        job_id_matches = False
+        found_job_id = ""
+        for backup in response['result']:
+            if backup['name'] == self.job_name and backup['state'] == 'running':
+                is_running = True
+                if backup['job_id'] == job_id:
+                    job_id_matches = True
+                else:
+                    found_job_id = backup['job_id']
+        self.assertTrue(is_running, "did not manage to find a running backup for job having name: '{}'. "
+                                    "Response from server was: {}".format(self.job_name, r.text))
+        self.assertTrue(job_id_matches, "While job named '{}' is running, the job id does not match. Expected to find"
+                                        "job id '{}' but found instead '{}'. Full response is:"
+                                        " {}".format(self.job_name, job_id, found_job_id, r.text))
+        # check response has expected keys
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertGreaterEqual(2, len(response['result']), "for {} 'result' key should have at least 2 results "
+                                                            "contained. Response was: {}".format(url, r.text))
+        self.assertIn("name", response['result'][0], "for {} response['result'][0] is missing the 'name' key. "
+                                                     "Response was: {}".format(url, r.text))
+        self.assertIn("state", response['result'][0], "for {} response['result'][0] is missing the 'state' key. "
+                                                      "Response was: {}".format(url, r.text))
+        self.assertIn("start_time", response['result'][0], "for {} response['result'][0] is missing the 'start_time' "
+                                                           "key. Response was: {}".format(url, r.text))
+        self.assertIn("next_run", response['result'][0], "for {} response['result'][0] is missing the 'next_run' key. "
+                                                         "Response was: {}".format(url, r.text))
+
+        logging.info("Checking if current_operation == 'Examining and backing up'")
+        counter = 0
+        while True:
+            # fetch again list of jobs and check that status of job, until it is matching expectations
+            url = self.base_url + self.api_root + '/backup/list'
+            r = requests.get(url=url, auth=(self.username, self.password))
+            self.assertEqual(r.status_code, 200, url + " " + r.text)
+            response = self.ValidatedAndDecodeResponse(r, url)
+            file_backup_started = False
+            for backup in response['result']:
+                if backup['name'] == self.job_name and backup['state'] == 'running':
+                    if backup['stats_text']['current_operation'] == "Examining and backing up":
+                        file_backup_started = True
+                        break
+                if backup['name'] == self.job_name and backup['state'] != 'running':
+                    pprint(backup)
+                    self.fail("Backup has exited prematurely the 'running' state due to unknown issue (see above "
+                              "pretty print)")
+
+            if file_backup_started:
+                break
+            if counter > 70:
+                pprint(response['result'])
+                self.fail(
+                    "Backup did not complete running the pre_run_script and proceed to backup files after 7"
+                    " seconds checking(see above pretty print for last job status)")
+            time.sleep(0.1)
+            counter += 1
+
+        logging.info("Cancelling the backup")
+        req = {"name": self.job_name}
+        url = self.base_url + self.api_root + '/backup/stop'
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                          " {}".format(url, r.text))
+        self.assertIn("name", response['result'],
+                      "For {} response['result'] is missing the 'name' key. Response was:"
+                      " {}".format(url, r.text))
+        self.assertIn("job_id", response['result'],
+                      "For {} response['result'] is missing the 'job_id' key. Response "
+                      "was: {}".format(url, r.text))
+
+        logging.info("Checking if state == 'stopping'")
+        counter = 0
+        while True:
+            # fetch again list of jobs and check that status of job, until it is matching expectations
+            url = self.base_url + self.api_root + '/backup/list'
+            r = requests.get(url=url, auth=(self.username, self.password))
+            self.assertEqual(r.status_code, 200, url + " " + r.text)
+            response = self.ValidatedAndDecodeResponse(r, url)
+            script_is_stopping = False
+            for backup in response['result']:
+                if backup['name'] == self.job_name and backup['state'] == 'stopping':
+                    script_is_stopping = True
+                    break
+            if script_is_stopping:
+                break
+            else:
+                if counter > 60:
+                    self.fail("Backup did not stop running after 6 seconds of checking")
+                time.sleep(0.1)
+                counter += 1
+
+        logging.info("Checking if current_operation == 'Running post_run_script ...'")
+        # now that the state is running, given that when a backup starts we have a 1 second sleep (hardcoded in server)
+        #  now attempt to figure out when the pre run script started and ensure that
+        #    'current_operation' == 'Running post_run_script ...'
+        counter = 0
+        while True:
+            # fetch again list of jobs and check that status of job, until it is matching expectations
+            url = self.base_url + self.api_root + '/backup/list'
+            r = requests.get(url=url, auth=(self.username, self.password))
+            self.assertEqual(r.status_code, 200, url + " " + r.text)
+            response = self.ValidatedAndDecodeResponse(r, url)
+            script_is_running = False
+            for backup in response['result']:
+                if backup['name'] == self.job_name and backup['state'] == 'stopping':
+                    if backup['stats_text']['current_operation'] == "Running post_run_script {}".format(
+                            self.script_path):
+                        script_is_running = True
+                        self.assertEqual(0, backup['stats_counters']["scripts_failed"], "At least pre/post run script"
+                                                                                        " has failed")
+                        self.assertEqual(1, backup['stats_counters']["scripts_ran"],
+                                         "Status should report 1 script ran but it reports that {} scripts "
+                                         "ran".format(backup['stats_counters']["scripts_ran"]))
+                        self.assertEqual(1, backup['stats_counters']["scripts_num"],
+                                         "Status should report 1 script exists but it reports that {} scripts "
+                                         "exist".format(backup['stats_counters']["scripts_num"]))
+                        break
+            if script_is_running:
+                break
+            else:
+                if counter > 100:
+                    self.fail("Backup did not start running the post_run_script after 10 seconds checking")
+                time.sleep(0.1)
+                counter += 1
+
+        logging.info("Checking if state == 'stopped'")
+        counter = 0
+        while True:
+            # fetch again list of jobs and check that status of job, until it is matching expectations
+            url = self.base_url + self.api_root + '/backup/list'
+            r = requests.get(url=url, auth=(self.username, self.password))
+            self.assertEqual(r.status_code, 200, url + " " + r.text)
+            response = self.ValidatedAndDecodeResponse(r, url)
+            script_is_stopping = False
+            for backup in response['result']:
+                if backup['name'] == self.job_name and backup['state'] == 'stopped':
+                    script_is_stopping = True
+                    break
+            if script_is_stopping:
+                break
+            else:
+                if counter > 60:
+                    self.fail("Backup did not stop running after 6 seconds of checking")
+                time.sleep(0.1)
+                counter += 1
+
+        logging.info("Checking that the file produced by pre_run_script has the expected content")
+        # Windows seems sometimes to be slow to release file locks , so let's try several times
+        counter = 0
+        while True:
+            try:
+                with open(self.script_result_path, "r") as fd:
+                    file_content = fd.read()
+                    break
+            except PermissionError:
+                if counter > 50:
+                    self.fail("File lock not released in 5 seconds or the user running the test can't access the file")
+                time.sleep(0.1)
+                counter += 1
+        self.assertEqual(job_id, file_content.rstrip(), "The file produced by the script should have as "
+                                                        "content the job id, but it doesn't ")
 
 
 def get_args():

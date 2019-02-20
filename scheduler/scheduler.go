@@ -294,8 +294,13 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 
 	// give "watch" clients a chance to connect before the backup starts emitting events
 	time.Sleep(1 * time.Second)
+
+	if strings.TrimSpace(backupConfig.PostRunScript) != "" {
+		backupJobsState.IncrementCounter(backupConfig.Name, "scripts_num", "", "", "", "")
+	}
 	// run pre-backup script
 	if strings.TrimSpace(backupConfig.PreRunScript) != "" {
+		backupJobsState.IncrementCounter(backupConfig.Name, "scripts_num", "", "", "", "")
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation",
 			fmt.Sprintf("Running pre_run_script %s", backupConfig.PreRunScript), "", "")
 		err := backup.RunPrePostScript(backupConfig.PreRunScript, "pre", backupConfig.Name, jobUuid)
@@ -415,14 +420,13 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 
 	failedScripts, err := notifications.Execute(serverConfigCopy, jobUuid, "backup", jobStateCopy.State, name, jobReport, backupJobErrorMsg)
 	if err != nil {
+		if failedScripts > 0 {
+			logger.Warningf("%d notification scripts exited with a non zero status code. Received errors " +
+				"were: %s", failedScripts, err)
+		}
 		logger.Warningf("At least an error was encountered while trying to send notifications: %s", err)
 	}
-	if failedScripts > 0 {
-		jobStateCopy.StatsCounters["scripts_failed"] += uint64(failedScripts)
-		for i := 0; i < failedScripts; i++ {
-			backupJobsState.IncrementCounter(backupConfig.Name, "scripts_failed", "", "", "", "")
-		}
-	}
+
 	// set state to "stopped"
 	err = backupJobsState.MarkStopped(name, loggingContext + ".cleanupAfterBackup",
 		jobUuid, true)
