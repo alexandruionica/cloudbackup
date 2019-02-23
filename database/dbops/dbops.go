@@ -5,6 +5,7 @@ import (
 	"cloudbackup/database"
 	"cloudbackup/shared"
 	"database/sql"
+	"errors"
 	log "github.com/sirupsen/logrus"
 	"time"
 )
@@ -239,16 +240,51 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 // adds a new record in the "jobs" table for a new job
 func AddJobDetails(db *sql.DB, jobId string, jobName string, jobType string, startTime time.Time) error {
 	/*
-		CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
-	processed_files INTEGER, processed_dirs INTEGER);
+		CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
+	report TEXT);
 	 */
 	_, err := db.Exec("INSERT INTO jobs (id, name, type, start_time, end_time, state, report) " +
 		"VALUES " +
 		"(?, ?, ?, ?, ?, ?, ?)", jobId, jobName, jobType, startTime, "", "started", "")
 	if err != nil {
-		logger.Errorf("While trying to add information about %s job having id '%s' to the database, the "+
-			"following error was encountered: '%s'", jobType, jobId, err)
+		logger.Errorf("While trying to add information about %s job having name '%s' and id '%s' to the " +
+			"database, the following error was encountered: '%s'", jobType, jobName, jobId, err)
 		return err
+	}
+	return nil
+}
+
+// updates an existing job record in the "jobs" table
+func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, endTime time.Time, JobState string, report string) error {
+	/*
+		CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
+	report TEXT);
+	 */
+	result, err := db.Exec("UPDATE jobs SET end_time = ?, state = ?, report = ? WHERE id = ? AND name = ? " +
+		"AND type = ?", endTime, JobState, report, jobId, jobName, jobType)
+	if err != nil {
+		logger.Errorf("While trying to update information about %s job having name '%s' and id '%s' in the " +
+			"database, the following error was encountered: '%s'", jobType, jobName, jobId, err)
+		return err
+	}
+	rowsUpdated, err := result.RowsAffected()
+	if err != nil {
+		logger.Errorf("While trying to check if updating the database entry for %s job having name '%s' and id" +
+			" '%s' was successful, the following error was encountered: '%s'", jobType, jobName, jobId, err)
+		return err
+	}
+	if rowsUpdated != 1 {
+		if rowsUpdated < 1 {
+			logger.Errorf("Did not manage to update the database entry for %s job having name '%s' and id '%s' as" +
+				" no matching entries were found. Job status and integrity may be affected.", jobType, jobName, jobId)
+			return errors.New("could not find a matching database entry")
+		} else {
+			logger.Errorf("Found '%d' database entries instead of 1 for %s job having name '%s' and id '%s'. " +
+				"Job status may be incorrect for the other jobs which had matching id and name and the status report " +
+				"will be incorrect for them  ", rowsUpdated, jobType, jobName, jobId)
+			return errors.New("more than one matching database entry")
+		}
+
 	}
 	return nil
 }

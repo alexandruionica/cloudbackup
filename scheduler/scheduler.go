@@ -391,7 +391,8 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 		}
 	}
 
-	jobStateCopy.EndTime = time.Now()
+	jobEndTime := time.Now()
+	jobStateCopy.EndTime = jobEndTime
 
 	jobStateCopy.State = "finished"
 	if cancelled {
@@ -434,6 +435,9 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup,
 		logger.Warnf("Encountered an error when trying to mark backup job '%s' having job id '%s' as 'stopped'. " +
 			"The error was: %s", name, jobUuid, err)
 	}
+
+	// if it errors out then UpdateJobDetails() will log. There is nothing we can do with the error here
+	_ = dbops.UpdateJobDetails(dbData.Db, jobUuid, name, "backup", jobEndTime, jobStateCopy.State ,jobReport) // #nosec
 
 	// close SQL connection and opened statements
 	dbops.CloseStatementsAndDb(dbData)
