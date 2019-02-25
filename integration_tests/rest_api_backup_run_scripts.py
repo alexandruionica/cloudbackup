@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import stat
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -342,6 +343,7 @@ if ( $found -ne 1 ) {{
                                                 "was: {}".format(self.job_name, r.text))
 
     # starts a backup which has a post_run script configured and tests that it runs as expected
+    # additionally after the backup finishes, open to the sqlite DB and asses the data matches expectations
     def test_backup_job_start_stop_scripts2(self):
         # fetch config
         r = requests.get(self.base_url + self.api_root + '/config', auth=(self.username, self.password))
@@ -361,6 +363,7 @@ if ( $found -ne 1 ) {{
         # adjust cfg contents
         response['result']['backup'][job_index]['post_run_script'] = self.script_path
         response['result']['backup'][job_index]['target'][0]['ratelimit'] = "100"
+        sqlite_db_file = response['result']['data_dir'] + os.sep + self.job_name + ".sqlite"
 
         # send to server updated config
         logging.info("Adjusting service config via the API")
@@ -498,6 +501,7 @@ if ( $found -ne 1 ) {{
             for backup in response['result']:
                 if backup['name'] == self.job_name and backup['state'] == 'stopping':
                     script_is_stopping = True
+                    job_status_while_stopping = backup
                     break
             if script_is_stopping:
                 break
@@ -522,6 +526,53 @@ if ( $found -ne 1 ) {{
                 counter += 1
         self.assertEqual(job_id, file_content.rstrip(), "The file produced by the script should have as "
                                                         "content the job id, but it doesn't ")
+
+        logging.info("Checking if current_operation == 'stopped'")
+        counter = 0
+        while True:
+            # fetch again list of jobs and check that status of job, until it is matching expectations
+            url = self.base_url + self.api_root + '/backup/list'
+            r = requests.get(url=url, auth=(self.username, self.password))
+            self.assertEqual(r.status_code, 200, url + " " + r.text)
+            response = self.ValidatedAndDecodeResponse(r, url)
+            script_is_stopping = False
+            for backup in response['result']:
+                if backup['name'] == self.job_name and backup['state'] == 'stopped':
+                    script_is_stopping = True
+                    break
+            if script_is_stopping:
+                break
+            else:
+                if counter > 60:
+                    self.fail("Backup did not complete stopping after 6 seconds of checking (after it entered"
+                              " 'stopping' state")
+                time.sleep(0.1)
+                counter += 1
+
+        logging.info("Fetch job status report from the sqlite database and compare it with the job status we got "
+                     "when checking if job=stopping")
+        # connect to DB, fetch data
+        conn = sqlite3.connect(sqlite_db_file)
+        cur = conn.cursor()
+        query_tuple = (job_id, self.job_name, "backup")
+        cur.execute('SELECT * FROM jobs WHERE id = ? AND name = ? AND type = ? ', query_tuple)
+        rows = cur.fetchall()
+        self.assertEqual(1, len(rows), "Was expecting to find 1 matching row in the DB but instead "
+                                       "found {}".format(len(rows)))
+        job_details = rows[0]
+        self.assertEqual(job_details[5], "finished", "Was expecting job status to be finished but instead it "
+                                                     "is {}".format(job_details[5]))
+        job_status_report = json.loads(job_details[6])
+        # change status from stopping to finished so then we can compare the dicts
+        # change status from stopping to finished so then we can compare the dicts
+        job_status_while_stopping["state"] = "finished"
+        # copy end time from status extract from DB as there is no way to know otherwise when it finished
+        job_status_while_stopping["end_time"] = job_status_report["end_time"]
+        # show the full diff in self.assertDictEqual
+        self.maxDiff = None
+        self.assertDictEqual(job_status_while_stopping, job_status_report)
+        # close db connection
+        conn.close()
 
     # starts a backup which has a post_run script configured and tests that it runs as expected despite the backup
     # being cancelled
