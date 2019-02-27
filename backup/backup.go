@@ -40,32 +40,33 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 			dbEntryFound, dbRecordProperties, err := getBackedupObjectPropertiesFromDb(path, dbData)
 			if err != nil {
 				updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-				return false, err
+				return false, errors.New(fmt.Sprintf("While searching the database for a file object record," +
+					" encountered error: %s", err))
 			}
 			// if a db entry is found then this object has been previously backed up so it needs to be verified if the
 			// object has changed
 			if dbEntryFound {
 				// check if properties match between DB record and os.FileInfo
-				logger.Infof("Found db record for '%s' with properties '%+v'", path, dbRecordProperties)
 				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum)
-				newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
+				updatedDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
 				if err != nil {
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
 					// backup this file
 					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-					return false, err
+					return false, errors.New(fmt.Sprintf("Could not prepare an updated db record due to " +
+						"error: %s", err))
 				}
 				if contentChanged {
 					encounteredError := 0
-					if newDbRecord.Type == "unknown" {
-						updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type,
+					if updatedDbRecord.Type == "unknown" {
+						updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type,
 							path, errors.New("unsupported file type"))
 						return false, errors.New("unsupported file type")
 					}
 					var encounteredErrorObject error
 					// back up the object to one or more remote object stores
 					for _, objectStore := range objectStores {
-						cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore, backupJobsState)
+						cancelled, err := UploadObject(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
 						if err != nil {
 							encounteredError ++
 							encounteredErrorObject = err
@@ -78,19 +79,19 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 						if len(objectStores) > 1{
 							logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
 						}
-						updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, encounteredErrorObject)
+						updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type, path, encounteredErrorObject)
 						return false, encounteredErrorObject
 					}
 
 					// backup successful
-					updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, nil)
+					updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type, path, nil)
 					return false, nil
 
 				} else {
 					if metadataChanged {
-						if newDbRecord.Type == "unknown" {
+						if updatedDbRecord.Type == "unknown" {
 							// report it as a "failed_to_upload_unknown" instead of updated_metadata as we don't support "unknown" files but we want to report somehow this issue
-							updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, errors.New("unsupported file type"))
+							updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type, path, errors.New("unsupported file type"))
 							return false, errors.New("unsupported file type")
 						}
 						encounteredError := 0
@@ -100,7 +101,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 							// TODO - proceed to update file metadata in the DB and on the remote ???? (to decide what to do with
 							// the remote: changed owner is probably something we want to flag, but not much else)
 							// back up the object to one or more remote object stores
-							cancelled, err := UpdateObjectMetadata(ctx, path, newDbRecord, backupConfig, objectStore, backupJobsState)
+							cancelled, err := UpdateObjectMetadata(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
 							if err != nil {
 								encounteredError ++
 								encounteredErrorObject = err
@@ -114,11 +115,11 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 								logger.Warnf("Failed upload metadata changes of of '%s' to %d out of %d targets",
 									path, encounteredError,  len(objectStores))
 							}
-							updateCounters(backupJobsState, backupConfig.Name, "update", newDbRecord.Type, path, encounteredErrorObject)
+							updateCounters(backupJobsState, backupConfig.Name, "update", updatedDbRecord.Type, path, encounteredErrorObject)
 							return false, encounteredErrorObject
 						}
 						// backup successful
-						updateCounters(backupJobsState, backupConfig.Name, "update", newDbRecord.Type, path, nil)
+						updateCounters(backupJobsState, backupConfig.Name, "update", updatedDbRecord.Type, path, nil)
 						return false, nil
 					}
 				}
@@ -154,7 +155,8 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				if err != nil {
 					// could not add dbentry to the database so we can't proceed to backup this file.
 					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-					return false, err
+					return false, errors.New(fmt.Sprintf("While trying to add new file object DB entry " +
+						"encountered error: %s", err))
 				}
 
 				encounteredError := 0
@@ -255,7 +257,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 		return false, shared.BackedUpFileProperties{}, nil
 	}
 	// if we got here, all was fine
-	return false, dbRecord, nil
+	return true, dbRecord, nil
 }
 
 // compares on disk state vs db and returns:
