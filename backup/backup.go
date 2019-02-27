@@ -145,6 +145,18 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					return false, errors.New("unsupported file type")
 				}
 
+				// TODO - seems the targets property is not filled in yet which is a problem
+				_, err = dbData.PreparedStatements.InsertStmt.Exec(newDbRecord.Path, newDbRecord.Type,
+					newDbRecord.LinkTarget, newDbRecord.Size, newDbRecord.Mtime.Format(time.RFC3339Nano),
+					newDbRecord.Ctime.Format(time.RFC3339Nano), newDbRecord.Owner,
+					newDbRecord.Permissons, newDbRecord.Checksum, newDbRecord.ChecksumType, newDbRecord.Encrypted,
+					newDbRecord.Targets)
+				if err != nil {
+					// could not add dbentry to the database so we can't proceed to backup this file.
+					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
+					return false, err
+				}
+
 				encounteredError := 0
 				var encounteredErrorObject error
 				// back up the object to one or more remote object stores
@@ -201,13 +213,36 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 			return false, shared.BackedUpFileProperties{}, errors.New("duplicate database record in 'files' table")
 		}
 		entryFound = true
-		err := rows.Scan(&dbRecord.Path, &dbRecord.Type, &dbRecord.LinkTarget, &dbRecord.Size, &dbRecord.Mtime,
-			&dbRecord.Ctime, &dbRecord.Owner, &dbRecord.Permissons, &dbRecord.Checksum,
+		// the sqlite3 driver produces an error when fetching a string and converting it to time.time so we have to
+		// manually do the conversion
+		var tmpMtime, tmpCtime string
+		err := rows.Scan(&dbRecord.Path, &dbRecord.Type, &dbRecord.LinkTarget, &dbRecord.Size, &tmpMtime,
+			&tmpCtime, &dbRecord.Owner, &dbRecord.Permissons, &dbRecord.Checksum,
 			&dbRecord.ChecksumType, &dbRecord.Encrypted, &dbRecord.Targets)
 		if err != nil {
 			logger.Errorf("While retrieving the database record for '%s' the following error was encountered:" +
 				" '%s'", path, err)
 			return false, shared.BackedUpFileProperties{}, err
+		} else {
+			// convert string to time for  mtime  and  ctime
+			if tmpMtime != "" {
+				dbRecord.Mtime, err = time.Parse(time.RFC3339Nano, tmpMtime)
+				if err != nil {
+					logger.Error("While converting mtime property of database record for '%s' the following " +
+						"error was encountered: %s", path, err)
+					return false, shared.BackedUpFileProperties{}, errors.New(fmt.Sprintf("While converting " +
+						"mtime property encountered error: %s", err))
+				}
+			}
+			if tmpCtime != "" {
+				dbRecord.Mtime, err = time.Parse(time.RFC3339Nano, tmpCtime)
+				if err != nil {
+					logger.Error("While converting ctime property of database record for '%s' the following " +
+						"error was encountered: %s", path, err)
+					return false, shared.BackedUpFileProperties{}, errors.New(fmt.Sprintf("While converting " +
+						"ctime property encountered error: %s", err))
+				}
+			}
 		}
 	}
 	if err = rows.Err(); err != nil {
