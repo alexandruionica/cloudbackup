@@ -874,6 +874,19 @@
               "description": "How many files or directories where excluded due to matching some exclusion rule provided by the user (in the configuration file).",
               "example": 7
             },
+            "up_to_date_files": {
+              "type": "integer",
+              "description": "Files for which an up to date copy is already in a backup so no action is needed."
+            },
+            "up_to_date_directories": {
+              "type": "integer",
+              "description": "Directories for which an up to date copy is already in a backup so no action is needed."
+            },
+            "up_to_date_symlinks": {
+              "type": "integer",
+              "description": "Symlinks for which an up to date copy is already in a backup so no action is needed.",
+              "example": 11
+            },
             "uploaded_files": {
               "type": "integer",
               "description": "How many files were uploaded so far during the run of this backup job.",
@@ -1044,8 +1057,8 @@
         "operation_type": {
           "type": "string",
           "example": "upload",
-          "pattern": "^(excluded|examine|upload|metadata)$",
-          "description": "One of \"excluded\", \"examine\", \"upload\" or \"metadata\" depicting if the message represents an examination of an object in order to determine if a backup is needed, content upload and metadata upload/update. The \"excluded\" value is reported only for excluded from backup objects(those are items which are located within the paths selected for backup but for which a configuration file entry has been set to purposely exclude them from the backup). The \"examine\" value is reported only when an error was produced during the examination step as otherwise a message won't be produced if this step is successful. The \"upload\" value is reported only for file content upload. The \"metadata\" value is reported when a properties change was detected for an already known (to be previously backed up) object or when a directory or symlink is backed up (as only properties and not actual content is uploaded for those)."
+          "pattern": "^(excluded|examine|upload|metadata|up_to_date)$",
+          "description": "One of \"excluded\", \"examine\", \"upload\", \"metadata\" or \"up_to_date\" depicting if the message represents an examination of an object in order to determine if a backup is needed, content upload and metadata upload/update. The \"excluded\" value is reported only for excluded from backup objects(those are items which are located within the paths selected for backup but for which a configuration file entry has been set to purposely exclude them from the backup). The \"examine\" value is reported only when an error was produced during the examination step as otherwise a message won't be produced if this step is successful. The \"upload\" value is reported only for file content upload. The \"metadata\" value is reported when a properties change was detected for an already known (to be previously backed up) object or when a directory or symlink is backed up (as only properties and not actual content is uploaded for those). The value \"up_to_date\" depicts that no action was needed as the object has previusly been backed up and the copy in the backup is up to date with the on disk item."
         },
         "error": {
           "type": "string",

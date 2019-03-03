@@ -124,6 +124,9 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 						// backup successful
 						updateCounters(backupJobsState, backupConfig.Name, "update", updatedDbRecord.Type, path, nil)
 						return false, nil
+					} else {
+						// object is up to date (aka we got a copy in the backup)
+						updateCounters(backupJobsState, backupConfig.Name, "up_to_date", updatedDbRecord.Type, path, nil)
 					}
 				}
 			// no db record found so this is the first time this object is backed up
@@ -482,6 +485,16 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 						logger.Warningf("Tried to increment 'updated_metadata' counter for '%s' of type: '%s'. " +
 							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
 				}
+			}
+		}
+		case "up_to_date": {
+			switch fileType {
+			case "file":
+				backupJobsState.IncrementCounter(backupName, "up_to_date_files", path, fileType, "up_to_date", "")
+			case "dir":
+				backupJobsState.IncrementCounter(backupName, "up_to_date_directories", path, fileType, "up_to_date", "")
+			case "symlink":
+				backupJobsState.IncrementCounter(backupName, "up_to_date_symlinks", path, fileType, "up_to_date", "")
 			}
 		}
 		default:
