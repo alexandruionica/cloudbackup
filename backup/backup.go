@@ -46,6 +46,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 			// if a db entry is found then this object has been previously backed up so it needs to be verified if the
 			// object has changed
 			if dbEntryFound {
+				logger.Debugf("Found DB entry for %s", path)
 				// check if properties match between DB record and os.FileInfo
 				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum)
 				updatedDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum)
@@ -57,6 +58,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 						"error: %s", err))
 				}
 				if contentChanged {
+					logger.Debugf("Content change detected for %s", path)
 					encounteredError := 0
 					if updatedDbRecord.Type == "unknown" {
 						updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type,
@@ -89,6 +91,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 
 				} else {
 					if metadataChanged {
+						logger.Debugf("Metadata change detected for %s", path)
 						if updatedDbRecord.Type == "unknown" {
 							// report it as a "failed_to_upload_unknown" instead of updated_metadata as we don't support "unknown" files but we want to report somehow this issue
 							updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type, path, errors.New("unsupported file type"))
@@ -125,6 +128,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				}
 			// no db record found so this is the first time this object is backed up
 			}else{
+				logger.Debugf("Did not find a DB entry for %s , this was not previously backed up", path)
 				checksum := ""
 				if backupConfig.Checksum && utils.FileType(stat) == "file" {
 					checksum, err = utils.GetFileMD5Sum(path)
@@ -237,7 +241,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 				}
 			}
 			if tmpCtime != "" {
-				dbRecord.Mtime, err = time.Parse(time.RFC3339Nano, tmpCtime)
+				dbRecord.Ctime, err = time.Parse(time.RFC3339Nano, tmpCtime)
 				if err != nil {
 					logger.Error("While converting ctime property of database record for '%s' the following " +
 						"error was encountered: %s", path, err)
