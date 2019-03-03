@@ -290,6 +290,10 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			// excluded files or directories due to matching some exclusion rule provided by the user (in the config)
 			//  excluded don't count against examined_files or examined_directories
 			"excluded": 0,
+			// files, directories and symlinks for which an up to date copy is already in a backup
+			"up_to_date_files": 0,
+			"up_to_date_directories": 0,
+			"up_to_date_symlinks": 0,
 			"uploaded_files": 0,
 			"uploaded_directories": 0,
 			"uploaded_symlinks": 0,
