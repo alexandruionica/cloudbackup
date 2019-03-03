@@ -244,6 +244,9 @@ func TestPath1(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 0,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -337,6 +340,9 @@ func TestPath2(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 0,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -441,6 +447,9 @@ func TestPath3(t *testing.T) {
 			"failed_to_examine": 0,
 			"failed_to_enumerate": 1,
 			"excluded": 0,
+			"up_to_date_directories": 0,
+			"up_to_date_files": 0,
+			"up_to_date_symlinks": 0,
 			"uploaded_directories": 0, // none due to dryrun=true
 			"uploaded_files": 0, // none due to dryrun=true
 			"uploaded_symlinks": 0, // none due to dryrun=true
@@ -539,6 +548,9 @@ func TestPath4(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 2,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -636,6 +648,9 @@ func TestPath5(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 1,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -735,6 +750,9 @@ func TestPath6(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 0,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -845,6 +863,9 @@ func TestPath7(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 0,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -948,6 +969,9 @@ func TestPath8(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 0,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -1043,6 +1067,9 @@ func TestPath9(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 2,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -1138,6 +1165,9 @@ func TestPath10(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 1,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -1233,6 +1263,9 @@ func TestPath11(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 1,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -1328,6 +1361,9 @@ func TestPath12(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 1,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 0, // none due to dryrun=true
 		"uploaded_files": 0, // none due to dryrun=true
 		"uploaded_symlinks": 0, // none due to dryrun=true
@@ -1434,6 +1470,9 @@ func TestPath13(t *testing.T) {
 		"failed_to_examine": 0,
 		"failed_to_enumerate": 0,
 		"excluded": 0,
+		"up_to_date_directories": 0,
+		"up_to_date_files": 0,
+		"up_to_date_symlinks": 0,
 		"uploaded_directories": 11,
 		"uploaded_files": 16,
 		"uploaded_symlinks": 0,
@@ -1563,6 +1602,9 @@ func TestPath14(t *testing.T) {
 			"failed_to_examine": 0,
 			"failed_to_enumerate": 1,
 			"excluded": 0,
+			"up_to_date_directories": 0,
+			"up_to_date_files": 0,
+			"up_to_date_symlinks": 0,
 			"uploaded_directories": 6,
 			"uploaded_files": 7,
 			"uploaded_symlinks": 2,
