@@ -30,18 +30,20 @@ func CloseStatementsAndDb(dbData shared.DbData) {
 func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	var err error
 	var PreparedStatements shared.DbPreparedStatements
-	// query statement
-	PreparedStatements.QueryStmt, err = db.Prepare("SELECT path, type, link_target, size, mtime, ctime, owner, " +
-		"permissions, checksum, checksum_type, encrypted, targets FROM files WHERE path = ?")
+	// query statement - having it as text to as it will be used in transactions too
+	PreparedStatements.Query = "SELECT path, type, link_target, size, mtime, ctime, owner, permissions, checksum, " +
+		"checksum_type, encrypted, targets FROM files WHERE path = ?"
+	PreparedStatements.QueryStmt, err = db.Prepare(PreparedStatements.Query)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL query statement, encountered error: '%s'", err)
 		return PreparedStatements, err
 	}
 
-	// insert statement
-	PreparedStatements.InsertStmt, err = db.Prepare("INSERT INTO files (path, type, link_target, size, mtime, " +
+	// insert statement - having it as text to as it will be used in transactions too
+	PreparedStatements.Insert = "INSERT INTO files (path, type, link_target, size, mtime, " +
 		"ctime, owner, permissions, checksum, checksum_type, encrypted, targets) VALUES " +
-		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	PreparedStatements.InsertStmt, err = db.Prepare(PreparedStatements.Insert)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL insert statement, encountered error: '%s'", err)
 		// close other opened statements before returning
@@ -52,9 +54,10 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 		return PreparedStatements, err
 	}
 
-	// update statement
-	PreparedStatements.UpdateStmt, err = db.Prepare("UPDATE files SET type=?, link_target=?, size=?, mtime=?, " +
-		"ctime=?, owner=?, permissions=?, checksum=?, checksum_type=?, encrypted=?, targets=? WHERE path=?")
+	// update statement - having it as text to as it will be used in transactions too
+	PreparedStatements.Update = "UPDATE files SET type=?, link_target=?, size=?, mtime=?, " +
+		"ctime=?, owner=?, permissions=?, checksum=?, checksum_type=?, encrypted=?, targets=? WHERE path=?"
+	PreparedStatements.UpdateStmt, err = db.Prepare(PreparedStatements.Update)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
 		// close other opened statements before returning

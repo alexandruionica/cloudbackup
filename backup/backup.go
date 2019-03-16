@@ -131,7 +131,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				}
 			// no db record found so this is the first time this object is backed up
 			}else{
-				logger.Debugf("Did not find a DB entry for %s , this was not previously backed up", path)
+				logger.Debugf("Did not find a DB entry for %s , this was not a previously backed up", path)
 				checksum := ""
 				if backupConfig.Checksum && utils.FileType(stat) == "file" {
 					checksum, err = utils.GetFileMD5Sum(path)
@@ -153,13 +153,24 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					return false, errors.New("unsupported file type")
 				}
 
+				dbtx, err := dbData.Db.Begin()
+				if err != nil {
+					// could not start a database transaction so we can't proceed to backup this file.
+					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
+					return false, errors.New(fmt.Sprintf("While trying to start a database transaction " +
+						"encountered error: %s", err))
+				}
 				// TODO - seems the targets property is not filled in yet which is a problem
-				_, err = dbData.PreparedStatements.InsertStmt.Exec(newDbRecord.Path, newDbRecord.Type,
+				_, err = dbtx.Exec(dbData.PreparedStatements.Insert, newDbRecord.Path, newDbRecord.Type,
 					newDbRecord.LinkTarget, newDbRecord.Size, newDbRecord.Mtime.Format(time.RFC3339Nano),
 					newDbRecord.Ctime.Format(time.RFC3339Nano), newDbRecord.Owner,
 					newDbRecord.Permissons, newDbRecord.Checksum, newDbRecord.ChecksumType, newDbRecord.Encrypted,
 					newDbRecord.Targets)
 				if err != nil {
+					txerr := dbtx.Rollback()
+					if txerr != nil {
+						logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
+					}
 					// could not add dbentry to the database so we can't proceed to backup this file.
 					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
 					return false, errors.New(fmt.Sprintf("While trying to add new file object DB entry " +
@@ -176,17 +187,33 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 						encounteredErrorObject = err
 					}
 					if cancelled {
+						txerr := dbtx.Rollback()
+						if txerr != nil {
+							logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
+						}
 						return true, nil
 					}
 				}
 				if encounteredError > 0 {
-					if len(objectStores) > 1{
-						logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
+					txerr := dbtx.Rollback()
+					if txerr != nil {
+						logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
 					}
+					if len(objectStores) > 1{
+						// TODO - ENSURE THAT ANY SUCCESSFULLY UPLOADED FILE/DIR/SYMLINK IS REMOVED
+						logger.Warnf("Failed upload of '%s' to %d out of %d targets. All targets are be " +
+							"considered failed (even the ones where the backup was successful) for this item.",
+							path, encounteredError,  len(objectStores))
+					}
+
 					updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, encounteredErrorObject)
 					return false, encounteredErrorObject
 				}
 
+				txerr := dbtx.Commit()
+				if txerr != nil {
+					return false, errors.New(fmt.Sprintf("Could not commit transaction due to error: %s", err))
+				}
 				// backup successful
 				updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, nil)
 				return false, nil
@@ -379,7 +406,8 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 }
 
 // uploads an object (file / dir / symlink) to the remote object storage. For dirs/symlinks it only uploads metadata
-// for files it uploads both content and metadata
+// for files it uploads both content and metadata. This function is also responsible for adding data in the
+// remote_files DB table
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
 func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,
 	backupConfig config.Backup, objectStores objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (bool, error) {

@@ -444,7 +444,7 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 			names = append(names, target.Name)
 		}
 
-		// check target name doesn't contain commas as those are now allowed
+		// check target name doesn't contain commas as those are now allowed as we'll use CSV in the DB for target names
 		if strings.ContainsAny(target.Name, ","){
 			msg := fmt.Sprintf("Target '%s' contains a comma in it's name. Commas are now allowed in target " +
 				"names", target.Name)
