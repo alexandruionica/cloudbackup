@@ -349,30 +349,30 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 // have obtained the value
 func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup, ctime time.Time, checksum string) (shared.BackedUpFileProperties, error) {
 	/*
-		type BackedUpFileProperties struct {
-		Path string
-		// one of: file / dir / symlink / unknown
-		Type string
-		// valid only for "symlink" type; otherwise it will be empty string
-		LinkTarget string
-		Size int64
-		// time object modified
-		Mtime time.Time
-		// time object metadata changed (ctime gets updated if file content gets changed too)
-		Ctime time.Time
-		// user id on *nix , Username on Windows (hence this is a string)
-		// Actual name (not account id / SID) of the file owner
-		Owner string
-		// Json encoded string. To decode use type from cloudbackup/backup/fileproperties  FilePermissions struct
-		Permissions string
-		// if checksuming is enabled then this will be non empty
-		Checksum string
-		// if checksuming is enabled then this will hold whatever algorithm was used for checksumming
-		ChecksumType string
-		Encrypted bool
-		// references the "name" of one or more entries in "targets" table ; multiple entries will be comma separated
-		Targets string
-	}
+			type BackedUpFileProperties struct {
+			Path string
+			// one of: file / dir / symlink / unknown
+			Type string
+			// valid only for "symlink" type; otherwise it will be empty string
+			LinkTarget string
+			Size int64
+			// time object modified
+			Mtime time.Time
+			// time object metadata changed (ctime gets updated if file content gets changed too)
+			Ctime time.Time
+			// user id on *nix , Username on Windows (hence this is a string)
+			// Actual name (not account id / SID) of the file owner
+			Owner string
+			// Json encoded string. To decode use type from cloudbackup/backup/fileproperties  FilePermissions struct
+			Permissions string
+			// if checksuming is enabled then this will be non empty
+			Checksum string
+			// if checksuming is enabled then this will hold whatever algorithm was used for checksumming
+			ChecksumType string
+			Encrypted bool
+			// references the "name" of one or more entries in "targets" table ; multiple entries will be comma separated
+			Targets string
+		}
 	*/
 	ctime, err := fileproperties.GetCtime(path)
 	if err != nil {
