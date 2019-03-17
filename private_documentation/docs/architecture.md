@@ -90,4 +90,4 @@ Before removing a target during configuration file update a manual "purge" job s
 ### remote_files
 
 The `remote_files` table contains a listing of all remote stored copies of the files (basically the backups). A file from the `files` table can have multiple entries in the `remote_files` table due to multiple versions of said file being backed up.
-There is one case where entries in the `remote_files` tables won't have any more a corresponding entry in the `files` table and that is when the local file got deleted. 
+There is one case where entries in the `remote_files` tables won't have any more a corresponding entry in the `files` table and that is when the local file got deleted but we still have backed up copies of said file and a restore might request the file to be restored. 
