@@ -742,7 +742,7 @@
         "name": {
           "type": "string",
           "example": "aws_1",
-          "description": "Name of the backup target. Commas are not allowed characters."
+          "description": "Name of the backup target. Commas are not allowed characters. If you define multiple targets for one backup section then any given file will be uploaded, in sequence to each target and also if there is a failure of one of the targets then that particular file/dir/symlink is considered to have failed to be backup and the succesful targets will have the newly uploaded/updated file/dir/symlink removed from them."
         },
         "type": {
           "type": "string",
