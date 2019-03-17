@@ -35,13 +35,14 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	report TEXT);
 
 	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target TEXT, 
-	upload_date TEXT, job_id TEXT, current INTEGER , delete_marker INTEGER, version TEXT, src_os TEXT, type TEXT, 
+	upload_date INTEGER, job_id TEXT, current INTEGER , delete_marker INTEGER, version TEXT, src_os TEXT, type TEXT, 
 	link_target TEXT, size INTEGER, mtime TEXT, ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, 
 	checksum_type, encrypted INTEGER,
 	FOREIGN KEY(target) REFERENCES targets(name), FOREIGN KEY(job_id) REFERENCES jobs(id));
 	
 	CREATE INDEX remote_files_job_id ON remote_files(job_id);
 	CREATE INDEX remote_files_local_path ON remote_files(local_path);
+	CREATE INDEX remote_files_upload_date ON remote_files(upload_date);
 
 	CREATE TABLE backup_collections (file_uuid TEXT, job_id TEXT, FOREIGN KEY(file_uuid) REFERENCES remote_files(uuid), 
 	FOREIGN KEY(job_id) REFERENCES jobs(id));
