@@ -1,14 +1,14 @@
 package testutils
 
 import (
-	"testing"
-	"os"
 	"bufio"
 	"cloudbackup/utils"
+	"os"
+	"testing"
 )
 
 // test that we can create a fake file and that it's contents match what we wrote to it
-func TestSetupFakeFile(t *testing.T){
+func TestSetupFakeFile(t *testing.T) {
 	var fileContent = "some sample text"
 	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "unittest_testutils_test_")
 	if err != nil {

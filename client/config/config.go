@@ -1,24 +1,26 @@
 package config
 
-
 import (
 	"errors"
 	"fmt"
 
+	"cloudbackup/utils"
 	"github.com/jinzhu/configor"
 	log "github.com/sirupsen/logrus"
-	"regexp"
 	"os"
+	"regexp"
 	"runtime"
-	"cloudbackup/utils"
 )
 
 const loggingContext = "client.config"
 const SecretReplace = "****************"
+
 // used for looking up environment variables holding configuration data
 const EnvPrefix = "CLOUDBACKUP_CLIENT"
+
 // default name of client configuration file . This is expected to be in the user's Homedir
 const defaultClientConfigFile = ".cloudbackup.yaml"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -39,13 +41,13 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 
 	// if a mix of command line options + env vars supplies all needed options then don't check if the config file
 	// exists
-	if CheckIfOptionOrEnvVars(cliUsername, EnvPrefix + "_Username", EnvPrefix + "_USERNAME") == false {
+	if CheckIfOptionOrEnvVars(cliUsername, EnvPrefix+"_Username", EnvPrefix+"_USERNAME") == false {
 		fileCheckRequired = true
 	}
-	if CheckIfOptionOrEnvVars(cliPassword, EnvPrefix + "_Password", EnvPrefix + "_PASSWORD") == false {
+	if CheckIfOptionOrEnvVars(cliPassword, EnvPrefix+"_Password", EnvPrefix+"_PASSWORD") == false {
 		fileCheckRequired = true
 	}
-	if CheckIfOptionOrEnvVars(cliAddress, EnvPrefix + "_Address", EnvPrefix + "_ADDRESS") == false {
+	if CheckIfOptionOrEnvVars(cliAddress, EnvPrefix+"_Address", EnvPrefix+"_ADDRESS") == false {
 		fileCheckRequired = true
 	}
 
@@ -72,7 +74,7 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 	}
 
 	if err != nil {
-		msg := fmt.Sprintf("When parsing the client configuration file %s the following error was encountered:" +
+		msg := fmt.Sprintf("When parsing the client configuration file %s the following error was encountered:"+
 			" %s", path, err)
 		logger.Error(msg)
 		return Client{}, path, errors.New(msg)
@@ -129,7 +131,7 @@ func CheckConfigOptionNotEmpty(value string, name string) error {
 	r, err := regexp.Compile(`^[[:space:]]+$`)
 	// if the err is not nil then we have bug
 	if err != nil {
-		logger.Errorf("Encountered error while compiling the regular expression used to evaluate the '%s'" +
+		logger.Errorf("Encountered error while compiling the regular expression used to evaluate the '%s'"+
 			" field. The error was: %s \n", name, err)
 		os.Exit(2)
 	}
@@ -141,17 +143,16 @@ func CheckConfigOptionNotEmpty(value string, name string) error {
 	return nil
 }
 
-
 func ValidateAddress(address string) error {
 	r, err := regexp.Compile(`^https?://[a-zA-Z0-9-.]+:[0-9]+$`)
 	// if the err is not nil then we have bug
 	if err != nil {
-		logger.Errorf("Encountered error while compiling the regular expression used to evaluate the 'address'" +
+		logger.Errorf("Encountered error while compiling the regular expression used to evaluate the 'address'"+
 			" field. The error was: %s \n", err)
 		os.Exit(2)
 	}
 	if r.MatchString(address) == false {
-		return errors.New(fmt.Sprintf("supplied 'address' having value '%s' does not match the pattern " +
+		return errors.New(fmt.Sprintf("supplied 'address' having value '%s' does not match the pattern "+
 			"'http://IP-ADDRESS:port' 'https://IP-ADDRESS:port' 'http://hostname:port' 'https://hostname:port'",
 			address))
 	}
@@ -160,7 +161,7 @@ func ValidateAddress(address string) error {
 }
 
 // if inPath == "" then return default config file path for OS ; if inPath != "" then return inPath
-func RetrieveClientConfigFilePath(inPath string) (string, error){
+func RetrieveClientConfigFilePath(inPath string) (string, error) {
 	if inPath != "" {
 		return inPath, nil
 	}
@@ -177,7 +178,7 @@ func RetrieveClientConfigFilePath(inPath string) (string, error){
 				"configuration file can't be established")
 		}
 		return homeDrive + homePath + string(os.PathSeparator) + defaultClientConfigFile, nil
-	// otherwise we're running Linux or some kind of Unix derivate so $HOME is the path to the user's home
+		// otherwise we're running Linux or some kind of Unix derivate so $HOME is the path to the user's home
 	} else {
 		home, found := os.LookupEnv("HOME")
 		if found == false {
@@ -201,7 +202,7 @@ func CheckIfOptionOrEnvVars(cliOption string, envVar1 string, envVar2 string) bo
 // replace passwords or secrets with **************** within an instance of Client type
 // Unfortunately this function doesn't have any smarts so whenever the config struct is changed then also an update to
 // the function is needed
-func SanitizeClientConfig (config Client) Client {
-    config.Password = SecretReplace
+func SanitizeClientConfig(config Client) Client {
+	config.Password = SecretReplace
 	return config
 }

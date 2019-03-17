@@ -47,7 +47,7 @@ func TestRunPrePostScript1(t *testing.T) {
 
 	jobId := uuid.NewV4().String()
 	// ensure the file extension is .bat or otherwise execution will fail on Windows
-	err = os.Rename(scriptPath, scriptPath + ".bat")
+	err = os.Rename(scriptPath, scriptPath+".bat")
 	if err != nil {
 		t.Fatalf("Could not rename '%s' to '%s.bat'", scriptPath, scriptPath)
 	}
@@ -88,7 +88,7 @@ func TestRunPrePostScript2(t *testing.T) {
 
 	jobId := uuid.NewV4().String()
 	// ensure the file extension is .ps1 or otherwise execution will fail on Windows
-	err = os.Rename(scriptPath, scriptPath + ".ps1")
+	err = os.Rename(scriptPath, scriptPath+".ps1")
 	if err != nil {
 		t.Fatalf("Could not rename '%s' to '%s.ps1'", scriptPath, scriptPath)
 	}

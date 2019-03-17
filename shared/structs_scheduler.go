@@ -67,7 +67,7 @@ type ResponseBackupCommand struct {
 }
 
 // init the CommWithSchedulerForBackup structure
-func (comm *CommWithSchedulerForBackup) Init () {
+func (comm *CommWithSchedulerForBackup) Init() {
 	comm.Mutex = &sync.Mutex{}
 	// channel used for synchronization; do NOT change it to a buffered channel
 	comm.ReceivedCommand = make(chan ReceiveBackupCommand)
@@ -93,16 +93,16 @@ type BackupJobStatus struct {
 	EndTime time.Time `json:"end_time,omitempty"`
 	// bandwidth/second used during last 1/5/15 minute(s) - makes sense only for $State == "running" . This
 	// value is the lower of disk read bandwidth and the upload speed to the backend object store
-	Rate1Min             int64                    `json:"rate_1min"`
+	Rate1Min             int64 `json:"rate_1min"`
 	_rate1Min            *ratecounter.RateCounter
-	Rate5Min             int64                    `json:"rate_5min"`
+	Rate5Min             int64 `json:"rate_5min"`
 	_rate5Min            *ratecounter.RateCounter
-	Rate15Min            int64                    `json:"rate_15min"`
+	Rate15Min            int64 `json:"rate_15min"`
 	_rate15Min           *ratecounter.RateCounter
-	FileContentBytesRead uint64					  `json:"file_content_bytes_read"`
-	ObjectStoreRates     []ObjectStoreRate        `json:"object_store_rates,omitempty"`
-	StatsCounters        map[string]uint64        `json:"stats_counters,omitempty"`
-	StatsText            map[string]string        `json:"stats_text,omitempty"`
+	FileContentBytesRead uint64            `json:"file_content_bytes_read"`
+	ObjectStoreRates     []ObjectStoreRate `json:"object_store_rates,omitempty"`
+	StatsCounters        map[string]uint64 `json:"stats_counters,omitempty"`
+	StatsText            map[string]string `json:"stats_text,omitempty"`
 	// used for keeping track of messages when sending real time upload status to connected clients
 	Sequence uint64 `json:"-"`
 	// TODO - to implement this . Lists the UTC time when the next run is scheduled
@@ -133,28 +133,28 @@ type ObjectStoreRate struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 	// this one is used only for the current file and reset to 0 whenever a new one starts being uploaded.
-	_currentFileRate  *ratecounter.RateCounter
-	Rate1Min int64 `json:"rate_1min"`
-	_rate1Min *ratecounter.RateCounter
-	Rate5Min int64 `json:"rate_5min"`
-	_rate5Min *ratecounter.RateCounter
-	Rate15Min int64 `json:"rate_15min"`
-	_rate15Min *ratecounter.RateCounter
+	_currentFileRate *ratecounter.RateCounter
+	Rate1Min         int64 `json:"rate_1min"`
+	_rate1Min        *ratecounter.RateCounter
+	Rate5Min         int64 `json:"rate_5min"`
+	_rate5Min        *ratecounter.RateCounter
+	Rate15Min        int64 `json:"rate_15min"`
+	_rate15Min       *ratecounter.RateCounter
 }
 
 // this interface is used only for cloudbackup/backup/scan/Scan() in order to be able to pass a different object when doing a
 //  dry run report
 type BackupJobsStateInterface interface {
-	AddBytesRead (BackupJobName string, bytesRead uint64)
+	AddBytesRead(BackupJobName string, bytesRead uint64)
 	IncrementCounter(BackupJobName string, counterName string, Path string, fileType string, OperationType string, Error string)
 	IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool)
-	IncrementSequence (BackupJobName string)
+	IncrementSequence(BackupJobName string)
 	UpdateStatsText(BackupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
 }
 
 // returns a slice with the state of both running and stopped jobs. $cfgCopy MUST be a copy and not a dereference of
 // the actual pointer to the main config (as slices are passed by reference and bad things will happen)
-func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string) []BackupJobStatus {
+func (jobs *BackupJobsState) Get(cfgCopy config.CfgTemplate, logContext string) []BackupJobStatus {
 	result := make([]BackupJobStatus, 0)
 	runningList := map[string]string{}
 	//log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Acquiring read lock before reading running " +
@@ -172,10 +172,10 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 		jobCopy.StatsCounters = make(map[string]uint64)
 		jobCopy.StatsText = make(map[string]string)
 		// copy maps
-		for k,v := range job.StatsCounters {
+		for k, v := range job.StatsCounters {
 			jobCopy.StatsCounters[k] = v
 		}
-		for k,v := range job.StatsText {
+		for k, v := range job.StatsText {
 			jobCopy.StatsText[k] = v
 		}
 		// copy ObjectStore rate slice
@@ -195,7 +195,7 @@ func (jobs *BackupJobsState) Get (cfgCopy config.CfgTemplate, logContext string)
 	for _, backupJob := range cfgCopy.Backup {
 		if _, foundMatch := runningList[backupJob.Name]; foundMatch == false {
 			result = append(result, BackupJobStatus{
-				Name: backupJob.Name,
+				Name:  backupJob.Name,
 				State: "stopped",
 				// TODO - add NextRun (see struct definition)
 			})
@@ -247,7 +247,7 @@ func (jobs *BackupJobsState) IsStopping(name string, JobId string, logContext st
 			if JobId == "" && job.State == "stopping" {
 				return true
 			} else {
-				if JobId != "" && job.BackupJobId == JobId && job.State == "stopping"{
+				if JobId != "" && job.BackupJobId == JobId && job.State == "stopping" {
 					return true
 				}
 			}
@@ -274,40 +274,40 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	jobs.Running = append(jobs.Running, BackupJobStatus{
-		Name: name,
-		State: "running",
+		Name:        name,
+		State:       "running",
 		BackupJobId: BackupJobId,
-		StartTime: time.Now(),
+		StartTime:   time.Now(),
 		// init statistics related fields ; IF ANY NEW ENTRY IS ADDED BELOW THEN REVISIT AT LEAST METHOD
 		// IncrementCounter() AND SEE IF SAID ADDITION NEEDS TO BE EXCLUDED FROM BEING SEND TO WATCHERS
 		StatsCounters: map[string]uint64{
-			"examined_files": 0,
+			"examined_files":       0,
 			"examined_directories": 0,
-			"examined_symlinks": 0,
-			"examined_unknown": 0,
-			"failed_to_examine": 0,
-			"failed_to_enumerate": 0,
+			"examined_symlinks":    0,
+			"examined_unknown":     0,
+			"failed_to_examine":    0,
+			"failed_to_enumerate":  0,
 			// excluded files or directories due to matching some exclusion rule provided by the user (in the config)
 			//  excluded don't count against examined_files or examined_directories
 			"excluded": 0,
 			// files, directories and symlinks for which an up to date copy is already in a backup
-			"up_to_date_files": 0,
-			"up_to_date_directories": 0,
-			"up_to_date_symlinks": 0,
-			"uploaded_files": 0,
-			"uploaded_directories": 0,
-			"uploaded_symlinks": 0,
-			"failed_to_upload_files": 0,
+			"up_to_date_files":             0,
+			"up_to_date_directories":       0,
+			"up_to_date_symlinks":          0,
+			"uploaded_files":               0,
+			"uploaded_directories":         0,
+			"uploaded_symlinks":            0,
+			"failed_to_upload_files":       0,
 			"failed_to_upload_directories": 0,
-			"failed_to_upload_symlinks": 0,
+			"failed_to_upload_symlinks":    0,
 			// this counter will always increment whenever we encounter an object different from "file", "dir", "symlink" types
-			"failed_to_upload_unknown": 0,
-			"updated_metadata_for_files": 0,
-			"updated_metadata_for_directories": 0,
-			"updated_metadata_for_symlinks": 0,
-			"failed_to_update_metadata_for_files": 0,
+			"failed_to_upload_unknown":                  0,
+			"updated_metadata_for_files":                0,
+			"updated_metadata_for_directories":          0,
+			"updated_metadata_for_symlinks":             0,
+			"failed_to_update_metadata_for_files":       0,
 			"failed_to_update_metadata_for_directories": 0,
-			"failed_to_update_metadata_for_symlinks": 0,
+			"failed_to_update_metadata_for_symlinks":    0,
 			// pre_run / post_run scripts which have failed will each increment once this counter
 			// (excludes notification scripts)
 			"scripts_failed": 0,
@@ -319,7 +319,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		},
 		StatsText: map[string]string{
 			"current_directory": "",
-			"current_file": "",
+			"current_file":      "",
 			"current_operation": "",
 		},
 		Ctx:      ctx,
@@ -331,13 +331,12 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 	return nil
 }
 
-
 // If $stopped == false then mark job as "stopping"; if $stopped == true then remove job from Running Jobs list
 // the $stopped bool parameter signifies when having value "false" the job state should be changed to "stopping" while
 // when the parameter is "true" then the job has been stopped and it should be removed from the list of running jobs
 func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJobId string, stopped bool) error {
 	var state string
-	if stopped{
+	if stopped {
 		state = "stopped"
 	} else {
 		state = "stopping"
@@ -378,7 +377,7 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 			updatedJobsRunning = append(updatedJobsRunning, job)
 		}
 	}
-	if found{
+	if found {
 		jobs.Running = updatedJobsRunning
 		return nil
 	} else {
@@ -395,17 +394,16 @@ func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName 
 		jobs.Lock.Unlock()
 	}()
 
-	MainLoop:
+MainLoop:
 	for _, job := range jobs.Running {
 		if BackupJobName == job.Name {
-			job.StatsCounters[counterName] +=1
-
+			job.StatsCounters[counterName] += 1
 
 			// don't send a message to the multiplexer for the below $counterName
 			switch counterName {
-				case
-					"examined_files", "examined_directories", "examined_symlinks",  "examined_unknown", "scripts_failed":
-						break MainLoop
+			case
+				"examined_files", "examined_directories", "examined_symlinks", "examined_unknown", "scripts_failed":
+				break MainLoop
 			}
 			// if this is a file, and no errors were encountered and this was a content upload then don't send a
 			// message to the multiplexer (because IncrementRateCounter() does it).
@@ -483,7 +481,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 		if BackupJobName == job.Name {
 
 			// if the job rate counters(pointers) are not initialised then init them
-			if job._rate1Min == nil || job._rate5Min == nil || job._rate15Min == nil{
+			if job._rate1Min == nil || job._rate5Min == nil || job._rate15Min == nil {
 				jobs.Running[k]._rate1Min = ratecounter.NewRateCounter(time.Minute * 1)
 				jobs.Running[k]._rate5Min = ratecounter.NewRateCounter(time.Minute * 5)
 				jobs.Running[k]._rate15Min = ratecounter.NewRateCounter(time.Minute * 15)
@@ -511,14 +509,14 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				}
 			}
 			// add entry and init counters
-			if ! foundObjectStoreEntry {
+			if !foundObjectStoreEntry {
 				jobs.Running[k].ObjectStoreRates = append(jobs.Running[k].ObjectStoreRates, ObjectStoreRate{
-					Name: ObjectStoreName,
-					Type: ObjectStoreType,
+					Name:             ObjectStoreName,
+					Type:             ObjectStoreType,
 					_currentFileRate: ratecounter.NewRateCounter(time.Second * 10),
-					_rate1Min: ratecounter.NewRateCounter(time.Minute * 1),
-					_rate5Min: ratecounter.NewRateCounter(time.Minute * 5),
-					_rate15Min: ratecounter.NewRateCounter(time.Minute * 15),
+					_rate1Min:        ratecounter.NewRateCounter(time.Minute * 1),
+					_rate5Min:        ratecounter.NewRateCounter(time.Minute * 5),
+					_rate15Min:       ratecounter.NewRateCounter(time.Minute * 15),
 				})
 			}
 
@@ -547,7 +545,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 					JobId:           job.BackupJobId,
 					Path:            Path,
 					PercentDone:     PercentDone,
-					Rate:            jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Rate()/10,
+					Rate:            jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Rate() / 10,
 					ObjectType:      "file",
 					ObjectStoreName: ObjectStoreName,
 					ObjectStoreType: ObjectStoreType,
@@ -562,7 +560,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 }
 
 // add to *BackupJobsState.FileContentBytesRead of a given backup job a number of bytes which were read(represents file contents)
-func (jobs *BackupJobsState) AddBytesRead (BackupJobName string, bytesRead uint64) {
+func (jobs *BackupJobsState) AddBytesRead(BackupJobName string, bytesRead uint64) {
 	if bytesRead == 0 {
 		return
 	}
@@ -578,10 +576,9 @@ func (jobs *BackupJobsState) AddBytesRead (BackupJobName string, bytesRead uint6
 	}
 }
 
-
 // increments *BackupJobsState.Sequence of a given backup job. The Sequence is used when sending messages to clients
 // about objects being uploaded
-func (jobs *BackupJobsState) IncrementSequence (BackupJobName string) {
+func (jobs *BackupJobsState) IncrementSequence(BackupJobName string) {
 	jobs.Lock.Lock()
 	defer jobs.Lock.Unlock()
 	for k, job := range jobs.Running {

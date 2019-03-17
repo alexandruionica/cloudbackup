@@ -52,7 +52,7 @@ func TestRunScript1(t *testing.T) {
 	scriptEntry := config.NotificationScript{
 		Path: scriptPath,
 		Type: []string{"finished"},
-		}
+	}
 	jobId := uuid.NewV4().String()
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 	if err == nil {

@@ -33,17 +33,17 @@ type WatchMessage struct {
 	// for a given object, shows progress.
 	PercentDone uint `json:"percent_done"`
 	// 10 second rate in bytes per second for given $Path . Will always have 0 value for $ObjectType != "file"
-	Rate            int64  `json:"rate"`
+	Rate int64 `json:"rate"`
 	// one of: file, dir, symlink, unknown .It's up to the http handler to replace "dir" with "directory"
 	// in order to make the output nicer for clients which will consume it.
-	ObjectType		string `json:"type"`
+	ObjectType      string `json:"type"`
 	ObjectStoreName string `json:"store_name"`
 	ObjectStoreType string `json:"store_type"`
 	// one of "excluded", "examine", "enumerate", "upload" or "metadata" depicting if the message represents an examination of an
 	// object in order to determine if a backup is needed, content upload and metadata upload/update
-	OperationType	string `json:"operation_type"`
+	OperationType string `json:"operation_type"`
 	// if non empty then
-	Error 			string `json:"error"`
+	Error string `json:"error"`
 	// if set to true then it means that the job has finished (not that it succeeded but that it finished its run)
 	// and that the client connection should be closed. Also when this is true then the rest of the fields should be ignored.
 	JobCompleted bool `json:"-"`
@@ -97,17 +97,17 @@ type WatchMultiplexer struct {
 	// For each registered consumer there should be an entry in this slice
 	Consumers []*WatchConsumer
 	// on this channel messages to be sent to clients are received (from backup or restore jobs)
-	WatchMsgSender <- chan WatchMessage
+	WatchMsgSender <-chan WatchMessage
 }
 
 // sends message to shutdown the multiplexer  by cancelling the context
-func (multiplexer *WatchMultiplexer) Stop (){
+func (multiplexer *WatchMultiplexer) Stop() {
 	multiplexer.Cancel()
 	// DO NOT close the channel used to receive messages as it will end with a panic the next time another component
 	// writes to it
 }
 
-func SendMsgToWatcher(msg WatchMessage, WatchMsgReceiver chan <-WatchMessage) {
+func SendMsgToWatcher(msg WatchMessage, WatchMsgReceiver chan<- WatchMessage) {
 	select {
 	case WatchMsgReceiver <- msg:
 		return
@@ -118,23 +118,23 @@ func SendMsgToWatcher(msg WatchMessage, WatchMsgReceiver chan <-WatchMessage) {
 }
 
 // appends a new consumer(client) to the slice of clients
-func (multiplexer *WatchMultiplexer) AddConsumer (JobType string, JobName string, JobId string,
-	CommChan chan WatchMessage,  Ctx context.Context, Cancel context.CancelFunc, ClientIdentifier string,
+func (multiplexer *WatchMultiplexer) AddConsumer(JobType string, JobName string, JobId string,
+	CommChan chan WatchMessage, Ctx context.Context, Cancel context.CancelFunc, ClientIdentifier string,
 	ClientUuid string) error {
 	NewClient := &WatchConsumer{
-		JobType: JobType,
-		JobName: JobName,
-		JobId: JobId,
-		CommChan: CommChan,
-		Ctx: Ctx,
-		Cancel: Cancel,
+		JobType:    JobType,
+		JobName:    JobName,
+		JobId:      JobId,
+		CommChan:   CommChan,
+		Ctx:        Ctx,
+		Cancel:     Cancel,
 		Identifier: ClientIdentifier,
-		Uuid: ClientUuid,
+		Uuid:       ClientUuid,
 		// rate limit to max 5 updates per second for a given file (actually 6 per second in case it reaches 100%
 		// upload during interval). Given multiple files in a 1 second interval then this limit will both be breached
 		// and we could also get less than 5 updates during the interval for a given file
 		// Burst is set tp =2 as when having burst=1 for unknown reasons the limiter would choke randomly and stop working
-		Limiter: rate.NewLimiter(WatchClientRateLimit, WatchClientRateLimitBurst),
+		Limiter:     rate.NewLimiter(WatchClientRateLimit, WatchClientRateLimitBurst),
 		CurrentPath: "",
 	}
 	multiplexer.Mutex.Lock()
@@ -150,9 +150,8 @@ func (multiplexer *WatchMultiplexer) AddConsumer (JobType string, JobName string
 
 }
 
-
 // removes a consumer(client) from the slice of clients
-func (multiplexer *WatchMultiplexer) RemoveConsumer (ClientIdentifier string, ClientUuid string) {
+func (multiplexer *WatchMultiplexer) RemoveConsumer(ClientIdentifier string, ClientUuid string) {
 	multiplexer.Mutex.Lock()
 	defer multiplexer.Mutex.Unlock()
 	for k, entry := range multiplexer.Consumers {
@@ -161,13 +160,13 @@ func (multiplexer *WatchMultiplexer) RemoveConsumer (ClientIdentifier string, Cl
 			multiplexer.Consumers[k] = multiplexer.Consumers[len(multiplexer.Consumers)-1]
 			multiplexer.Consumers[len(multiplexer.Consumers)-1] = nil // without this Garbage Collection will leak memory
 			multiplexer.Consumers = multiplexer.Consumers[:len(multiplexer.Consumers)-1]
-			logger.Debugf("Deleted entry for watch consumer '%s' having uuid '%s'. There are '%d' remaining " +
+			logger.Debugf("Deleted entry for watch consumer '%s' having uuid '%s'. There are '%d' remaining "+
 				"consumers", ClientIdentifier, ClientUuid, len(multiplexer.Consumers))
 			return
 		}
 	}
 	// if we got here, we got a problem
-	logger.Debugf("Did not find an entry to delete for watch consumer '%s' having uuid '%s'. This is most " +
-		"likely a bug", ClientIdentifier, ClientUuid,)
+	logger.Debugf("Did not find an entry to delete for watch consumer '%s' having uuid '%s'. This is most "+
+		"likely a bug", ClientIdentifier, ClientUuid)
 
 }

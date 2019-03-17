@@ -26,13 +26,13 @@ func TestStop1(t *testing.T) {
 	select {
 	case <-multiplexer.Ctx.Done():
 		// do nothing, we're good
-	default: {
-		t.Fatalf("multiplexer.Stop() should have led to multiplexer.Ctx.Done() to return instantly but it " +
-			"didn't most likely because the context wasn't cancelled")
-	}
+	default:
+		{
+			t.Fatalf("multiplexer.Stop() should have led to multiplexer.Ctx.Done() to return instantly but it " +
+				"didn't most likely because the context wasn't cancelled")
+		}
 	}
 }
-
 
 // send first one message, fetch it back from the client channel and verify it matches expectation. Proceed then
 // to send 2 more messages and check the channels size is 2
@@ -63,12 +63,12 @@ func TestSendMsgToWatcher1(t *testing.T) {
 
 	go Start(multiplexer)
 	msgToSend := shared.WatchMessage{
-		JobId: JobUuid,
-		JobName: JobName,
-		JobType: "backup",
-		Path: "/testpath1",
+		JobId:       JobUuid,
+		JobName:     JobName,
+		JobType:     "backup",
+		Path:        "/testpath1",
 		PercentDone: 0,
-		}
+	}
 	shared.SendMsgToWatcher(msgToSend, serverMsgChan)
 	// sleep 10 milliseconds in order to allow the go Start() routine to consume the message and forward it to clients
 	time.Sleep(10 * time.Millisecond)
@@ -81,15 +81,17 @@ func TestSendMsgToWatcher1(t *testing.T) {
 			len(clientMsgChan))
 	}
 	select {
-	case receivedMsg := <- clientMsgChan: {
-		if receivedMsg.JobId != JobUuid {
-			t.Fatalf("Was expecting Jobid=%s in the message received by the client but instead got " +
-				"Jobid=%s", JobUuid, receivedMsg.JobId)
+	case receivedMsg := <-clientMsgChan:
+		{
+			if receivedMsg.JobId != JobUuid {
+				t.Fatalf("Was expecting Jobid=%s in the message received by the client but instead got "+
+					"Jobid=%s", JobUuid, receivedMsg.JobId)
+			}
 		}
-	}
-	default: {
-		t.Fatalf("Did not manage to fetch the message which was supposed to exist on the client channel")
-	}
+	default:
+		{
+			t.Fatalf("Did not manage to fetch the message which was supposed to exist on the client channel")
+		}
 	}
 
 	// send another 2 messages and check client chan size is 2
@@ -108,15 +110,17 @@ func TestSendMsgToWatcher1(t *testing.T) {
 			len(clientMsgChan))
 	}
 	select {
-	case receivedMsg := <- clientMsgChan: {
-		if receivedMsg.JobId != JobUuid {
-			t.Fatalf("Was expecting Jobid=%s in the message received by the client but instead got " +
-				"Jobid=%s", JobUuid, receivedMsg.JobId)
+	case receivedMsg := <-clientMsgChan:
+		{
+			if receivedMsg.JobId != JobUuid {
+				t.Fatalf("Was expecting Jobid=%s in the message received by the client but instead got "+
+					"Jobid=%s", JobUuid, receivedMsg.JobId)
+			}
 		}
-	}
-	default: {
-		t.Fatalf("Did not manage to fetch the message which was supposed to exist on the client channel")
-	}
+	default:
+		{
+			t.Fatalf("Did not manage to fetch the message which was supposed to exist on the client channel")
+		}
 	}
 
 	// shutdown multiplexer and check that it did stop properly
@@ -124,10 +128,11 @@ func TestSendMsgToWatcher1(t *testing.T) {
 	select {
 	case <-multiplexer.Ctx.Done():
 		// do nothing, we're good
-	default: {
-		t.Fatalf("multiplexer.Stop() should have led to multiplexer.Ctx.Done() to return instantly but it " +
-			"didn't most likely because the context wasn't cancelled")
-	}
+	default:
+		{
+			t.Fatalf("multiplexer.Stop() should have led to multiplexer.Ctx.Done() to return instantly but it " +
+				"didn't most likely because the context wasn't cancelled")
+		}
 	}
 }
 
@@ -247,10 +252,10 @@ func TestSendMsgToClients1(t *testing.T) {
 	}
 
 	msgToSend := shared.WatchMessage{
-		JobId: JobUuid,
-		JobName: JobName,
-		JobType: "backup",
-		Path: "/testpath1",
+		JobId:       JobUuid,
+		JobName:     JobName,
+		JobType:     "backup",
+		Path:        "/testpath1",
 		PercentDone: 0,
 	}
 	for i := 1; i <= 10; i++ {
@@ -290,21 +295,20 @@ func TestSendMsgToClients2(t *testing.T) {
 	}
 
 	msgToSend := shared.WatchMessage{
-		JobId: JobUuid,
-		JobName: JobName,
-		JobType: "backup",
+		JobId:       JobUuid,
+		JobName:     JobName,
+		JobType:     "backup",
 		PercentDone: 0,
 	}
-	for i := 1; i <= 2 * ChanSize; i++ {
+	for i := 1; i <= 2*ChanSize; i++ {
 		msgToSend.Path = "/testpath" + strconv.Itoa(i)
 		sendMsgToClients(multiplexer, msgToSend)
 	}
 	if len(clientMsgChan) != ChanSize {
 		t.Fatalf("It was expected to find %d messages on the watch client channel but %d where found",
-			2 * ChanSize, len(clientMsgChan))
+			2*ChanSize, len(clientMsgChan))
 	}
 }
-
 
 // tell client job has been finished
 func TestTellClientsJobFinished1(t *testing.T) {
@@ -333,7 +337,7 @@ func TestTellClientsJobFinished1(t *testing.T) {
 	}
 
 	go Start(multiplexer)
-	TellClientsJobFinished("backup", JobName,JobUuid, serverMsgChan, false, false)
+	TellClientsJobFinished("backup", JobName, JobUuid, serverMsgChan, false, false)
 
 	// sleep 10 milliseconds in order to allow the go Start() routine to consume the message and forward it to clients
 	time.Sleep(10 * time.Millisecond)
@@ -387,7 +391,7 @@ func TestTellClientsJobFinished2(t *testing.T) {
 	}
 
 	go Start(multiplexer)
-	TellClientsJobFinished("backup", JobName,JobUuid, serverMsgChan, true, false)
+	TellClientsJobFinished("backup", JobName, JobUuid, serverMsgChan, true, false)
 
 	// sleep 10 milliseconds in order to allow the go Start() routine to consume the message and forward it to clients
 	time.Sleep(10 * time.Millisecond)
@@ -444,7 +448,7 @@ func TestTellClientsJobFinished3(t *testing.T) {
 	}
 
 	go Start(multiplexer)
-	TellClientsJobFinished("backup", JobName,JobUuid, serverMsgChan, false, true)
+	TellClientsJobFinished("backup", JobName, JobUuid, serverMsgChan, false, true)
 
 	// sleep 10 milliseconds in order to allow the go Start() routine to consume the message and forward it to clients
 	time.Sleep(10 * time.Millisecond)

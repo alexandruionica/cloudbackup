@@ -1,12 +1,12 @@
 package config
 
 import (
-	"testing"
-	"cloudbackup/utils"
 	"cloudbackup/testutils"
+	"cloudbackup/utils"
 	"os"
 	"reflect"
 	"runtime"
+	"testing"
 )
 
 // test loading client config file with regular reporting from configor library
@@ -24,14 +24,14 @@ func TestLoad1(t *testing.T) {
 		}
 	}()
 
-	result, _, err := Load(path, false, "","","")
+	result, _, err := Load(path, false, "", "", "")
 	if err != nil {
 		t.Fatalf("Could not load fake client config file. Error was: %s", err)
 	}
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.TypeOf(compare) != reflect.TypeOf(result) {
 		t.Fatalf("Type of result should have been '%s' but is '%s' ", reflect.TypeOf(compare),
-			reflect.TypeOf(result) )
+			reflect.TypeOf(result))
 	}
 }
 
@@ -50,20 +50,20 @@ func TestLoad2(t *testing.T) {
 		}
 	}()
 
-	result, _, err := Load(path, true, "","","")
+	result, _, err := Load(path, true, "", "", "")
 	if err != nil {
 		t.Fatalf("Could not load fake client config file. Error was: %s", err)
 	}
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.TypeOf(compare) != reflect.TypeOf(result) {
 		t.Fatalf("Type of result should have been '%s' but is '%s' ", reflect.TypeOf(compare),
-			reflect.TypeOf(result) )
+			reflect.TypeOf(result))
 	}
 }
 
 // test loading missing config file
 func TestLoad3(t *testing.T) {
-	_, _, err := Load("a/file/which/does/not/exist", true, "","","")
+	_, _, err := Load("a/file/which/does/not/exist", true, "", "", "")
 	if err == nil {
 		t.Fatal("Client config file load should have failed due to missing file but instead succeeded")
 	}
@@ -71,7 +71,7 @@ func TestLoad3(t *testing.T) {
 
 // test loading valid yaml but invalid config file
 func TestLoad4(t *testing.T) {
-	var compare= Client{}
+	var compare = Client{}
 	var invalidConfig = []byte(`zzzzzz
 some: value`)
 	path, err := utils.SetupTmpFileWithContent(invalidConfig, "unittest_client_config_test_")
@@ -86,7 +86,7 @@ some: value`)
 		}
 	}()
 
-	result, _, err := Load(path, true, "","","")
+	result, _, err := Load(path, true, "", "", "")
 	if err == nil {
 		t.Fatal("Invalid yaml config file should have caused an eror but didn't")
 	}
@@ -100,16 +100,16 @@ func TestLoad5(t *testing.T) {
 	testData := Client{
 		Username: "someuser",
 		Password: "somepass",
-		Address: "http://7.7.7.7:9999",
+		Address:  "http://7.7.7.7:9999",
 	}
-	result, _, err := Load("", false, testData.Username,testData.Password,testData.Address)
+	result, _, err := Load("", false, testData.Username, testData.Password, testData.Address)
 	if err != nil {
 		t.Fatalf("Could not load fake configuration options. Error was: %s", err)
 	}
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.TypeOf(testData) != reflect.TypeOf(result) {
 		t.Fatalf("Type of result should have been '%s' but is '%s' ", reflect.TypeOf(testData),
-			reflect.TypeOf(result) )
+			reflect.TypeOf(result))
 	}
 	// check data matches
 	if result.Username != testData.Username || result.Password != testData.Password || result.Address != testData.Address {
@@ -123,9 +123,9 @@ func TestLoad6(t *testing.T) {
 	testData := Client{
 		Username: "someuser",
 		Password: "somepass",
-		Address: "ftp://1.2.3.4:21",
+		Address:  "ftp://1.2.3.4:21",
 	}
-	result, _, err := Load("", false, testData.Username,testData.Password,testData.Address)
+	result, _, err := Load("", false, testData.Username, testData.Password, testData.Address)
 	if err == nil {
 		t.Fatal("Expected error for Load() when passing in an address in an incorrect format but we didn't " +
 			"get any error")
@@ -133,14 +133,14 @@ func TestLoad6(t *testing.T) {
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.TypeOf(testData) != reflect.TypeOf(result) {
 		t.Fatalf("Type of result should have been '%s' but is '%s' ", reflect.TypeOf(testData),
-			reflect.TypeOf(result) )
+			reflect.TypeOf(result))
 	}
 }
 
 func TestCheckConfigOptionNotEmpty(t *testing.T) {
 	err := CheckConfigOptionNotEmpty("bla", "bla_option")
 	if err != nil {
-		t.Fatalf("CheckConfigOptionNotEmpty() should not have raised error for non empty string but we got: " +
+		t.Fatalf("CheckConfigOptionNotEmpty() should not have raised error for non empty string but we got: "+
 			"'%s'", err)
 	}
 
@@ -160,28 +160,28 @@ func TestValidateAddress(t *testing.T) {
 	testAddr := "http://blabla.org:81"
 	err := ValidateAddress(testAddr)
 	if err != nil {
-		t.Fatalf("ValidateAddress() should not have raised error for address '%s' but we got: " +
+		t.Fatalf("ValidateAddress() should not have raised error for address '%s' but we got: "+
 			"'%s'", testAddr, err)
 	}
 
 	testAddr = "https://blabla.org:82"
 	err = ValidateAddress(testAddr)
 	if err != nil {
-		t.Fatalf("ValidateAddress() should not have raised error for address '%s' but we got: " +
+		t.Fatalf("ValidateAddress() should not have raised error for address '%s' but we got: "+
 			"'%s'", testAddr, err)
 	}
 
 	testAddr = "http://1.2.3.4:83"
 	err = ValidateAddress(testAddr)
 	if err != nil {
-		t.Fatalf("ValidateAddress() should not have raised error for address '%s' but we got: " +
+		t.Fatalf("ValidateAddress() should not have raised error for address '%s' but we got: "+
 			"'%s'", testAddr, err)
 	}
 
 	testAddr = "https://1.2.3.4:84"
 	err = ValidateAddress(testAddr)
 	if err != nil {
-		t.Fatalf("ValidateAddress() should not have raised error for address '%s' but we got: " +
+		t.Fatalf("ValidateAddress() should not have raised error for address '%s' but we got: "+
 			"'%s'", testAddr, err)
 	}
 
@@ -229,7 +229,7 @@ func TestValidate1(t *testing.T) {
 	var clientConfig = Client{
 		Username: "blablauser",
 		Password: "34sdf234",
-		Address: "http://127.0.0.1:880",
+		Address:  "http://127.0.0.1:880",
 	}
 	err := Validate(clientConfig)
 	if err != nil {
@@ -239,40 +239,40 @@ func TestValidate1(t *testing.T) {
 	clientConfig.Address = "google.com"
 	err = Validate(clientConfig)
 	if err == nil {
-		t.Fatalf("Validate mock client config should have failed but didn't. " +
+		t.Fatalf("Validate mock client config should have failed but didn't. "+
 			"Input structure was: %+v", clientConfig)
 	}
 
 	clientConfig = Client{
 		Username: "blablauser",
 		Password: "34sdf234",
-		Address: "",
+		Address:  "",
 	}
 	err = Validate(clientConfig)
 	if err == nil {
-		t.Fatalf("Validate mock client config should have failed but didn't. " +
+		t.Fatalf("Validate mock client config should have failed but didn't. "+
 			"Input structure was: %+v", clientConfig)
 	}
 
 	clientConfig = Client{
 		Username: "blablauser",
 		Password: "",
-		Address: "http://127.0.0.1:880",
+		Address:  "http://127.0.0.1:880",
 	}
 	err = Validate(clientConfig)
 	if err == nil {
-		t.Fatalf("Validate mock client config should have failed but didn't. " +
+		t.Fatalf("Validate mock client config should have failed but didn't. "+
 			"Input structure was: %+v", clientConfig)
 	}
 
 	clientConfig = Client{
 		Username: "",
 		Password: "34sdf234",
-		Address: "http://127.0.0.1:880",
+		Address:  "http://127.0.0.1:880",
 	}
 	err = Validate(clientConfig)
 	if err == nil {
-		t.Fatalf("Validate mock client config should have failed but didn't. " +
+		t.Fatalf("Validate mock client config should have failed but didn't. "+
 			"Input structure was: %+v", clientConfig)
 	}
 }
@@ -294,12 +294,12 @@ func TestSanitizeCheckIfOptionOrEnvVars1(t *testing.T) {
 	envVar2 := "EnvVar2"
 	err := os.Unsetenv(envVar1)
 	if err != nil {
-		t.Fatalf("Recevied error while trying to unset an environment variable as part of the test setup." +
+		t.Fatalf("Recevied error while trying to unset an environment variable as part of the test setup."+
 			" Err was: %s", err)
 	}
 	err = os.Unsetenv(envVar2)
 	if err != nil {
-		t.Fatalf("1. Recevied error while trying to unset an environment variable as part of the test setup." +
+		t.Fatalf("1. Recevied error while trying to unset an environment variable as part of the test setup."+
 			" Err was: %s", err)
 	}
 	result := CheckIfOptionOrEnvVars("", envVar1, envVar2)
@@ -314,7 +314,7 @@ func TestSanitizeCheckIfOptionOrEnvVars1(t *testing.T) {
 
 	err = os.Setenv(envVar1, "somevalue")
 	if err != nil {
-		t.Fatalf("4. Recevied error while trying to set an environment variable as part of the test." +
+		t.Fatalf("4. Recevied error while trying to set an environment variable as part of the test."+
 			" Err was: %s", err)
 	}
 	result = CheckIfOptionOrEnvVars("", envVar1, envVar2)
@@ -323,13 +323,13 @@ func TestSanitizeCheckIfOptionOrEnvVars1(t *testing.T) {
 	}
 	err = os.Unsetenv(envVar1)
 	if err != nil {
-		t.Fatalf("6. Recevied error while trying to unset an environment variable as part of the test cleanup." +
+		t.Fatalf("6. Recevied error while trying to unset an environment variable as part of the test cleanup."+
 			" Err was: %s", err)
 	}
 
 	err = os.Setenv(envVar2, "SomeOtherValue")
 	if err != nil {
-		t.Fatalf("7. Recevied error while trying to set an environment variable as part of the test." +
+		t.Fatalf("7. Recevied error while trying to set an environment variable as part of the test."+
 			" Err was: %s", err)
 	}
 	result = CheckIfOptionOrEnvVars("", envVar1, envVar2)
@@ -338,12 +338,12 @@ func TestSanitizeCheckIfOptionOrEnvVars1(t *testing.T) {
 	}
 	err = os.Unsetenv(envVar2)
 	if err != nil {
-		t.Fatalf("9. Recevied error while trying to unset an environment variable as part of the test cleanup." +
+		t.Fatalf("9. Recevied error while trying to unset an environment variable as part of the test cleanup."+
 			" Err was: %s", err)
 	}
 }
 
-func TestRetrieveClientConfigFilePath1(t *testing.T){
+func TestRetrieveClientConfigFilePath1(t *testing.T) {
 	result, err := RetrieveClientConfigFilePath("somepath")
 	if err != nil {
 		t.Fatalf("Recevied error while trying running RetrieveClientConfigFilePath(). Error was: %s", err)
@@ -353,16 +353,16 @@ func TestRetrieveClientConfigFilePath1(t *testing.T){
 	}
 }
 
-func TestRetrieveClientConfigFilePath2(t *testing.T){
+func TestRetrieveClientConfigFilePath2(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		err := os.Setenv("HomeDrive", "C:")
 		if err != nil {
-			t.Fatalf("1. Recevied error while trying to set an environment variable as part of the test." +
+			t.Fatalf("1. Recevied error while trying to set an environment variable as part of the test."+
 				" Err was: %s", err)
 		}
 		err = os.Setenv("HomePath", `\somepath\someuser`)
 		if err != nil {
-			t.Fatalf("2. Recevied error while trying to set an environment variable as part of the test." +
+			t.Fatalf("2. Recevied error while trying to set an environment variable as part of the test."+
 				" Err was: %s", err)
 		}
 		expectedResult := `C:\somepath\someuser` + string(os.PathSeparator) + defaultClientConfigFile
@@ -374,11 +374,11 @@ func TestRetrieveClientConfigFilePath2(t *testing.T){
 			t.Fatalf("RetrieveClientConfigFilePath() was expected to return %s but it returned: %s",
 				expectedResult, result)
 		}
-	// otherwise we're running some kind of Unix or Linux
+		// otherwise we're running some kind of Unix or Linux
 	} else {
 		err := os.Setenv("HOME", `/home/someuser`)
 		if err != nil {
-			t.Fatalf("1. Recevied error while trying to set an environment variable as part of the test." +
+			t.Fatalf("1. Recevied error while trying to set an environment variable as part of the test."+
 				" Err was: %s", err)
 		}
 		expectedResult := `/home/someuser` + string(os.PathSeparator) + defaultClientConfigFile
@@ -393,16 +393,16 @@ func TestRetrieveClientConfigFilePath2(t *testing.T){
 	}
 }
 
-func TestRetrieveClientConfigFilePath3(t *testing.T){
+func TestRetrieveClientConfigFilePath3(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		err := os.Unsetenv("HomeDrive")
 		if err != nil {
-			t.Fatalf("1. Recevied error while trying to unset an environment variable as part of the test." +
+			t.Fatalf("1. Recevied error while trying to unset an environment variable as part of the test."+
 				" Err was: %s", err)
 		}
 		err = os.Unsetenv("HomePath")
 		if err != nil {
-			t.Fatalf("2. Recevied error while trying to set an environment variable as part of the test." +
+			t.Fatalf("2. Recevied error while trying to set an environment variable as part of the test."+
 				" Err was: %s", err)
 		}
 		_, err = RetrieveClientConfigFilePath("")
@@ -410,11 +410,11 @@ func TestRetrieveClientConfigFilePath3(t *testing.T){
 			t.Fatal("Did not recevied error when running RetrieveClientConfigFilePath() without input and when" +
 				" ensuring required environment variables were missing.")
 		}
-	// otherwise we're running some kind of Unix or Linux
+		// otherwise we're running some kind of Unix or Linux
 	} else {
 		err := os.Unsetenv("HOME")
 		if err != nil {
-			t.Fatalf("Recevied error while trying to unset an environment variable as part of the test." +
+			t.Fatalf("Recevied error while trying to unset an environment variable as part of the test."+
 				" Err was: %s", err)
 		}
 		_, err = RetrieveClientConfigFilePath("")

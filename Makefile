@@ -23,6 +23,8 @@ alltest: test build inttest
 # test coding practices
 testcp:
 	@$(GOCMD) version
+	@echo "############ Running: go fmt - ensure standard formatting ############"
+	$(GOCMD) fmt ./...
 	@echo "############ Running: go vet - checking for suspicious constructs ############"
 	$(GOCMD) vet ./...
 	@echo "############ Running: errcheck - checking unhandled errors ############"

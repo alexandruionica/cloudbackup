@@ -13,6 +13,7 @@ import (
 
 const MaxBufferSize = 20971520 // 20 MiB = 20971520
 const loggingContext = "objectstore"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -20,11 +21,11 @@ var logger = log.WithFields(log.Fields{
 var CouldNotConvertRate = errors.New("could not convert rate to numeric value")
 
 type ObjectStore interface {
-	Upload (path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface) (result string, cancelled bool, err error)
+	Upload(path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface) (result string, cancelled bool, err error)
 	// update or create a metadata entry
-	MetadataUpdate (path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error)
+	MetadataUpdate(path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error)
 	//
-	GetStoreDetails()(StoreName string, StoreType string)
+	GetStoreDetails() (StoreName string, StoreType string)
 }
 
 type FileReader struct {
@@ -40,8 +41,8 @@ type FileReader struct {
 	objectStoreName string
 	// used for figuring out which stats counter to increment
 	objectStoreType string
-	rateLimit uint64
-	burst uint64
+	rateLimit       uint64
+	burst           uint64
 	// used for error messages during file.Close()
 	path string
 	// used to calculate how many bytes can still be requested to be read from the file (makes sense only when rate limiting is in use)
@@ -52,12 +53,13 @@ type FileReader struct {
 	ctx context.Context
 }
 
-func GetObjectStores (ctx context.Context, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface) ([]ObjectStore, error) {
+func GetObjectStores(ctx context.Context, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface) ([]ObjectStore, error) {
 	results := make([]ObjectStore, 0)
 	for _, backupTarget := range backupConfig.Target {
 
 		switch backupTarget.Type {
-			case "test_null": {
+		case "test_null":
+			{
 				store, err := InitialiseStoreTestNull(ctx, backupConfig, backupTarget, backupTarget.RateLimit, backupJobsState)
 				if err != nil {
 					return results, err
@@ -65,9 +67,10 @@ func GetObjectStores (ctx context.Context, backupConfig config.Backup, backupJob
 				results = append(results, store)
 
 			}
-			// TODO: when implementing aws_s3 backend go back to the config file used for unit tests and add it back there too as it was removed due to tests failing because it was yet to be implemented
-			// also update the config file used be the Python integration tests
-			default: {
+		// TODO: when implementing aws_s3 backend go back to the config file used for unit tests and add it back there too as it was removed due to tests failing because it was yet to be implemented
+		// also update the config file used be the Python integration tests
+		default:
+			{
 				logger.Errorf("unknown backend of type: '%s'", backupTarget.Type)
 				return results, errors.New("unknown backend type")
 			}
@@ -78,26 +81,26 @@ func GetObjectStores (ctx context.Context, backupConfig config.Backup, backupJob
 
 // setup the io.Reader compliant type which records how many bytes were transferred and which also hooks up the
 // rate limiter (if rate limiting is enabled)
-func NewFileReader (path string, bucket *rate.Limiter, backupJobsState shared.BackupJobsStateInterface,
-	BackupJobName string, ObjectStoreName string, ObjectStoreType string, rate uint64, burst uint64, fileSize int64, ctx context.Context)(FileReader, error) {
+func NewFileReader(path string, bucket *rate.Limiter, backupJobsState shared.BackupJobsStateInterface,
+	BackupJobName string, ObjectStoreName string, ObjectStoreType string, rate uint64, burst uint64, fileSize int64, ctx context.Context) (FileReader, error) {
 	fileReader, err := os.Open(path) // #nosec
 	if err != nil {
 		return FileReader{}, err
 	}
 
 	result := FileReader{
-		origFileReader: fileReader,
-		bucket: bucket,
+		origFileReader:  fileReader,
+		bucket:          bucket,
 		backupJobsState: backupJobsState,
-		backupJobName: BackupJobName,
+		backupJobName:   BackupJobName,
 		objectStoreName: ObjectStoreName,
 		objectStoreType: ObjectStoreType,
-		rateLimit:rate,
-		burst: burst,
-		path: path,
-		fileSize: fileSize,
-		readBytes: 0,
-		ctx: ctx,
+		rateLimit:       rate,
+		burst:           burst,
+		path:            path,
+		fileSize:        fileSize,
+		readBytes:       0,
+		ctx:             ctx,
 	}
 
 	return result, nil
@@ -111,17 +114,18 @@ func calculatePercent(fileSize int64, readBytes int64) uint {
 	if readBytes == 0 {
 		return 0
 	} else {
-		return uint((readBytes * 100)/fileSize)
+		return uint((readBytes * 100) / fileSize)
 	}
 }
 
 // this reader just request reads from the actual os.file reader and forwards the result to the caller while also incrementing a counter
 func (handle *FileReader) Read(p []byte) (int, error) {
 	select {
-	case <-handle.ctx.Done(): {
-		logger.Infof("Received cancellation request while reading content of '%s'", handle.path)
-		return 0, context.Canceled
-	}
+	case <-handle.ctx.Done():
+		{
+			logger.Infof("Received cancellation request while reading content of '%s'", handle.path)
+			return 0, context.Canceled
+		}
 	default:
 		{
 			newFile := false
@@ -135,7 +139,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 				// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
 				// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 				// messages to be sent to watch clients
-				if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+				if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
 					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 						handle.objectStoreType, int64(readBytes), handle.path,
 						calculatePercent(handle.fileSize, handle.readBytes), newFile)
@@ -147,11 +151,11 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 				// bucket.WaitN() allows to read up to burst limit so we need to ensure we don't attempt larger values
 				// than burst; we also need to be sure that we're not trying to read more bytes than the file has
 				// because if we do so then the WaitN() will pause for more tokens to be available than needed
-				if uint64(len(p)) <= handle.burst && (handle.fileSize - handle.readBytes) >= int64(len(p)) {
+				if uint64(len(p)) <= handle.burst && (handle.fileSize-handle.readBytes) >= int64(len(p)) {
 					// logger.Infof("1. waiting to read %10d for %s", len(p), handle.path)
 					err := handle.bucket.WaitN(context.Background(), len(p))
 					if err != nil {
-						logger.Warningf("While pausing before attempting to read '%s' the following error was received " +
+						logger.Warningf("While pausing before attempting to read '%s' the following error was received "+
 							"from the rate limiting token bucket: %s . Proceeding to read content while ignoring the rate limiting", handle.path, err)
 					}
 					readBytes, err := handle.origFileReader.Read(p)
@@ -159,7 +163,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
 					// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 					// messages to be sent to watch clients
-					if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+					if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
 						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 							handle.objectStoreType, int64(readBytes), handle.path,
 							calculatePercent(handle.fileSize, handle.readBytes), newFile)
@@ -182,8 +186,8 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 							if handle.fileSize == 0 {
 								newBufSize = 1000
 							} else {
-								if handle.fileSize - handle.readBytes < 0 {
-									logger.Warningf("Remaining bytes to be read for '%s' is reported as %d which signifies a bug", handle.path, handle.fileSize - handle.readBytes)
+								if handle.fileSize-handle.readBytes < 0 {
+									logger.Warningf("Remaining bytes to be read for '%s' is reported as %d which signifies a bug", handle.path, handle.fileSize-handle.readBytes)
 								}
 							}
 						}
@@ -199,7 +203,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					// logger.Infof("2. waiting to read %10d for %s", newBufSize, handle.path)
 					err := handle.bucket.WaitN(context.Background(), int(newBufSize))
 					if err != nil {
-						logger.Warningf("While pausing before attempting to read '%s' the following error was received " +
+						logger.Warningf("While pausing before attempting to read '%s' the following error was received "+
 							"from the rate limiting token bucket: %s . Proceeding to read content while ignoring the rate limiting", handle.path, err)
 					}
 					readBytes, err := handle.origFileReader.Read(tmpP)
@@ -207,7 +211,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
 					// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 					// messages to be sent to watch clients
-					if ! (readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+					if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
 						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 							handle.objectStoreType, int64(readBytes), handle.path,
 							calculatePercent(handle.fileSize, handle.readBytes), newFile)
@@ -236,19 +240,19 @@ func (handle *FileReader) Close() {
 
 // sets up a rate limited bucket if $rateLimitStr converts to a value >0
 // returns: pointer to rate limited bucket, converted $ratelimit, burst value, error
-func setupRateLimiterBucket (rateLimitStr string, targetName string, backupConfigName string) (*rate.Limiter, uint64, uint64, error){
+func setupRateLimiterBucket(rateLimitStr string, targetName string, backupConfigName string) (*rate.Limiter, uint64, uint64, error) {
 	var rateLimitBucket *rate.Limiter
 
 	ratelimit, err := humanize.ParseBytes(rateLimitStr)
 	if err != nil {
-		logger.Errorf("While trying to convert the rate limit '%s' to a " +
+		logger.Errorf("While trying to convert the rate limit '%s' to a "+
 			"number the following error was encountered: %s", rateLimitStr, err)
 		return rateLimitBucket, 0, 0, CouldNotConvertRate
 	}
 	if ratelimit > 0 {
 		// if rateLimitVal > 9223372036854775807 conversion to int64 from uint64 will return a negative number
 		if ratelimit > 9223372036854775807 {
-			logger.Warningf("Rate is %d which is higher than ~ 9223 petabytes/sec and this would overflow " +
+			logger.Warningf("Rate is %d which is higher than ~ 9223 petabytes/sec and this would overflow "+
 				"during a conversion from uint64 to int64. Lowering rate to %d", ratelimit, 9223372036854775807)
 			// 9223.something petabytes/sec should be sufficient for the near future
 			ratelimit = 9223372036854775807
@@ -258,7 +262,7 @@ func setupRateLimiterBucket (rateLimitStr string, targetName string, backupConfi
 	var burst uint64
 	if ratelimit > 0 {
 		// burst represents how much can be fetched in one iteration
-		burst = ratelimit/10
+		burst = ratelimit / 10
 		// lower burst to ~2GB if burst is larger that the max positive value of a 32bit integer
 		if burst > 2147483647 {
 			burst = 2147483647

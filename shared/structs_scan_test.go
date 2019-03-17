@@ -1,9 +1,9 @@
 package shared
 
 import (
-	"testing"
 	"github.com/satori/go.uuid"
 	"sync"
+	"testing"
 )
 
 // test struct.MarkEvaluating() and struct.GetStats() and struct.GetCancelFunctionForJob()
@@ -19,12 +19,12 @@ func TestMarkEvaluatingAndGetStatsAndGetCancelAndGetContextForJob(t *testing.T) 
 		t.Fatal(err)
 	}
 	if backupJobsState.DryRunning[0].Name != jobName {
-		t.Fatalf("Expected job having name '%s' to be marked as evaluating but instead '%s' is reported as " +
+		t.Fatalf("Expected job having name '%s' to be marked as evaluating but instead '%s' is reported as "+
 			"evaluating", jobName, backupJobsState.DryRunning[0].Name)
 	}
 
 	if backupJobsState.DryRunning[0].State != "evaluating" {
-		t.Fatalf("Expected job having name '%s' to be marked as evaluating but instead is reported as having " +
+		t.Fatalf("Expected job having name '%s' to be marked as evaluating but instead is reported as having "+
 			"state '%s'", jobName, backupJobsState.DryRunning[0].State)
 	}
 
@@ -41,13 +41,13 @@ func TestMarkEvaluatingAndGetStatsAndGetCancelAndGetContextForJob(t *testing.T) 
 
 	_, err = backupJobsState.GetContextForJob(jobName, JobUuid)
 	if err != nil {
-		t.Fatalf("backupJobsState.GetContextForJob() when called using valid job name and valid job id" +
+		t.Fatalf("backupJobsState.GetContextForJob() when called using valid job name and valid job id"+
 			" returned error: %s", err)
 	}
 
 	_, err = backupJobsState.GetContextForJob(jobName, "")
 	if err != nil {
-		t.Fatalf("backupJobsState.GetContextForJob() when called using valid job name and  empty job id" +
+		t.Fatalf("backupJobsState.GetContextForJob() when called using valid job name and  empty job id"+
 			" returned error: %s", err)
 	}
 
@@ -57,16 +57,15 @@ func TestMarkEvaluatingAndGetStatsAndGetCancelAndGetContextForJob(t *testing.T) 
 			" did not return any error despite one being expected")
 	}
 
-
 	_, err = backupJobsState.GetCancelFunctionForJob(jobName, JobUuid)
 	if err != nil {
-		t.Fatalf("backupJobsState.GetCancelFunctionForJob() when called using valid job name and valid job id" +
+		t.Fatalf("backupJobsState.GetCancelFunctionForJob() when called using valid job name and valid job id"+
 			" returned error: %s", err)
 	}
 
 	_, err = backupJobsState.GetCancelFunctionForJob(jobName, "")
 	if err != nil {
-		t.Fatalf("backupJobsState.GetCancelFunctionForJob() when called using valid job name and  empty job id" +
+		t.Fatalf("backupJobsState.GetCancelFunctionForJob() when called using valid job name and  empty job id"+
 			" returned error: %s", err)
 	}
 

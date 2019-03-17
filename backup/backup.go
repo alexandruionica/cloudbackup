@@ -26,7 +26,7 @@ var logger = log.WithFields(log.Fields{
 
 // performs backup of a file or dir
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
+func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (bool, error) {
 	select {
 	case <-ctx.Done():
@@ -40,7 +40,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 			dbEntryFound, dbRecordProperties, err := getBackedupObjectPropertiesFromDb(path, dbData)
 			if err != nil {
 				updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-				return false, errors.New(fmt.Sprintf("While searching the database for a file object record," +
+				return false, errors.New(fmt.Sprintf("While searching the database for a file object record,"+
 					" encountered error: %s", err))
 			}
 			// if a db entry is found then this object has been previously backed up so it needs to be verified if the
@@ -54,7 +54,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
 					// backup this file
 					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-					return false, errors.New(fmt.Sprintf("Could not prepare an updated db record due to " +
+					return false, errors.New(fmt.Sprintf("Could not prepare an updated db record due to "+
 						"error: %s", err))
 				}
 				if contentChanged {
@@ -70,7 +70,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					for _, objectStore := range objectStores {
 						cancelled, err := UploadObject(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
 						if err != nil {
-							encounteredError ++
+							encounteredError++
 							encounteredErrorObject = err
 						}
 						if cancelled {
@@ -78,8 +78,8 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 						}
 					}
 					if encounteredError > 0 {
-						if len(objectStores) > 1{
-							logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError,  len(objectStores))
+						if len(objectStores) > 1 {
+							logger.Warnf("Failed upload of '%s' to %d out of %d targets", path, encounteredError, len(objectStores))
 						}
 						updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type, path, encounteredErrorObject)
 						return false, encounteredErrorObject
@@ -106,7 +106,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 							// back up the object to one or more remote object stores
 							cancelled, err := UpdateObjectMetadata(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
 							if err != nil {
-								encounteredError ++
+								encounteredError++
 								encounteredErrorObject = err
 							}
 							if cancelled {
@@ -114,9 +114,9 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 							}
 						}
 						if encounteredError > 0 {
-							if len(objectStores) > 1{
+							if len(objectStores) > 1 {
 								logger.Warnf("Failed upload metadata changes of of '%s' to %d out of %d targets",
-									path, encounteredError,  len(objectStores))
+									path, encounteredError, len(objectStores))
 							}
 							updateCounters(backupJobsState, backupConfig.Name, "update", updatedDbRecord.Type, path, encounteredErrorObject)
 							return false, encounteredErrorObject
@@ -129,8 +129,8 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 						updateCounters(backupJobsState, backupConfig.Name, "up_to_date", updatedDbRecord.Type, path, nil)
 					}
 				}
-			// no db record found so this is the first time this object is backed up
-			}else{
+				// no db record found so this is the first time this object is backed up
+			} else {
 				logger.Debugf("Did not find a DB entry for %s , this was not a previously backed up", path)
 				checksum := ""
 				if backupConfig.Checksum && utils.FileType(stat) == "file" {
@@ -157,7 +157,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				if err != nil {
 					// could not start a database transaction so we can't proceed to backup this file.
 					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-					return false, errors.New(fmt.Sprintf("While trying to start a database transaction " +
+					return false, errors.New(fmt.Sprintf("While trying to start a database transaction "+
 						"encountered error: %s", err))
 				}
 				// TODO - seems the targets property is not filled in yet which is a problem
@@ -173,7 +173,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					}
 					// could not add dbentry to the database so we can't proceed to backup this file.
 					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-					return false, errors.New(fmt.Sprintf("While trying to add new file object DB entry " +
+					return false, errors.New(fmt.Sprintf("While trying to add new file object DB entry "+
 						"encountered error: %s", err))
 				}
 
@@ -183,7 +183,7 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 				for _, objectStore := range objectStores {
 					cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore, backupJobsState)
 					if err != nil {
-						encounteredError ++
+						encounteredError++
 						encounteredErrorObject = err
 					}
 					if cancelled {
@@ -199,11 +199,11 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 					if txerr != nil {
 						logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
 					}
-					if len(objectStores) > 1{
+					if len(objectStores) > 1 {
 						// TODO - ENSURE THAT ANY SUCCESSFULLY UPLOADED FILE/DIR/SYMLINK IS REMOVED
-						logger.Warnf("Failed upload of '%s' to %d out of %d targets. All targets are be " +
+						logger.Warnf("Failed upload of '%s' to %d out of %d targets. All targets are be "+
 							"considered failed (even the ones where the backup was successful) for this item.",
-							path, encounteredError,  len(objectStores))
+							path, encounteredError, len(objectStores))
 					}
 
 					updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, encounteredErrorObject)
@@ -227,17 +227,17 @@ func Do (ctx context.Context, path string, stat os.FileInfo, backupConfig config
 // returns the following values: bool depicting if an entry was found or not; if found a populated
 // shared.BackedUpFileProperties object containing all of the properties of given object as extracted from the DB
 // record; an error object is an error is encountered
-func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool, shared.BackedUpFileProperties, error){
+func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool, shared.BackedUpFileProperties, error) {
 	rows, err := dbData.PreparedStatements.QueryStmt.Query(path)
 	if err != nil {
-		logger.Errorf("While querying the database in order to check if '%s' has been previously backed" +
+		logger.Errorf("While querying the database in order to check if '%s' has been previously backed"+
 			" up, the following error was encountered: %s", path, err)
 		return false, shared.BackedUpFileProperties{}, err
 	}
-	defer func (){
+	defer func() {
 		err := rows.Close()
 		if err != nil {
-			logger.Warnf("While trying to Close() a prepared statement for checking if '%s' has been" +
+			logger.Warnf("While trying to Close() a prepared statement for checking if '%s' has been"+
 				" previously backed up, the following error was encountered: %s", path, err)
 		}
 	}()
@@ -256,7 +256,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 			&tmpCtime, &dbRecord.Owner, &dbRecord.Permissons, &dbRecord.Checksum,
 			&dbRecord.ChecksumType, &dbRecord.Encrypted, &dbRecord.Targets)
 		if err != nil {
-			logger.Errorf("While retrieving the database record for '%s' the following error was encountered:" +
+			logger.Errorf("While retrieving the database record for '%s' the following error was encountered:"+
 				" '%s'", path, err)
 			return false, shared.BackedUpFileProperties{}, err
 		} else {
@@ -264,29 +264,29 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 			if tmpMtime != "" {
 				dbRecord.Mtime, err = time.Parse(time.RFC3339Nano, tmpMtime)
 				if err != nil {
-					logger.Error("While converting mtime property of database record for '%s' the following " +
+					logger.Error("While converting mtime property of database record for '%s' the following "+
 						"error was encountered: %s", path, err)
-					return false, shared.BackedUpFileProperties{}, errors.New(fmt.Sprintf("While converting " +
+					return false, shared.BackedUpFileProperties{}, errors.New(fmt.Sprintf("While converting "+
 						"mtime property encountered error: %s", err))
 				}
 			}
 			if tmpCtime != "" {
 				dbRecord.Ctime, err = time.Parse(time.RFC3339Nano, tmpCtime)
 				if err != nil {
-					logger.Error("While converting ctime property of database record for '%s' the following " +
+					logger.Error("While converting ctime property of database record for '%s' the following "+
 						"error was encountered: %s", path, err)
-					return false, shared.BackedUpFileProperties{}, errors.New(fmt.Sprintf("While converting " +
+					return false, shared.BackedUpFileProperties{}, errors.New(fmt.Sprintf("While converting "+
 						"ctime property encountered error: %s", err))
 				}
 			}
 		}
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database in order to check if '%s' " +
+		logger.Error("While enumerating the results of querying the database in order to check if '%s' "+
 			"has been previously backed up, the following error was encountered: %s", path, err)
 		return false, shared.BackedUpFileProperties{}, err
 	}
-	if ! entryFound {
+	if !entryFound {
 		logger.Debugf("Did not find in the DB a match for %s", path)
 		return false, shared.BackedUpFileProperties{}, nil
 	}
@@ -312,10 +312,10 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 		} else if checksum != dbRecordProperties.Checksum {
 			contentChanged = true
 		}
-	// if size or mtime differs then we got a file change
+		// if size or mtime differs then we got a file change
 	} else if stat.Size() != dbRecordProperties.Size || stat.ModTime() != dbRecordProperties.Mtime {
 		contentChanged = true
-	// if type changed then we need to back it up (for example in the DB it's marked as a symlink but on disk it's a file now
+		// if type changed then we need to back it up (for example in the DB it's marked as a symlink but on disk it's a file now
 	} else if objectType != dbRecordProperties.Type {
 		contentChanged = true
 	}
@@ -329,16 +329,16 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 		}
 	}
 	// if we have a symlink, check if the symlink target has changed and if so then update metadata
-	if ! metadataChanged && objectType == "symlink" {
+	if !metadataChanged && objectType == "symlink" {
 		linkTarget, err := os.Readlink(path)
-		    // in case of error we just treat it as the metadata changed as we can't know for sure if it didn't and it's better to be safe and just back it up
-			if err != nil {
+		// in case of error we just treat it as the metadata changed as we can't know for sure if it didn't and it's better to be safe and just back it up
+		if err != nil {
+			metadataChanged = true
+		} else {
+			if linkTarget != dbRecordProperties.LinkTarget {
 				metadataChanged = true
-			} else {
-				if linkTarget != dbRecordProperties.LinkTarget {
-					metadataChanged = true
-				}
 			}
+		}
 	}
 	return
 }
@@ -349,49 +349,49 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 // have obtained the value
 func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup, ctime time.Time, checksum string) (shared.BackedUpFileProperties, error) {
 	/*
-	type BackedUpFileProperties struct {
-	Path string
-	// one of: file / dir / symlink / unknown
-	Type string
-	// valid only for "symlink" type; otherwise it will be empty string
-	LinkTarget string
-	Size int64
-	// time object modified
-	Mtime time.Time
-	// time object metadata changed (ctime gets updated if file content gets changed too)
-	Ctime time.Time
-	// user id on *nix , Username on Windows (hence this is a string)
-	// Actual name (not account id / SID) of the file owner
-	Owner string
-	// Json encoded string. To decode use type from cloudbackup/backup/fileproperties  FilePermissions struct
-	Permissions string
-	// if checksuming is enabled then this will be non empty
-	Checksum string
-	// if checksuming is enabled then this will hold whatever algorithm was used for checksumming
-	ChecksumType string
-	Encrypted bool
-	// references the "name" of one or more entries in "targets" table ; multiple entries will be comma separated
-	Targets string
-}
-	 */
-	 ctime, err := fileproperties.GetCtime(path)
-	 if err != nil {
-	 	ctime = time.Time{}
-	 }
+		type BackedUpFileProperties struct {
+		Path string
+		// one of: file / dir / symlink / unknown
+		Type string
+		// valid only for "symlink" type; otherwise it will be empty string
+		LinkTarget string
+		Size int64
+		// time object modified
+		Mtime time.Time
+		// time object metadata changed (ctime gets updated if file content gets changed too)
+		Ctime time.Time
+		// user id on *nix , Username on Windows (hence this is a string)
+		// Actual name (not account id / SID) of the file owner
+		Owner string
+		// Json encoded string. To decode use type from cloudbackup/backup/fileproperties  FilePermissions struct
+		Permissions string
+		// if checksuming is enabled then this will be non empty
+		Checksum string
+		// if checksuming is enabled then this will hold whatever algorithm was used for checksumming
+		ChecksumType string
+		Encrypted bool
+		// references the "name" of one or more entries in "targets" table ; multiple entries will be comma separated
+		Targets string
+	}
+	*/
+	ctime, err := fileproperties.GetCtime(path)
+	if err != nil {
+		ctime = time.Time{}
+	}
 
-	 // even if we get an error (and we don't have complete or any file properties) we will still attempt to back it up
-	 owner, permissions, _ := fileproperties.GetObjectPermissions(path, stat) // #nosec
-	 onDiskObjectProperties := shared.BackedUpFileProperties{
-		Path: path,
-		Type: utils.FileType(stat),
-		Size: stat.Size(),
-		Mtime: stat.ModTime(),
-		Ctime: ctime,
-		Owner: owner,
+	// even if we get an error (and we don't have complete or any file properties) we will still attempt to back it up
+	owner, permissions, _ := fileproperties.GetObjectPermissions(path, stat) // #nosec
+	onDiskObjectProperties := shared.BackedUpFileProperties{
+		Path:       path,
+		Type:       utils.FileType(stat),
+		Size:       stat.Size(),
+		Mtime:      stat.ModTime(),
+		Ctime:      ctime,
+		Owner:      owner,
 		Permissons: permissions,
-		Checksum: checksum,
-		Encrypted: backupConfig.Encrypt,
-	 }
+		Checksum:   checksum,
+		Encrypted:  backupConfig.Encrypt,
+	}
 	if checksum != "" {
 		// for now we support only md5 checksumming, but we have room to implement something else, if needed, later
 		onDiskObjectProperties.ChecksumType = "md5"
@@ -447,7 +447,6 @@ func UpdateObjectMetadata(ctx context.Context, path string, newDbRecord shared.B
 	logger.Debugf("Updating remote stored metadata for previously backed up and unchanged '%s'", path)
 	// TODO - insert / update db records
 
-
 	return false, nil
 }
 
@@ -458,64 +457,68 @@ func UpdateObjectMetadata(ctx context.Context, path string, newDbRecord shared.B
 // $err != nil then the counter to be updated will be one of "failure" type and otherwise its a "success" one
 func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName string, operationType string, fileType string, path string, err error) {
 	switch operationType {
-		case "upload": {
+	case "upload":
+		{
 			if err != nil {
 				switch fileType {
-					case "file":
-						backupJobsState.IncrementCounter(backupName, "failed_to_upload_files", path, fileType, "upload", err.Error())
-					case "dir":
-						backupJobsState.IncrementCounter(backupName, "failed_to_upload_directories", path, fileType, "metadata", err.Error())
-					case "symlink":
-						backupJobsState.IncrementCounter(backupName, "failed_to_upload_symlinks", path, fileType, "metadata", err.Error())
-					default: {
+				case "file":
+					backupJobsState.IncrementCounter(backupName, "failed_to_upload_files", path, fileType, "upload", err.Error())
+				case "dir":
+					backupJobsState.IncrementCounter(backupName, "failed_to_upload_directories", path, fileType, "metadata", err.Error())
+				case "symlink":
+					backupJobsState.IncrementCounter(backupName, "failed_to_upload_symlinks", path, fileType, "metadata", err.Error())
+				default:
+					{
 						backupJobsState.IncrementCounter(backupName, "failed_to_upload_unknown", path, fileType, "metadata", err.Error())
-						logger.Warningf("'%s' is of an unknown type. Only directories, regular files and " +
-							"symlinks are supported for backup. Consider excluding this file from backup in order " +
+						logger.Warningf("'%s' is of an unknown type. Only directories, regular files and "+
+							"symlinks are supported for backup. Consider excluding this file from backup in order "+
 							"to prevent future warnings.", path)
 					}
 				}
 			} else {
 				switch fileType {
-					case "file":
-						backupJobsState.IncrementCounter(backupName, "uploaded_files", path, fileType, "upload","")
-					case "dir":
-						backupJobsState.IncrementCounter(backupName, "uploaded_directories", path, fileType, "metadata","")
-					case "symlink":
-						backupJobsState.IncrementCounter(backupName, "uploaded_symlinks", path, fileType, "metadata","")
-					default:
-						logger.Warningf("Tried to increment 'uploaded' counter for '%s' of type: '%s'. " +
-							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
-					}
+				case "file":
+					backupJobsState.IncrementCounter(backupName, "uploaded_files", path, fileType, "upload", "")
+				case "dir":
+					backupJobsState.IncrementCounter(backupName, "uploaded_directories", path, fileType, "metadata", "")
+				case "symlink":
+					backupJobsState.IncrementCounter(backupName, "uploaded_symlinks", path, fileType, "metadata", "")
+				default:
+					logger.Warningf("Tried to increment 'uploaded' counter for '%s' of type: '%s'. "+
+						"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
+				}
 			}
 		}
-		case "update": {
+	case "update":
+		{
 			if err != nil {
 				switch fileType {
-					case "file":
-						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_files", path, fileType, "metadata",err.Error())
-					case "dir":
-						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_directories", path, fileType, "metadata", err.Error())
-					case "symlink":
-						backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_symlinks", path, fileType, "metadata", err.Error())
-					default:
-						logger.Warningf("Tried to increment 'failed_to_update_metadata' counter for '%s' of type: '%s'. " +
-							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
+				case "file":
+					backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_files", path, fileType, "metadata", err.Error())
+				case "dir":
+					backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_directories", path, fileType, "metadata", err.Error())
+				case "symlink":
+					backupJobsState.IncrementCounter(backupName, "failed_to_update_metadata_for_symlinks", path, fileType, "metadata", err.Error())
+				default:
+					logger.Warningf("Tried to increment 'failed_to_update_metadata' counter for '%s' of type: '%s'. "+
+						"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
 				}
 			} else {
 				switch fileType {
-					case "file":
-						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_files", path, fileType, "metadata","")
-					case "dir":
-						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_directories", path, fileType, "metadata","")
-					case "symlink":
-						backupJobsState.IncrementCounter(backupName, "updated_metadata_for_symlinks", path, fileType, "metadata","")
-					default:
-						logger.Warningf("Tried to increment 'updated_metadata' counter for '%s' of type: '%s'. " +
-							"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
+				case "file":
+					backupJobsState.IncrementCounter(backupName, "updated_metadata_for_files", path, fileType, "metadata", "")
+				case "dir":
+					backupJobsState.IncrementCounter(backupName, "updated_metadata_for_directories", path, fileType, "metadata", "")
+				case "symlink":
+					backupJobsState.IncrementCounter(backupName, "updated_metadata_for_symlinks", path, fileType, "metadata", "")
+				default:
+					logger.Warningf("Tried to increment 'updated_metadata' counter for '%s' of type: '%s'. "+
+						"This is a bug as this type should be skipped from being backed up. Please report it.", path, fileType)
 				}
 			}
 		}
-		case "up_to_date": {
+	case "up_to_date":
+		{
 			switch fileType {
 			case "file":
 				backupJobsState.IncrementCounter(backupName, "up_to_date_files", path, fileType, "up_to_date", "")
@@ -525,9 +528,9 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 				backupJobsState.IncrementCounter(backupName, "up_to_date_symlinks", path, fileType, "up_to_date", "")
 			}
 		}
-		default:
-			logger.Errorf("Tried to update counters for operation of type '%s' during a backup having name '%s' " +
-				"for object '%s'. This is bug, please report it.", operationType, backupName, path)
+	default:
+		logger.Errorf("Tried to update counters for operation of type '%s' during a backup having name '%s' "+
+			"for object '%s'. This is bug, please report it.", operationType, backupName, path)
 	}
 }
 
@@ -544,7 +547,7 @@ func RunPrePostScript(path string, scriptType string, backupName string, jobId s
 	}
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
-		msg := fmt.Sprintf("While executing %s_run_script '%s', encountered error: %s\nScript " +
+		msg := fmt.Sprintf("While executing %s_run_script '%s', encountered error: %s\nScript "+
 			"output was: %s", scriptType, path, err, stdoutStderr)
 		logger.Error(msg)
 		return errors.New(msg)

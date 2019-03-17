@@ -1,17 +1,17 @@
 package httpd
 
 import (
-	"testing"
-	"sync"
 	"github.com/julienschmidt/httprouter"
-	"net/http/httptest"
-	"net/http"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"testing"
 )
 
 func TestPageRootHttp(t *testing.T) {
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},}
+		Mutex: &sync.RWMutex{}}
 	router := httprouter.New()
 	router.GET("/", fakeSrvData.handlerRoot)
 	ts := httptest.NewServer(router)
@@ -27,7 +27,7 @@ func TestPageRootHttp(t *testing.T) {
 
 	// test if response body for / is what we expect
 	expectedResponse := "HTTP server is running\n"
-	defer func() {_ = res.Body.Close()}()
+	defer func() { _ = res.Body.Close() }()
 	contents, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("%s", err)

@@ -15,7 +15,7 @@ type StoreError struct {
 	storeType string
 }
 
-func InitialiseStoreError (ctx context.Context, backupConfig config.Backup, storeName string, storeType string, rateLimitVal int64) (*StoreError) {
+func InitialiseStoreError(ctx context.Context, backupConfig config.Backup, storeName string, storeType string, rateLimitVal int64) *StoreError {
 	result := &StoreError{
 		storeName: storeName,
 		storeType: storeType,
@@ -24,15 +24,15 @@ func InitialiseStoreError (ctx context.Context, backupConfig config.Backup, stor
 	return result
 }
 
-func (object *StoreError) Upload (path string, newDbRecord shared.BackedUpFileProperties)  (result string, cancelled bool, err error) {
+func (object *StoreError) Upload(path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
 	return "", false, errors.New(fmt.Sprintf("unsupported backend of type: '%s'", object.storeType))
 }
 
-func (object *StoreError) MetadataUpdate (path string, newDbRecord shared.BackedUpFileProperties)  (result string, cancelled bool, err error) {
+func (object *StoreError) MetadataUpdate(path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
 	return "", false, errors.New(fmt.Sprintf("unsupported backend of type: '%s'", object.storeType))
 }
 
 // GetStoreDetails()(StoreName string, StoreType string)
-func (object *StoreError) GetStoreDetails ()  (StoreName string, StoreType string) {
+func (object *StoreError) GetStoreDetails() (StoreName string, StoreType string) {
 	return object.storeName, object.storeType
 }

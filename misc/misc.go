@@ -6,13 +6,14 @@ import (
 )
 
 const loggingContext = "misc"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
 type LoggingArgs struct {
-	Debug bool
-	Quiet bool
+	Debug   bool
+	Quiet   bool
 	TextLog bool
 	LogFile string
 }
@@ -180,7 +181,7 @@ username: testuser1
 password: 'HV}H/y?<9$]Z5N4N'
 address: http://127.0.0.1:8080`
 
-func SetupLogging(args LoggingArgs){
+func SetupLogging(args LoggingArgs) {
 	log.SetOutput(os.Stdout)
 
 	if args.TextLog {
@@ -194,7 +195,7 @@ func SetupLogging(args LoggingArgs){
 		if err == nil {
 			log.SetOutput(logFile)
 		} else {
-			log.Errorf("Failed to log to file %s as the following error was received: '%s'. Reverting to using " +
+			log.Errorf("Failed to log to file %s as the following error was received: '%s'. Reverting to using "+
 				"stdout for log output.", args.LogFile, err)
 		}
 	}

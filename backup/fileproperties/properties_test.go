@@ -18,7 +18,7 @@ func testGetcTime(t *testing.T, path string, timestart time.Time) {
 		t.Fatalf("1. While trying to get ctime for %s got error: %s", path, err)
 	}
 	if timestart.After(fileCtime) {
-		t.Fatalf("File creation time for %s is reported to be before this test started. Ctime: %s; test " +
+		t.Fatalf("File creation time for %s is reported to be before this test started. Ctime: %s; test "+
 			"start: %s", path, fileCtime, timestart)
 	}
 	time.Sleep(20 * time.Millisecond)
@@ -27,7 +27,7 @@ func testGetcTime(t *testing.T, path string, timestart time.Time) {
 		t.Fatalf("Ctime for %s is reported to be %s which is in the future", path, fileCtime)
 	}
 	// Symlinks on windows don't seem to have their ctime updated so we'll skip the test on this platform only
-	if ! (strings.Contains(path, "symlink") && runtime.GOOS == "windows") {
+	if !(strings.Contains(path, "symlink") && runtime.GOOS == "windows") {
 		time.Sleep(20 * time.Millisecond)
 		// update file ctime and see we can see a different result from GetCtime
 		if err := os.Chmod(path, 0444); err != nil {
@@ -43,7 +43,7 @@ func testGetcTime(t *testing.T, path string, timestart time.Time) {
 		if fileCtime.Equal(fileCtime2) {
 			t.Fatalf("File %s ctime should have changed after chmod but it's reported to be the same: %s vs %s", path, fileCtime, fileCtime2)
 		}
-		if fileCtime2.Before(time1stTest){
+		if fileCtime2.Before(time1stTest) {
 			t.Fatal("After chmod() the 2nd file ctime should be newer but it isn't")
 		}
 	}

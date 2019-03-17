@@ -13,7 +13,6 @@ import (
 	"testing"
 )
 
-
 // basic auth test - if not supplying credentials then 401 is returned
 func TestBasicAuth1(t *testing.T) {
 	// load config file
@@ -26,10 +25,9 @@ func TestBasicAuth1(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	w := httptest.NewRecorder()
@@ -64,10 +62,9 @@ func TestBasicAuth2(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
@@ -102,10 +99,9 @@ func TestBasicAuth3(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
@@ -140,10 +136,9 @@ func TestBasicAuth4(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
@@ -162,7 +157,6 @@ func TestBasicAuth4(t *testing.T) {
 		t.Fatalf("HTTP response when supplying INVALID credentials was not 401 but %d", resp.StatusCode)
 	}
 }
-
 
 // basic auth test - no user + pair defined in the config database
 func TestBasicAuth5(t *testing.T) {
@@ -183,8 +177,8 @@ func TestBasicAuth5(t *testing.T) {
 	configuration.Config.User = make([]config.User, 0)
 
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
@@ -216,10 +210,9 @@ func TestCheckAccess1(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("GET", "http://example.com/api/v1/config", nil)
 	// req.SetBasicAuth(username, password)
@@ -235,7 +228,7 @@ func TestCheckAccess1(t *testing.T) {
 	resp := w.Result()
 
 	if resp.StatusCode != 500 {
-		t.Fatalf("calling CheckAccess() on unauthenticated sessions should return HTTP response code 500 but " +
+		t.Fatalf("calling CheckAccess() on unauthenticated sessions should return HTTP response code 500 but "+
 			"we got %d", resp.StatusCode)
 	}
 }
@@ -255,10 +248,9 @@ func TestCheckAccess2(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
@@ -275,7 +267,7 @@ func TestCheckAccess2(t *testing.T) {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 {
-		t.Fatalf("calling CheckAccess() on authenticated session with valid 'write' access user should return " +
+		t.Fatalf("calling CheckAccess() on authenticated session with valid 'write' access user should return "+
 			"HTTP response code 200 but we got %d. Response body was: '%s'", resp.StatusCode, body)
 	}
 }
@@ -295,10 +287,9 @@ func TestCheckAccess3(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
@@ -315,8 +306,8 @@ func TestCheckAccess3(t *testing.T) {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != 403 {
-		t.Fatalf("calling CheckAccess() on authenticated session with 'read' access user is NOT granted access" +
-			" to paths which have not been white listed and HTTP code 403 is returned but we got %d. Response " +
+		t.Fatalf("calling CheckAccess() on authenticated session with 'read' access user is NOT granted access"+
+			" to paths which have not been white listed and HTTP code 403 is returned but we got %d. Response "+
 			"body was: '%s'", resp.StatusCode, body)
 	}
 }
@@ -336,10 +327,9 @@ func TestCheckAccess4(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-
 	fakeSrvData := SrvData{httpsEnabled: false,
-		Mutex: &sync.RWMutex{},
-		globalcfg: configuration,}
+		Mutex:     &sync.RWMutex{},
+		globalcfg: configuration}
 
 	req := httptest.NewRequest("GET", "http://example.com/api/v1/config", nil)
 	req.SetBasicAuth(username, password)
@@ -356,8 +346,8 @@ func TestCheckAccess4(t *testing.T) {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 {
-		t.Fatalf("calling CheckAccess() on authenticated session with 'read' access user is granted access" +
-			" to paths which HAVE been white listed and HTTP code 200 is returned but we got %d. Response " +
+		t.Fatalf("calling CheckAccess() on authenticated session with 'read' access user is granted access"+
+			" to paths which HAVE been white listed and HTTP code 200 is returned but we got %d. Response "+
 			"body was: '%s'", resp.StatusCode, body)
 	}
 }
@@ -423,7 +413,7 @@ func TestJSONError1(t *testing.T) {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != 300 {
-		t.Fatalf("calling JSONError() passing http code '300' but got as reply HTTP code '%d' and response " +
+		t.Fatalf("calling JSONError() passing http code '300' but got as reply HTTP code '%d' and response "+
 			"body '%s'", resp.StatusCode, body)
 	}
 
@@ -435,8 +425,8 @@ func TestJSONError1(t *testing.T) {
 	}
 
 	var bodyStruct struct {
-		Code string `json:"code"`
-		Message  string `json:"message"`
+		Code    string `json:"code"`
+		Message string `json:"message"`
 	}
 	// no point in checking again if json correctly unMarshalls
 	_ = json.Unmarshal(body, &bodyStruct)
@@ -465,7 +455,7 @@ func TestJSONSuccess1(t *testing.T) {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 {
-		t.Fatalf("reply from JSONSuccess() didn't have http code '200' but got as reply HTTP code '%d' and " +
+		t.Fatalf("reply from JSONSuccess() didn't have http code '200' but got as reply HTTP code '%d' and "+
 			"response body '%s'", resp.StatusCode, body)
 	}
 
@@ -477,8 +467,8 @@ func TestJSONSuccess1(t *testing.T) {
 	}
 
 	var bodyStruct struct {
-		Code string `json:"code"`
-		Message  string `json:"message"`
+		Code    string `json:"code"`
+		Message string `json:"message"`
 	}
 	// no point in checking again if json correctly unMarshalls
 	_ = json.Unmarshal(body, &bodyStruct)
@@ -514,7 +504,7 @@ func TestJSONSuccessWithResult1(t *testing.T) {
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 {
-		t.Fatalf("reply from JSONSuccessWithResult() didn't have http code '200' but got as reply HTTP code '%d' and " +
+		t.Fatalf("reply from JSONSuccessWithResult() didn't have http code '200' but got as reply HTTP code '%d' and "+
 			"response body '%s'", resp.StatusCode, body)
 	}
 
@@ -526,9 +516,9 @@ func TestJSONSuccessWithResult1(t *testing.T) {
 	}
 
 	var bodyStruct struct {
-		Code string `json:"code"`
-		Message  string `json:"message"`
-		Result interface{} `json:"result"`
+		Code    string      `json:"code"`
+		Message string      `json:"message"`
+		Result  interface{} `json:"result"`
 	}
 	// no point in checking again if json correctly unMarshalls
 	_ = json.Unmarshal(body, &bodyStruct)
@@ -543,8 +533,8 @@ func TestJSONSuccessWithResult1(t *testing.T) {
 	}
 
 	m := make(map[string]string)
-	m["Key1"]="somevalue1"
-	m["Key2"]="somevalue2"
+	m["Key1"] = "somevalue1"
+	m["Key2"] = "somevalue2"
 	if bodyStruct.Result == "" || bodyStruct.Result == nil {
 		t.Fatalf("Response from JSONSuccessWithResult() was expected to have result= non empty but instead it's value was: %+v",
 			bodyStruct.Result)

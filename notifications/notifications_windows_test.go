@@ -66,7 +66,7 @@ func TestRunScript1(t *testing.T) {
 	scriptEntry := config.NotificationScript{
 		Path: scriptPath,
 		Type: []string{"finished"},
-		}
+	}
 	jobId := uuid.NewV4().String()
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 	if err == nil {
@@ -91,7 +91,7 @@ func TestRunScript2(t *testing.T) {
 	jobId := uuid.NewV4().String()
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
-	err = os.Rename(scriptPath, scriptPath + ".bat")
+	err = os.Rename(scriptPath, scriptPath+".bat")
 	if err != nil {
 		t.Fatalf("Could not rename '%s' to '%s.bat'", scriptPath, scriptPath)
 	}
@@ -135,7 +135,7 @@ func TestRunScript3(t *testing.T) {
 	jobId := uuid.NewV4().String()
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
-	err = os.Rename(scriptPath, scriptPath + ".bat")
+	err = os.Rename(scriptPath, scriptPath+".bat")
 	if err != nil {
 		t.Fatalf("Could not rename '%s' to '%s.bat'", scriptPath, scriptPath)
 	}
@@ -175,7 +175,7 @@ func TestRunScript4(t *testing.T) {
 	jobId := uuid.NewV4().String()
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
-	err = os.Rename(scriptPath, scriptPath + ".bat")
+	err = os.Rename(scriptPath, scriptPath+".bat")
 	if err != nil {
 		t.Fatalf("Could not rename '%s' to '%s.bat'", scriptPath, scriptPath)
 	}
@@ -206,7 +206,7 @@ func TestRunScript5(t *testing.T) {
 	jobId := uuid.NewV4().String()
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
-	err = os.Rename(scriptPath, scriptPath + ".ps1")
+	err = os.Rename(scriptPath, scriptPath+".ps1")
 	if err != nil {
 		t.Fatalf("Could not rename '%s' to '%s.ps1'", scriptPath, scriptPath)
 	}

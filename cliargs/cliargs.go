@@ -1,27 +1,27 @@
 package cliargs
 
 import (
-	log "github.com/sirupsen/logrus"
-	clientConfig "cloudbackup/client/config"
 	clientBackup "cloudbackup/client/backup"
+	clientConfig "cloudbackup/client/config"
 	clientNotification "cloudbackup/client/notification"
 	"cloudbackup/config"
 	"cloudbackup/daemon"
 	"cloudbackup/misc"
 	"cloudbackup/password"
 	"cloudbackup/utils"
-	"sync"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"os"
+	"sync"
 )
 
 const loggingContext = "cliargs"
 
 // top level CLI options and arguments
 type Args struct {
-	Server ArgsCommandServer  `command:"server" description:"Backup server related commands and options"`
-	Client ArgsCommandClient  `command:"client" description:"Backup client related commands and options"`
-	Misc   ArgsCommandMisc    `command:"misc" description:"Miscellaneous commands"`
+	Server ArgsCommandServer `command:"server" description:"Backup server related commands and options"`
+	Client ArgsCommandClient `command:"client" description:"Backup client related commands and options"`
+	Misc   ArgsCommandMisc   `command:"misc" description:"Miscellaneous commands"`
 }
 
 type ArgsCommandServer struct {
@@ -37,24 +37,24 @@ type ArgsCommandServerConfig struct {
 
 type ArgsCommandServerConfigValidate struct {
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
-	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration. WARNING! Secrets and passwords will be shown when using log level debug."`
+	Debug      bool   `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration. WARNING! Secrets and passwords will be shown when using log level debug."`
 }
 
 type ArgsCommandServerConfigDump struct {
-	Debug bool `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration. WARNING! Secrets and passwords will be shown when using log level debug."`
+	Debug      bool   `short:"d" long:"debug" description:"Set logging to debug in order to see more details about the build up of the configuration. WARNING! Secrets and passwords will be shown when using log level debug."`
 	ConfigFile string `short:"c" long:"configfile" description:"RuntimeConfig file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
 }
 
 // arguments for an actual Daemon start
 type ArgsCommandServerStart struct {
 	ConfigFile string `short:"c" long:"configfile" description:"Server configuration file expected to be in YAML format and have .yml or .yaml extension" required:"true"`
-	Quiet bool `short:"q" long:"quiet" description:"Set logging to quiet: don't show any log messages"`
-	Debug bool `short:"d" long:"debug" description:"Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug while the configuration information is being parsed and potentially later on."`
-	TextLog bool `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
-	LogFile string `short:"l" long:"logfile" description:"Output logging messages to this file instead of stdout. If the target file can't be created or can't be written to then it will output an error and revert back to using stdout for logging output."`
+	Quiet      bool   `short:"q" long:"quiet" description:"Set logging to quiet: don't show any log messages"`
+	Debug      bool   `short:"d" long:"debug" description:"Set logging to debug. WARNING! Secrets and passwords will be shown when using log level debug while the configuration information is being parsed and potentially later on."`
+	TextLog    bool   `short:"t" long:"textlog" description:"Set logging to plaintext. Defaults to false which means JSON formatting is used"`
+	LogFile    string `short:"l" long:"logfile" description:"Output logging messages to this file instead of stdout. If the target file can't be created or can't be written to then it will output an error and revert back to using stdout for logging output."`
 }
 
-type ArgsCommandServerConfigExample struct {}
+type ArgsCommandServerConfigExample struct{}
 
 type ArgsCommandMisc struct {
 	HashPassword ArgsCommandMiscHash `command:"hash-password" description:"Hash a password using bcrypt. This is a convenience function so you can easily hash passwords before adding them to the yaml config file of the server."`
@@ -64,8 +64,8 @@ type ArgsCommandMiscHash struct {
 }
 
 type ArgsCommandClient struct {
-	Config ArgsCommandClientConfig `command:"config" description:"Client configuration file related options"`
-	Backup ArgsCommandClientBackup `command:"backup" description:"Interact with backup jobs (start/stop/status)"`
+	Config       ArgsCommandClientConfig       `command:"config" description:"Client configuration file related options"`
+	Backup       ArgsCommandClientBackup       `command:"backup" description:"Interact with backup jobs (start/stop/status)"`
 	Notification ArgsCommandClientNotification `command:"notification" description:"Interact with server generated notifications"`
 }
 
@@ -86,20 +86,19 @@ type ArgsCommandClientBackupCommonOptions struct {
 }
 
 type ArgsCommandClientBackup struct {
-	Start ArgsCommandClientBackupStart `command:"start" description:"Start a backup job"`
-	Stop  ArgsCommandClientBackupStop `command:"stop" description:"Stop a running backup job"`
-	List  ArgsCommandClientBackupList `command:"list" description:"List all backup jobs and a brief status for each of them"`
-	Status  ArgsCommandClientBackupStatus `command:"status" description:"Show details about a specific backup job."`
-	Watch  ArgsCommandClientBackupWatch `command:"watch" description:"Continuously watches a specific backup job in order to show file, directory and symlinks backup progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces more events per second than it can handle or if the client can't receive quickly enough events produced by the server.'"`
+	Start  ArgsCommandClientBackupStart  `command:"start" description:"Start a backup job"`
+	Stop   ArgsCommandClientBackupStop   `command:"stop" description:"Stop a running backup job"`
+	List   ArgsCommandClientBackupList   `command:"list" description:"List all backup jobs and a brief status for each of them"`
+	Status ArgsCommandClientBackupStatus `command:"status" description:"Show details about a specific backup job."`
+	Watch  ArgsCommandClientBackupWatch  `command:"watch" description:"Continuously watches a specific backup job in order to show file, directory and symlinks backup progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces more events per second than it can handle or if the client can't receive quickly enough events produced by the server.'"`
 	DryRun ArgsCommandClientBackupDryRun `command:"dryrun" description:"Dry run a backup job in order to see what files and directories get evaluated"`
-
 }
 
 type ArgsCommandClientBackupStart struct {
 	ArgsCommandClientBackupCommonOptions
 	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
-	Job struct {
-		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
 	Watch bool `short:"w" long:"watch" description:"If the backup is successfully started then watch the backup job in order to show progress. Please see the description of the command 'client backup watch' for more details."`
 }
@@ -107,8 +106,8 @@ type ArgsCommandClientBackupStart struct {
 type ArgsCommandClientBackupStop struct {
 	ArgsCommandClientBackupCommonOptions
 	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
-	Job struct {
-		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job to start. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
 	JobId string `short:"i" long:"job-id" description:"Id of the job to stop. Using this ensures that only a particular job is stopped. If the job id doesn't match the id of the running job having the same name then the stop operation will not proceed"`
 }
@@ -116,18 +115,17 @@ type ArgsCommandClientBackupStop struct {
 type ArgsCommandClientBackupWatch struct {
 	ArgsCommandClientBackupCommonOptions
 	Json bool `long:"json" description:"If the operation is successful then print JSON responses as they are received from server. If this option is not specified then the response is processed and the output is a plaintext table."`
-	Job struct {
-		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
 	JobId string `short:"i" long:"job-id" description:"Id of the job to watch. Using this ensures that only a particular job is watched. If the job id doesn't match the id of the running job having the same name then the watch operation will not proceed"`
-
 }
 
 type ArgsCommandClientBackupDryRun struct {
 	ArgsCommandClientBackupCommonOptions
 	Json bool `long:"json" description:"If the operation is successful then print JSON responses as they are received from server. If this option is not specified then the response is processed and the output is a plaintext table followed by a summary at the end."`
-	Job struct {
-		Name   string `positional-arg-name:"job_name" description:"Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
 }
 
@@ -139,8 +137,8 @@ type ArgsCommandClientBackupList struct {
 type ArgsCommandClientBackupStatus struct {
 	ArgsCommandClientBackupCommonOptions
 	Json bool `long:"json" description:"If the operation was successful then print only the part of the JSON response which is related to your selected job. If this option is not specified then the response is processed and the output is in a table like format"`
-	Job struct {
-		Name   string `positional-arg-name:"job_name" description:"Name of the backup job for which to get the status. This needs to match a backup job as defined in the configuration of the server"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job for which to get the status. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
 	JobId string `short:"i" long:"job-id" description:"Id of the job to stop. Using this ensures that only a particular running job is showed. If the job id doesn't match the id of the running job having the same name then the status operation will exit."`
 }
@@ -172,7 +170,7 @@ func (command *ArgsCommandServerConfigValidate) Execute(args []string) error {
 		log.SetLevel(log.WarnLevel)
 	}
 	_, err := config.Load(command.ConfigFile, command.Debug, &sync.RWMutex{})
-	if err != nil{
+	if err != nil {
 		fmt.Printf("Server configuration file %s did not pass validation\n", command.ConfigFile)
 		os.Exit(1)
 	} else {
@@ -204,8 +202,8 @@ func (command *ArgsCommandServerConfigDump) Execute(args []string) error {
 // this is where the main stuff actually starts
 func (command *ArgsCommandServerStart) Execute(args []string) error {
 	loggingArgs := misc.LoggingArgs{
-		Quiet: command.Quiet,
-		Debug: command.Debug,
+		Quiet:   command.Quiet,
+		Debug:   command.Debug,
 		TextLog: command.TextLog,
 		LogFile: command.LogFile,
 	}
@@ -232,19 +230,19 @@ func (command *ArgsCommandMiscHash) Execute(args []string) error {
 
 func (command *ArgsCommandClientConfigValidate) Execute(args []string) error {
 	loggingArgs := misc.LoggingArgs{
-		Quiet: true,
-		Debug: command.Debug,
+		Quiet:   true,
+		Debug:   command.Debug,
 		TextLog: !command.JsonLog,
 	}
 	misc.SetupLogging(loggingArgs)
 
 	_, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
-	if err != nil{
-		fmt.Printf("Client configuration using file %s and optional environment variables and command line " +
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
 			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
 		os.Exit(1)
 	} else {
-		fmt.Printf("Client configuration using file %s and optional environment variables and command line " +
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
 			"switches is valid\n", path)
 		os.Exit(0)
 	}
@@ -253,8 +251,8 @@ func (command *ArgsCommandClientConfigValidate) Execute(args []string) error {
 
 func (command *ArgsCommandClientConfigDump) Execute(args []string) error {
 	loggingArgs := misc.LoggingArgs{
-		Quiet: true,
-		Debug: command.Debug,
+		Quiet:   true,
+		Debug:   command.Debug,
 		TextLog: !command.JsonLog,
 	}
 	misc.SetupLogging(loggingArgs)
@@ -266,7 +264,7 @@ func (command *ArgsCommandClientConfigDump) Execute(args []string) error {
 		utils.Pp(clientConfig.SanitizeClientConfig(configData))
 		os.Exit(0)
 	} else {
-		fmt.Printf("Client configuration using file %s and optional environment variables and command line " +
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
 			"switches did not pass validation\nThe encountered error was: %s\n",
 			path, err)
 		os.Exit(1)

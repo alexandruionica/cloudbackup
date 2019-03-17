@@ -1,11 +1,11 @@
 package password
 
 import (
-	"testing"
-	"strings"
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
+	"testing"
 )
 
 // check if a generated hash looks like a hash; do not attempt to decrypt hash

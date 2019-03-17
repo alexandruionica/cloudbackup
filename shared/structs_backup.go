@@ -11,7 +11,7 @@ type BackedUpFileProperties struct {
 	Type string
 	// valid only for "symlink" type; otherwise it will be empty string
 	LinkTarget string
-	Size int64
+	Size       int64
 	// time object modified
 	Mtime time.Time
 	// time inode got changed, basically file properties got changed (but not file content). Exception is that ctime
@@ -27,7 +27,7 @@ type BackedUpFileProperties struct {
 	Checksum string
 	// if checksuming is enabled then this will hold whatever algorithm was used for checksumming
 	ChecksumType string
-	Encrypted bool
+	Encrypted    bool
 	// references the "name" of one or more entries in "targets" table ; multiple entries will be comma separated
 	Targets string
 }

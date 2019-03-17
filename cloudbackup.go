@@ -4,11 +4,13 @@ package main
 import (
 	"os"
 
+	"cloudbackup/cliargs"
 	flags "github.com/jessevdk/go-flags"
 	log "github.com/sirupsen/logrus"
-	"cloudbackup/cliargs"
 )
+
 const loggingContext = "main"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })

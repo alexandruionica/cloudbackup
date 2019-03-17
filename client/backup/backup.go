@@ -24,6 +24,7 @@ import (
 
 const ApiPrefix = "/api/v1"
 const loggingContext = "client.backup"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -40,7 +41,7 @@ type StartStopResponse struct {
 
 func List(config clientConfig.Client, jsonOutput bool) {
 	httpClient := &http.Client{}
-	req, err := http.NewRequest("GET", config.Address + ApiPrefix + "/backup/list", nil)
+	req, err := http.NewRequest("GET", config.Address+ApiPrefix+"/backup/list", nil)
 	if err != nil {
 		fmt.Printf("Error starting the http client: %s\n", err)
 		os.Exit(1)
@@ -79,7 +80,7 @@ func List(config clientConfig.Client, jsonOutput bool) {
 
 func Status(config clientConfig.Client, jsonOutput bool, jobName string, jobId string) {
 	httpClient := &http.Client{}
-	req, err := http.NewRequest("GET", config.Address + ApiPrefix + "/backup/list", nil)
+	req, err := http.NewRequest("GET", config.Address+ApiPrefix+"/backup/list", nil)
 	if err != nil {
 		fmt.Printf("Error starting the http client: %s\n", err)
 		os.Exit(1)
@@ -119,7 +120,7 @@ func Status(config clientConfig.Client, jsonOutput bool, jobName string, jobId s
 			break
 		}
 	}
-	if ! found {
+	if !found {
 		if jobId != "" {
 			fmt.Printf("No job having name %s and id %s was found\n", jobName, jobId)
 		} else {
@@ -136,7 +137,9 @@ func Status(config clientConfig.Client, jsonOutput bool, jobName string, jobId s
 }
 
 func Start(config clientConfig.Client, jsonOutput bool, jobName string, watch bool) {
-	payload := struct{Name string `json:"name"`}{jobName,}
+	payload := struct {
+		Name string `json:"name"`
+	}{jobName}
 	encodedPayload, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Printf("Could not JSON encode request payload. Received error was: %s", err)
@@ -144,7 +147,7 @@ func Start(config clientConfig.Client, jsonOutput bool, jobName string, watch bo
 	}
 
 	httpClient := &http.Client{}
-	req, err := http.NewRequest("POST", config.Address + ApiPrefix + "/backup/start",
+	req, err := http.NewRequest("POST", config.Address+ApiPrefix+"/backup/start",
 		bytes.NewBuffer(encodedPayload))
 	if err != nil {
 		fmt.Printf("Error starting the http client: %s\n", err)
@@ -195,7 +198,7 @@ func Start(config clientConfig.Client, jsonOutput bool, jobName string, watch bo
 
 func Stop(config clientConfig.Client, jsonOutput bool, jobName string, JobId string) {
 	payload := httpd.BackupJob{
-		Name: jobName,
+		Name:  jobName,
 		JobId: JobId,
 	}
 	encodedPayload, err := json.Marshal(payload)
@@ -205,7 +208,7 @@ func Stop(config clientConfig.Client, jsonOutput bool, jobName string, JobId str
 	}
 
 	httpClient := &http.Client{}
-	req, err := http.NewRequest("POST", config.Address + ApiPrefix + "/backup/stop",
+	req, err := http.NewRequest("POST", config.Address+ApiPrefix+"/backup/stop",
 		bytes.NewBuffer(encodedPayload))
 	if err != nil {
 		fmt.Printf("Error starting the http client: %s\n", err)
@@ -249,7 +252,7 @@ func Stop(config clientConfig.Client, jsonOutput bool, jobName string, JobId str
 
 func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId string) {
 	payload := httpd.BackupJob{
-		Name: jobName,
+		Name:  jobName,
 		JobId: JobId,
 	}
 	encodedPayload, err := json.Marshal(payload)
@@ -259,7 +262,7 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 	}
 
 	httpClient := &http.Client{}
-	req, err := http.NewRequest("POST", config.Address + ApiPrefix + "/backup/watch",
+	req, err := http.NewRequest("POST", config.Address+ApiPrefix+"/backup/watch",
 		bytes.NewBuffer(encodedPayload))
 	if err != nil {
 		fmt.Printf("Error starting the http client: %s\n", err)
@@ -308,11 +311,11 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 					fmt.Printf("\n" + string(line)[6:])
 				} else {
 					if seq == 0 {
-						if seq + 1 < decodedJsonMessage.Sequence {
-							fmt.Printf("Before attaching %d files, directories and symlinks were processed\n", decodedJsonMessage.Sequence - (seq + 1))
+						if seq+1 < decodedJsonMessage.Sequence {
+							fmt.Printf("Before attaching %d files, directories and symlinks were processed\n", decodedJsonMessage.Sequence-(seq+1))
 						}
-						fmt.Printf( "Percent     Rate   Store    Type   OpType Path Error\n")
-						fmt.Printf( "------- -------- ------- ------- -------- ---- -----\n")
+						fmt.Printf("Percent     Rate   Store    Type   OpType Path Error\n")
+						fmt.Printf("------- -------- ------- ------- -------- ---- -----\n")
 						seq = decodedJsonMessage.Sequence
 					}
 					if utf8.RuneCountInString(decodedJsonMessage.ObjectStoreType) > maxLenghtObjectStoreType {
@@ -323,8 +326,8 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 						// redraw over the same line when the file name hasn't changed (meaning sequence number is unchanged)
 						fmtPrefix = "\033[2K\r"
 					} else {
-						if seq + 1 < decodedJsonMessage.Sequence {
-							fmt.Printf("\nSKIPPED MESSAGES ABOUT %d files, directories and symlinks", decodedJsonMessage.Sequence - (seq + 1))
+						if seq+1 < decodedJsonMessage.Sequence {
+							fmt.Printf("\nSKIPPED MESSAGES ABOUT %d files, directories and symlinks", decodedJsonMessage.Sequence-(seq+1))
 						}
 						seq = decodedJsonMessage.Sequence
 					}
@@ -339,8 +342,8 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 					if decodedJsonMessage.ObjectStoreType == "" {
 						decodedJsonMessage.ObjectStoreType = strings.Repeat(" ", maxLenghtObjectStoreType)
 					}
-					fmt.Printf(fmtPrefix + "%3d%% %7s/sec %" + strconv.Itoa(maxLenghtObjectStoreType) + "s %9s %9s %s %s", decodedJsonMessage.PercentDone,
-						humanize.Bytes(uint64(decodedJsonMessage.Rate)), decodedJsonMessage.ObjectStoreType ,
+					fmt.Printf(fmtPrefix+"%3d%% %7s/sec %"+strconv.Itoa(maxLenghtObjectStoreType)+"s %9s %9s %s %s", decodedJsonMessage.PercentDone,
+						humanize.Bytes(uint64(decodedJsonMessage.Rate)), decodedJsonMessage.ObjectStoreType,
 						decodedJsonMessage.ObjectType, decodedJsonMessage.OperationType, decodedJsonMessage.Path,
 						errorField)
 				}
@@ -350,7 +353,9 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 }
 
 func DryRun(config clientConfig.Client, jsonOutput bool, jobName string) {
-	payload := struct{Name string `json:"name"`}{jobName,}
+	payload := struct {
+		Name string `json:"name"`
+	}{jobName}
 	encodedPayload, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Printf("Could not JSON encode request payload. Received error was: %s", err)
@@ -358,7 +363,7 @@ func DryRun(config clientConfig.Client, jsonOutput bool, jobName string) {
 	}
 
 	httpClient := &http.Client{}
-	req, err := http.NewRequest("POST", config.Address + ApiPrefix + "/backup/dryrun",
+	req, err := http.NewRequest("POST", config.Address+ApiPrefix+"/backup/dryrun",
 		bytes.NewBuffer(encodedPayload))
 	if err != nil {
 		fmt.Printf("Error starting the http client: %s\n", err)
@@ -410,7 +415,7 @@ func DryRun(config clientConfig.Client, jsonOutput bool, jobName string) {
 					if decodedJsonMessage.Excluded {
 						marker = "X"
 						incl = "exclude"
-						inclAppend = fmt.Sprintf( " matching exclusion rule: '%s'",
+						inclAppend = fmt.Sprintf(" matching exclusion rule: '%s'",
 							decodedJsonMessage.ExclusionExpr)
 						// type is unknown so we'll skip printing this field
 						fType = ""
@@ -429,7 +434,7 @@ func DryRun(config clientConfig.Client, jsonOutput bool, jobName string) {
 }
 
 // for a "list" command this formats the result and prints it in a nice way
-func printBackupList(decodedJson ListResponse){
+func printBackupList(decodedJson ListResponse) {
 	logger.Debugf("%+v", decodedJson)
 	NameLength, StateLength, JobIdLength, StartTimeLenght, NextRunLenght := 4, 5, 6, 5, 8
 	for _, job := range decodedJson.Result {
@@ -455,7 +460,7 @@ func printBackupList(decodedJson ListResponse){
 	}
 	// table header
 	tableTemplate := "%" + strconv.Itoa(NameLength) + "s | %" + strconv.Itoa(StateLength) + "s | %" +
-		strconv.Itoa(JobIdLength) + "s | %" + strconv.Itoa(StartTimeLenght) +  "s | %" + strconv.Itoa(NextRunLenght) +
+		strconv.Itoa(JobIdLength) + "s | %" + strconv.Itoa(StartTimeLenght) + "s | %" + strconv.Itoa(NextRunLenght) +
 		"s\n"
 	fmt.Printf(tableTemplate, "Name", "State", "Job Id", "Start", "Next Run")
 	for _, job := range decodedJson.Result {
@@ -480,11 +485,11 @@ func printBackupList(decodedJson ListResponse){
 }
 
 // for a "status" command this formats the result and prints it in a nice way
-func printBackupStatus(decodedJson shared.BackupJobStatus){
+func printBackupStatus(decodedJson shared.BackupJobStatus) {
 	logger.Debugf("%+v", decodedJson)
 	fmt.Printf("Name: %s\n", decodedJson.Name)
 	fmt.Printf("State: %s\n", decodedJson.State)
-	if decodedJson.State == "running"{
+	if decodedJson.State == "running" {
 		fmt.Printf("Current operation: %s\n", decodedJson.StatsText["current_operation"])
 		fmt.Printf("Job id: %s\n", decodedJson.BackupJobId)
 		fmt.Printf("Start time: %s\n", decodedJson.StartTime.String())
@@ -546,5 +551,5 @@ func printBackupStatus(decodedJson shared.BackupJobStatus){
 	} else {
 		nextRun = decodedJson.NextRun.String()
 	}
-	fmt.Printf("Next scheduled run for this job: %s\n",nextRun)
+	fmt.Printf("Next scheduled run for this job: %s\n", nextRun)
 }

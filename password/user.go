@@ -1,13 +1,12 @@
 package password
 
 import (
-	"golang.org/x/crypto/bcrypt"
-	"github.com/howeyc/gopass"
-	"fmt"
-	"unicode/utf8"
 	"errors"
+	"fmt"
+	"github.com/howeyc/gopass"
+	"golang.org/x/crypto/bcrypt"
+	"unicode/utf8"
 )
-
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 5)
@@ -24,7 +23,7 @@ func ReadPassFromCli() (string, error) {
 	fmt.Printf("Password: ")
 	pass, err := gopass.GetPasswdMasked()
 	if err != nil {
-		fmt.Printf("Encountered error while trying to read the password from the terminal. " +
+		fmt.Printf("Encountered error while trying to read the password from the terminal. "+
 			"The error was: %s \n", err)
 		return "", err
 	}

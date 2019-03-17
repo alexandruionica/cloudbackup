@@ -14,10 +14,10 @@ func TestAddConsumer1(t *testing.T) {
 
 	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
 	multiplexer := &WatchMultiplexer{
-		Mutex: &sync.RWMutex{},
-		Ctx: ctxMultiplexer,
-		Cancel: cancelMultiplexer,
-		Running: false,
+		Mutex:          &sync.RWMutex{},
+		Ctx:            ctxMultiplexer,
+		Cancel:         cancelMultiplexer,
+		Running:        false,
 		WatchMsgSender: serverMsgChan,
 	}
 
@@ -29,7 +29,7 @@ func TestAddConsumer1(t *testing.T) {
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		if err.Error() != MultiplexerNotReady {
-			t.Fatalf("multiplexer.AddConsumer() was expected to return error: %s   but it returned error:" +
+			t.Fatalf("multiplexer.AddConsumer() was expected to return error: %s   but it returned error:"+
 				" %s", MultiplexerNotReady, err)
 		}
 	} else {
@@ -51,10 +51,10 @@ func TestAddConsumerAndRemoveConsumer(t *testing.T) {
 
 	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
 	multiplexer := &WatchMultiplexer{
-		Mutex: &sync.RWMutex{},
-		Ctx: ctxMultiplexer,
-		Cancel: cancelMultiplexer,
-		Running: false,
+		Mutex:          &sync.RWMutex{},
+		Ctx:            ctxMultiplexer,
+		Cancel:         cancelMultiplexer,
+		Running:        false,
 		WatchMsgSender: serverMsgChan,
 	}
 

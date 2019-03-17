@@ -20,7 +20,7 @@ func (srvSrc SrvData) handlerPostNotificationTest(w http.ResponseWriter, r *http
 	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostNotificationTest")
 
 	if notifications.GetNumNotificators(configCopy.Notifications) == 0 {
-		JSONError(w, 500, HttpErrInternalServerError, "Notification test can not be run as there " +
+		JSONError(w, 500, HttpErrInternalServerError, "Notification test can not be run as there "+
 			"are no notification entries in the server's configuration file")
 		return
 	}

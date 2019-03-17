@@ -13,13 +13,14 @@ import (
 
 const ApiPrefix = "/api/v1"
 const loggingContext = "client.notification"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
 type HttpStatusReply struct {
-	HTTPCode int `json:"-"`
-	Code string `json:"code"`
+	HTTPCode int    `json:"-"`
+	Code     string `json:"code"`
 	Message  string `json:"message"`
 }
 
