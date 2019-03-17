@@ -263,7 +263,7 @@ func TestPrepare1(t *testing.T) {
 	}
 
 	// test Prepared Query
-	rows, err := preparedStatements.QueryStmt.Query(path)
+	rows, err := preparedStatements.FilesQueryStmt.Query(path)
 	if err != nil {
 		t.Fatalf("While querying the database in order to check if '%s' has been previously backed"+
 			" up, the following error was encountered: %s", path, err)
@@ -276,18 +276,18 @@ func TestPrepare1(t *testing.T) {
 	}
 
 	// test Prepared Insert
-	_, err = preparedStatements.InsertStmt.Exec(path, "file", "", 1234, time.Now(), time.Now(), "testuser1", "", "",
+	_, err = preparedStatements.FilesInsertStmt.Exec(path, "file", "", 1234, time.Now(), time.Now(), "testuser1", "", "",
 		"none", 0, "a_target")
 	if err != nil {
-		t.Fatalf("While trying to use prepared statement with preparedStatements.InsertStmt.Exec() for checking "+
+		t.Fatalf("While trying to use prepared statement with preparedStatements.FilesInsertStmt.Exec() for checking "+
 			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
 	}
 
 	// test Prepared Update
-	_, err = preparedStatements.UpdateStmt.Exec("file", "", 1234, time.Now(), time.Now(), "testuser2", "", "",
+	_, err = preparedStatements.FilesUpdateStmt.Exec("file", "", 1234, time.Now(), time.Now(), "testuser2", "", "",
 		"none", 0, "a_target", path)
 	if err != nil {
-		t.Fatalf("While trying to use prepared statement with preparedStatements.UpdateStmt.Exec() for checking "+
+		t.Fatalf("While trying to use prepared statement with preparedStatements.FilesUpdateStmt.Exec() for checking "+
 			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
 	}
 

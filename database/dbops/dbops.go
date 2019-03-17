@@ -31,43 +31,43 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	var err error
 	var PreparedStatements shared.DbPreparedStatements
 	// query statement - having it as text to as it will be used in transactions too
-	PreparedStatements.Query = "SELECT path, type, link_target, size, mtime, ctime, owner, permissions, checksum, " +
+	PreparedStatements.FilesQuery = "SELECT path, type, link_target, size, mtime, ctime, owner, permissions, checksum, " +
 		"checksum_type, encrypted, targets FROM files WHERE path = ?"
-	PreparedStatements.QueryStmt, err = db.Prepare(PreparedStatements.Query)
+	PreparedStatements.FilesQueryStmt, err = db.Prepare(PreparedStatements.FilesQuery)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL query statement, encountered error: '%s'", err)
 		return PreparedStatements, err
 	}
 
 	// insert statement - having it as text to as it will be used in transactions too
-	PreparedStatements.Insert = "INSERT INTO files (path, type, link_target, size, mtime, " +
+	PreparedStatements.FilesInsert = "INSERT INTO files (path, type, link_target, size, mtime, " +
 		"ctime, owner, permissions, checksum, checksum_type, encrypted, targets) VALUES " +
 		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	PreparedStatements.InsertStmt, err = db.Prepare(PreparedStatements.Insert)
+	PreparedStatements.FilesInsertStmt, err = db.Prepare(PreparedStatements.FilesInsert)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL insert statement, encountered error: '%s'", err)
 		// close other opened statements before returning
-		err2 := PreparedStatements.QueryStmt.Close()
+		err2 := PreparedStatements.FilesQueryStmt.Close()
 		if err2 != nil {
-			logger.Warnf("While trying to early close 'QueryStmt' received error: '%s'", err2)
+			logger.Warnf("While trying to early close 'FilesQueryStmt' received error: '%s'", err2)
 		}
 		return PreparedStatements, err
 	}
 
 	// update statement - having it as text to as it will be used in transactions too
-	PreparedStatements.Update = "UPDATE files SET type=?, link_target=?, size=?, mtime=?, " +
+	PreparedStatements.FilesUpdate = "UPDATE files SET type=?, link_target=?, size=?, mtime=?, " +
 		"ctime=?, owner=?, permissions=?, checksum=?, checksum_type=?, encrypted=?, targets=? WHERE path=?"
-	PreparedStatements.UpdateStmt, err = db.Prepare(PreparedStatements.Update)
+	PreparedStatements.FilesUpdateStmt, err = db.Prepare(PreparedStatements.FilesUpdate)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
 		// close other opened statements before returning
-		err2 := PreparedStatements.QueryStmt.Close()
+		err2 := PreparedStatements.FilesQueryStmt.Close()
 		if err2 != nil {
-			logger.Warnf("While trying to early close 'QueryStmt' received error: '%s'", err2)
+			logger.Warnf("While trying to early close 'FilesQueryStmt' received error: '%s'", err2)
 		}
-		err2 = PreparedStatements.InsertStmt.Close()
+		err2 = PreparedStatements.FilesInsertStmt.Close()
 		if err2 != nil {
-			logger.Warnf("While trying to early close 'InsertStmt' received error: '%s'", err2)
+			logger.Warnf("While trying to early close 'FilesInsertStmt' received error: '%s'", err2)
 		}
 		return PreparedStatements, err
 	}
@@ -77,22 +77,22 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 // close a shared.DbPreparedStatements object
 func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements) {
-	if dbPreparedStatements.QueryStmt != nil {
-		err := dbPreparedStatements.QueryStmt.Close()
+	if dbPreparedStatements.FilesQueryStmt != nil {
+		err := dbPreparedStatements.FilesQueryStmt.Close()
 		if err != nil {
 			logger.Warnf("Could not close the db query statement for common operations")
 		}
 	}
 
-	if dbPreparedStatements.InsertStmt != nil {
-		err := dbPreparedStatements.InsertStmt.Close()
+	if dbPreparedStatements.FilesInsertStmt != nil {
+		err := dbPreparedStatements.FilesInsertStmt.Close()
 		if err != nil {
 			logger.Warnf("Could not close the db insert statement for common operations")
 		}
 	}
 
-	if dbPreparedStatements.UpdateStmt != nil {
-		err := dbPreparedStatements.UpdateStmt.Close()
+	if dbPreparedStatements.FilesUpdateStmt != nil {
+		err := dbPreparedStatements.FilesUpdateStmt.Close()
 		if err != nil {
 			logger.Warnf("Could not close the db update statement for common operations")
 		}

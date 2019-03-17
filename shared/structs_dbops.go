@@ -13,10 +13,10 @@ type DbData struct {
 // this normally populated by dataabase/dbops/Prepare()
 type DbPreparedStatements struct {
 	// each "string" entry contains the sql statement to be used for preparing the statement
-	Query      string
-	QueryStmt  *sql.Stmt
-	Insert     string
-	InsertStmt *sql.Stmt
-	Update     string
-	UpdateStmt *sql.Stmt
+	FilesQuery      string
+	FilesQueryStmt  *sql.Stmt
+	FilesInsert     string
+	FilesInsertStmt *sql.Stmt
+	FilesUpdate     string
+	FilesUpdateStmt *sql.Stmt
 }
