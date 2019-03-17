@@ -255,7 +255,7 @@ func WaitForServerToStart(host string, port string, t *testing.T) error {
 	// check several times is port is being listened on
 	counter := 0
 	for {
-		conn, _ := net.DialTimeout("tcp", net.JoinHostPort(host, port), 100 * time.Millisecond) // #nosec
+		conn, _ := net.DialTimeout("tcp", net.JoinHostPort(host, port), 100*time.Millisecond) // #nosec
 		if conn != nil {
 			err := conn.Close()
 			if err != nil {
@@ -281,81 +281,81 @@ address: http://127.0.0.1:8080
 `)
 
 // folder with some files to test backing up; user must delete folder afterwards
-func SetupBackupDir(testName string, t *testing.T) (string){
-	var path = utils.SetupTmpDir("unittest_backup_scan_test_" + testName, t)
+func SetupBackupDir(testName string, t *testing.T) string {
+	var path = utils.SetupTmpDir("unittest_backup_scan_test_"+testName, t)
 	var err error
 	// something like /tmp/$RANDOM/dir1/dir2/dir3/dir4
-	err = os.MkdirAll(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "dir4", 0755) // #nosec
+	err = os.MkdirAll(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"dir4", 0755) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 	// something like /tmp/$RANDOM/absolute_symlink_to_dir3 -> /tmp/$RANDOM/dir1/dir2/dir3
-	err = os.Symlink(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "dir3", path + string(filepath.Separator) + "absolute_symlink_to_dir3")
+	err = os.Symlink(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+		string(filepath.Separator)+"dir3", path+string(filepath.Separator)+"absolute_symlink_to_dir3")
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// something like /tmp/$RANDOM/relative_symlink_to_dir3 -> dir1/dir2/dir3
-	err = os.Symlink("dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "dir3", path + string(filepath.Separator) + "relative_symlink_to_dir3")
+	err = os.Symlink("dir1"+string(filepath.Separator)+"dir2"+
+		string(filepath.Separator)+"dir3", path+string(filepath.Separator)+"relative_symlink_to_dir3")
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// /tmp/$RANDOM/file1
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "file1", []byte(`text for file1`), 0644)
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// /tmp/$RANDOM/dir1/dir2/dir3/file2.txt
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "file2.txt", []byte(`text for file2.txt`),
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file2.txt", []byte(`text for file2.txt`),
 		0644)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 	// /tmp/$RANDOM/dir1/dir2/dir3/file3
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "file3", []byte(`text for file3`), 0644)
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file3", []byte(`text for file3`), 0644)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// /tmp/$RANDOM/dir1/dir2/dir3/file4
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "dir3" + string(filepath.Separator) + "file4", []byte(`text for file4`), 0644)
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file4", []byte(`text for file4`), 0644)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// /tmp/$RANDOM/dir1/dir2/file5
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "file5", []byte(`text for file5`), 0640)
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+		string(filepath.Separator)+"file5", []byte(`text for file5`), 0640)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// /tmp/$RANDOM/dir1/dir2/file6
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir2" +
-		string(filepath.Separator) + "file6", []byte(`text for file6`), 0600)
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+		string(filepath.Separator)+"file6", []byte(`text for file6`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// /tmp/$RANDOM/dir1/dir5/
-	err = os.MkdirAll(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+	err = os.MkdirAll(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
 		"dir5", 0755) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -363,7 +363,7 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 	}
 
 	// /tmp/$RANDOM/dir1/file7
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
 		"file7", []byte(`text for file7`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -371,7 +371,7 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 	}
 
 	// unicode in filename /tmp/$RANDOM/dir1/file8世界⌘ä
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
 		"file8世界⌘ä", []byte(`text for file8世界⌘ä`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -379,7 +379,7 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 	}
 
 	// dir with unicode in name /tmp/$RANDOM/dir1/dir6öüÂș/
-	err = os.MkdirAll(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
+	err = os.MkdirAll(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
 		"dir6öüÂș", 0755) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -387,16 +387,16 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 	}
 
 	// plain file name in unicode dirname /tmp/$RANDOM/dir1/dir6öüÂș/file9
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
-		"dir6öüÂș" + string(filepath.Separator) + "file9", []byte(`text for file9`), 0600)
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
+		"dir6öüÂș"+string(filepath.Separator)+"file9", []byte(`text for file9`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// unicode file name in unicode dirname /tmp/$RANDOM/dir1/dir6öüÂș/file10ŹżÇù.txt
-	err = ioutil.WriteFile(path + string(filepath.Separator) + "dir1" + string(filepath.Separator) +
-		"dir6öüÂș" + string(filepath.Separator) + "file10ŹżÇù.txt", []byte(`text for file10ŹżÇù.txt`), 0600)
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
+		"dir6öüÂș"+string(filepath.Separator)+"file10ŹżÇù.txt", []byte(`text for file10ŹżÇù.txt`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
@@ -409,11 +409,11 @@ func SetupBackupDir(testName string, t *testing.T) (string){
 // created items which are returned as an slice of strings
 // returns: path to config file; slice of paths to delete
 func SetupMockConfigAndTmpPaths(t *testing.T, prefix string) (string, []string) {
-	dbDataDirPath := utils.SetupTmpDir(prefix + "_datadir_", t)
-	HtmlDirPath := utils.SetupTmpDir(prefix + "_htmldir_", t)
-	newMockYaml := bytes.Replace(MockYaml, []byte("data_dir: /tmp"), []byte("data_dir: " + dbDataDirPath), 1)
-	newMockYaml = bytes.Replace(newMockYaml, []byte("html_dir: /tmp"), []byte("html_dir: " + HtmlDirPath), 1)
-	path, err := utils.SetupTmpFileWithContent(newMockYaml, prefix + "_config_")
+	dbDataDirPath := utils.SetupTmpDir(prefix+"_datadir_", t)
+	HtmlDirPath := utils.SetupTmpDir(prefix+"_htmldir_", t)
+	newMockYaml := bytes.Replace(MockYaml, []byte("data_dir: /tmp"), []byte("data_dir: "+dbDataDirPath), 1)
+	newMockYaml = bytes.Replace(newMockYaml, []byte("html_dir: /tmp"), []byte("html_dir: "+HtmlDirPath), 1)
+	path, err := utils.SetupTmpFileWithContent(newMockYaml, prefix+"_config_")
 	if err != nil {
 		err2 := os.RemoveAll(dbDataDirPath)
 		if err2 != nil {
@@ -422,13 +422,13 @@ func SetupMockConfigAndTmpPaths(t *testing.T, prefix string) (string, []string) 
 		t.Fatalf("Could not create tmp config file due to error: %s", err)
 	}
 
-	pathsToDelete := make([]string,0)
+	pathsToDelete := make([]string, 0)
 	pathsToDelete = append(pathsToDelete, path, dbDataDirPath, HtmlDirPath)
 	return path, pathsToDelete
 }
 
 // given a slice containing paths, it tries delete each one of them from disk
-func DeleteTestFilesAndDirs(toDelete []string){
+func DeleteTestFilesAndDirs(toDelete []string) {
 	for _, item := range toDelete {
 		err := os.RemoveAll(item)
 		if err != nil {
@@ -441,5 +441,5 @@ func DeleteTestFilesAndDirs(toDelete []string){
 // produce a tmp file path, not guaranteed to be unique but given an uuid is used, collision chances should be low
 func GenerateTmpFilePath(prefix string, suffix string) string {
 	namePart := uuid.NewV4().String()
-	return filepath.Join(os.TempDir(), prefix + namePart + suffix)
+	return filepath.Join(os.TempDir(), prefix+namePart+suffix)
 }

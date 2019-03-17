@@ -1,17 +1,18 @@
 package daemon
 
 import (
-	log "github.com/sirupsen/logrus"
 	"cloudbackup/config"
+	"cloudbackup/daemon/globals"
 	"cloudbackup/httpd"
 	"cloudbackup/scheduler"
 	"cloudbackup/shared"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"sync"
-	"cloudbackup/daemon/globals"
 )
 
 const loggingContext = "daemon"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -42,13 +43,13 @@ func Start(configFile string, debug bool) {
 	backupJobsState := scheduler.NewJobsState()
 
 	var httpServer *httpd.SrvData
-	if configuration.GetCopyWithLock(loggingContext).Https.Enabled{
+	if configuration.GetCopyWithLock(loggingContext).Https.Enabled {
 		logger.Info("Because the HTTPS server has been enabled the HTTP server will not be started")
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
 			configuration.GetCopyWithLock(loggingContext).Https.BindAddress, true,
 			configuration.GetCopyWithLock(loggingContext).Https.SslCertPath,
 			configuration.GetCopyWithLock(loggingContext).Https.SslKeyPath, commWithSchedulerForBackup, backupJobsState)
-	}else {
+	} else {
 		httpServer = httpd.New(sndCfgChangeToHttpd, rcvCfgChangeFromHttpd, configuration,
 			configuration.GetCopyWithLock(loggingContext).Http.BindAddress, false, "",
 			"", commWithSchedulerForBackup, backupJobsState)

@@ -76,7 +76,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 }
 
 // close a shared.DbPreparedStatements object
-func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements){
+func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements) {
 	if dbPreparedStatements.QueryStmt != nil {
 		err := dbPreparedStatements.QueryStmt.Close()
 		if err != nil {
@@ -108,42 +108,42 @@ func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements){
 func EnsureTargetsInDb(db *sql.DB, backupConfig config.Backup) error {
 	logger.Debug("Checking the database has a record for each target mentioned in the config file")
 	var (
-		targetName         string
-		backupName         string
+		targetName string
+		backupName string
 	)
 	dbFoundTargetNames := make([]string, 0)
 	// build list of targets from the Database
 	rows, err := db.Query("SELECT name, backup_name from targets")
 	if err != nil {
-		logger.Errorf("While trying to get from the database the list of targets, the following error was " +
+		logger.Errorf("While trying to get from the database the list of targets, the following error was "+
 			"encountered: '%s'", err)
 		return err
 	}
-	defer func (){
+	defer func() {
 		err := rows.Close()
 		if err != nil {
-			logger.Warnf("While trying to Close() a db.Query for retrieving target list, the following error " +
+			logger.Warnf("While trying to Close() a db.Query for retrieving target list, the following error "+
 				"was encountered: '%s'", err)
 		}
 	}()
 	for rows.Next() {
 		err := rows.Scan(&targetName, &backupName)
 		if err != nil {
-			logger.Errorf("While enumerating from the database the list of targets, the following error was " +
+			logger.Errorf("While enumerating from the database the list of targets, the following error was "+
 				"encountered: '%s'", err)
 			return err
 		}
 		dbFoundTargetNames = append(dbFoundTargetNames, targetName)
 		if backupName != backupConfig.Name {
-			logger.Warningf("Found in the database belonging to backup job '%s' target '%s' having back job " +
-				"name '%s' which is different than what the config file has. This inconsistency may have been caused by" +
+			logger.Warningf("Found in the database belonging to backup job '%s' target '%s' having back job "+
+				"name '%s' which is different than what the config file has. This inconsistency may have been caused by"+
 				" adjusting the configuration file and then manually renaming the sql database file",
 				backupConfig.Name, targetName, backupName)
 		}
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.Errorf("Could not enumerate the list of all targets from the database due to the following " +
+		logger.Errorf("Could not enumerate the list of all targets from the database due to the following "+
 			"error: '%s'", err)
 		return err
 	}
@@ -164,11 +164,11 @@ func EnsureTargetsInDb(db *sql.DB, backupConfig config.Backup) error {
 					found = true
 				}
 			}
-			if ! found {
+			if !found {
 				targetNamesToAdd = append(targetNamesToAdd, configTarget)
 			}
 		}
-	// else just add all target names in the config to the list of names to insert in the DB
+		// else just add all target names in the config to the list of names to insert in the DB
 	} else {
 		for _, configTarget := range configFoundTargetNames {
 			targetNamesToAdd = append(targetNamesToAdd, configTarget)
@@ -183,10 +183,10 @@ func EnsureTargetsInDb(db *sql.DB, backupConfig config.Backup) error {
 			// walk each target in the config file until a match is found
 			for _, targetInCfg := range backupConfig.Target {
 				if targetToAdd == targetInCfg.Name {
-					_, err := db.Exec("INSERT INTO targets (name, backup_name, type, date_added) VALUES " +
+					_, err := db.Exec("INSERT INTO targets (name, backup_name, type, date_added) VALUES "+
 						"(?, ?, ?, ?)", targetToAdd, backupConfig.Name, targetInCfg.Type, dateAdded)
 					if err != nil {
-						logger.Errorf("While trying to add information about target '%s' to the database, the " +
+						logger.Errorf("While trying to add information about target '%s' to the database, the "+
 							"following error was encountered: '%s'", targetToAdd, err)
 						return err
 					}
@@ -214,14 +214,14 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			logger.Warnf("While trying to Close() a db.Query for retrieving any job id with a given uuid, the " +
+			logger.Warnf("While trying to Close() a db.Query for retrieving any job id with a given uuid, the "+
 				"following error was encountered: '%s'", err)
 		}
 	}()
 	for rows.Next() {
 		err := rows.Scan(&jobIdInDb)
 		if err != nil {
-			logger.Errorf("While enumerating from the database the list of jobs with a given uuid, the " +
+			logger.Errorf("While enumerating from the database the list of jobs with a given uuid, the "+
 				"following error was encountered: '%s'", err)
 			return false, err
 		}
@@ -243,14 +243,14 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 // adds a new record in the "jobs" table for a new job
 func AddJobDetails(db *sql.DB, jobId string, jobName string, jobType string, startTime time.Time) error {
 	/*
-		CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
-	report TEXT);
-	 */
-	_, err := db.Exec("INSERT INTO jobs (id, name, type, start_time, end_time, state, report) " +
-		"VALUES " +
+			CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
+		report TEXT);
+	*/
+	_, err := db.Exec("INSERT INTO jobs (id, name, type, start_time, end_time, state, report) "+
+		"VALUES "+
 		"(?, ?, ?, ?, ?, ?, ?)", jobId, jobName, jobType, startTime, "", "started", "")
 	if err != nil {
-		logger.Errorf("While trying to add information about %s job having name '%s' and id '%s' to the " +
+		logger.Errorf("While trying to add information about %s job having name '%s' and id '%s' to the "+
 			"database, the following error was encountered: '%s'", jobType, jobName, jobId, err)
 		return err
 	}
@@ -260,30 +260,30 @@ func AddJobDetails(db *sql.DB, jobId string, jobName string, jobType string, sta
 // updates an existing job record in the "jobs" table
 func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, endTime time.Time, JobState string, report string) error {
 	/*
-		CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
-	report TEXT);
-	 */
-	result, err := db.Exec("UPDATE jobs SET end_time = ?, state = ?, report = ? WHERE id = ? AND name = ? " +
+			CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
+		report TEXT);
+	*/
+	result, err := db.Exec("UPDATE jobs SET end_time = ?, state = ?, report = ? WHERE id = ? AND name = ? "+
 		"AND type = ?", endTime, JobState, report, jobId, jobName, jobType)
 	if err != nil {
-		logger.Errorf("While trying to update information about %s job having name '%s' and id '%s' in the " +
+		logger.Errorf("While trying to update information about %s job having name '%s' and id '%s' in the "+
 			"database, the following error was encountered: '%s'", jobType, jobName, jobId, err)
 		return err
 	}
 	rowsUpdated, err := result.RowsAffected()
 	if err != nil {
-		logger.Errorf("While trying to check if updating the database entry for %s job having name '%s' and id" +
+		logger.Errorf("While trying to check if updating the database entry for %s job having name '%s' and id"+
 			" '%s' was successful, the following error was encountered: '%s'", jobType, jobName, jobId, err)
 		return err
 	}
 	if rowsUpdated != 1 {
 		if rowsUpdated < 1 {
-			logger.Errorf("Did not manage to update the database entry for %s job having name '%s' and id '%s' as" +
+			logger.Errorf("Did not manage to update the database entry for %s job having name '%s' and id '%s' as"+
 				" no matching entries were found. Job status and integrity may be affected.", jobType, jobName, jobId)
 			return errors.New("could not find a matching database entry")
 		} else {
-			logger.Errorf("Found '%d' database entries instead of 1 for %s job having name '%s' and id '%s'. " +
-				"Job status may be incorrect for the other jobs which had matching id and name and the status report " +
+			logger.Errorf("Found '%d' database entries instead of 1 for %s job having name '%s' and id '%s'. "+
+				"Job status may be incorrect for the other jobs which had matching id and name and the status report "+
 				"will be incorrect for them  ", rowsUpdated, jobType, jobName, jobId)
 			return errors.New("more than one matching database entry")
 		}

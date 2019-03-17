@@ -16,7 +16,7 @@ import (
 )
 
 // obtain data about current user using OS supplied utilities instead on relying on Golang libraries
-func getRunningUserDetails(t *testing.T)(sid, username, domain string){
+func getRunningUserDetails(t *testing.T) (sid, username, domain string) {
 	//cmd := exec.Command(`C:\WINDOWS\System32\whoami.exe /user /NH`)
 	cmd := exec.Command("whoami", "/user", "/NH")
 	stdout, err := cmd.StdoutPipe()
@@ -32,7 +32,7 @@ func getRunningUserDetails(t *testing.T)(sid, username, domain string){
 	desktop-a2b\aionica S-1-5-21-1166836205-3126379902-2704385944-1001
 
 	PS C:\Users\aionica>
-	 */
+	*/
 
 	scanner := bufio.NewScanner(stdout)
 	// read only the first line of output
@@ -55,14 +55,14 @@ func getRunningUserDetails(t *testing.T)(sid, username, domain string){
 }
 
 type propertiesFromPowerShell struct {
-	Name string
-	Domain string
-	FileSystemRights string
+	Name              string
+	Domain            string
+	FileSystemRights  string
 	AccessControlType string
-	IsInherited string
+	IsInherited       string
 }
 
-func getFilePropertiesUsingPowershell(t *testing.T, file string)([]propertiesFromPowerShell){
+func getFilePropertiesUsingPowershell(t *testing.T, file string) []propertiesFromPowerShell {
 	/* The command will return output similar to the below example
 	PS C:\Users\vagrant> (get-acl <folder or file name>).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto
 
@@ -71,8 +71,8 @@ func getFilePropertiesUsingPowershell(t *testing.T, file string)([]propertiesFro
 	NT AUTHORITY\SYSTEM          FullControl             Allow        True ContainerInherit, ObjectInherit
 	BUILTIN\Administrators       FullControl             Allow        True ContainerInherit, ObjectInherit
 	VAGRANT-RS57QRT\vagrant      FullControl             Allow        True ContainerInherit, ObjectInherit
-	 */
-	cmd := exec.Command("powershell", "-NonInteractive", `(get-acl ` + file +  `).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto`)
+	*/
+	cmd := exec.Command("powershell", "-NonInteractive", `(get-acl `+file+`).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto`)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatalf("Could not setup pipe for Powershell command due to error: %s", err)
@@ -100,15 +100,15 @@ func getFilePropertiesUsingPowershell(t *testing.T, file string)([]propertiesFro
 			cmdOutput := regexp.MustCompile(`^([a-zA-Z0-9 -]+)\\([a-zA-Z0-9-]*) +([a-zA-Z0-9-]+) +([a-zA-Z0-9-]+) +([a-zA-Z0-9-]+)`)
 			regexResultArray := cmdOutput.FindStringSubmatch(lineOutput)
 			if regexResultArray == nil {
-				t.Fatalf("Could not regex file properties from output returned by the Powershell commandlet. " +
+				t.Fatalf("Could not regex file properties from output returned by the Powershell commandlet. "+
 					"Line which failed to regex is: '%s'", lineOutput)
 			}
 			fileProp := propertiesFromPowerShell{
-				Name: regexResultArray[2],
-				Domain: regexResultArray[1],
-				FileSystemRights: regexResultArray[3],
+				Name:              regexResultArray[2],
+				Domain:            regexResultArray[1],
+				FileSystemRights:  regexResultArray[3],
 				AccessControlType: regexResultArray[4],
-				IsInherited: regexResultArray[5],
+				IsInherited:       regexResultArray[5],
 			}
 			retrievedProperties = append(retrievedProperties, fileProp)
 		}
@@ -117,15 +117,15 @@ func getFilePropertiesUsingPowershell(t *testing.T, file string)([]propertiesFro
 		t.Fatalf("while reading standard input from Powershell command, got error: %s", err)
 	}
 	if len(retrievedProperties) == 0 {
-		t.Fatalf("Either the file %s has no access controls on it or more likely parsing the file properties " +
-			"output from Powershell did not find any lines containing ACLs. The output of the powershell was: %s" +
+		t.Fatalf("Either the file %s has no access controls on it or more likely parsing the file properties "+
+			"output from Powershell did not find any lines containing ACLs. The output of the powershell was: %s"+
 			"\n", file, allOutput)
 	}
 	return retrievedProperties
 }
 
 // workhorse for the test in this file
-func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username, domain string){
+func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username, domain string) {
 	owner, permissions, err := GetObjectPermissions(file, filestat)
 	if err != nil {
 		t.Fatalf("While trying to get permissions of %s got error: %s", file, err)
@@ -138,13 +138,12 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 		t.Fatalf("Could not json decode the permissions string due to error: %s", err)
 	}
 
-
 	// variable depicts if the creator  of the file is shown as the "Onwer" in the top level entry or in one of the ACE
 	// entries
 	creatorInACES := false
 	if strings.ToLower(username) != strings.ToLower(owner) {
 		// check the json structure to see if the ACLs contain the user we run under . Windows permissions seem to work in misterious ways
-		for _, AceEntry := range(expandedPerm.ACEs) {
+		for _, AceEntry := range expandedPerm.ACEs {
 			if strings.ToLower(username) == strings.ToLower(AceEntry.Account.Name) {
 				creatorInACES = true
 				if strings.ToLower(domain) != strings.ToLower(AceEntry.Account.Domain) {
@@ -153,8 +152,8 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 				}
 			}
 		}
-		if ! creatorInACES {
-			t.Fatalf("1. Expected owner of %s to be %s but instead got owner %s . The expected owner wasn't " +
+		if !creatorInACES {
+			t.Fatalf("1. Expected owner of %s to be %s but instead got owner %s . The expected owner wasn't "+
 				"found in any ACE entry either", file, username, owner)
 		}
 	}
@@ -165,13 +164,13 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	// check permissions object has expected content
 	if strings.ToLower(username) != strings.ToLower(expandedPerm.Owner.Name) {
 		// check the json structure to see if the ACLs contain the user we run under . Windows permissions seem to work in mysterious ways
-		for _, AceEntry := range(expandedPerm.ACEs) {
+		for _, AceEntry := range expandedPerm.ACEs {
 			if strings.ToLower(username) == strings.ToLower(AceEntry.Account.Name) {
 				creatorInACES = true
 			}
 		}
-		if ! creatorInACES {
-			t.Fatalf("2. Expected owner of %s to be %s but instead got owner %s . The expected owner wasn't " +
+		if !creatorInACES {
+			t.Fatalf("2. Expected owner of %s to be %s but instead got owner %s . The expected owner wasn't "+
 				"found in any ACE entry either", file, username, owner)
 		}
 	}
@@ -184,13 +183,13 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	// we need to go through each ACE
 	if creatorInACES {
 		foundOwnerSidMatch := false
-		for _, AceEntry := range(expandedPerm.ACEs) {
+		for _, AceEntry := range expandedPerm.ACEs {
 			if sid == AceEntry.Account.SID {
 				foundOwnerSidMatch = true
 			}
 		}
 
-		if ! foundOwnerSidMatch {
+		if !foundOwnerSidMatch {
 			t.Fatalf("Creator sid %s of %s was not found in any of the ACEs", sid, file)
 		}
 
@@ -211,7 +210,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	// when using the native Windows System calls
 	foundMatchInProperties := false
 	filePropertiesFromPowerShell := getFilePropertiesUsingPowershell(t, file)
-	for _, fileProperties := range(filePropertiesFromPowerShell) {
+	for _, fileProperties := range filePropertiesFromPowerShell {
 		if strings.ToLower(username) == strings.ToLower(fileProperties.Name) && strings.ToLower(domain) == strings.ToLower(fileProperties.Domain) {
 			// FileSystemRights AccessControlType
 			// FullControl             Allow
@@ -220,7 +219,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 			}
 		}
 	}
-	if ! foundMatchInProperties {
+	if !foundMatchInProperties {
 		t.Fatalf("The Powershell retrieved file properties don't have the creator of the files listed as " +
 			"having 'FullControl' on the file")
 	}
@@ -228,7 +227,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 }
 
 // compare file / dir / symlink properties returned by GetObjectPermissions() with data supplied by OS tools
-func TestGetObjectPermissions1withStat(t *testing.T){
+func TestGetObjectPermissions1withStat(t *testing.T) {
 	sid, username, domain := getRunningUserDetails(t)
 
 	// folder with some mock files and symlinks

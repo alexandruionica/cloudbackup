@@ -22,7 +22,7 @@ func TestSetupRateLimiterBucket1(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := config.Load(path, false, &sync.RWMutex{})
+	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -41,7 +41,7 @@ func TestSetupRateLimiterBucket1(t *testing.T) {
 		t.Fatalf("setupRateLimiterBucket() returned %d but 10000 was expected.", ratelimitNumeric)
 	}
 	if burst < 1 {
-		t.Fatalf("setupRateLimiterBucket() returned a ratelimit >0 but burst is < 1 (returned burst value is" +
+		t.Fatalf("setupRateLimiterBucket() returned a ratelimit >0 but burst is < 1 (returned burst value is"+
 			" '%d'). If ratelimit that >0 then burst needs to be >0", burst)
 	}
 	if bucket == nil {
@@ -55,7 +55,7 @@ func TestSetupRateLimiterBucket2(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := config.Load(path, false, &sync.RWMutex{})
+	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -74,7 +74,7 @@ func TestSetupRateLimiterBucket2(t *testing.T) {
 		t.Fatalf("setupRateLimiterBucket() returned %d but 0 was expected.", ratelimitNumeric)
 	}
 	if burst != 0 {
-		t.Fatalf("setupRateLimiterBucket() returned a ratelimit 0 but burst != 0 (returned burst value is" +
+		t.Fatalf("setupRateLimiterBucket() returned a ratelimit 0 but burst != 0 (returned burst value is"+
 			" '%d'). If ratelimit = 0 then we should get burst = 0", burst)
 	}
 	if bucket != nil {
@@ -89,7 +89,7 @@ func TestSetupRateLimiterBucket3(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := config.Load(path, false, &sync.RWMutex{})
+	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -108,7 +108,7 @@ func TestSetupRateLimiterBucket3(t *testing.T) {
 		t.Fatalf("setupRateLimiterBucket() returned %d but 5 was expected.", ratelimitNumeric)
 	}
 	if burst != 1 {
-		t.Fatalf("setupRateLimiterBucket() returned a ratelimit of %d but burst != 1 (returned burst value is" +
+		t.Fatalf("setupRateLimiterBucket() returned a ratelimit of %d but burst != 1 (returned burst value is"+
 			" '%d'). If ratelimit that <10 then burst needs to be 1", ratelimitNumeric, burst)
 	}
 	if bucket == nil {
@@ -122,7 +122,7 @@ func TestSetupRateLimiterBucket4(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := config.Load(path, false, &sync.RWMutex{})
+	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -141,8 +141,8 @@ func TestSetupRateLimiterBucket4(t *testing.T) {
 		t.Fatalf("setupRateLimiterBucket() returned %d but 9223372036854775807 was expected.", ratelimitNumeric)
 	}
 	if burst != MaxBufferSize {
-		t.Fatalf("setupRateLimiterBucket() returned a ratelimit of %d but burst != %d (returned burst value is" +
-			" '%d'). If burst > 2147483647 or burst > %d then burst needs to be lowered to whatever value of the " +
+		t.Fatalf("setupRateLimiterBucket() returned a ratelimit of %d but burst != %d (returned burst value is"+
+			" '%d'). If burst > 2147483647 or burst > %d then burst needs to be lowered to whatever value of the "+
 			"previous two is smaller", ratelimitNumeric, MaxBufferSize, burst, MaxBufferSize)
 	}
 	if bucket == nil {
@@ -156,7 +156,7 @@ func TestNewFileReader1(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := config.Load(path, false, &sync.RWMutex{})
+	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -189,7 +189,7 @@ func TestNewFileReader2(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := config.Load(path, false, &sync.RWMutex{})
+	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -235,31 +235,34 @@ func TestNewFileReader2(t *testing.T) {
 	p := make([]byte, 1024)
 	startTime := time.Now()
 	// fetch all file content
-	InfiniteLoop:
+InfiniteLoop:
 	for {
 		_, err := reader.Read(p)
 		if err != nil {
 			switch err {
 			// io.Reader reports io.EOF when reaching the end of the file. This is normal and expected
-			case io.EOF: {
-				duration := time.Since(startTime)
-				if duration.Seconds() < 2 {
-					t.Fatalf("Reading the rate limited file should have taken 2 seconds but it took %f",
-						duration.Seconds())
+			case io.EOF:
+				{
+					duration := time.Since(startTime)
+					if duration.Seconds() < 2 {
+						t.Fatalf("Reading the rate limited file should have taken 2 seconds but it took %f",
+							duration.Seconds())
+					}
+					if duration.Seconds() > 2.1 {
+						t.Fatalf("Reading the rate limited file should have taken a bit over 2 seconds but it took %f",
+							duration.Seconds())
+					}
+					reader.Close()
+					break InfiniteLoop
 				}
-				if duration.Seconds() > 2.1 {
-					t.Fatalf("Reading the rate limited file should have taken a bit over 2 seconds but it took %f",
-						duration.Seconds())
+			case context.Canceled:
+				{
+					break InfiniteLoop
 				}
-				reader.Close()
-				break InfiniteLoop
-			}
-			case context.Canceled: {
-				break InfiniteLoop
-			}
-			default: {
-				t.Fatalf("While reading '%s' the following error was encountered: %s", path, err)
-			}
+			default:
+				{
+					t.Fatalf("While reading '%s' the following error was encountered: %s", path, err)
+				}
 			}
 		}
 	}
@@ -271,7 +274,7 @@ func TestNewFileReader3(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := config.Load(path, false, &sync.RWMutex{})
+	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -324,21 +327,24 @@ InfiniteLoop:
 		if err != nil {
 			switch err {
 			// io.Reader reports io.EOF when reaching the end of the file. This is normal and expected
-			case io.EOF: {
-				duration := time.Since(startTime)
-				if duration.Seconds() > 0.1 {
-					t.Fatalf("Reading the rate limited file should have taken under 0.1 seconds but it took %f",
-						duration.Seconds())
+			case io.EOF:
+				{
+					duration := time.Since(startTime)
+					if duration.Seconds() > 0.1 {
+						t.Fatalf("Reading the rate limited file should have taken under 0.1 seconds but it took %f",
+							duration.Seconds())
+					}
+					reader.Close()
+					break InfiniteLoop
 				}
-				reader.Close()
-				break InfiniteLoop
-			}
-			case context.Canceled: {
-				break InfiniteLoop
-			}
-			default: {
-				t.Fatalf("While reading '%s' the following error was encountered: %s", path, err)
-			}
+			case context.Canceled:
+				{
+					break InfiniteLoop
+				}
+			default:
+				{
+					t.Fatalf("While reading '%s' the following error was encountered: %s", path, err)
+				}
 			}
 		}
 	}
@@ -401,39 +407,39 @@ func TestGetObjectStores2(t *testing.T) {
 }
 
 func TestCalculatePercent1(t *testing.T) {
-	result := calculatePercent(100,10)
+	result := calculatePercent(100, 10)
 	if result != 10 {
 		t.Fatalf("Was expecting a result of '10' from calculatePercent() but got %d", result)
 	}
 
-	result = calculatePercent(100,100)
+	result = calculatePercent(100, 100)
 	if result != 100 {
 		t.Fatalf("1. Was expecting a result of '100' from calculatePercent() but got %d", result)
 	}
 
 	// if we pass in a read value larger than $filesize, we should get 100 as a result
-	result = calculatePercent(100,200)
+	result = calculatePercent(100, 200)
 	if result != 200 {
 		t.Fatalf("2. Was expecting a result of '200' from calculatePercent() but got %d", result)
 	}
 
-	result = calculatePercent(100,0)
+	result = calculatePercent(100, 0)
 	if result != 0 {
 		t.Fatalf("Was expecting a result of '0' from calculatePercent() but got %d", result)
 	}
 
-	result = calculatePercent(0,0)
+	result = calculatePercent(0, 0)
 	if result != 100 {
 		t.Fatalf("1. Was expecting a result of '100' from calculatePercent() but got %d", result)
 	}
 
 	// this is an actual scenario (on Linux some special files have 0 size but attempting to read them may return content)
-	result = calculatePercent(0,20)
+	result = calculatePercent(0, 20)
 	if result != 100 {
 		t.Fatalf("2. Was expecting a result of '100' from calculatePercent() but got %d", result)
 	}
 
-	result = calculatePercent(101101,101100)
+	result = calculatePercent(101101, 101100)
 	if result != 99 {
 		t.Fatalf("Was expecting a result of '99' from calculatePercent() but got %d", result)
 	}

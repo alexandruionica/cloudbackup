@@ -1,11 +1,11 @@
 package database
 
 import (
-	"testing"
+	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"os"
 	"path/filepath"
-	"cloudbackup/testutils"
+	"testing"
 )
 
 // test GetDbFilePath() with valid, absolute data_dir path
@@ -55,7 +55,7 @@ func TestDbFileExists1(t *testing.T) {
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	exists := DbFileExists(path)
-	if ! exists {
+	if !exists {
 		t.Fatalf("DbFileExists() was supposed to return true for '%s' but it didn't", path)
 	}
 
@@ -87,7 +87,7 @@ func TestOpenDb1(t *testing.T) {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	_, err := OpenDb(dbDataDirPath + string(filepath.Separator) + "folder_which_does_not_exist", backupName, true)
+	_, err := OpenDb(dbDataDirPath+string(filepath.Separator)+"folder_which_does_not_exist", backupName, true)
 	if err == nil {
 		t.Fatal("OpenDb() was supposed to return an error but didn't")
 	}
@@ -124,7 +124,7 @@ func TestCreateDb2_1(t *testing.T) {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	db, err := OpenDb(dbDataDirPath + string(filepath.Separator) + "folder_which_does_not_exist", backupName,
+	db, err := OpenDb(dbDataDirPath+string(filepath.Separator)+"folder_which_does_not_exist", backupName,
 		false)
 	defer CloseDb(db, backupName)
 	if err != nil {
@@ -277,7 +277,7 @@ func TestStart1(t *testing.T) {
 		}
 	}()
 
-	db , err := Start(dbDataDirPath, backupName)
+	db, err := Start(dbDataDirPath, backupName)
 	defer CloseDb(db, backupName)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)

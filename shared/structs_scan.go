@@ -1,12 +1,12 @@
 package shared
 
 import (
-	"sync"
 	"errors"
+	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"context"
+	log "github.com/sirupsen/logrus"
 )
 
 type DryRunBackupJobsState struct {
@@ -40,7 +40,7 @@ func (jobs *DryRunBackupJobsState) IncrementCounter(BackupJobName string, counte
 	}()
 	for _, job := range jobs.DryRunning {
 		if BackupJobName == job.Name {
-			job.StatsCounters[counterName] +=1
+			job.StatsCounters[counterName] += 1
 			break
 		}
 	}
@@ -53,12 +53,12 @@ func (jobs *DryRunBackupJobsState) IncrementRateCounter(BackupJobName string, Ob
 }
 
 // we don't need this for a dry run but this function is needed in order to satisfy the interface constrains
-func (jobs *DryRunBackupJobsState) IncrementSequence (BackupJobName string) {
+func (jobs *DryRunBackupJobsState) IncrementSequence(BackupJobName string) {
 	return
 }
 
 // we don't need this for a dry run but this function is needed in order to satisfy the interface constrains
-func (jobs *DryRunBackupJobsState) AddBytesRead (BackupJobName string, bytesRead uint64) {
+func (jobs *DryRunBackupJobsState) AddBytesRead(BackupJobName string, bytesRead uint64) {
 	return
 }
 
@@ -79,7 +79,7 @@ func (jobs *DryRunBackupJobsState) UpdateStatsText(BackupJobName string, statNam
 			job.StatsText[statName] = statValue
 			if statValue != "" {
 				response := ScanEvalItemReport{
-					Name: statValue,
+					Name:          statValue,
 					ExclusionExpr: exclusionExpr,
 				}
 				switch statName {
@@ -125,28 +125,28 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 
 	ctx, cancel := context.WithCancel(context.Background())
 	jobs.DryRunning = append(jobs.DryRunning, BackupJobStatus{
-		Name: name,
-		State: "evaluating",
+		Name:        name,
+		State:       "evaluating",
 		BackupJobId: BackupJobId,
-		StartTime: time.Now(),
+		StartTime:   time.Now(),
 		// init statistics related fields
 		StatsCounters: map[string]uint64{
-			"examined_files": 0,
+			"examined_files":       0,
 			"examined_directories": 0,
-			"failed_to_examine": 0,
-			"failed_to_enumerate": 0,
+			"failed_to_examine":    0,
+			"failed_to_enumerate":  0,
 			// excluded files or directories due to matching some exclusion rule provided by the user (in the config)
 			//  excluded don't count against examined_files or examined_directories
-			"excluded": 0,
-			"uploaded_files": 0,
+			"excluded":           0,
+			"uploaded_files":     0,
 			"uploaded_non_files": 0,
-			"failed_to_upload": 0,
+			"failed_to_upload":   0,
 		},
 		StatsText: map[string]string{
 			"current_directory": "",
-			"current_file": "",
+			"current_file":      "",
 		},
-		Ctx: ctx,
+		Ctx:    ctx,
 		Cancel: cancel,
 	})
 	return nil
@@ -229,17 +229,17 @@ func (jobs *DryRunBackupJobsState) GetStats(BackupJobName string) (BackupJobStat
 
 	result := BackupJobStatus{
 		StatsCounters: make(map[string]uint64),
-		StatsText: make(map[string]string),
+		StatsText:     make(map[string]string),
 	}
 	found := false
 	for _, job := range jobs.DryRunning {
 		if BackupJobName == job.Name {
 			found = true
 			// copy maps
-			for k,v := range job.StatsCounters {
+			for k, v := range job.StatsCounters {
 				result.StatsCounters[k] = v
 			}
-			for k,v := range job.StatsText {
+			for k, v := range job.StatsText {
 				result.StatsText[k] = v
 			}
 		}

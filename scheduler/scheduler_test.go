@@ -23,7 +23,7 @@ func TestGenerateJobUuid1(t *testing.T) {
 	backupJobsState := NewJobsState()
 	serverConfigCopy := result.GetCopyWithLock(loggingContext + ".TestGenerateJobUuid1")
 
-	startJobUuid ,err := GenerateJobUuid(result.Config.Backup[0].Name, backupJobsState, serverConfigCopy, "backup")
+	startJobUuid, err := GenerateJobUuid(result.Config.Backup[0].Name, backupJobsState, serverConfigCopy, "backup")
 	if err != nil {
 		t.Fatalf("GenerateJobUuid() returned error: %s", err)
 	}
@@ -54,8 +54,7 @@ func TestGenerateJobUuid2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-
-	startJobUuid ,err := GenerateJobUuid(result.Config.Backup[0].Name, backupJobsState, serverConfigCopy, "backup")
+	startJobUuid, err := GenerateJobUuid(result.Config.Backup[0].Name, backupJobsState, serverConfigCopy, "backup")
 	if err != nil {
 		t.Fatalf("GenerateJobUuid() returned error: %s", err)
 	}
@@ -79,18 +78,18 @@ func TestGenerateJobUuid3(t *testing.T) {
 	backupJobsState := NewJobsState()
 	serverConfigCopy := result.GetCopyWithLock(loggingContext + ".TestGenerateJobUuid1")
 
-	startJobUuid ,err := GenerateJobUuid(result.Config.Backup[0].Name, backupJobsState, serverConfigCopy,
+	startJobUuid, err := GenerateJobUuid(result.Config.Backup[0].Name, backupJobsState, serverConfigCopy,
 		"aWeirdJobType")
 	if err == nil {
 		t.Fatalf("GenerateJobUuid() did not return an error despite '%s' being expected", shared.ErrUnknownJobType)
 	}
-	if err.Error() != shared.ErrUnknownJobType  {
+	if err.Error() != shared.ErrUnknownJobType {
 		t.Fatalf("GenerateJobUuid() did not return an error '%s' but instead it returned: '%s'",
 			shared.ErrUnknownJobType, err)
 	}
 	if startJobUuid != "" {
-		t.Fatalf("GenerateJobUuid() should have returned an empty string instead of an UUID because an error was " +
-			"reported but instead it returned: '%s'. Normally GenerateJobUuid() returns the first parameter as empty" +
+		t.Fatalf("GenerateJobUuid() should have returned an empty string instead of an UUID because an error was "+
+			"reported but instead it returned: '%s'. Normally GenerateJobUuid() returns the first parameter as empty"+
 			" string if an error is encountered", startJobUuid)
 	}
 }

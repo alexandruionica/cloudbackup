@@ -1,16 +1,16 @@
 package httpd
 
 import (
-	"net/http"
-	"github.com/julienschmidt/httprouter"
 	"fmt"
+	"github.com/julienschmidt/httprouter"
+	"net/http"
 )
 
 // serve / and logger.Info requester
-func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
+func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	LogHttpRequest(r)
 	srv := srvSrc.GetCopyWithLock(loggingContext + ".handlerRoot")
-	if srv.httpsEnabled{
+	if srv.httpsEnabled {
 		_, err := w.Write([]byte("HTTPS server is running\n"))
 		if err != nil {
 			logger.Debug("handlerRoot() - could not write response back to client ")

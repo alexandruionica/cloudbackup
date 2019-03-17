@@ -24,7 +24,7 @@ func TestLoad1(t *testing.T) {
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.TypeOf(compare) != reflect.TypeOf(result) {
 		t.Fatalf("Type of result should have been '%s' but is '%s' ", reflect.TypeOf(compare),
-			reflect.TypeOf(result) )
+			reflect.TypeOf(result))
 	}
 }
 
@@ -42,7 +42,7 @@ func TestLoad2(t *testing.T) {
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.TypeOf(compare) != reflect.TypeOf(result) {
 		t.Fatalf("Type of result should have been '%s' but is '%s' ", reflect.TypeOf(compare),
-			reflect.TypeOf(result) )
+			reflect.TypeOf(result))
 	}
 }
 
@@ -135,7 +135,7 @@ func TestConfiguration_GetCopyWithLock(t *testing.T) {
 	// we just ensure that we have the same string in the result as what we expect
 	if result.GetCopyWithLock(loggingContext).Backup[0].Name != expectedString {
 		t.Fatalf("The result should have been '%s' but is '%s' ", expectedString,
-			result.GetCopyWithLock(loggingContext).Backup[0].Name )
+			result.GetCopyWithLock(loggingContext).Backup[0].Name)
 	}
 }
 
@@ -145,7 +145,7 @@ func TestValidate0(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -166,7 +166,7 @@ func TestValidate1(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -220,7 +220,7 @@ func TestValidate5(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -244,7 +244,7 @@ func TestValidate6(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -268,7 +268,7 @@ func TestValidate7(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -292,7 +292,7 @@ func TestValidate8(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -317,7 +317,7 @@ func TestValidate9(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -343,7 +343,7 @@ func TestValidate10(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -370,7 +370,7 @@ func TestValidate11(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -396,7 +396,7 @@ func TestValidate12(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -422,7 +422,7 @@ func TestValidate13(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -448,7 +448,7 @@ func TestValidate14(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -476,7 +476,7 @@ func TestValidate15(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -504,7 +504,7 @@ func TestValidate16(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -532,7 +532,7 @@ func TestValidate17(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -582,7 +582,7 @@ func TestValidate18(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -606,7 +606,7 @@ func TestValidate19(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -625,14 +625,13 @@ func TestValidate19(t *testing.T) {
 	}
 }
 
-
 // check that commas are now allowed in target names
 func TestValidate20(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -651,7 +650,7 @@ func TestValidate21(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -670,7 +669,7 @@ func TestValidate22(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -682,18 +681,18 @@ func TestValidate22(t *testing.T) {
 	result.Config.Backup[0].Target[0].Type = targetType
 	err = Validate(result.Config, false)
 	if err != nil {
-		t.Fatalf("Config file failed to load successfully but should have because target type '%s' should " +
+		t.Fatalf("Config file failed to load successfully but should have because target type '%s' should "+
 			"be allowed", targetType)
 	}
 	// validate also individual functions
 	err = ValidateBackup(result.Config.Backup, true)
 	if err != nil {
-		t.Fatalf("Config struct failed to validate but should have because target type '%s' should " +
+		t.Fatalf("Config struct failed to validate but should have because target type '%s' should "+
 			"be allowed", targetType)
 	}
 	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
 	if err != nil {
-		t.Fatalf("Targets config struct failed to validate but should have because target type '%s' should " +
+		t.Fatalf("Targets config struct failed to validate but should have because target type '%s' should "+
 			"be allowed", targetType)
 	}
 }
@@ -704,7 +703,7 @@ func TestValidate23(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -716,18 +715,18 @@ func TestValidate23(t *testing.T) {
 	result.Config.Backup[0].Target[0].Type = targetType
 	err = Validate(result.Config, false)
 	if err != nil {
-		t.Fatalf("Config file failed to load successfully but should have because target type '%s' should " +
+		t.Fatalf("Config file failed to load successfully but should have because target type '%s' should "+
 			"be allowed", targetType)
 	}
 	// validate also individual functions
 	err = ValidateBackup(result.Config.Backup, true)
 	if err != nil {
-		t.Fatalf("Config struct failed to validate but should have because target type '%s' should " +
+		t.Fatalf("Config struct failed to validate but should have because target type '%s' should "+
 			"be allowed", targetType)
 	}
 	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
 	if err != nil {
-		t.Fatalf("Targets config struct failed to validate but should have because target type '%s' should " +
+		t.Fatalf("Targets config struct failed to validate but should have because target type '%s' should "+
 			"be allowed", targetType)
 	}
 }
@@ -738,7 +737,7 @@ func TestValidate24(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -750,18 +749,18 @@ func TestValidate24(t *testing.T) {
 	result.Config.Backup[0].Target[0].Type = targetType
 	err = Validate(result.Config, false)
 	if err == nil {
-		t.Fatalf("Config file should have failed to load successfully but didn't despite target type '%s' not " +
+		t.Fatalf("Config file should have failed to load successfully but didn't despite target type '%s' not "+
 			"being  allowed", targetType)
 	}
 	// validate also individual functions
 	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
-		t.Fatalf("Config struct should have failed to load successfully but didn't despite target type '%s' not " +
+		t.Fatalf("Config struct should have failed to load successfully but didn't despite target type '%s' not "+
 			"being  allowed", targetType)
 	}
 	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
 	if err == nil {
-		t.Fatalf("Targets config struct should have failed to load successfully but didn't despite target type" +
+		t.Fatalf("Targets config struct should have failed to load successfully but didn't despite target type"+
 			" '%s' not being  allowed", targetType)
 	}
 }
@@ -772,7 +771,7 @@ func TestValidate25(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -805,7 +804,7 @@ func TestValidate26(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -832,14 +831,13 @@ func TestValidate26(t *testing.T) {
 	}
 }
 
-
 // rate limit is valid decodable
 func TestValidate27(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -863,14 +861,13 @@ func TestValidate27(t *testing.T) {
 	}
 }
 
-
 // PostRunScript fails because the script doesn't exist
 func TestValidate28(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -882,13 +879,13 @@ func TestValidate28(t *testing.T) {
 	result.Config.Backup[0].PostRunScript = scriptPath
 	err = Validate(result.Config, false)
 	if err == nil {
-		t.Fatalf("Validate() reports that config file loaded successfully; but shouldn't have because " +
+		t.Fatalf("Validate() reports that config file loaded successfully; but shouldn't have because "+
 			"'PostRunScript' '%s' does not exist", scriptPath)
 	}
 
 	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
-		t.Fatalf("ValidateBackup() reports that config file loaded successfully; but shouldn't have because " +
+		t.Fatalf("ValidateBackup() reports that config file loaded successfully; but shouldn't have because "+
 			"'PostRunScript' '%s' does not exist", scriptPath)
 	}
 
@@ -911,7 +908,7 @@ func TestValidate29(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -923,13 +920,13 @@ func TestValidate29(t *testing.T) {
 	result.Config.Backup[0].PreRunScript = scriptPath
 	err = Validate(result.Config, false)
 	if err == nil {
-		t.Fatalf("Validate() reports that config file loaded successfully; but shouldn't have because " +
+		t.Fatalf("Validate() reports that config file loaded successfully; but shouldn't have because "+
 			"'PreRunScript' '%s' does not exist", scriptPath)
 	}
 
 	err = ValidateBackup(result.Config.Backup, true)
 	if err == nil {
-		t.Fatalf("ValidateBackup() reports that config file loaded successfully; but shouldn't have because " +
+		t.Fatalf("ValidateBackup() reports that config file loaded successfully; but shouldn't have because "+
 			"'PreRunScript' '%s' does not exist", scriptPath)
 	}
 
@@ -952,7 +949,7 @@ func TestValidate30(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -972,7 +969,7 @@ func TestValidate30(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not create file %s", scriptPath)
 	}
-	defer func(){
+	defer func() {
 		_ = f.Close() // #nosec
 	}()
 	if _, err := f.Write([]byte("some content")); err != nil {
@@ -996,7 +993,7 @@ func TestValidate30(t *testing.T) {
 	}
 	err = isExecutable(scriptPath)
 	if err != nil {
-		t.Fatalf("isExecutable() produced error while evaluation %s but it was expected to have the execute bit" +
+		t.Fatalf("isExecutable() produced error while evaluation %s but it was expected to have the execute bit"+
 			" set. The reported error was: %s", scriptPath, err)
 	}
 
@@ -1023,7 +1020,7 @@ func TestValidate31(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -1043,7 +1040,7 @@ func TestValidate31(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not create file %s", scriptPath)
 	}
-	defer func(){
+	defer func() {
 		_ = f.Close() // #nosec
 	}()
 	if _, err := f.Write([]byte("some content")); err != nil {
@@ -1068,7 +1065,7 @@ func TestValidate31(t *testing.T) {
 
 	err = isExecutable(scriptPath)
 	if err != nil {
-		t.Fatalf("isExecutable() produced error while evaluation %s but it was expected to have the execute bit" +
+		t.Fatalf("isExecutable() produced error while evaluation %s but it was expected to have the execute bit"+
 			" set. The reported error was: %s", scriptPath, err)
 	}
 
@@ -1096,13 +1093,13 @@ func TestCheckStringIsOnly(t *testing.T) {
 }
 
 func TestCheckStringIsOnly2(t *testing.T) {
-	if CheckStringIsOnly("*******ERWER", "*"){
+	if CheckStringIsOnly("*******ERWER", "*") {
 		t.Fatal("CheckStringIsOnly() did return a match but this should not happened")
 	}
 }
 
 func TestCheckStringIsOnly3(t *testing.T) {
-	if CheckStringIsOnly("", "*"){
+	if CheckStringIsOnly("", "*") {
 		t.Fatal("CheckStringIsOnly() did return a match but this should not happened as we passed in an empty " +
 			"string to check")
 	}
@@ -1114,11 +1111,11 @@ func TestCopyPasswordsFromOldConfig(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
 	}
@@ -1136,7 +1133,7 @@ func TestCopyPasswordsFromOldConfig(t *testing.T) {
 
 	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
 	if err != nil {
-		t.Fatalf("Old config and new config both have password hashes for various entries but " +
+		t.Fatalf("Old config and new config both have password hashes for various entries but "+
 			"CopyPasswordsFromOldConfig() returned error: %s", err)
 	}
 }
@@ -1147,11 +1144,11 @@ func TestCopyPasswordsFromOldConfig2(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
 	}
@@ -1160,7 +1157,7 @@ func TestCopyPasswordsFromOldConfig2(t *testing.T) {
 		t.Fatal("Config file doesn't have user section but we're trying to validate User related code")
 	}
 	if len(result.Config.Backup) == 0 {
-		t.Fatal( "Config file doesn't have 'Backup' section but we're trying to validate Backup related code")
+		t.Fatal("Config file doesn't have 'Backup' section but we're trying to validate Backup related code")
 	}
 	if len(result.Config.Backup[0].Target) == 0 {
 		t.Fatal("Config file doesn't have 'Backup[0].Target' section but we're trying to validate Backup.Target" +
@@ -1178,19 +1175,19 @@ func TestCopyPasswordsFromOldConfig2(t *testing.T) {
 		t.Fatalf("CopyPasswordsFromOldConfig() returned error: %s", err)
 	}
 	if NewConfig.User[0].Pass == SecretReplace {
-		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's User[0].Pass (this is user " +
+		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's User[0].Pass (this is user "+
 			"having name: '%s') from '%s' to an actual hash but did not do so", NewConfig.User[0].Name, SecretReplace)
 	}
 
 	if NewConfig.Backup[1].EncryptPass == SecretReplace {
-		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's Backup[1].EncryptPass (this is backup " +
+		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's Backup[1].EncryptPass (this is backup "+
 			"having name: '%s') from '%s' to an actual password but did not do so", NewConfig.Backup[1].Name, SecretReplace)
 	}
 
 	if NewConfig.Backup[0].Target[0].Pass == SecretReplace {
-		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's Backup[0].Target[0].Pass " +
+		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's Backup[0].Target[0].Pass "+
 			"(this is backup having name: '%s' and target name '%s') from '%s' to an actual password but did not do so",
-				NewConfig.Backup[0].Name, NewConfig.Backup[0].Target[0].Name, SecretReplace)
+			NewConfig.Backup[0].Name, NewConfig.Backup[0].Target[0].Name, SecretReplace)
 	}
 }
 
@@ -1200,11 +1197,11 @@ func TestCopyPasswordsFromOldConfig3(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
 	}
@@ -1230,11 +1227,11 @@ func TestCopyPasswordsFromOldConfig4(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
 	}
@@ -1261,11 +1258,11 @@ func TestCopyPasswordsFromOldConfig5(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
 	}
@@ -1291,11 +1288,11 @@ func TestCopyPasswordsFromOldConfig6(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
 	}
@@ -1326,11 +1323,11 @@ func TestCopyPasswordsFromOldConfig7(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
 	}
@@ -1361,11 +1358,11 @@ func TestCopyPasswordsFromOldConfig8(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a second time the fake config file. Error was: %s", err)
 	}
@@ -1383,7 +1380,6 @@ func TestCopyPasswordsFromOldConfig8(t *testing.T) {
 	NewConfig.Backup[0].Target[0].Pass = SecretReplace
 	oldConfig.Backup[0].Target[0].Pass = ""
 
-
 	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
 	if err == nil {
 		t.Fatal("CopyPasswordsFromOldConfig() did not return error but one was expected")
@@ -1396,7 +1392,7 @@ func TestSanitizeCfgTemplate(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -1438,7 +1434,7 @@ func TestSave(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	result , err := Load(path, false, &sync.RWMutex{})
+	result, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -1449,7 +1445,7 @@ func TestSave(t *testing.T) {
 	}
 
 	// load again as we need a 2nd variable to hold the "new" config we're going to write
-	result2 , err := Load(path, false, &sync.RWMutex{})
+	result2, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a 2nd time the fake config file. Error was: %s", err)
 	}
@@ -1468,7 +1464,7 @@ func TestSave(t *testing.T) {
 	}
 
 	// load again config from file to check changes were saved
-	result3 , err := Load(path, false, &sync.RWMutex{})
+	result3, err := Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load a 3rd time the fake config file. Error was: %s", err)
 	}
@@ -1481,6 +1477,5 @@ func TestSave(t *testing.T) {
 	if result3.Config.Backup[0].Name != tmpName {
 		t.Fatal("The content of the saved configuration does not match expectation")
 	}
-
 
 }

@@ -1,24 +1,25 @@
 package common
 
 import (
-	"net/http"
-	"io/ioutil"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"encoding/json"
+	"io/ioutil"
+	"net/http"
 
 	"cloudbackup/httpd"
 	log "github.com/sirupsen/logrus"
 )
 
 const loggingContext = "client.common"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
 // some basic validation of responses received from the Cloudbackup API server
 func ValidateServerResponse(resp *http.Response) ([]byte, error) {
-	defer func(){
+	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
 			logger.Debugf("Received error when trying to close response body. Error was: %s", err)
@@ -28,7 +29,7 @@ func ValidateServerResponse(resp *http.Response) ([]byte, error) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		logger.Debugf("%s %+v", err, resp)
-		return body, errors.New(fmt.Sprintf("Cloud not process the response body received from the server. " +
+		return body, errors.New(fmt.Sprintf("Cloud not process the response body received from the server. "+
 			"The error was: %s", err))
 	}
 
@@ -36,7 +37,7 @@ func ValidateServerResponse(resp *http.Response) ([]byte, error) {
 	var decodedJson httpd.HttpStatusReply
 	err = json.Unmarshal(body, &decodedJson)
 	if err != nil {
-		return body, errors.New(fmt.Sprintf("Could not decode the JSON response received from server. Error " +
+		return body, errors.New(fmt.Sprintf("Could not decode the JSON response received from server. Error "+
 			"was: %s", err))
 	}
 

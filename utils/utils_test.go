@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"testing"
 	"os"
 	"path/filepath"
 	"runtime"
+	"testing"
 )
 
 // plain file exists
@@ -95,7 +95,7 @@ func TestFileExists6(t *testing.T) {
 		}
 	}()
 
-	err = os.Symlink(path, path + "_symlink")
+	err = os.Symlink(path, path+"_symlink")
 	if err != nil {
 		t.Fatalf("Error setting up symlink: %s", err)
 	}
@@ -106,7 +106,7 @@ func TestFileExists6(t *testing.T) {
 		}
 	}()
 
-	_, err = FileExists(path + "_symlink", true)
+	_, err = FileExists(path+"_symlink", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestFileExists7(t *testing.T) {
 		}
 	}()
 
-	err = os.Symlink(path, path + "_symlink")
+	err = os.Symlink(path, path+"_symlink")
 	if err != nil {
 		t.Fatalf("Error setting up symlink: %s", err)
 	}
@@ -136,7 +136,7 @@ func TestFileExists7(t *testing.T) {
 		}
 	}()
 
-	_, err = FileExists(path + "_symlink", false)
+	_, err = FileExists(path+"_symlink", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +204,6 @@ func TestStringInSlice2(t *testing.T) {
 		t.Fatal("Found string in slice but it should have failed as searched string doesn't exist in slice")
 	}
 }
-
 
 // path is directory which exists - do dereference
 func TestDirExists1(t *testing.T) {
@@ -384,7 +383,7 @@ func TestGetFileMD5Sum2(t *testing.T) {
 		t.Fatal("GetFileMD5Sum() did not return an error despite one being expected")
 	}
 	if checksum != "" {
-		t.Fatalf("GetFileMD5Sum() was supposed to return for missing file %s the checksum '' (empty string) " +
+		t.Fatalf("GetFileMD5Sum() was supposed to return for missing file %s the checksum '' (empty string) "+
 			"but it returned '%s'", path, checksum)
 	}
 }
@@ -418,7 +417,7 @@ func TestFileType1(t *testing.T) {
 // test with directory
 func TestFileType2(t *testing.T) {
 	var path = os.TempDir()
-	stat , err := DirExists(path, true)
+	stat, err := DirExists(path, true)
 	if err != nil {
 		t.Fatalf("While trying to get os.stat() of %s got error : %s", path, err)
 	}

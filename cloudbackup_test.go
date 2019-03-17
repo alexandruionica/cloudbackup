@@ -2,12 +2,12 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
-	"testing"
 	"reflect"
+	"testing"
 )
 
 // test that variables are of the expected type
-func TestVars1(t *testing.T){
+func TestVars1(t *testing.T) {
 	var loggerHere = log.WithFields(log.Fields{
 		"context": "main",
 	})

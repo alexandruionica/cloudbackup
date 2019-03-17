@@ -20,12 +20,13 @@ import (
 )
 
 const loggingContext = "client.notification"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
 // returns how many notifications we have defined in the config file
-func GetNumNotificators (notificationDefs config.Notification) int {
+func GetNumNotificators(notificationDefs config.Notification) int {
 	return len(notificationDefs.Email) + len(notificationDefs.Script)
 }
 
@@ -58,7 +59,7 @@ func Execute(config config.CfgTemplate, JobId string, JobType string, JobState s
 		}
 	}
 	if numErrors > 0 {
-		return failedScripts, errors.New(fmt.Sprintf("%d notification definitions were run and %d encountered " +
+		return failedScripts, errors.New(fmt.Sprintf("%d notification definitions were run and %d encountered "+
 			"errors. The errors were: %s", numNotificators, numErrors, totalErrors))
 	}
 	// if we got here then all was good
@@ -68,7 +69,7 @@ func Execute(config config.CfgTemplate, JobId string, JobType string, JobState s
 // Sends one email ...
 // see description of Execute() for most of parameters except $emailEntry which represents email configuration as
 // described in the configuration file
-func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType string, JobState string, JobName string,
+func sendEmail(emailEntry config.NotificationEmail, JobId string, JobType string, JobState string, JobName string,
 	JobReport string, JobError string) error {
 	logger.Debug("Sending email notification")
 
@@ -88,27 +89,28 @@ func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType strin
 	switch JobState {
 	case "test":
 		e.Subject = "Notification test"
-		e.Text = []byte(fmt.Sprintf("Receiving this email proves that the backup server's SMTP(email) settings" +
+		e.Text = []byte(fmt.Sprintf("Receiving this email proves that the backup server's SMTP(email) settings"+
 			" are correct.\nNotification test job having id '%s' has completed successfully.", JobId))
 	case "cancelled":
 		e.Subject = fmt.Sprintf("%s job \"%s\" has been %s", JobType, JobName, JobState)
 		emailText = []string{fmt.Sprintf("%s job \"%s\" having id %s has been %s", JobType, JobName, JobId, JobState)}
 		emailText = append(emailText, "Check backup server logs for more details")
-		e.Text = []byte(strings.Join(emailText,"\n"))
-	case "failed": {
-		if JobError != "" {
-			e.Text = []byte(fmt.Sprintf("Job failed with error: %s\nCheck backup server logs for more details",
-				JobError))
+		e.Text = []byte(strings.Join(emailText, "\n"))
+	case "failed":
+		{
+			if JobError != "" {
+				e.Text = []byte(fmt.Sprintf("Job failed with error: %s\nCheck backup server logs for more details",
+					JobError))
+			}
 		}
-	}
 	case "crashed":
-		emailText = append(emailText,"When a job is marked as crashed it means that there is a record of the job" +
-			" starting but not record of it finishing, failing or being cancelled and the job is no longer running. " +
-			"A potential scenario for this is " +
-			"that the server got restarted, it crashed itself or the backup software encountered an issue and crashed. " +
+		emailText = append(emailText, "When a job is marked as crashed it means that there is a record of the job"+
+			" starting but not record of it finishing, failing or being cancelled and the job is no longer running. "+
+			"A potential scenario for this is "+
+			"that the server got restarted, it crashed itself or the backup software encountered an issue and crashed. "+
 			"For the last scenario, check backup server logs for more details")
 	default:
-		e.Text = []byte(strings.Join(emailText,"\n"))
+		e.Text = []byte(strings.Join(emailText, "\n"))
 	}
 
 	if JobType == "backup" && JobReport != "" {
@@ -124,13 +126,13 @@ func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType strin
 
 	var err error
 	if emailEntry.User == "" {
-		err = e.Send(emailEntry.Server + ":" + emailEntry.Port, nil)
+		err = e.Send(emailEntry.Server+":"+emailEntry.Port, nil)
 	} else {
-		err = e.Send(emailEntry.Server + ":" + emailEntry.Port, smtp.PlainAuth("", emailEntry.User,
+		err = e.Send(emailEntry.Server+":"+emailEntry.Port, smtp.PlainAuth("", emailEntry.User,
 			emailEntry.Pass, emailEntry.Server))
 	}
 	if err != nil {
-		logger.Errorf("While trying to send a notification via email to '%s', the following error was " +
+		logger.Errorf("While trying to send a notification via email to '%s', the following error was "+
 			"encountered: %s", emailEntry.To, err)
 		return err
 	}
@@ -146,10 +148,10 @@ func sendEmail (emailEntry config.NotificationEmail, JobId string, JobType strin
 // runs a Notification script
 func runScript(scriptEntry config.NotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
 	logger.Infof("Running notification script '%s'", scriptEntry.Path)
-	reportFile, err := utils.SetupTmpFileWithContent([]byte(JobReport),"cloudbackup_job_report_notification_")
+	reportFile, err := utils.SetupTmpFileWithContent([]byte(JobReport), "cloudbackup_job_report_notification_")
 	if err != nil {
 		reportFile = ""
-		logger.Warningf("While trying to setup a temporary file to hold the job report which would be passed " +
+		logger.Warningf("While trying to setup a temporary file to hold the job report which would be passed "+
 			"to notification script '%s', the following error was encountered: %s", scriptEntry.Path, err)
 	}
 	logger.Debugf("Running (without the single quotes): '%s' '%s' '%s' '%s' '%s' '%s' '%s'", scriptEntry.Path,
@@ -165,7 +167,7 @@ func runScript(scriptEntry config.NotificationScript, JobId string, JobType stri
 
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
-		msg := fmt.Sprintf("While executing notification script '%s', encountered error: %s\nScript " +
+		msg := fmt.Sprintf("While executing notification script '%s', encountered error: %s\nScript "+
 			"output was: %s", scriptEntry.Path, err, stdoutStderr)
 		logger.Error(msg)
 		return errors.New(msg)
@@ -176,7 +178,7 @@ func runScript(scriptEntry config.NotificationScript, JobId string, JobType stri
 
 // figure out a default From address - this is used if the config doesn't have anything specified so we try to come up
 // with something reasonable
-func prepareFromAddress () string {
+func prepareFromAddress() string {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "unknown"
@@ -184,10 +186,9 @@ func prepareFromAddress () string {
 	return "cloudbackup@" + hostname
 }
 
-
 // produces a HTML body which will be the Email body (if clients can read html)
 // $emailTextBody represents the plaintext variant of the email; decodedJson represents the last state of the job
-func prepareHtmlEmail (emailTextBody []string, decodedJson shared.BackupJobStatus) (result string) {
+func prepareHtmlEmail(emailTextBody []string, decodedJson shared.BackupJobStatus) (result string) {
 	tdStyle := `style="border:1px solid #ddd;padding:3px;"`
 	td := "<td " + tdStyle + " >"
 	tr := "<tr>" + td
@@ -211,14 +212,14 @@ func prepareHtmlEmail (emailTextBody []string, decodedJson shared.BackupJobStatu
   color: white;
 }
 </style></head><body>` + fmt.Sprintf("\n")
-	result = header + "<b>" + strings.Join(emailTextBody,"<br>") +
+	result = header + "<b>" + strings.Join(emailTextBody, "<br>") +
 		fmt.Sprintf("</b>\n<hr>\n<table id='report' style='border-collapse:collapse;'\n")
 
 	result += tr + "Start time" + td + fmt.Sprintf("%s\n", decodedJson.StartTime)
 	result += tr + "Duration" + td + fmt.Sprintf("%s\n", decodedJson.EndTime.Sub(decodedJson.StartTime).Round(time.Second))
 
 	if len(decodedJson.ObjectStoreRates) < 2 {
-		result += tr + "1 minute rate:" + td  + humanize.Bytes(uint64(decodedJson.Rate1Min)) + "/s" + fmt.Sprintf("\n")
+		result += tr + "1 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate1Min)) + "/s" + fmt.Sprintf("\n")
 		result += tr + "5 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate5Min)) + "/s" + fmt.Sprintf("\n")
 		result += tr + "15 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate15Min)) + "/s" + fmt.Sprintf("\n")
 	} else {

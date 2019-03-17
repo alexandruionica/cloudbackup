@@ -19,19 +19,22 @@ import (
 
 const loggingContext = "config"
 const SecretReplace = "****************"
+
 // used for looking up environment variables holding configuration data
 const EnvPrefix = "CLOUDBACKUP"
+
 var NotificationTypes = []string{"started", "finished", "failed", "cancelled", "crashed"}
+
 // allowed backup target types (this is used in a validation function below). If this is updated then please also
 // update the Swagger file
 var BackupTargetTypes = [...]string{"aws_s3", "gcp_storage", "azure_blob"}
+
 // allowed backup target types used for testing purposes only
 var HiddenBackupTargetTypes = [...]string{"test_null"}
 
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
-	})
-
+})
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
@@ -39,22 +42,22 @@ var logger = log.WithFields(log.Fields{
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating
 type Backup struct {
-	Name string `required:"true" yaml:"name" json:"name"`
-	Paths []string `required:"true" yaml:"paths" json:"paths"`
+	Name       string   `required:"true" yaml:"name" json:"name"`
+	Paths      []string `required:"true" yaml:"paths" json:"paths"`
 	Exclusions []string `yaml:"exclusions" json:"exclusions"`
 	// TODO - fix library bug - https://github.com/jinzhu/configor/issues/34
-	Dereference bool `default:"true" yaml:"dereference" json:"dereference"`
-	Checksum bool `default:"false" yaml:"checksum" json:"checksum"`
-	Target []Target `required:"true" yaml:"target" json:"target"`
-	Schedule []string `yaml:"schedule" json:"schedule"`
-	Encrypt bool `default:"false" yaml:"encrypt" json:"encrypt"`
-	EncryptPass string `yaml:"encrypt_pass" json:"encrypt_pass"`
+	Dereference bool     `default:"true" yaml:"dereference" json:"dereference"`
+	Checksum    bool     `default:"false" yaml:"checksum" json:"checksum"`
+	Target      []Target `required:"true" yaml:"target" json:"target"`
+	Schedule    []string `yaml:"schedule" json:"schedule"`
+	Encrypt     bool     `default:"false" yaml:"encrypt" json:"encrypt"`
+	EncryptPass string   `yaml:"encrypt_pass" json:"encrypt_pass"`
 	// 0 means unlimited number of versions
 	VersionsMaxNum uint `default:"0" yaml:"versions_max_num" json:"versions_max_num"`
 	// 0 means unlimited number of age
 	VersionsMaxAge string `default:"0" yaml:"versions_max_age" json:"versions_max_age"`
 	//
-	PreRunScript string  `yaml:"pre_run_script" json:"pre_run_script"`
+	PreRunScript  string `yaml:"pre_run_script" json:"pre_run_script"`
 	PostRunScript string `yaml:"post_run_script" json:"post_run_script"`
 }
 
@@ -64,13 +67,13 @@ type Backup struct {
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating
 type Target struct {
-	Name string `required:"true" yaml:"name" json:"name"`
-	Type string `required:"true" yaml:"type" json:"type"`
-	RateLimit string `default:"0" yaml:"ratelimit" json:"ratelimit"`
-	User string `yaml:"user" json:"user"`
-	Pass string `yaml:"pass" json:"pass"`
-	Bucket string `required:"true" yaml:"bucket" json:"bucket"`
-	Prefix string `required:"true" yaml:"prefix" json:"prefix"`
+	Name         string `required:"true" yaml:"name" json:"name"`
+	Type         string `required:"true" yaml:"type" json:"type"`
+	RateLimit    string `default:"0" yaml:"ratelimit" json:"ratelimit"`
+	User         string `yaml:"user" json:"user"`
+	Pass         string `yaml:"pass" json:"pass"`
+	Bucket       string `required:"true" yaml:"bucket" json:"bucket"`
+	Prefix       string `required:"true" yaml:"prefix" json:"prefix"`
 	StorageClass string `yaml:"storage_class" json:"storage_class"`
 }
 
@@ -93,10 +96,10 @@ type Http struct {
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type Https struct {
-	Enabled bool `default:"false" yaml:"enabled" json:"enabled"`
+	Enabled     bool   `default:"false" yaml:"enabled" json:"enabled"`
 	BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address" json:"bind_address"`
 	SslCertPath string `yaml:"ssl_cert_path" json:"ssl_cert_path"`
-	SslKeyPath string `yaml:"ssl_key_path" json:"ssl_key_path"`
+	SslKeyPath  string `yaml:"ssl_key_path" json:"ssl_key_path"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
@@ -107,13 +110,13 @@ type Notification struct {
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type NotificationEmail struct {
-	Server string `required:"true" yaml:"server" json:"server"`
-	User string `yaml:"user,omitempty" json:"user,omitempty"`
-	Pass string `yaml:"pass,omitempty" json:"pass,omitempty"`
-	Port string `yaml:"port" json:"port" default:"25"`
-	From string `yaml:"from,omitempty" json:"from,omitempty"`
-	To string `required:"true" yaml:"to" json:"to"`
-	CC []string `yaml:"cc,omitempty" json:"cc,omitempty"`
+	Server string   `required:"true" yaml:"server" json:"server"`
+	User   string   `yaml:"user,omitempty" json:"user,omitempty"`
+	Pass   string   `yaml:"pass,omitempty" json:"pass,omitempty"`
+	Port   string   `yaml:"port" json:"port" default:"25"`
+	From   string   `yaml:"from,omitempty" json:"from,omitempty"`
+	To     string   `required:"true" yaml:"to" json:"to"`
+	CC     []string `yaml:"cc,omitempty" json:"cc,omitempty"`
 	// type is one of: started, finished, failed, cancelled, crashed
 	Type []string `yaml:"type" json:"type" default:"[failed,crashed]"`
 }
@@ -140,7 +143,6 @@ type CfgTemplate struct {
 	// RuntimeConfig struct containing this struct)
 	Mutex *sync.RWMutex `yaml:"-" json:"-"`
 }
-
 
 // this struct contains the above "master" config struct and also some runtime related parameters and settings
 type RuntimeConfig struct {
@@ -203,7 +205,7 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 	defer func() {
 		mutex.RUnlock()
 		//logger.Debug("Read lock released after reading config file")
-		}()
+	}()
 	//logger.Debug("Acquired read lock for reading config file")
 	// if debug then also adjust logging level of configor library (set library to Verbose not Debug as
 	// Verbose is actually what we expect when using  "debug")
@@ -214,7 +216,7 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 	}
 
 	if err != nil {
-		msg := fmt.Sprintf("When parsing the server configuration file %s the following error was encountered:" +
+		msg := fmt.Sprintf("When parsing the server configuration file %s the following error was encountered:"+
 			" %s", path, err)
 		logger.Error(msg)
 		return &RuntimeConfig{}, errors.New(msg)
@@ -230,8 +232,8 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 	Config.Mutex = &sync.RWMutex{}
 
 	return &RuntimeConfig{Mutex: mutex,
-					      Path: path,
-					      Config: Config,
+		Path:   path,
+		Config: Config,
 	}, nil
 }
 
@@ -245,7 +247,7 @@ func Save(runtimeCfg *RuntimeConfig, newConfig CfgTemplate) error {
 	}()
 	toWrite, err := yaml.Marshal(newConfig)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Could not marshall YAML when preparing for write the configuration " +
+		return errors.New(fmt.Sprintf("Could not marshall YAML when preparing for write the configuration "+
 			"file. The error received was: %s", err.Error()))
 	}
 	if err := ioutil.WriteFile(runtimeCfg.Path, toWrite, 0644); err != nil {
@@ -293,14 +295,14 @@ func Validate(config CfgTemplate, hiddenPass bool) error {
 // validate "Backup" section of the config
 func ValidateBackup(backups []Backup, logError bool) error {
 	names := make([]string, 0)
-	i:=0
+	i := 0
 	for _, backup := range backups {
 		// have this as the first check as subsequent ones use the Backup name in error output in order to indicate
 		// where did things go wrong
-		if utils.StringInSlice(backup.Name, names){
-			msg := fmt.Sprintf("more than one Backups have the same 'name=%s' . Backup 'name' values must" +
+		if utils.StringInSlice(backup.Name, names) {
+			msg := fmt.Sprintf("more than one Backups have the same 'name=%s' . Backup 'name' values must"+
 				" be unique", backup.Name)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -310,19 +312,19 @@ func ValidateBackup(backups []Backup, logError bool) error {
 		// check backup "Name" is ASCII only. We use the backup name as part of the file name holding the SQL database
 		// and there is potential that on some OSes the filesystem doesn't support ASCII
 		nameTested := utf8string.NewString(backup.Name)
-		if ! nameTested.IsASCII() {
-			msg := fmt.Sprintf("Backup having name '%s' contains non ASCII characters but only ASCII characters " +
+		if !nameTested.IsASCII() {
+			msg := fmt.Sprintf("Backup having name '%s' contains non ASCII characters but only ASCII characters "+
 				"are allowed for backup names", backup.Name)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
 		}
 
-		if backup.Encrypt && backup.EncryptPass == ""{
-			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'encrypt=true' but 'encrypt_pass' is not" +
+		if backup.Encrypt && backup.EncryptPass == "" {
+			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'encrypt=true' but 'encrypt_pass' is not"+
 				" set. Set a password or disable encryption", i, backup.Name)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -357,7 +359,7 @@ func ValidateBackup(backups []Backup, logError bool) error {
 		if err != nil {
 			return err
 		}
-		i+=1
+		i += 1
 	}
 	return nil
 }
@@ -366,9 +368,9 @@ func ValidateBackup(backups []Backup, logError bool) error {
 // $scriptType is expected to be one of "pre" or "post" (for PreRun and PostRun script)
 func ValidatePrePostRunScript(path string, scriptType string, backupName string, logError bool) error {
 	if _, err := utils.FileExists(path, true); err != nil {
-		msg := fmt.Sprintf("When validating the existence of %s run script '%s' belonging to backup job '%s' " +
+		msg := fmt.Sprintf("When validating the existence of %s run script '%s' belonging to backup job '%s' "+
 			"the following error ocurred: %s", scriptType, path, backupName, err)
-		if logError{
+		if logError {
 			logger.Error(msg)
 		}
 		return err
@@ -376,9 +378,9 @@ func ValidatePrePostRunScript(path string, scriptType string, backupName string,
 
 	err := isExecutable(path)
 	if err != nil {
-		msg := fmt.Sprintf("Encountered the following error when checking if %s run script '%s', belonging to " +
+		msg := fmt.Sprintf("Encountered the following error when checking if %s run script '%s', belonging to "+
 			"backup job '%s' is executable: %s", scriptType, path, backupName, err)
-		if logError{
+		if logError {
 			logger.Error(msg)
 		}
 		return errors.New(msg)
@@ -392,30 +394,30 @@ func ValidateHttps(config CfgTemplate, logError bool) error {
 	if config.Https.Enabled == true {
 		if config.Https.SslCertPath == "" {
 			msg := fmt.Sprintf("https: enabled=true  but https: ssl_cert_path  is not set")
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
 		}
 		if config.Https.SslKeyPath == "" {
 			msg := fmt.Sprintf("https: enabled=true  but https: ssl_key_path  is not set")
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
 		}
 		if _, err := utils.FileExists(config.Https.SslCertPath, true); err != nil {
-			msg := fmt.Sprintf("https: enabled=true  and https: ssl_cert_path=%s but when evaluating " +
+			msg := fmt.Sprintf("https: enabled=true  and https: ssl_cert_path=%s but when evaluating "+
 				"the latter the following error ocurred: %s", config.Https.SslCertPath, err)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return err
 		}
 		if _, err := utils.FileExists(config.Https.SslKeyPath, true); err != nil {
-			msg := fmt.Sprintf("https: enabled=true  and https: ssl_key_path=%s but when evaluating " +
+			msg := fmt.Sprintf("https: enabled=true  and https: ssl_key_path=%s but when evaluating "+
 				"the latter the following error ocurred: %s", config.Https.SslKeyPath, err)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return err
@@ -432,11 +434,11 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 		// where did things go wrong
 
 		// check uniqueness of backup Target name
-		if utils.StringInSlice(target.Name, names){
-			msg := fmt.Sprintf("more than one 'target' of the same 'backup' (belonging to backup section having" +
-				" 'name=%s') have the same 'name=%s' . Target 'name' values must be unique within a 'backup'" +
-					" section", BackupName, target.Name)
-			if logError{
+		if utils.StringInSlice(target.Name, names) {
+			msg := fmt.Sprintf("more than one 'target' of the same 'backup' (belonging to backup section having"+
+				" 'name=%s') have the same 'name=%s' . Target 'name' values must be unique within a 'backup'"+
+				" section", BackupName, target.Name)
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -445,10 +447,10 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 		}
 
 		// check target name doesn't contain commas as those are now allowed as we'll use CSV in the DB for target names
-		if strings.ContainsAny(target.Name, ","){
-			msg := fmt.Sprintf("Target '%s' contains a comma in it's name. Commas are now allowed in target " +
+		if strings.ContainsAny(target.Name, ",") {
+			msg := fmt.Sprintf("Target '%s' contains a comma in it's name. Commas are now allowed in target "+
 				"names", target.Name)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -457,10 +459,10 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 		// check ratelimit is valid
 		ratelimit, err := humanize.ParseBytes(target.RateLimit)
 		if err != nil {
-			msg := fmt.Sprintf("Target '%s' for backup '%s' has ratelimit defined as %s could not be " +
+			msg := fmt.Sprintf("Target '%s' for backup '%s' has ratelimit defined as %s could not be "+
 				"translated to a number. While attempting translation the following error was encountered: %s",
 				target.Name, BackupName, target.RateLimit, err)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -468,9 +470,9 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 
 		// check ratelimit is not < 0
 		if ratelimit < 0 {
-			msg := fmt.Sprintf("Target '%s' for backup '%s' has ratelimit defined as %d which is a negative " +
+			msg := fmt.Sprintf("Target '%s' for backup '%s' has ratelimit defined as %d which is a negative "+
 				"number. Only 0 and positive numbers are allowed", target.Name, BackupName, ratelimit)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -478,20 +480,20 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 
 		matched := false
 		// check target type is allowed
-		for _, AllowedTargetType := range(BackupTargetTypes) {
+		for _, AllowedTargetType := range BackupTargetTypes {
 			if strings.ToLower(target.Type) == strings.ToLower(AllowedTargetType) {
 				matched = true
 			}
 		}
-		for _, AllowedTargetType := range(HiddenBackupTargetTypes) {
+		for _, AllowedTargetType := range HiddenBackupTargetTypes {
 			if strings.ToLower(target.Type) == strings.ToLower(AllowedTargetType) {
 				matched = true
 			}
 		}
-		if ! matched {
-			msg := fmt.Sprintf("Target '%s' is of type '%s' but this is not an allowed type. Allowed types " +
+		if !matched {
+			msg := fmt.Sprintf("Target '%s' is of type '%s' but this is not an allowed type. Allowed types "+
 				"are one of: %s", target.Name, target.Type, strings.Trim(fmt.Sprintf("%s", BackupTargetTypes), "[]"))
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -517,15 +519,14 @@ func ValidateNotification(notifications Notification, logError bool) error {
 	return nil
 }
 
-
 func ValidateNotificationCommand(commands []NotificationScript, logError bool) error {
 	for _, notificationCommand := range commands {
 		// check supplied file path at least exists (if it's executable is a different story which also may be
 		// platform dependent
 		if _, err := utils.FileExists(notificationCommand.Path, true); err != nil {
-			msg := fmt.Sprintf("When validating the existence of notification script '%s' " +
+			msg := fmt.Sprintf("When validating the existence of notification script '%s' "+
 				"the following error ocurred: %s", notificationCommand.Path, err)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return err
@@ -533,9 +534,9 @@ func ValidateNotificationCommand(commands []NotificationScript, logError bool) e
 
 		err := isExecutable(notificationCommand.Path)
 		if err != nil {
-			msg := fmt.Sprintf("Encountered the following error when checking if notification script '%s' " +
+			msg := fmt.Sprintf("Encountered the following error when checking if notification script '%s' "+
 				"is executable: %s", notificationCommand.Path, err)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -552,10 +553,10 @@ func ValidateNotificationCommand(commands []NotificationScript, logError bool) e
 			if foundMatch {
 				continue
 			} else {
-				msg := fmt.Sprintf("Notification script '%s' has mentioned a notification event type of '%s' " +
+				msg := fmt.Sprintf("Notification script '%s' has mentioned a notification event type of '%s' "+
 					"which is not an allowed value. Allowed values are: %+v", notificationCommand.Path, entryType,
 					NotificationTypes)
-				if logError{
+				if logError {
 					logger.Error(msg)
 				}
 				return errors.New("chosen notification type value is not valid")
@@ -568,12 +569,12 @@ func ValidateNotificationCommand(commands []NotificationScript, logError bool) e
 func ValidateNotificationEmail(emails []NotificationEmail, logError bool) error {
 	for _, notificationEmail := range emails {
 		// check that we're using authentication if not connecting to the localhost SMTP server
-		if notificationEmail.User == "" && notificationEmail.Pass == "" && ! isLocalhost(notificationEmail.Server) {
-			msg := fmt.Sprintf("Notification email entry has 'user' and 'pass' fields empty (or not defined) " +
-				"but the specified " +
-				"email(SMTP) server is '%s' and not one of 'localhost', '127.0.0.1' and '::1' which means " +
+		if notificationEmail.User == "" && notificationEmail.Pass == "" && !isLocalhost(notificationEmail.Server) {
+			msg := fmt.Sprintf("Notification email entry has 'user' and 'pass' fields empty (or not defined) "+
+				"but the specified "+
+				"email(SMTP) server is '%s' and not one of 'localhost', '127.0.0.1' and '::1' which means "+
 				"authentication is mandatory. Please fill in the User and Pass fields", notificationEmail.Server)
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -582,7 +583,7 @@ func ValidateNotificationEmail(emails []NotificationEmail, logError bool) error 
 		if notificationEmail.User != "" && notificationEmail.Pass == "" {
 			msg := fmt.Sprintf("Notification email entry has 'user' field filled in but the 'pass' field isn't. " +
 				"Please fill in also the 'pass' field")
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -590,7 +591,7 @@ func ValidateNotificationEmail(emails []NotificationEmail, logError bool) error 
 		if notificationEmail.User == "" && notificationEmail.Pass != "" {
 			msg := fmt.Sprintf("Notification email entry has 'pass' field filled in but the 'user' field isn't. " +
 				"Please fill in also the 'user' field")
-			if logError{
+			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
@@ -607,9 +608,9 @@ func ValidateNotificationEmail(emails []NotificationEmail, logError bool) error 
 			if foundMatch {
 				continue
 			} else {
-				msg := fmt.Sprintf("Notification email entry has mentioned a notification event type of '%s' " +
+				msg := fmt.Sprintf("Notification email entry has mentioned a notification event type of '%s' "+
 					"which is not an allowed value. Allowed values are: %+v", entryType, NotificationTypes)
-				if logError{
+				if logError {
 					logger.Error(msg)
 				}
 				return errors.New(msg)
@@ -623,40 +624,43 @@ func ValidateNotificationEmail(emails []NotificationEmail, logError bool) error 
 // Validate directory path
 func ValidateDir(dir string, paramName string, logError bool) error {
 	_, err := utils.DirExists(dir, true)
-	if err != nil{
+	if err != nil {
 		msg := ""
 		switch err {
-		case utils.ErrNoSuchDir: {
-			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed. " +
-				"In case '%s' is a default value for '%s' then you will not notice it in the configuration file.",
-				dir, paramName, dir, paramName )
+		case utils.ErrNoSuchDir:
+			{
+				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed. "+
+					"In case '%s' is a default value for '%s' then you will not notice it in the configuration file.",
+					dir, paramName, dir, paramName)
 			}
-		case utils.ErrUnusableDirPath: {
-			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter can not be used. In case '%s' is a " +
-				"default value for '%s' then you will not notice it in the configuration file.",
-				dir, paramName, dir, paramName)
-		}
-		case utils.ErrNoSuchRelativeDir: {
-			absPath, _ := filepath.Abs(dir) // #nosec
-			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed. " +
-				"The absolute is: '%s'. In case '%s' is a default value for '%s' then you will not notice it in the" +
-					" configuration file.", dir, paramName, absPath, dir, paramName )
+		case utils.ErrUnusableDirPath:
+			{
+				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter can not be used. In case '%s' is a "+
+					"default value for '%s' then you will not notice it in the configuration file.",
+					dir, paramName, dir, paramName)
 			}
-		case utils.ErrNotADir: {
-			msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter exists but it is not a directory. In case " +
-				"'%s' is a default value for '%s' then you will not notice it in the configuration file.",
-				dir, paramName, dir, paramName)
+		case utils.ErrNoSuchRelativeDir:
+			{
+				absPath, _ := filepath.Abs(dir) // #nosec
+				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter does not exist or can not be accessed. "+
+					"The absolute is: '%s'. In case '%s' is a default value for '%s' then you will not notice it in the"+
+					" configuration file.", dir, paramName, absPath, dir, paramName)
+			}
+		case utils.ErrNotADir:
+			{
+				msg = fmt.Sprintf("Path '%s' supplied for '%s' parameter exists but it is not a directory. In case "+
+					"'%s' is a default value for '%s' then you will not notice it in the configuration file.",
+					dir, paramName, dir, paramName)
 			}
 		}
 
-		if logError{
+		if logError {
 			logger.Error(msg)
 		}
 		return errors.New(msg)
 	} else {
 		return nil
 	}
-
 
 }
 
@@ -667,10 +671,10 @@ func ValidateUser(config CfgTemplate, logError bool, hiddenPass bool) error {
 	if len(config.User) > 0 {
 		names := make([]string, 0)
 		for _, user := range config.User {
-			if utils.StringInSlice(user.Name, names){
-				msg := fmt.Sprintf("more than one users have the same 'name=%s' . User 'name' values must" +
+			if utils.StringInSlice(user.Name, names) {
+				msg := fmt.Sprintf("more than one users have the same 'name=%s' . User 'name' values must"+
 					" be unique", user.Name)
-				if logError{
+				if logError {
 					logger.Error(msg)
 				}
 				return errors.New(msg)
@@ -693,7 +697,7 @@ func ValidateUser(config CfgTemplate, logError bool, hiddenPass bool) error {
 			}
 			// Access field has only two options allowed: "read" or "write"
 			if strings.ToLower(user.Access) != "read" && strings.ToLower(user.Access) != "write" {
-				msg := fmt.Sprintf("Username '%s' has field 'access' set to value '%s' but the only two allowed " +
+				msg := fmt.Sprintf("Username '%s' has field 'access' set to value '%s' but the only two allowed "+
 					"values are 'read' or 'write'", user.Name, user.Access)
 				if logError {
 					logger.Error(msg)
@@ -724,7 +728,7 @@ func ValidateAndCreateDB(config CfgTemplate) error {
 // replace passwords or secrets with **************** within an instance of CfgTemplate type
 // Unfortunately this function doesn't have any smarts so whenever the config struct is changed then also an update to
 // the function is needed
-func SanitizeCfgTemplate (config CfgTemplate) CfgTemplate {
+func SanitizeCfgTemplate(config CfgTemplate) CfgTemplate {
 	// overwrite User.Pass
 	for i := 0; i < len(config.User); i++ {
 		if config.User[i].Pass != "" {
@@ -836,9 +840,9 @@ func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []Notif
 				}
 			}
 			if foundMatch != true {
-				return errors.New(fmt.Sprintf("In the notifications section, username '%s' configured for " +
-					"email(SMTP) server '%s' has a password " +
-					"of '%s' which implies the password should be copied from the current(active) configuration but no " +
+				return errors.New(fmt.Sprintf("In the notifications section, username '%s' configured for "+
+					"email(SMTP) server '%s' has a password "+
+					"of '%s' which implies the password should be copied from the current(active) configuration but no "+
 					"such username + server address was found in the current configuration",
 					newNotificationsEmail[i].User, newNotificationsEmail[i].Server, oldNotificationsEmail[i].Pass))
 			}
@@ -868,16 +872,16 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup 
 						newConfigBackup[i].EncryptPass = oldConfigBackup[j].EncryptPass
 						break
 					} else {
-						return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' " +
-							"which implies the password should be copied from the current(active) configuration but " +
-							"in the current configuration there isn't a password set for 'encrypt_pass' so there " +
+						return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' "+
+							"which implies the password should be copied from the current(active) configuration but "+
+							"in the current configuration there isn't a password set for 'encrypt_pass' so there "+
 							"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].EncryptPass))
 					}
 				}
 			}
 			if foundMatch != true {
-				return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' which implies the password " +
-					"should be copied from the current(active) configuration but no backup with the same name was found in " +
+				return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' which implies the password "+
+					"should be copied from the current(active) configuration but no backup with the same name was found in "+
 					"the current configuration", newConfigBackup[i].Name, newConfigBackup[i].EncryptPass))
 			}
 		}
@@ -900,20 +904,20 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup 
 									newConfigBackup[i].Target[j].Pass = oldConfigBackup[k].Target[l].Pass
 									break
 								} else {
-									return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an " +
-										"'pass' of '%s' which implies the password " +
-										"should be copied from the current(active) configuration but in the current " +
-										"configuration there isn't a password set for the same target name so there " +
+									return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an "+
+										"'pass' of '%s' which implies the password "+
+										"should be copied from the current(active) configuration but in the current "+
+										"configuration there isn't a password set for the same target name so there "+
 										"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
 										newConfigBackup[i].Target[j].Pass))
 								}
 							}
 						}
 						if foundTargetMatch != true {
-							return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an " +
-								"'pass' of '%s' which implies the password " +
-								"should be copied from the current(active) configuration but no 'target' with the " +
-								"same name was found in the current configuration for a Backup having the same" +
+							return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an "+
+								"'pass' of '%s' which implies the password "+
+								"should be copied from the current(active) configuration but no 'target' with the "+
+								"same name was found in the current configuration for a Backup having the same"+
 								" name", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
 								newConfigBackup[i].Target[j].Pass))
 						}
@@ -921,9 +925,9 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup 
 					}
 				}
 				if foundMatch != true {
-					return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an " +
-						"'pass' of '%s' which implies the password " +
-						"should be copied from the current(active) configuration but no 'backup' with the " +
+					return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an "+
+						"'pass' of '%s' which implies the password "+
+						"should be copied from the current(active) configuration but no 'backup' with the "+
 						"same name was found in the current configuration", newConfigBackup[i].Name,
 						newConfigBackup[i].Target[j].Name, newConfigBackup[i].Target[j].Pass))
 				}
@@ -938,7 +942,7 @@ func isLocalhost(name string) bool {
 }
 
 // makes a deep copy of a Backup struct
-func CopyBackupStruct(source Backup) Backup{
+func CopyBackupStruct(source Backup) Backup {
 	result := source
 	result.Paths = make([]string, len(source.Paths))
 	copy(result.Paths, source.Paths)

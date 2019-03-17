@@ -21,7 +21,7 @@ type Account struct {
 type FilePermissions struct {
 	Owner Account
 	Group Account
-	Mode os.FileMode
+	Mode  os.FileMode
 }
 
 // gets in a platform dependent way the properties of a file or directory. The code here works probably only on
@@ -55,7 +55,7 @@ func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 	is written in pure Go and parses /etc/passwd and /etc/group. The other is cgo-based and relies on the standard C
 	library (libc) routines such as getpwuid_r and getgrnam_r.
 	When cgo is available, cgo-based (libc-backed) code is used by default.
-	 */
+	*/
 
 	// lookup username from user id
 	username, err := user.LookupId(strconv.FormatUint(uint64(filePerm.Owner.Id), 10))
@@ -77,11 +77,10 @@ func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 		filePerm.Group.Name = groupname.Name
 	}
 
-
 	logger.Debugf("permissions of '%s' are: %+v\n", path, filePerm)
 
 	jsonPayload, err := json.Marshal(filePerm)
-	if err !=nil {
+	if err != nil {
 		logger.Warnf("Could not JSON encode the permissions of '%s' due to error: '%s'", path, err)
 		return filePerm.Owner.Name, "", ErrCouldNotJsonEncode
 	}

@@ -3,12 +3,12 @@
 package daemon
 
 import (
+	"cloudbackup/daemon/globals"
 	"cloudbackup/httpd"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-	"cloudbackup/daemon/globals"
-	"fmt"
 )
 
 // sleeps until it receives on one of the many channels an event
@@ -19,7 +19,7 @@ func WaitForEvent(httpServer *httpd.SrvData, rcvCfgChangeFromHttpd <-chan bool, 
 		syscall.SIGINT,
 		syscall.SIGTERM,
 		syscall.SIGQUIT,
-		syscall.SIGUSR1,)
+		syscall.SIGUSR1)
 	// infinite loop
 	for {
 		select {
@@ -27,7 +27,7 @@ func WaitForEvent(httpServer *httpd.SrvData, rcvCfgChangeFromHttpd <-chan bool, 
 		case s := <-signalChan:
 			ProcessSignal(s, httpServer, shutdownScheduler)
 			// received an event
-		case _ = <- rcvCfgChangeFromHttpd:
+		case _ = <-rcvCfgChangeFromHttpd:
 			logger.Debug("Notifying scheduler to reload configuration")
 			sndCfgChangeToScheduler <- true
 			if len(sndCfgChangeToScheduler) > 5 {
@@ -49,7 +49,7 @@ func ProcessSignal(s os.Signal, httpServer *httpd.SrvData, shutdownScheduler cha
 		// tell scheduler to stop (and also stop running backups / restores )
 		shutdownScheduler <- true
 		// scheduler will reply back on the same channel when it has exited
-		_ = <- shutdownScheduler
+		_ = <-shutdownScheduler
 		logger.Info("Exiting")
 		os.Exit(0)
 

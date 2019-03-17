@@ -1,4 +1,5 @@
 package evaluate
+
 // compare known state about file or directory with actual state on disk
 
 //import (
@@ -9,4 +10,3 @@ package evaluate
 //var logger = log.WithFields(log.Fields{
 //	"context": loggingContext,
 //})
-

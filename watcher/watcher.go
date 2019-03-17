@@ -7,20 +7,20 @@ import (
 	"sync"
 )
 
-
 const loggingContext = "watcher"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
 // return an initialised object
-func New (msgReceiver <- chan shared.WatchMessage) *shared.WatchMultiplexer {
+func New(msgReceiver <-chan shared.WatchMessage) *shared.WatchMultiplexer {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &shared.WatchMultiplexer{
-		Mutex: &sync.RWMutex{},
-		Ctx: ctx,
-		Cancel: cancel,
-		Running: false,
+		Mutex:          &sync.RWMutex{},
+		Ctx:            ctx,
+		Cancel:         cancel,
+		Running:        false,
 		WatchMsgSender: msgReceiver,
 	}
 }
@@ -44,10 +44,11 @@ func Start(multiplexer *shared.WatchMultiplexer) {
 				tellClientsToExit(multiplexer)
 				return
 			}
-		case receivedMsg := <-multiplexer.WatchMsgSender: {
-			sendMsgToClients(multiplexer, receivedMsg)
-			continue
-		}
+		case receivedMsg := <-multiplexer.WatchMsgSender:
+			{
+				sendMsgToClients(multiplexer, receivedMsg)
+				continue
+			}
 		}
 	}
 }
@@ -63,11 +64,10 @@ func tellClientsToExit(multiplexer *shared.WatchMultiplexer) {
 	}
 }
 
-
 // Tells watch clients that a particular job has finished so they should cleanup and exit
 // $JobType must be one of "backup" or "restore". If cancelled == true then it means the job was cancelled while
 // running (and before it completed)
-func TellClientsJobFinished(JobType string, JobName string, JobId string, WatchMsgReceiver chan <-shared.WatchMessage, JobCancelled bool, JobFailed bool) {
+func TellClientsJobFinished(JobType string, JobName string, JobId string, WatchMsgReceiver chan<- shared.WatchMessage, JobCancelled bool, JobFailed bool) {
 	msg := shared.WatchMessage{
 		Sequence:        0,
 		JobType:         JobType,
@@ -110,18 +110,18 @@ func sendMsgToClients(multiplexer *shared.WatchMultiplexer, msg shared.WatchMess
 				// the current event which could not be sent. Basically act like a ring buffer.
 				default:
 					select {
-						case _ = <- client.CommChan:
-							select {
-								// try to send again the message to the client
-								case client.CommChan <- msg:
-									continue
-								// discard message if channel is still full
-								default:
-									continue
-							}
-						// if a message can't be fetched from the client channel then abort and discard the new message
+					case _ = <-client.CommChan:
+						select {
+						// try to send again the message to the client
+						case client.CommChan <- msg:
+							continue
+						// discard message if channel is still full
 						default:
 							continue
+						}
+					// if a message can't be fetched from the client channel then abort and discard the new message
+					default:
+						continue
 					}
 				}
 			} else {
@@ -134,7 +134,7 @@ func sendMsgToClients(multiplexer *shared.WatchMultiplexer, msg shared.WatchMess
 
 // checks if it's allowed to send messages to a given client. Also updates the path and sequence numbers whenever needed
 // Given that this function makes changes on $client it is MANDATORY THAT THE CALLER DOES LOCKING on the parent []*shared.WatchConsumer
-func clientSendAllowed (ctx context.Context, client *shared.WatchConsumer, msg shared.WatchMessage) bool {
+func clientSendAllowed(ctx context.Context, client *shared.WatchConsumer, msg shared.WatchMessage) bool {
 	sendAllowed := false
 	// if this is the first message sent to this client then send it or if we got an error then forward it to the client and ignore rate limiting
 	if client.CurrentPath == "" || msg.Error != "" {
@@ -156,7 +156,7 @@ func clientSendAllowed (ctx context.Context, client *shared.WatchConsumer, msg s
 					if err == context.Canceled {
 						sendAllowed = true
 					} else {
-						logger.Debugf("While running Limiter.Wait() before sending a message to connected " +
+						logger.Debugf("While running Limiter.Wait() before sending a message to connected "+
 							"client '%s' got error: %s", client.Identifier, err)
 					}
 				} else {

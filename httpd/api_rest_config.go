@@ -1,20 +1,20 @@
 package httpd
 
 import (
-	"cloudbackup/config"
-	"github.com/julienschmidt/httprouter"
-	"fmt"
-	"net/http"
-	"encoding/json"
-	"cloudbackup/utils"
-	"os"
-	"github.com/jinzhu/configor"
 	"bytes"
+	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
+	"cloudbackup/utils"
+	"encoding/json"
+	"fmt"
+	"github.com/jinzhu/configor"
+	"github.com/julienschmidt/httprouter"
+	"net/http"
+	"os"
 )
 
 // serve $api_prefix/config and logger.Info requester
-func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params){
+func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	globals.Stats.IncrementRoutines("httpd_handlers")
 	defer globals.Stats.DecrementRoutines("httpd_handlers")
 	srv := srvSrc.GetCopyWithLock(loggingContext + ".pageRoot")
@@ -31,7 +31,7 @@ func (srvSrc SrvData) handlerGetConfig(w http.ResponseWriter, r *http.Request, _
 func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	globals.Stats.IncrementRoutines("httpd_handlers")
 	defer globals.Stats.DecrementRoutines("httpd_handlers")
-	bodyBytes , err := ValidateJsonHTTPInput(w, r)
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
 	if err != nil {
 		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
 		return
@@ -39,7 +39,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 
 	tmpFilePath, err := utils.SetupTmpFileWithContent(bodyBytes, "new_config_")
 	if err != nil {
-		msg := fmt.Sprintf("Error writing temporary file to hold the new configuration. The encountered" +
+		msg := fmt.Sprintf("Error writing temporary file to hold the new configuration. The encountered"+
 			" error was: %s", err)
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
 		logger.Error(msg)
@@ -56,11 +56,11 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 
 	// rename file so it has .json extension . Otherwise the "configor" library needs to guess if it's a YAML or JSON
 	// file
-	err = os.Rename(tmpFilePath, tmpFilePath + ".json")
+	err = os.Rename(tmpFilePath, tmpFilePath+".json")
 	if err != nil {
 		logger.Errorf("Encountered error: '%s' when trying to rename temporary file %s to  %s", err,
-			tmpFilePath, tmpFilePath + ".json")
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+			tmpFilePath, tmpFilePath+".json")
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when "+
 			"manipulating new configuration file")
 		return
 	}
@@ -88,8 +88,8 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 	// create DB files, if needed
 	err = config.ValidateAndCreateDB(NewConfig)
 	if err != nil {
-		msg := fmt.Sprintf("The new configuration triggered a create for the internal databases used to hold " +
-			"information about backed up files and during this create event the following error was encountered:" +
+		msg := fmt.Sprintf("The new configuration triggered a create for the internal databases used to hold "+
+			"information about backed up files and during this create event the following error was encountered:"+
 			" %s", err)
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, msg)
 		logger.Debug(msg)
@@ -109,17 +109,17 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 
 	oldConfigMarshalled, err := json.Marshal(oldConfig)
 	if err != nil {
-		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() existing config in order to " +
+		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() existing config in order to "+
 			"compare it with the new config", err)
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when "+
 			"trying to compare old config with the new one in order to establish if they differ")
 		return
 	}
 	NewConfigMarshalled, err := json.Marshal(NewConfig)
 	if err != nil {
-		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() new config in order to " +
+		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() new config in order to "+
 			"compare it with the old config", err)
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when "+
 			"trying to compare new config with the old one in order to establish if they differ")
 		return
 	}
@@ -130,7 +130,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 	// compare new and old config and if there is no difference then don't rewrite the config file
 	if bytes.Equal(oldConfigMarshalled, NewConfigMarshalled) {
 		logger.Debug("old and new config match")
-		JSONSuccess(w, "success", "The supplied configuration matches the existing one so no actual " +
+		JSONSuccess(w, "success", "The supplied configuration matches the existing one so no actual "+
 			"changes are going to take effect")
 		return
 	} else {
@@ -149,7 +149,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 		} else {
 			// log that a config change happened
 			httpUser, _, _ := r.BasicAuth()
-			logger.Infof("Configuration file '%s' updated with new content as requested by user '%s' from '%s' via" +
+			logger.Infof("Configuration file '%s' updated with new content as requested by user '%s' from '%s' via"+
 				" '%s' to '%s%s'", srv.globalcfg.Path, httpUser, r.RemoteAddr, r.Method, r.Host, r.RequestURI)
 		}
 	}
@@ -158,8 +158,8 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 	// builtin "cron"(scheduling) daemon
 	srvSrc.sndCfgChange <- true
 
-	JSONSuccess(w, "success", "Successfully updated server configuration. Any changes to SSL " +
-		"certificates, ports and addresses to listen on and if to use http or https will require a server restart in" +
+	JSONSuccess(w, "success", "Successfully updated server configuration. Any changes to SSL "+
+		"certificates, ports and addresses to listen on and if to use http or https will require a server restart in"+
 		" order to take effect")
 	return
 }
@@ -168,7 +168,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	globals.Stats.IncrementRoutines("httpd_handlers")
 	defer globals.Stats.DecrementRoutines("httpd_handlers")
-	bodyBytes , err := ValidateJsonHTTPInput(w, r)
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
 	if err != nil {
 		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
 		return
@@ -176,7 +176,7 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 
 	tmpFilePath, err := utils.SetupTmpFileWithContent(bodyBytes, "new_config_backup_")
 	if err != nil {
-		msg := fmt.Sprintf("Error writing temporary file to hold the new backup section configuration. The " +
+		msg := fmt.Sprintf("Error writing temporary file to hold the new backup section configuration. The "+
 			"encountered error was: %s", err)
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
 		logger.Error(msg)
@@ -193,11 +193,11 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 
 	// rename file so it has .json extension . Otherwise the "configor" library needs to guess if it's a YAML or JSON
 	// file
-	err = os.Rename(tmpFilePath, tmpFilePath + ".json")
+	err = os.Rename(tmpFilePath, tmpFilePath+".json")
 	if err != nil {
 		logger.Errorf("Encountered error: '%s' when trying to rename temporary file %s to  %s", err,
-			tmpFilePath, tmpFilePath + ".json")
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+			tmpFilePath, tmpFilePath+".json")
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when "+
 			"manipulating new configuration file")
 		return
 	}
@@ -207,7 +207,7 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 	// load new config from tmp file and perform basic validation
 	err = configor.New(&configor.Config{ENVPrefix: config.EnvPrefix}).Load(&NewConfigBackup, tmpFilePath)
 	if err != nil {
-		msg := fmt.Sprintf("When validating the new backup configuration section the following error was" +
+		msg := fmt.Sprintf("When validating the new backup configuration section the following error was"+
 			" encountered: %s", err)
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, msg)
 		logger.Debug(msg)
@@ -219,7 +219,7 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 	// perform advanced validation of the above loaded (in a struct) config
 	err = config.ValidateBackup(backups, true)
 	if err != nil {
-		msg := fmt.Sprintf("When validating the new backup configuration section the following error was " +
+		msg := fmt.Sprintf("When validating the new backup configuration section the following error was "+
 			"encountered: %s", err)
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidConfig, msg)
 		logger.Debug(msg)
@@ -257,24 +257,24 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 
 	oldConfigMarshalled, err := json.Marshal(oldConfig)
 	if err != nil {
-		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() existing config in order to " +
+		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() existing config in order to "+
 			"compare it with the new config", err)
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when "+
 			"trying to compare old config with the new one in order to establish if they differ")
 		return
 	}
 	NewConfigMarshalled, err := json.Marshal(NewConfig)
 	if err != nil {
-		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() new config in order to " +
+		logger.Errorf("Encountered error: '%s' when trying to json.Marshall() new config in order to "+
 			"compare it with the old config", err)
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when " +
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "internal error when "+
 			"trying to compare new config with the old one in order to establish if they differ")
 		return
 	}
 	var writeErr error
 	if bytes.Equal(oldConfigMarshalled, NewConfigMarshalled) {
 		logger.Debug("old and new config match")
-		JSONSuccess(w, "success", "The supplied configuration matches the existing one so no actual " +
+		JSONSuccess(w, "success", "The supplied configuration matches the existing one so no actual "+
 			"changes are going to take effect")
 		return
 	} else {
@@ -293,7 +293,7 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 		} else {
 			// log that a config change happened
 			httpUser, _, _ := r.BasicAuth()
-			logger.Infof("Configuration file '%s' updated with new content as requested by user '%s' from '%s' via" +
+			logger.Infof("Configuration file '%s' updated with new content as requested by user '%s' from '%s' via"+
 				" '%s' to '%s%s'", srv.globalcfg.Path, httpUser, r.RemoteAddr, r.Method, r.Host, r.RequestURI)
 		}
 	}
@@ -302,8 +302,8 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 	// builtin "cron"(scheduling) daemon
 	srvSrc.sndCfgChange <- true
 
-	JSONSuccess(w, "success", "Successfully updated server configuration. Any changes to SSL " +
-		"certificates, ports and addresses to listen on and if to use http or https will require a server restart in" +
+	JSONSuccess(w, "success", "Successfully updated server configuration. Any changes to SSL "+
+		"certificates, ports and addresses to listen on and if to use http or https will require a server restart in"+
 		" order to take effect")
 	return
 }

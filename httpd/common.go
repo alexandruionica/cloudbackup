@@ -20,33 +20,31 @@ import (
 
 // various "code" messages the API can return
 const (
-	HttpErrBadContentType = "bad content type"
-	HttpErrInvalidJson = "invalid json"
-	HttpErrInvalidConfig = "invalid config"
-	HttpErrUnauthorized = "unauthorized"
+	HttpErrBadContentType      = "bad content type"
+	HttpErrInvalidJson         = "invalid json"
+	HttpErrInvalidConfig       = "invalid config"
+	HttpErrUnauthorized        = "unauthorized"
 	HttpErrInternalServerError = "internal server error"
-	HttpErrForbidden = "access denied"
+	HttpErrForbidden           = "access denied"
 	HttpErrIncorrectClientData = "client supplied incorrect data"
-	HttpErrNotFound = "not found"
-	HttpErrInternalError = "internal server error"
-
+	HttpErrNotFound            = "not found"
+	HttpErrInternalError       = "internal server error"
 )
 
 type HttpStatusReply struct {
-	HTTPCode int `json:"-"`
-	Code string `json:"code"`
+	HTTPCode int    `json:"-"`
+	Code     string `json:"code"`
 	Message  string `json:"message"`
 }
-
 
 type SrvData struct {
 	// if we receive something over the channel then a configuration change happened and we are being notified
 	rcvCfgChange chan bool
 	// we send something over the channel in order to notify when we adjusted the global config
 	sndCfgChange chan bool
-	httpsrv *http.Server
-	SslCertPath string
-	SslKeyPath string
+	httpsrv      *http.Server
+	SslCertPath  string
+	SslKeyPath   string
 	httpsEnabled bool
 	// when true then the web server is already being shutdown and cleanup is in progress
 	serverExiting bool
@@ -74,7 +72,6 @@ func (srv *SrvData) GetCopyWithLock(logContext string) SrvData {
 	return cfgCopy
 }
 
-
 // provides basic Authentication against username + password hashes stored in the config
 // returns a httprouter.Handle function
 func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
@@ -87,9 +84,9 @@ func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 		isAuthenticated := false
 		errmsg := "Basic authentication is required. Please provide an username and password"
 
-		if hasAuth && httpUser !="" {
+		if hasAuth && httpUser != "" {
 			errmsg = "Invalid username or password"
-			logger.Debugf("Checking if user: '%s' provided via HTTP(S) matches any username + password hash " +
+			logger.Debugf("Checking if user: '%s' provided via HTTP(S) matches any username + password hash "+
 				"from the config", httpUser)
 			// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
 			// shared with other functions (running in other routines)
@@ -102,7 +99,7 @@ func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 				// check if a matching username + pass exists
 				for _, user := range runtimeCfg.User {
 					if user.Name == httpUser {
-						logger.Debugf("Username '%s' matches an entry from the config, checking if password" +
+						logger.Debugf("Username '%s' matches an entry from the config, checking if password"+
 							" matches the stored hash", httpUser)
 						if password.CheckPasswordHash(httpPassword, user.Pass) {
 							logger.Debugf("Password provided for username '%s' matches stored password hash",
@@ -139,7 +136,7 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 		// Get the Basic Authentication credentials
 		httpUser, _, hasAuth := r.BasicAuth()
 		if hasAuth != true {
-			msg := fmt.Sprintf("CheckAccess() called for an unauthenticated session for path '%s' and HTTP " +
+			msg := fmt.Sprintf("CheckAccess() called for an unauthenticated session for path '%s' and HTTP "+
 				"method '%s'. Please submit a bug report", r.URL.Path, r.Method)
 			logger.Error(msg)
 			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
@@ -162,7 +159,7 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 				// check we have a key with the method value in ReadAccess
 				if _, ok := ReadAccess[r.Method]; ok {
 					for _, path := range ReadAccess[r.Method] {
-						if r.URL.Path == ApiPrefix + path {
+						if r.URL.Path == ApiPrefix+path {
 							logger.Infof("found match for %s", r.URL.Path)
 							hasAccess = true
 							break
@@ -181,7 +178,7 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 			handle(w, r, ps)
 			return
 		} else {
-			msg := fmt.Sprintf("User '%s' does not have access to '%s' using http method '%s'. If access is " +
+			msg := fmt.Sprintf("User '%s' does not have access to '%s' using http method '%s'. If access is "+
 				"needed then please request 'write' privileges from your systems admininistrator", httpUser,
 				r.URL.Path, r.Method)
 			logger.Debug(msg)
@@ -192,15 +189,13 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 	}
 }
 
-
-
 // send HTTP error back to user in JSON format; "httpcode" is HTTP status code to reply with, "code" is a short message to show,
 // "message" is a detailed explanation of what when wrong
 func JSONError(w http.ResponseWriter, httpcode int, code string, message string) {
 	e := HttpStatusReply{
 		HTTPCode: httpcode,
-		Code: code,
-		Message: message,
+		Code:     code,
+		Message:  message,
 	}
 	b, err := json.Marshal(e)
 	if err != nil {
@@ -219,8 +214,8 @@ func JSONError(w http.ResponseWriter, httpcode int, code string, message string)
 func JSONSuccess(w http.ResponseWriter, code string, message string) {
 	status := HttpStatusReply{
 		HTTPCode: 200,
-		Code: code,
-		Message: message,
+		Code:     code,
+		Message:  message,
 	}
 
 	b, err := json.Marshal(status)
@@ -231,7 +226,7 @@ func JSONSuccess(w http.ResponseWriter, code string, message string) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status.HTTPCode)
-	_, err  = fmt.Fprint(w, string(b))
+	_, err = fmt.Fprint(w, string(b))
 	if err != nil {
 		logger.Debugf("Encountered an error while writing reply to client: %s", err)
 	}
@@ -242,13 +237,13 @@ func JSONSuccess(w http.ResponseWriter, code string, message string) {
 func JSONSuccessWithResult(w http.ResponseWriter, code string, message string, result interface{}) {
 	status := HttpStatusReply{
 		HTTPCode: 200,
-		Code: code,
-		Message: message,
+		Code:     code,
+		Message:  message,
 	}
 	response := struct {
 		HttpStatusReply
 		Result interface{} `json:"result"`
-	}{ status, result}
+	}{status, result}
 
 	b, err := json.Marshal(response)
 	if err != nil {
@@ -258,7 +253,7 @@ func JSONSuccessWithResult(w http.ResponseWriter, code string, message string, r
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(response.HTTPCode)
-	_, err  = fmt.Fprint(w, string(b))
+	_, err = fmt.Fprint(w, string(b))
 	if err != nil {
 		logger.Debugf("Encountered an error while writing reply to client: %s", err)
 	}
@@ -267,16 +262,16 @@ func JSONSuccessWithResult(w http.ResponseWriter, code string, message string, r
 // validate HTTP input of type JSON. We Buffer the request body so we can process it multiple times. This is bad if
 // someone sends a very large payload as they could cause a DOS by crashing the daemon so
 // ONLY AUTHENTICATED SESSIONS SHOULD USE THIS FUNCTION
-func ValidateJsonHTTPInput (w http.ResponseWriter, r *http.Request) (bodyBytes []byte, err error) {
+func ValidateJsonHTTPInput(w http.ResponseWriter, r *http.Request) (bodyBytes []byte, err error) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		msg := fmt.Sprintf("%s 'Content-Type' is not of type 'application/json'", r.Method)
 		JSONError(w, http.StatusBadRequest, HttpErrBadContentType, msg)
 		return bodyBytes, errors.New(msg)
 	}
 	// Buffer the request body so we can process it multiple times.
-	bodyBytes , err = ioutil.ReadAll(r.Body)
+	bodyBytes, err = ioutil.ReadAll(r.Body)
 	if err != nil {
-		msg := fmt.Sprintf("Error reading request body with containing new config. The encountered error" +
+		msg := fmt.Sprintf("Error reading request body with containing new config. The encountered error"+
 			" was: %s", err)
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
 		logger.Warn(msg)
@@ -286,7 +281,7 @@ func ValidateJsonHTTPInput (w http.ResponseWriter, r *http.Request) (bodyBytes [
 	// err = json.NewDecoder(bodyBytes).Decode(&decodedJson)
 	err = json.Unmarshal(bodyBytes, &decodedJson)
 	if err != nil {
-		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprintf("Request body is not valid JSON. " +
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprintf("Request body is not valid JSON. "+
 			"While attempting to decode the JSON payload the following error was encountered: %s", err))
 		return bodyBytes, err
 	}
@@ -295,11 +290,10 @@ func ValidateJsonHTTPInput (w http.ResponseWriter, r *http.Request) (bodyBytes [
 
 // basic logging of http requests. Does not include response code. Requests wrapped with BasicAuth() will get logged but
 // otherwise you must call this function
-func LogHttpRequest(r *http.Request){
+func LogHttpRequest(r *http.Request) {
 	log.WithFields(log.Fields{"context": loggingContext + ".access"}).Infof("%s %s %s %s", r.RemoteAddr,
 		r.Method, r.Host, r.RequestURI)
 }
-
 
 // calls an "evaluate" of the backup paths for a particular job
 func dryRunBackupPaths(ctx context.Context, backupConfig config.Backup, backupJobsState *shared.DryRunBackupJobsState,

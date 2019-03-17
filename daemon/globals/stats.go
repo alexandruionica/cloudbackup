@@ -8,24 +8,25 @@ import (
 )
 
 const loggingContext = "daemon"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 var Stats GlobalStats
 
-type Gauge struct{
-	Routines map[string]uint64 `json:"routines"`
+type Gauge struct {
+	Routines  map[string]uint64 `json:"routines"`
 	Functions map[string]uint64 `json:"functions"`
 }
 
-type Counter struct{
-	Routines map[string]uint64 `json:"routines"`
+type Counter struct {
+	Routines  map[string]uint64 `json:"routines"`
 	Functions map[string]uint64 `json:"functions"`
 }
 type GlobalStats struct {
-	Gauge Gauge `json:"gauge"`
-	Counter Counter `json:"counter"`
-	Lock *sync.RWMutex `json:"-"`
+	Gauge   Gauge         `json:"gauge"`
+	Counter Counter       `json:"counter"`
+	Lock    *sync.RWMutex `json:"-"`
 }
 
 func (stats *GlobalStats) IncrementRoutines(name string) {
@@ -79,7 +80,6 @@ func (stats *GlobalStats) Print() {
 	utils.Pp(stats)
 }
 
-
 // logs stats and also print to stdout
 func (stats *GlobalStats) Log() {
 	stats.Lock.RLock()
@@ -94,11 +94,11 @@ func (stats *GlobalStats) Log() {
 func init() {
 	Stats = GlobalStats{
 		Gauge: Gauge{
-			Routines: map[string]uint64{},
+			Routines:  map[string]uint64{},
 			Functions: map[string]uint64{},
 		},
 		Counter: Counter{
-			Routines: map[string]uint64{},
+			Routines:  map[string]uint64{},
 			Functions: map[string]uint64{},
 		},
 		Lock: &sync.RWMutex{},

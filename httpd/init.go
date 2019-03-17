@@ -2,19 +2,20 @@ package httpd
 
 import (
 	"cloudbackup/config"
-	"context"
-	log "github.com/sirupsen/logrus"
-	"github.com/julienschmidt/httprouter"
-	"fmt"
-	"net/http"
-	"time"
-	"sync"
-	"cloudbackup/shared"
 	"cloudbackup/daemon/globals"
+	"cloudbackup/shared"
+	"context"
+	"fmt"
+	"github.com/julienschmidt/httprouter"
+	log "github.com/sirupsen/logrus"
+	"net/http"
+	"sync"
+	"time"
 )
+
 const (
 	loggingContext = "httpd"
-	ApiPrefix = "/api/v1"
+	ApiPrefix      = "/api/v1"
 )
 
 var logger = log.WithFields(log.Fields{
@@ -25,7 +26,7 @@ var logger = log.WithFields(log.Fields{
 // prefixed with $ApiPrefix in the calling function
 var ReadAccess = map[string][]string{
 	//"POST": []string{"aaa", "bbb"},
-	"GET": {"/config", "/backup/list"},
+	"GET":  {"/config", "/backup/list"},
 	"POST": {"/backup/dryrun", "/backup/watch"},
 }
 
@@ -33,22 +34,22 @@ var ReadAccess = map[string][]string{
 func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.RuntimeConfig, addr string,
 	httpsEnabled bool, SslCertPath string, SslKeyPath string,
 	commWithSchedulerForBackup *shared.CommWithSchedulerForBackup,
-	backupJobsState *shared.BackupJobsState ) (*SrvData) {
+	backupJobsState *shared.BackupJobsState) *SrvData {
 
 	return &SrvData{rcvCfgChange: rcvCfgChange,
-		sndCfgChange: sndCfgChange,
+		sndCfgChange:  sndCfgChange,
 		serverExiting: false,
-		globalcfg: globalcfg,
+		globalcfg:     globalcfg,
 		httpsrv: &http.Server{
-			Addr: addr,
+			Addr:    addr,
 			Handler: nil,
 		},
-		SslCertPath: SslCertPath,
-		SslKeyPath: SslKeyPath,
-		httpsEnabled: httpsEnabled,
-		Mutex: &sync.RWMutex{},
+		SslCertPath:                SslCertPath,
+		SslKeyPath:                 SslKeyPath,
+		httpsEnabled:               httpsEnabled,
+		Mutex:                      &sync.RWMutex{},
 		commWithSchedulerForBackup: commWithSchedulerForBackup,
-		backupJobsState: backupJobsState,
+		backupJobsState:            backupJobsState,
 	}
 }
 
@@ -67,22 +68,22 @@ func (srv *SrvData) Start() {
 	router := httprouter.New()
 	router.GET("/", srv.handlerRoot)
 	// serve documentation - static files - NO AUTHENTICATION needed; NO REQUEST LOGGING done
-	router.ServeFiles("/docs/*filepath", http.Dir(staticHtmlDir + "/docs"))
-	router.ServeFiles("/docs_api/*filepath", http.Dir(staticHtmlDir + "/docs_api"))
+	router.ServeFiles("/docs/*filepath", http.Dir(staticHtmlDir+"/docs"))
+	router.ServeFiles("/docs_api/*filepath", http.Dir(staticHtmlDir+"/docs_api"))
 	// redirect /swgger.json to /docs/api/swgger.json - NO AUTHENTICATION needed; NO REQUEST LOGGING done
 	router.GET("/swagger.json", handlerGETtlSwaggerJson)
 	// redirect /swgger.yaml to /docs/api/swgger.yaml - NO AUTHENTICATION needed; NO REQUEST LOGGING done
 	router.GET("/swagger.yaml", handlerGETtlSwaggerYaml)
 	// API endpoints - MUST wrap around srv.BasicAuth(srv.CheckAccess($HANDLER_NAME))
-	router.GET(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerGetConfig)))
-	router.POST(ApiPrefix+ "/config", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfig)))
-	router.POST(ApiPrefix+ "/config/backup", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfigBackup)))
-	router.POST(ApiPrefix+ "/backup/start", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupStart)))
-	router.POST(ApiPrefix+ "/backup/stop", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupStop)))
-	router.GET(ApiPrefix+ "/backup/list", srv.BasicAuth(srv.CheckAccess(srv.handlerGetBackupList)))
-	router.POST(ApiPrefix+ "/backup/dryrun", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupDryRun)))
-	router.POST(ApiPrefix+ "/backup/watch", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupWatch)))
-	router.POST(ApiPrefix+ "/report/notification/test", srv.BasicAuth(srv.CheckAccess(srv.handlerPostNotificationTest)))
+	router.GET(ApiPrefix+"/config", srv.BasicAuth(srv.CheckAccess(srv.handlerGetConfig)))
+	router.POST(ApiPrefix+"/config", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfig)))
+	router.POST(ApiPrefix+"/config/backup", srv.BasicAuth(srv.CheckAccess(srv.handlerPutConfigBackup)))
+	router.POST(ApiPrefix+"/backup/start", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupStart)))
+	router.POST(ApiPrefix+"/backup/stop", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupStop)))
+	router.GET(ApiPrefix+"/backup/list", srv.BasicAuth(srv.CheckAccess(srv.handlerGetBackupList)))
+	router.POST(ApiPrefix+"/backup/dryrun", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupDryRun)))
+	router.POST(ApiPrefix+"/backup/watch", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupWatch)))
+	router.POST(ApiPrefix+"/report/notification/test", srv.BasicAuth(srv.CheckAccess(srv.handlerPostNotificationTest)))
 
 	// put a write lock and update the router - by this point all routes should have been added
 	srv.Mutex.Lock()
@@ -112,7 +113,7 @@ func (srv *SrvData) Start() {
 }
 
 // shutdown gracefully the http server using 30 sec timeout
-func (srv *SrvData) Stop(){
+func (srv *SrvData) Stop() {
 	logger.Debug("Shutting down the http server...")
 	srv.Mutex.Lock()
 	srv.serverExiting = true
@@ -128,4 +129,3 @@ func (srv *SrvData) Stop(){
 	}
 
 }
-

@@ -29,7 +29,7 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 	// is closed before we attempt to delete the file
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
-	db , err := database.Start(dbDataDirPath, backupName)
+	db, err := database.Start(dbDataDirPath, backupName)
 	defer func() {
 		database.CloseDb(db, backupName)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -63,7 +63,7 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 	dbFoundTargetNames := make(map[string]foundData)
 	rows, err := db.Query("SELECT name, backup_name, type from targets")
 	if err != nil {
-		t.Fatalf("While trying to get from the database the list of targets, the following error was " +
+		t.Fatalf("While trying to get from the database the list of targets, the following error was "+
 			"encountered: '%s'", err)
 	}
 	for rows.Next() {
@@ -82,11 +82,11 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 	for _, targetInConfig := range backupConfig.Target {
 		if _, ok := dbFoundTargetNames[targetInConfig.Name]; ok {
 			if targetInConfig.Type != dbFoundTargetNames[targetInConfig.Name].targetType {
-				t.Fatalf("Target '%s' has type '%s' in the config file but the result from the DB shows type " +
+				t.Fatalf("Target '%s' has type '%s' in the config file but the result from the DB shows type "+
 					"'%s", targetInConfig.Name, targetInConfig.Type, dbFoundTargetNames[targetInConfig.Name].targetType)
 			}
 			if backupConfig.Name != dbFoundTargetNames[targetInConfig.Name].backupName {
-				t.Fatalf("Target '%s' has backup job name '%s' in the config file but the result from the DB " +
+				t.Fatalf("Target '%s' has backup job name '%s' in the config file but the result from the DB "+
 					"shows name '%s'", targetInConfig.Name, backupConfig.Name,
 					dbFoundTargetNames[targetInConfig.Name].backupName)
 			}
@@ -113,7 +113,7 @@ func TestEnsureTargetsInDb2(t *testing.T) {
 	// is closed before we attempt to delete the file
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
-	db , err := database.Start(dbDataDirPath, backupName)
+	db, err := database.Start(dbDataDirPath, backupName)
 	defer func() {
 		database.CloseDb(db, backupName)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -156,7 +156,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 	// is closed before we attempt to delete the file
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
-	db , err := database.Start(dbDataDirPath, backupName)
+	db, err := database.Start(dbDataDirPath, backupName)
 	defer func() {
 		database.CloseDb(db, backupName)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -176,7 +176,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 		t.Fatalf("EnsureTargetsInDb() returned error: '%s'", err)
 	}
 
-	result , err := db.Exec(`DELETE FROM targets WHERE name="aws_2"`)
+	result, err := db.Exec(`DELETE FROM targets WHERE name="aws_2"`)
 	if err != nil {
 		if err != nil {
 			t.Fatalf("Attempting to delete 1 record from 'targets' returned error: '%s'", err)
@@ -207,7 +207,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 
 	rows, err := db.Query("SELECT name, backup_name, type from targets")
 	if err != nil {
-		t.Fatalf("While trying to get from the database the list of targets, the following error was " +
+		t.Fatalf("While trying to get from the database the list of targets, the following error was "+
 			"encountered: '%s'", err)
 	}
 	for rows.Next() {
@@ -226,11 +226,11 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 	for _, targetInConfig := range backupConfig.Target {
 		if _, ok := dbFoundTargetNames[targetInConfig.Name]; ok {
 			if targetInConfig.Type != dbFoundTargetNames[targetInConfig.Name].targetType {
-				t.Fatalf("Target '%s' has type '%s' in the config file but the result from the DB shows type " +
+				t.Fatalf("Target '%s' has type '%s' in the config file but the result from the DB shows type "+
 					"'%s", targetInConfig.Name, targetInConfig.Type, dbFoundTargetNames[targetInConfig.Name].targetType)
 			}
 			if backupConfig.Name != dbFoundTargetNames[targetInConfig.Name].backupName {
-				t.Fatalf("Target '%s' has backup job name '%s' in the config file but the result from the DB " +
+				t.Fatalf("Target '%s' has backup job name '%s' in the config file but the result from the DB "+
 					"shows name '%s'", targetInConfig.Name, backupConfig.Name,
 					dbFoundTargetNames[targetInConfig.Name].backupName)
 			}
@@ -242,7 +242,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 }
 
 // test that Prepare() produces usable prepared statements
-func TestPrepare1(t *testing.T){
+func TestPrepare1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	path := "an_imaginary_file_name"
@@ -265,13 +265,13 @@ func TestPrepare1(t *testing.T){
 	// test Prepared Query
 	rows, err := preparedStatements.QueryStmt.Query(path)
 	if err != nil {
-		t.Fatalf("While querying the database in order to check if '%s' has been previously backed" +
+		t.Fatalf("While querying the database in order to check if '%s' has been previously backed"+
 			" up, the following error was encountered: %s", path, err)
 	}
 
 	err = rows.Close()
 	if err != nil {
-		t.Fatalf("While trying to Close() a prepared statement for checking if '%s' has been" +
+		t.Fatalf("While trying to Close() a prepared statement for checking if '%s' has been"+
 			" previously backed up, the following error was encountered: %s", path, err)
 	}
 
@@ -279,7 +279,7 @@ func TestPrepare1(t *testing.T){
 	_, err = preparedStatements.InsertStmt.Exec(path, "file", "", 1234, time.Now(), time.Now(), "testuser1", "", "",
 		"none", 0, "a_target")
 	if err != nil {
-		t.Fatalf("While trying to use prepared statement with preparedStatements.InsertStmt.Exec() for checking " +
+		t.Fatalf("While trying to use prepared statement with preparedStatements.InsertStmt.Exec() for checking "+
 			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
 	}
 
@@ -287,7 +287,7 @@ func TestPrepare1(t *testing.T){
 	_, err = preparedStatements.UpdateStmt.Exec("file", "", 1234, time.Now(), time.Now(), "testuser2", "", "",
 		"none", 0, "a_target", path)
 	if err != nil {
-		t.Fatalf("While trying to use prepared statement with preparedStatements.UpdateStmt.Exec() for checking " +
+		t.Fatalf("While trying to use prepared statement with preparedStatements.UpdateStmt.Exec() for checking "+
 			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
 	}
 
@@ -295,7 +295,7 @@ func TestPrepare1(t *testing.T){
 	database.CloseDb(db, backupName)
 }
 
-func TestClosePreparedStatements1(t *testing.T){
+func TestClosePreparedStatements1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	defer func() {
@@ -317,7 +317,6 @@ func TestClosePreparedStatements1(t *testing.T){
 	ClosePreparedStatements(preparedStatements)
 	database.CloseDb(db, backupName)
 }
-
 
 // test with empty shared.DbData struct
 func TestCloseStatementsAndDb1(t *testing.T) {
@@ -342,8 +341,8 @@ func TestCloseStatementsAndDb2(t *testing.T) {
 
 	dbData := shared.DbData{
 		Connected: true,
-		Db: db,
-		Name: backupName,
+		Db:        db,
+		Name:      backupName,
 	}
 	CloseStatementsAndDb(dbData)
 }
@@ -369,14 +368,13 @@ func TestCloseStatementsAndDb3(t *testing.T) {
 	}
 
 	dbData := shared.DbData{
-		Connected: true,
-		Db: db,
-		Name: backupName,
+		Connected:          true,
+		Db:                 db,
+		Name:               backupName,
 		PreparedStatements: preparedStatements,
 	}
 	CloseStatementsAndDb(dbData)
 }
-
 
 // should succeed
 func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
@@ -411,7 +409,7 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 	for rows.Next() {
 		err := rows.Scan(&jobIdInDb)
 		if err != nil {
-			logger.Errorf("While enumerating from the database the list of jobs with a given uuid, the " +
+			logger.Errorf("While enumerating from the database the list of jobs with a given uuid, the "+
 				"following error was encountered: '%s'", err)
 		}
 		// any result row means we had a match
@@ -424,7 +422,7 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 	}
 	_ = rows.Close() // #nosec
 
-	if ! foundRecord {
+	if !foundRecord {
 		t.Fatalf("Did not find in the DB a match for the job details which just got added")
 	}
 
@@ -435,7 +433,7 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 		t.Fatalf("CheckJobUuidExists() wasn't supposed to return an error but did return: '%s'", err)
 	}
 
-	if ! foundRecordUsingFunction {
+	if !foundRecordUsingFunction {
 		t.Fatalf("CheckJobUuidExists() did not find in the DB a match for the job details which just got added")
 	}
 
@@ -451,7 +449,6 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 
 	database.CloseDb(db, backupName)
 }
-
 
 // should return false as we're using an empty db
 func TestCheckJobUuidExists1(t *testing.T) {

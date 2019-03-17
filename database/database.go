@@ -1,19 +1,21 @@
 package database
 
 import (
-	log "github.com/sirupsen/logrus"
 	"cloudbackup/utils"
-	_ "github.com/mattn/go-sqlite3"
 	"database/sql"
 	"errors"
-	"path/filepath"
+	_ "github.com/mattn/go-sqlite3"
+	log "github.com/sirupsen/logrus"
 	"os"
+	"path/filepath"
 )
 
 const loggingContext = "database"
+
 // cache=shared - according to https://www.sqlite.org/sharedcache.html this improves performance
 // _foreign_keys=1 - enable foreign keys support and enforcement
 const DbOptions = "_foreign_keys=1&cache=shared"
+
 var ErrCouldNotCreateDB = errors.New("could not create database")
 var ErrCouldNotOpenDB = errors.New("could not open database")
 var logger = log.WithFields(log.Fields{
@@ -59,7 +61,7 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 		if DbFileExists(dbfilepath) {
 			err2 := os.Remove(dbfilepath)
 			if err2 != nil {
-				logger.Errorf("An additional error was encountered when trying to remove the incorrectly " +
+				logger.Errorf("An additional error was encountered when trying to remove the incorrectly "+
 					"initialised db file '%s'. The error was: %s", dbfilepath, err2)
 			}
 		}
@@ -82,7 +84,7 @@ func OpenDb(datadir string, backupName string, fileExists bool) (*sql.DB, error)
 	}
 
 	logger.Debugf("Opening database file '%s'", dbfilepath)
-	db, err := sql.Open("sqlite3", dbfilepath + "?" + DbOptions)
+	db, err := sql.Open("sqlite3", dbfilepath+"?"+DbOptions)
 	if err != nil {
 		logger.Errorf("Could not open database %s due to error: %s", dbfilepath, err)
 		return &sql.DB{}, ErrCouldNotOpenDB
@@ -97,7 +99,7 @@ func OpenDb(datadir string, backupName string, fileExists bool) (*sql.DB, error)
 		Second please set the database connections of the SQL package to 1.
 
 		db.SetMaxOpenConn(1)
-	 */
+	*/
 	db.SetMaxOpenConns(1)
 
 	if fileExists {
@@ -115,15 +117,15 @@ func OpenDb(datadir string, backupName string, fileExists bool) (*sql.DB, error)
 func CloseDb(db *sql.DB, name string) {
 	err := db.Close()
 	if err != nil {
-		logger.Errorf("While trying to close database '%s' encountered error: '%s'", name, err )
+		logger.Errorf("While trying to close database '%s' encountered error: '%s'", name, err)
 	}
 }
 
 // figure out the absolute path to the database file
-func GetDbFilePath(datadir string, backupName string) (string, error){
+func GetDbFilePath(datadir string, backupName string) (string, error) {
 	dbfilepath, err := filepath.Abs(datadir + string(filepath.Separator) + backupName + ".sqlite")
 	if err != nil {
-		logger.Errorf("While trying to establish the absolute path to the database holding information about " +
+		logger.Errorf("While trying to establish the absolute path to the database holding information about "+
 			" backup job '%s' the following error was encountered: %s", backupName, err)
 		return "", errors.New("could not establish the absolute path to the database file")
 	} else {
@@ -135,7 +137,7 @@ func DbFileExists(dbfilepath string) bool {
 	_, err := utils.FileExists(dbfilepath, true)
 	if err != nil {
 		if err != utils.ErrNoSuchFile {
-			logger.Errorf("When attempting to read the properties for the database file '%s' the following " +
+			logger.Errorf("When attempting to read the properties for the database file '%s' the following "+
 				"error was received: ", err)
 		}
 		return false
@@ -155,16 +157,16 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 		return err
 	}
 	// check if database file exists
-	if ! DbFileExists(dbfilepath) {
-		if configInit{
-			logger.Warnf("Database file '%s' used to store details for backup job '%s' doesn't exist. This is " +
-				"expected during the first start of the backup server or when configuration file changes affect the" +
-				" 'data_dir' option or add a new backup job. If this is not the case then the root cause for the " +
+	if !DbFileExists(dbfilepath) {
+		if configInit {
+			logger.Warnf("Database file '%s' used to store details for backup job '%s' doesn't exist. This is "+
+				"expected during the first start of the backup server or when configuration file changes affect the"+
+				" 'data_dir' option or add a new backup job. If this is not the case then the root cause for the "+
 				"missing database file should be established. Proceeding now to create the database.",
 				dbfilepath, backupName)
 		} else {
-			logger.Errorf("Database file '%s' used to store details for backup job '%s' doesn't exist. This is " +
-				"unexpected as the database file should already exist so the root cause for this issue should be " +
+			logger.Errorf("Database file '%s' used to store details for backup job '%s' doesn't exist. This is "+
+				"unexpected as the database file should already exist so the root cause for this issue should be "+
 				"established. Creating the database now in order to proceed with the backup.",
 				dbfilepath, backupName)
 		}
@@ -175,7 +177,7 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 
 		err = CreateDb(db, backupName)
 		if err != nil {
-			logger.Errorf("Backups for job '%s' are not possible as the database file can't be created or " +
+			logger.Errorf("Backups for job '%s' are not possible as the database file can't be created or "+
 				"initialised",
 				backupName)
 			return err

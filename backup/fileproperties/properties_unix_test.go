@@ -17,7 +17,7 @@ import (
 )
 
 // obtain data about current user using OS supplied utilities instead on relying on Golang libraries
-func getRunningUserDetails(t *testing.T)(uid, username, gid, groupname string){
+func getRunningUserDetails(t *testing.T) (uid, username, gid, groupname string) {
 	cmd := exec.Command("id")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -48,8 +48,7 @@ func getRunningUserDetails(t *testing.T)(uid, username, gid, groupname string){
 	return uid, username, gid, groupname
 }
 
-
-func getFileMode(t *testing.T, path string, dereference bool)(string){
+func getFileMode(t *testing.T, path string, dereference bool) string {
 	/* Command output for  stat is :
 
 	freebsd/linux/MacOS:  stat -L  (for lstat = dereference)
@@ -81,7 +80,7 @@ func getFileMode(t *testing.T, path string, dereference bool)(string){
 	Access: Fri May 20 01:23:56 2016
 	Modify: Fri May 20 01:23:56 2016
 	Change: Fri May 20 01:23:56 2016
-	 */
+	*/
 	var cmd *exec.Cmd
 	switch os := runtime.GOOS; os {
 	case "darwin", "freebsd":
@@ -95,7 +94,7 @@ func getFileMode(t *testing.T, path string, dereference bool)(string){
 	case "linux":
 		{
 			if dereference {
-				cmd = exec.Command("stat","-L", path)
+				cmd = exec.Command("stat", "-L", path)
 			} else {
 				cmd = exec.Command("stat", path)
 			}
@@ -118,20 +117,20 @@ func getFileMode(t *testing.T, path string, dereference bool)(string){
 	for scanner.Scan() {
 		lineOutput = scanner.Text()
 		switch os := runtime.GOOS; os {
-			case "darwin", "freebsd":
-				{
-					if strings.HasPrefix(lineOutput, "  Mode: ("){
-						foundMatch = true
-					}
+		case "darwin", "freebsd":
+			{
+				if strings.HasPrefix(lineOutput, "  Mode: (") {
+					foundMatch = true
 				}
-			case "linux":
-				{
-					if strings.HasPrefix(lineOutput, "Access: ("){
-						foundMatch = true
-					}
+			}
+		case "linux":
+			{
+				if strings.HasPrefix(lineOutput, "Access: (") {
+					foundMatch = true
 				}
-			default:
-				t.Fatalf("2. This test doesn't support OS of type: %s . Please adjust the test as needed", runtime.GOOS)
+			}
+		default:
+			t.Fatalf("2. This test doesn't support OS of type: %s . Please adjust the test as needed", runtime.GOOS)
 
 		}
 		if foundMatch {
@@ -141,7 +140,7 @@ func getFileMode(t *testing.T, path string, dereference bool)(string){
 	if err := scanner.Err(); err != nil {
 		t.Fatalf("while reading standard input got error: %s", err)
 	}
-	if ! foundMatch {
+	if !foundMatch {
 		t.Fatalf("Command output did not match expected patterns so no regex search was attempted.")
 	}
 	// Use raw strings to avoid having to quote the backslashes.
@@ -155,7 +154,7 @@ func getFileMode(t *testing.T, path string, dereference bool)(string){
 }
 
 // workhorse for the test in this file
-func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username, gid, groupname, mode string){
+func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username, gid, groupname, mode string) {
 	owner, permissions, err := GetObjectPermissions(file, filestat)
 	if err != nil {
 		t.Fatalf("While trying to get permissions of %s got error: %s", file, err)
@@ -172,7 +171,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username,
 	}
 	// check permissions object has expected content
 	if username != expandedPerm.Owner.Name {
-			t.Fatalf("2. Expected owner of %s to be %s but instead got owner %s", file, username, owner)
+		t.Fatalf("2. Expected owner of %s to be %s but instead got owner %s", file, username, owner)
 	}
 
 	if owner != expandedPerm.Owner.Name {
@@ -211,15 +210,15 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, uid, username,
 		t.Fatalf("Could not convert %s to uint64", mode)
 	}
 	if uint32(modeNumeric) != uint32(expandedPerm.Mode.Perm()) {
-		t.Fatalf("Expected file mode for %s to be %s but instead it's %o . BEWARE that output from the second " +
-			"field may have the first '0' truncated but actual comparison is done on the numeric value instead of hex" +
+		t.Fatalf("Expected file mode for %s to be %s but instead it's %o . BEWARE that output from the second "+
+			"field may have the first '0' truncated but actual comparison is done on the numeric value instead of hex"+
 			" representation", file, mode, expandedPerm.Mode.Perm())
 	}
 }
 
 // compare file / dir / symlink properties returned by GetObjectPermissions() with data supplied by OS tools while
 // DEREFERENCE links
-func TestGetObjectPermissions1withStat(t *testing.T){
+func TestGetObjectPermissions1withStat(t *testing.T) {
 	uid, username, gid, groupname := getRunningUserDetails(t)
 
 	// folder with some mock files and symlinks
@@ -249,7 +248,7 @@ func TestGetObjectPermissions1withStat(t *testing.T){
 }
 
 //use Lstat instead of Stat which means to NOT dereference links
-func TestGetObjectPermissions1withLstat(t *testing.T){
+func TestGetObjectPermissions1withLstat(t *testing.T) {
 	uid, username, gid, groupname := getRunningUserDetails(t)
 
 	// folder with some mock files and symlinks

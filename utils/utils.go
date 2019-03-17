@@ -1,20 +1,21 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/md5" // #nosec
 	"encoding/json"
 	"errors"
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"io"
-	"os"
-	"testing"
 	"io/ioutil"
+	"os"
 	"path/filepath"
-	"bytes"
+	"testing"
 )
 
 const loggingContext = "utils"
+
 var ErrNoSuchFile = errors.New("file does not exist")
 var ErrNotRegularFile = errors.New("file is not a regular file")
 var ErrNoSuchDir = errors.New("directory does not exist")
@@ -27,9 +28,9 @@ var logger = log.WithFields(log.Fields{
 })
 
 // pretty print by converting received input to JSON and then doing a fmt.println()
-func Pp(input interface{}){
+func Pp(input interface{}) {
 	output, err := json.MarshalIndent(input, "", "  ")
-	if err != nil{
+	if err != nil {
 		logger.Errorf("Could not Pretty Print due to: %s", err)
 	} else {
 		fmt.Println(string(output))
@@ -37,11 +38,11 @@ func Pp(input interface{}){
 }
 
 // for a given []byte array containing a JSON encoded message, indent said message and print it
-func PpJson(input []byte) error{
+func PpJson(input []byte) error {
 	var prettyJSON bytes.Buffer
 	err := json.Indent(&prettyJSON, input, "", "  ")
 	if err != nil {
-		logger.Debugf("provided message is not valid JSON. Received error was: '%s' and provided message was:" +
+		logger.Debugf("provided message is not valid JSON. Received error was: '%s' and provided message was:"+
 			" %s ", err, string(input))
 		return errors.New(fmt.Sprintf("provided message is not valid JSON. Received error was: '%s'", err))
 	}
@@ -93,13 +94,13 @@ func DirExists(path string, dereference bool) (os.FileInfo, error) {
 	}
 
 	// provided path does not exist
-	if err != nil{
-		if filepath.IsAbs(path){
+	if err != nil {
+		if filepath.IsAbs(path) {
 			// for absolute path provided return error as Directory does not exist or is unaccesible
 			return stat, ErrNoSuchDir
 		} else {
 			_, err := filepath.Abs(path)
-			if err != nil{
+			if err != nil {
 				// provided path string is unusable
 				return stat, ErrUnusableDirPath
 			} else {
@@ -147,7 +148,6 @@ func SetupTmpFileWithContent(content []byte, prefix string) (string, error) {
 	return tmpfile.Name(), nil
 }
 
-
 // create a directory in the tmpdir. The user must delete the file
 // afterwards. Returns a string with is the full path of the directory
 func SetupTmpDir(prefix string, t *testing.T) string {
@@ -158,8 +158,7 @@ func SetupTmpDir(prefix string, t *testing.T) string {
 	return tmpdir
 }
 
-
-func GetFileMD5Sum(path string)(string, error){
+func GetFileMD5Sum(path string) (string, error) {
 	f, err := os.Open(path) // #nosec
 	if err != nil {
 		return "", err
@@ -167,7 +166,7 @@ func GetFileMD5Sum(path string)(string, error){
 	defer func() {
 		err := f.Close()
 		if err != nil {
-			logger.Warnf("After MD5 checksum calculation for '%s' while trying to close the file descriptor " +
+			logger.Warnf("After MD5 checksum calculation for '%s' while trying to close the file descriptor "+
 				"the following error was encountered: %s", path, err)
 		}
 	}()

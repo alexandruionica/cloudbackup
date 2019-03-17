@@ -16,6 +16,7 @@ import (
 )
 
 const loggingContext = "backup.scan"
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -56,29 +57,32 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 					return true, err
 				}
 				if err != nil {
-					logger.Warnf("While backing up the contents of directory %s the following error was " +
+					logger.Warnf("While backing up the contents of directory %s the following error was "+
 						"encountered: %s", path, err)
 				}
 			} else {
 				switch utils.FileType(stat) {
-				case "file": {
-					backupJobsState.IncrementCounter(backupConfig.Name, "examined_files", path,
-						"file", "examine","")
-				}
-				case "symlink": {
-					backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks", path,
-						"symlink", "examine","")
-				}
-				default: {
-					backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown", path,
-						"unknown", "examine","")
-				}
+				case "file":
+					{
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_files", path,
+							"file", "examine", "")
+					}
+				case "symlink":
+					{
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks", path,
+							"symlink", "examine", "")
+					}
+				default:
+					{
+						backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown", path,
+							"unknown", "examine", "")
+					}
 				}
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
-				if ! dryRun {
+				if !dryRun {
 					// call to function dealing with backing up individual files
 					cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState)
-					if cancelled{
+					if cancelled {
 						return true, nil
 					}
 					if err != nil {
@@ -120,11 +124,11 @@ func readDirNames(dirname string) ([]string, error) {
 func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup,
 	backupJobsState shared.BackupJobsStateInterface, dryRun bool, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore) (bool, error) {
-	if ! dryRun {
+	if !dryRun {
 		// call to backup the folder entry itself (this can lead to a scenario where the directory entry itself is
 		// backed up but when attempting to walk the directory an error could be triggered)
 		cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState)
-		if cancelled{
+		if cancelled {
 			return true, nil
 		}
 		if err != nil {
@@ -166,7 +170,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			logger.Debugf("Getting details for %s", childPath)
 			excluded, excludedExpr, err := isExcluded(backupConfig.Exclusions, childPath)
 			if err != nil {
-				logger.Warnf("While trying to check if %s should be excluded from being backed up, the following " +
+				logger.Warnf("While trying to check if %s should be excluded from being backed up, the following "+
 					"error was encountered '%s'", childPath, err)
 				backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_examine", childPath,
 					"unknown", "examine", err.Error())
@@ -208,25 +212,28 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 						"", "")
 				} else {
 					switch utils.FileType(fileInfo) {
-					case "file": {
-						backupJobsState.IncrementCounter(backupConfig.Name, "examined_files", childPath,
-							"file", "examine", "")
-					}
-					case "symlink": {
-						backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks", childPath,
-							"symlink", "examine", "")
-					}
-					default: {
-						backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown", childPath,
-							"unknown", "examine", "")
-					}
+					case "file":
+						{
+							backupJobsState.IncrementCounter(backupConfig.Name, "examined_files", childPath,
+								"file", "examine", "")
+						}
+					case "symlink":
+						{
+							backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks", childPath,
+								"symlink", "examine", "")
+						}
+					default:
+						{
+							backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown", childPath,
+								"unknown", "examine", "")
+						}
 					}
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", childPath,
-						"","")
-					if ! dryRun {
+						"", "")
+					if !dryRun {
 						// call to function dealing with backing up of files
 						cancelled, err := backup.Do(ctx, childPath, fileInfo, backupConfig, dbData, objectStores, backupJobsState)
-						if cancelled{
+						if cancelled {
 							return true, nil
 						}
 						if err != nil {
@@ -247,7 +254,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 // check if $path is matches any of the Globstar elements of the $exclusions array. If a match is found then true
 // is returned followed also by the exclusion rule which matched and nil; if an error is encountered then the last
 // element will be the error message
-func isExcluded(exclusions []string, path string) (bool, string, error){
+func isExcluded(exclusions []string, path string) (bool, string, error) {
 	for _, excludedPath := range exclusions {
 		match, err := doublestar.PathMatch(excludedPath, path)
 		if err != nil {

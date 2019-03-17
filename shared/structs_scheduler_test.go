@@ -22,22 +22,22 @@ func TestMarkRunningStoppingAndIsRunningIsStopping(t *testing.T) {
 		t.Fatal(err)
 	}
 	if backupJobsState.Running[0].Name != jobName {
-		t.Fatalf("Expected job having name '%s' to be marked as running but instead '%s' is reported as " +
+		t.Fatalf("Expected job having name '%s' to be marked as running but instead '%s' is reported as "+
 			"running", jobName, backupJobsState.Running[0].Name)
 	}
 
 	if backupJobsState.Running[0].State != "running" {
-		t.Fatalf("Expected job having name '%s' to be marked as running but instead is reported as having " +
+		t.Fatalf("Expected job having name '%s' to be marked as running but instead is reported as having "+
 			"state '%s'", jobName, backupJobsState.Running[0].State)
 	}
 
 	isRunning := backupJobsState.IsRunning(jobName, JobUuid, logContext)
-	if ! isRunning {
+	if !isRunning {
 		t.Fatal("Was expecting that isRunning() reports true for the job but instead we got 'false'")
 	}
 
 	isRunning = backupJobsState.IsRunning(jobName, "", logContext)
-	if ! isRunning {
+	if !isRunning {
 		t.Fatal("Was expecting that isRunning() with blank jobid reports true for the job but instead we " +
 			"got 'false'")
 	}
@@ -75,11 +75,11 @@ func TestMarkRunningStoppingAndIsRunningIsStopping(t *testing.T) {
 	// mark "stopping" should succeed when using correct job name and correct Job ID
 	err = backupJobsState.MarkStopped(jobName, logContext, JobUuid, false)
 	if err != nil {
-		t.Fatalf("backupJobsState.MarkStopped(stopped:=false) should have succeeded when using correct " +
+		t.Fatalf("backupJobsState.MarkStopped(stopped:=false) should have succeeded when using correct "+
 			"job name and job id but we got error: '%s'", err)
 	}
 	isStopping = backupJobsState.IsStopping(jobName, JobUuid, logContext)
-	if ! isStopping {
+	if !isStopping {
 		t.Fatal("Was expecting that isStopping() reports true for the job but instead we got false")
 	}
 
@@ -111,7 +111,7 @@ func TestMarkRunningStoppingAndIsRunningIsStopping(t *testing.T) {
 	// mark "stopped" should succeed when using correct job name and correct Job ID
 	err = backupJobsState.MarkStopped(jobName, logContext, JobUuid, true)
 	if err != nil {
-		t.Fatalf("backupJobsState.MarkStopped(stopped:=true) should have succeeded when using correct " +
+		t.Fatalf("backupJobsState.MarkStopped(stopped:=true) should have succeeded when using correct "+
 			"job name and job id but we got error: '%s'", err)
 	}
 	// given that job is now stopped isStopping() should return false
@@ -135,7 +135,7 @@ func TestMarkRunningStoppingAndIsRunningIsStopping2(t *testing.T) {
 	}
 
 	isRunning := backupJobsState.IsRunning(jobName, JobUuid, logContext)
-	if ! isRunning {
+	if !isRunning {
 		t.Fatal("Was expecting that isRunning() reports true for the job but instead we got 'false'")
 	}
 
@@ -156,7 +156,7 @@ func TestMarkRunningStoppingAndIsRunningIsStopping2(t *testing.T) {
 	// mark "stopped" should succeed when using correct job name and correct Job ID
 	err = backupJobsState.MarkStopped(jobName, logContext, JobUuid, true)
 	if err != nil {
-		t.Fatalf("backupJobsState.MarkStopped(stopped:=true) should have succeeded when using correct " +
+		t.Fatalf("backupJobsState.MarkStopped(stopped:=true) should have succeeded when using correct "+
 			"job name and job id but we got error: '%s'", err)
 	}
 	// given that job is now stopped isStopping() should return false
@@ -173,7 +173,7 @@ func TestIncrementCounterAndGet(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	configuration , err := config.Load(path, false, &sync.RWMutex{})
+	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -192,7 +192,7 @@ func TestIncrementCounterAndGet(t *testing.T) {
 	}
 
 	isRunning := backupJobsState.IsRunning(jobName, JobUuid, logContext)
-	if ! isRunning {
+	if !isRunning {
 		t.Fatal("Was expecting that isRunning() reports true for the job but instead we got 'false'")
 	}
 
@@ -209,7 +209,7 @@ func TestIncrementCounterAndGet(t *testing.T) {
 			}
 		}
 	}
-	if ! found {
+	if !found {
 		t.Fatalf("Could not find a job with name '%s' in the output of backupJobsState.Get()", jobName)
 	}
 }
@@ -221,7 +221,7 @@ func TestUpdateStatsTextAndGet(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	configuration , err := config.Load(path, false, &sync.RWMutex{})
+	configuration, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
@@ -241,7 +241,7 @@ func TestUpdateStatsTextAndGet(t *testing.T) {
 	}
 
 	isRunning := backupJobsState.IsRunning(jobName, JobUuid, logContext)
-	if ! isRunning {
+	if !isRunning {
 		t.Fatal("Was expecting that isRunning() reports true for the job but instead we got 'false'")
 	}
 
@@ -259,7 +259,7 @@ func TestUpdateStatsTextAndGet(t *testing.T) {
 			}
 		}
 	}
-	if ! found {
+	if !found {
 		t.Fatalf("Could not find a job with name '%s' in the output of backupJobsState.Get()", jobName)
 	}
 }
