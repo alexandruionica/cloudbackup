@@ -14,7 +14,7 @@ const loggingContext = "database"
 
 // cache=shared - according to https://www.sqlite.org/sharedcache.html this improves performance
 // _foreign_keys=1 - enable foreign keys support and enforcement
-const DbOptions = "_foreign_keys=1&cache=shared"
+const DbOptions = "_foreign_keys=1&cache=shared&_journal_mode=TRUNCATE"
 
 var ErrCouldNotCreateDB = errors.New("could not create database")
 var ErrCouldNotOpenDB = errors.New("could not open database")
