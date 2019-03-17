@@ -161,7 +161,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 						"encountered error: %s", err))
 				}
 				// TODO - seems the targets property is not filled in yet which is a problem
-				_, err = dbtx.Exec(dbData.PreparedStatements.Insert, newDbRecord.Path, newDbRecord.Type,
+				_, err = dbtx.Exec(dbData.PreparedStatements.FilesInsert, newDbRecord.Path, newDbRecord.Type,
 					newDbRecord.LinkTarget, newDbRecord.Size, newDbRecord.Mtime.Format(time.RFC3339Nano),
 					newDbRecord.Ctime.Format(time.RFC3339Nano), newDbRecord.Owner,
 					newDbRecord.Permissons, newDbRecord.Checksum, newDbRecord.ChecksumType, newDbRecord.Encrypted,
@@ -228,7 +228,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 // shared.BackedUpFileProperties object containing all of the properties of given object as extracted from the DB
 // record; an error object is an error is encountered
 func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool, shared.BackedUpFileProperties, error) {
-	rows, err := dbData.PreparedStatements.QueryStmt.Query(path)
+	rows, err := dbData.PreparedStatements.FilesQueryStmt.Query(path)
 	if err != nil {
 		logger.Errorf("While querying the database in order to check if '%s' has been previously backed"+
 			" up, the following error was encountered: %s", path, err)
