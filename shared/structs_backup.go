@@ -28,6 +28,8 @@ type BackedUpFileProperties struct {
 	// if checksuming is enabled then this will hold whatever algorithm was used for checksumming
 	ChecksumType string
 	Encrypted    bool
+	// uuid of backup job which backed up this file
+	JobUuid string
 	// references the "name" of one or more entries in "targets" table ; multiple entries will be comma separated
 	Targets string
 }

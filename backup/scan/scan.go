@@ -25,7 +25,7 @@ var logger = log.WithFields(log.Fields{
 // return: first parameter will be "true" only if it was signalled via closeChan to stop the running backup; second
 // parameter signifies errors
 func Path(ctx context.Context, path string, backupConfig config.Backup, backupJobsState shared.BackupJobsStateInterface,
-	dryRun bool, dbData shared.DbData, objectStores []objectstore.ObjectStore) (bool, error) {
+	dryRun bool, dbData shared.DbData, objectStores []objectstore.ObjectStore, jobUuid string) (bool, error) {
 	globals.Stats.IncrementFunctions("scan.Path")
 	defer globals.Stats.DecrementFunctions("scan.Path")
 
@@ -51,7 +51,7 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 			}
 		default:
 			if stat.IsDir() {
-				exiting, err := walk(ctx, path, stat, backupConfig, backupJobsState, dryRun, dbData, objectStores)
+				exiting, err := walk(ctx, path, stat, backupConfig, backupJobsState, dryRun, dbData, objectStores, jobUuid)
 				// backup job was signalled to exit - Examine FIRST $exiting and then $err
 				if exiting {
 					return true, err
@@ -81,7 +81,7 @@ func Path(ctx context.Context, path string, backupConfig config.Backup, backupJo
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
 				if !dryRun {
 					// call to function dealing with backing up individual files
-					cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState)
+					cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobUuid)
 					if cancelled {
 						return true, nil
 					}
@@ -123,11 +123,11 @@ func readDirNames(dirname string) ([]string, error) {
 // second value signifies errors
 func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup,
 	backupJobsState shared.BackupJobsStateInterface, dryRun bool, dbData shared.DbData,
-	objectStores []objectstore.ObjectStore) (bool, error) {
+	objectStores []objectstore.ObjectStore, jobUuid string) (bool, error) {
 	if !dryRun {
 		// call to backup the folder entry itself (this can lead to a scenario where the directory entry itself is
 		// backed up but when attempting to walk the directory an error could be triggered)
-		cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState)
+		cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobUuid)
 		if cancelled {
 			return true, nil
 		}
@@ -202,7 +202,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			} else {
 				if fileInfo.IsDir() {
 					exiting, _ := walk(ctx, childPath, fileInfo, backupConfig, backupJobsState, dryRun, dbData,
-						objectStores) // #nosec
+						objectStores, jobUuid) // #nosec
 					// lower level walk() was signalled to exit
 					if exiting {
 						return true, nil
@@ -232,7 +232,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 						"", "")
 					if !dryRun {
 						// call to function dealing with backing up of files
-						cancelled, err := backup.Do(ctx, childPath, fileInfo, backupConfig, dbData, objectStores, backupJobsState)
+						cancelled, err := backup.Do(ctx, childPath, fileInfo, backupConfig, dbData, objectStores, backupJobsState, jobUuid)
 						if cancelled {
 							return true, nil
 						}
