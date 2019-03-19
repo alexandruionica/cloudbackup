@@ -327,7 +327,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		default:
 			// backupJobsState MUST be a pointer
-			cancelled, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData, objectStores)
+			cancelled, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData, objectStores, jobUuid)
 			// Examine FIRST $exit and then $err
 			if cancelled {
 				cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil)

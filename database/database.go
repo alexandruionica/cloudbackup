@@ -14,7 +14,11 @@ const loggingContext = "database"
 
 // cache=shared - according to https://www.sqlite.org/sharedcache.html this improves performance
 // _foreign_keys=1 - enable foreign keys support and enforcement
-const DbOptions = "_foreign_keys=1&cache=shared&_journal_mode=TRUNCATE"
+// _journal_mode=WAL - use Write-Ahead Logging as it's more performant  - should be safe and faster - https://www.sqlite.org/pragma.html#pragma_journal_mode
+// synchronous=NORMAL - WAL mode is safe from corruption with synchronous=NORMAL - https://www.sqlite.org/pragma.html#pragma_synchronous
+// both of the above "_journal_mode" and "synchronous" ensure good performance from Sqlite. Removing those settings will
+// decrease performance by 8 times to roughly 100 transactions/sec for our usage cases
+const DbOptions = "_foreign_keys=1&cache=shared&_journal_mode=WAL&_synchronous=NORMAL"
 
 var ErrCouldNotCreateDB = errors.New("could not create database")
 var ErrCouldNotOpenDB = errors.New("could not open database")
@@ -26,8 +30,10 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 
 	sqlStmt := `
 	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
-	ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, checksum_type, encrypted INTEGER, 
-	targets TEXT);
+	ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, checksum_type, encrypted INTEGER, job_id TEXT,
+	targets TEXT, FOREIGN KEY(job_id) REFERENCES jobs(id));
+	
+	CREATE INDEX files_job_id ON files(job_id);
 
 	CREATE TABLE targets (name TEXT NOT NULL PRIMARY KEY, backup_name TEXT, type TEXT, date_added TEXT);
 
@@ -35,7 +41,7 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	report TEXT);
 
 	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target TEXT, 
-	upload_date INTEGER, job_id TEXT, current INTEGER , delete_marker INTEGER, version TEXT, src_os TEXT, type TEXT, 
+	upload_date INTEGER, job_id TEXT, delete_marker INTEGER, version INTEGER, src_os TEXT, type TEXT, 
 	link_target TEXT, size INTEGER, mtime TEXT, ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, 
 	checksum_type, encrypted INTEGER,
 	FOREIGN KEY(target) REFERENCES targets(name), FOREIGN KEY(job_id) REFERENCES jobs(id));

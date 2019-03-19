@@ -32,7 +32,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	var PreparedStatements shared.DbPreparedStatements
 	// query statement - having it as text to as it will be used in transactions too
 	PreparedStatements.FilesQuery = "SELECT path, type, link_target, size, mtime, ctime, owner, permissions, checksum, " +
-		"checksum_type, encrypted, targets FROM files WHERE path = ?"
+		"checksum_type, encrypted, job_id, targets FROM files WHERE path = ?"
 	PreparedStatements.FilesQueryStmt, err = db.Prepare(PreparedStatements.FilesQuery)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL query statement, encountered error: '%s'", err)
@@ -41,8 +41,8 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// insert statement - having it as text to as it will be used in transactions too
 	PreparedStatements.FilesInsert = "INSERT INTO files (path, type, link_target, size, mtime, " +
-		"ctime, owner, permissions, checksum, checksum_type, encrypted, targets) VALUES " +
-		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		"ctime, owner, permissions, checksum, checksum_type, encrypted, job_id, targets) VALUES " +
+		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	PreparedStatements.FilesInsertStmt, err = db.Prepare(PreparedStatements.FilesInsert)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL insert statement, encountered error: '%s'", err)
@@ -56,7 +56,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// update statement - having it as text to as it will be used in transactions too
 	PreparedStatements.FilesUpdate = "UPDATE files SET type=?, link_target=?, size=?, mtime=?, " +
-		"ctime=?, owner=?, permissions=?, checksum=?, checksum_type=?, encrypted=?, targets=? WHERE path=?"
+		"ctime=?, owner=?, permissions=?, checksum=?, checksum_type=?, encrypted=?, job_id=?, targets=? WHERE path=?"
 	PreparedStatements.FilesUpdateStmt, err = db.Prepare(PreparedStatements.FilesUpdate)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
@@ -71,6 +71,11 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 		}
 		return PreparedStatements, err
 	}
+
+	// insert statement - having it as text only and not an actual prepared statement (as this will be used only in transactions, and called generally once per transaction)
+	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, remote_path, local_path, target, upload_date, " +
+		"job_id, delete_marker, version, src_os, type, link_target, size, mtime, ctime, owner, permissions, " +
+		"checksum, checksum_type, encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	return PreparedStatements, nil
 }

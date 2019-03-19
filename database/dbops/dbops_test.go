@@ -245,6 +245,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 func TestPrepare1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
+	jobId := uuid.NewV4().String()
 	path := "an_imaginary_file_name"
 	defer func() {
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -275,9 +276,15 @@ func TestPrepare1(t *testing.T) {
 			" previously backed up, the following error was encountered: %s", path, err)
 	}
 
+	// add entry to "jobs" DB table
+	err = AddJobDetails(db, jobId, "my_backup", "backup", time.Now())
+	if err != nil {
+		t.Fatalf("Could not add job details to 'jobs' table")
+	}
+
 	// test Prepared Insert
 	_, err = preparedStatements.FilesInsertStmt.Exec(path, "file", "", 1234, time.Now(), time.Now(), "testuser1", "", "",
-		"none", 0, "a_target")
+		"none", 0, jobId, "a_target")
 	if err != nil {
 		t.Fatalf("While trying to use prepared statement with preparedStatements.FilesInsertStmt.Exec() for checking "+
 			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
@@ -285,7 +292,7 @@ func TestPrepare1(t *testing.T) {
 
 	// test Prepared Update
 	_, err = preparedStatements.FilesUpdateStmt.Exec("file", "", 1234, time.Now(), time.Now(), "testuser2", "", "",
-		"none", 0, "a_target", path)
+		"none", 0, jobId, "a_target", path)
 	if err != nil {
 		t.Fatalf("While trying to use prepared statement with preparedStatements.FilesUpdateStmt.Exec() for checking "+
 			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)

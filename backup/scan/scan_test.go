@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 )
 
 func compareWithWatchMessages(t *testing.T, backupJobsState *shared.BackupJobsState) {
@@ -239,7 +240,7 @@ func TestPath1(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -335,7 +336,7 @@ func TestPath2(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -442,7 +443,7 @@ func TestPath3(t *testing.T) {
 		}
 
 		for _, backupPath := range backupConfig.Paths {
-			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 			if err != nil {
 				t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 			}
@@ -543,7 +544,7 @@ func TestPath4(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -643,7 +644,7 @@ func TestPath5(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -746,7 +747,7 @@ func TestPath6(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -858,7 +859,7 @@ func TestPath7(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -964,7 +965,7 @@ func TestPath8(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1062,7 +1063,7 @@ func TestPath9(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1160,7 +1161,7 @@ func TestPath10(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1258,7 +1259,7 @@ func TestPath11(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1356,7 +1357,7 @@ func TestPath12(t *testing.T) {
 	}
 
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, true, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1464,8 +1465,14 @@ func TestPath13(t *testing.T) {
 		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 	}
 
+	// add entry to "jobs" DB table
+	err = dbops.AddJobDetails(dbData.Db, jobId, "my_backup", "backup", time.Now())
+	if err != nil {
+		t.Fatalf("Could not add job details to 'jobs' table")
+	}
+
 	for _, backupPath := range backupConfig.Paths {
-		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores)
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores, jobId)
 		if err != nil {
 			t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
@@ -1595,8 +1602,14 @@ func TestPath14(t *testing.T) {
 			t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
 		}
 
+		// add entry to "jobs" DB table
+		err = dbops.AddJobDetails(dbData.Db, jobId, "my_backup", "backup", time.Now())
+		if err != nil {
+			t.Fatalf("Could not add job details to 'jobs' table")
+		}
+
 		for _, backupPath := range backupConfig.Paths {
-			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores)
+			_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores, jobId)
 			if err != nil {
 				t.Fatalf("Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 			}
