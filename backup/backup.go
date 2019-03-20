@@ -111,10 +111,9 @@ func backupExistingWithMetadataChange(ctx context.Context, path string, stat os.
 	var encounteredErrorObject error
 	// back up the object metadata to one or more remote object stores
 	for _, objectStore := range objectStores {
-		// TODO - proceed to update file metadata in the DB and on the remote ???? (to decide what to do with
 		// the remote: changed owner is probably something we want to flag, but not much else)
 		// back up the object to one or more remote object stores
-		cancelled, err := UpdateObjectMetadata(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
+		remotePath, cancelled, err := UpdateObjectMetadata(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
@@ -126,6 +125,10 @@ func backupExistingWithMetadataChange(ctx context.Context, path string, stat os.
 			}
 			return true, nil
 		}
+		targetName, _ := objectStore.GetStoreDetails()
+		// TODO - replace first returned value _ with $remoteUuid var name and use it to insert content in the backup_collections table
+		// TODO - ensure that $remotePath + $version is unique ; if not and another figure out what to do
+		_, err = addEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, updatedDbRecord)
 	}
 	if encounteredError > 0 {
 		txerr := dbtx.Rollback()
@@ -179,7 +182,7 @@ func backupExistingWithContentChange(ctx context.Context, path string, stat os.F
 	var encounteredErrorObject error
 	// back up the object to one or more remote object stores
 	for _, objectStore := range objectStores {
-		_, cancelled, err := UploadObject(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
+		remotePath, cancelled, err := UploadObject(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
@@ -191,6 +194,9 @@ func backupExistingWithContentChange(ctx context.Context, path string, stat os.F
 			}
 			return true, nil
 		}
+		targetName, _ := objectStore.GetStoreDetails()
+		// TODO - replace first returned value _ with $remoteUuid var name and use it to insert content in the backup_collections table
+		_, err = addEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, updatedDbRecord)
 	}
 	if encounteredError > 0 {
 		txerr := dbtx.Rollback()
@@ -320,8 +326,12 @@ func addEntryToRemoteFiles(remotePath string, target string, jobUuid string, del
 	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) (string, error) {
 	entryUuid := uuid.NewV4().String()
 	// TODO - calculate version (select from remote_files all entries matching "local_path" with the current item, and then look at their version field and increment the largest value found
-	version := 1
-	_, err := dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, remotePath, fileDbRecord.Path, target,
+	version, err := getRemoteFileVersion(dbData, dbtx, fileDbRecord.Path, target)
+	logger.Debugf("Adding entry to remote_files for %s", fileDbRecord.Path)
+	if err != nil {
+		return "", err
+	}
+	_, err = dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, remotePath, fileDbRecord.Path, target,
 		time.Now().UnixNano(), jobUuid, deleteMarker, version, runtime.GOOS, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.Format(time.RFC3339Nano),
 		fileDbRecord.Ctime.Format(time.RFC3339Nano), fileDbRecord.Owner,
@@ -331,6 +341,47 @@ func addEntryToRemoteFiles(remotePath string, target string, jobUuid string, del
 			"encountered error: %s", fileDbRecord.Path, err))
 	}
 	return entryUuid, nil
+}
+
+// For a given file path and a backup target name calculate version
+// returns an increment of the largest found version and nil; if an error is encountered then it returns 0 and the error; if no entry is found then it returns 1 and nil
+func getRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string) (int, error) {
+	// rows, err := dbData.PreparedStatements.RemoteFilesQueryNewestVersionStmt.Query(localPath, targetName)
+	rows, err := dbtx.Query(dbData.PreparedStatements.RemoteFilesQueryNewestVersion, localPath, targetName)
+	if err != nil {
+		logger.Errorf("While querying the database in order to calculate a version number for '%s' the "+
+			"following error was encountered: %s", localPath, err)
+		return 0, err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() a prepared statement used for querying the database in order "+
+				"to calculate a version number for '%s' the following error was encountered: %s", localPath, err)
+		}
+	}()
+	var version int
+	entryFound := false
+	for rows.Next() {
+		entryFound = true
+		err := rows.Scan(&version)
+		if err != nil {
+			logger.Errorf("While retrieving the database record for '%s' the following error was encountered:"+
+				" '%s'", targetName, err)
+			return 0, err
+		}
+		break
+	}
+	if err = rows.Err(); err != nil {
+		logger.Error("While enumerating the results of querying the database in order calculate a version number"+
+			" for '%s' , the following error was encountered: %s", localPath, err)
+		return 0, err
+	}
+	if entryFound {
+		return version + 1, nil
+	} else {
+		return 1, nil
+	}
 }
 
 // check if a given path exists in the Database;
@@ -499,9 +550,10 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 // uploads an object (file / dir / symlink) to the remote object storage. For dirs/symlinks it only uploads metadata
 // for files it uploads both content and metadata. This function is also responsible for adding data in the
 // remote_files DB table
-// return values: string with the remote object path(for example bucket_name/path/to/file) bool with true if backup got cancelled, false otherwise ; error if error encountered
+// return values: string with the remote object path(for example bucket_name/path/to/file), bool with true if backup
+// got cancelled, false otherwise ; error if error encountered
 func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,
-	backupConfig config.Backup, objectStores objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (string, bool, error) {
+	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (string, bool, error) {
 	// TODO - use the context and pass it further down
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", path)
@@ -509,7 +561,7 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 		logger.Debugf("Uploading metadata for '%s' which is of type '%s'", path, newDbRecord.Type)
 	}
 
-	result, cancelled, err := objectStores.Upload(path, newDbRecord, backupJobsState)
+	result, cancelled, err := objectStore.Upload(path, newDbRecord, backupJobsState)
 	if cancelled {
 		return "", true, err
 	}
@@ -518,10 +570,8 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 	}
 
 	// $result represents the remote path (in the object store) where the object has been backed up
-	storeName, _ := objectStores.GetStoreDetails()
+	storeName, _ := objectStore.GetStoreDetails()
 	logger.Debugf("'%s' successfully uploaded to object store %s at remote location '%s'", path, storeName, result)
-
-	// TODO - add "Target" to DB record and then update record in db
 
 	return result, false, nil
 }
@@ -531,14 +581,26 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 // params: $ctx for canceable context; $path with absolute path to object being backed up; $newDbRecord has all of the
 // details about the object which will be partially used for the metadata; $backupConfig is the struct with the details
 // of this backup as represented in the config file
-// return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
+// return values: string with the remote object path(for example bucket_name/path/to/file), bool with true if backup
+// got cancelled, false otherwise ; error if error encountered
 func UpdateObjectMetadata(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,
-	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (bool, error) {
+	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (string, bool, error) {
 	// TODO - use the context and pass it further down
 	logger.Debugf("Updating remote stored metadata for previously backed up and unchanged '%s'", path)
-	// TODO - insert / update db records
 
-	return false, nil
+	result, cancelled, err := objectStore.MetadataUpdate(path, newDbRecord)
+	if cancelled {
+		return "", true, err
+	}
+	if err != nil {
+		return "", false, err
+	}
+
+	// $result represents the remote path (in the object store) where the object has been backed up
+	storeName, _ := objectStore.GetStoreDetails()
+	logger.Debugf("'%s' successfully uploaded to object store %s at remote location '%s'", path, storeName, result)
+
+	return result, false, nil
 }
 
 // update counters in the backup job state struct. Params: $backupJobsState is the shared struct (pointer to it)

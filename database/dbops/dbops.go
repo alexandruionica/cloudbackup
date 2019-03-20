@@ -77,6 +77,9 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 		"job_id, delete_marker, version, src_os, type, link_target, size, mtime, ctime, owner, permissions, " +
 		"checksum, checksum_type, encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
+	//  query statement used to figure out the largest version for a particular path and target name pair
+	PreparedStatements.RemoteFilesQueryNewestVersion = "SELECT version FROM remote_files WHERE local_path = ? AND target = ? ORDER BY version DESC LIMIT 1"
+
 	return PreparedStatements, nil
 }
 
