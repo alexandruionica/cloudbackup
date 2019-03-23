@@ -30,6 +30,4 @@ type BackedUpFileProperties struct {
 	Encrypted    bool
 	// uuid of backup job which backed up this file
 	JobUuid string
-	// references the "name" of one or more entries in "targets" table ; multiple entries will be comma separated
-	Targets string
 }

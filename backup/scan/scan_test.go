@@ -1401,9 +1401,9 @@ func TestPath12(t *testing.T) {
 
 // test number of examined files as reported by Path() when  dereference=true and when using an actual DB
 func TestPath13(t *testing.T) {
-	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	path, _ := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+	//defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1447,7 +1447,6 @@ func TestPath13(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.Start() returned error: '%s'", err)
 	}
-
 	preparedStatements, err := dbops.Prepare(db)
 	if err != nil {
 		t.Fatalf("dbops.Prepare() returned error: '%s'", err)
@@ -1459,6 +1458,10 @@ func TestPath13(t *testing.T) {
 		Connected:          true,
 		PreparedStatements: preparedStatements,
 	}
+	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
+	if err != nil {
+		t.Fatalf("While trying to ensure all backup config targets have a DB entry, got error: %s", err)
+	}
 
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
@@ -1466,7 +1469,7 @@ func TestPath13(t *testing.T) {
 	}
 
 	// add entry to "jobs" DB table
-	err = dbops.AddJobDetails(dbData.Db, jobId, "my_backup", "backup", time.Now())
+	err = dbops.AddJobDetails(dbData.Db, jobId, backupConfig.Target[0].Name, "backup", time.Now())
 	if err != nil {
 		t.Fatalf("Could not add job details to 'jobs' table")
 	}
@@ -1595,6 +1598,10 @@ func TestPath14(t *testing.T) {
 			Db:                 db,
 			Connected:          true,
 			PreparedStatements: preparedStatements,
+		}
+		err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
+		if err != nil {
+			t.Fatalf("While trying to ensure all backup config targets have a DB entry, got error: %s", err)
 		}
 
 		objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)

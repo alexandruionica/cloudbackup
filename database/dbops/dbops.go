@@ -32,7 +32,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	var PreparedStatements shared.DbPreparedStatements
 	// query statement - having it as text to as it will be used in transactions too
 	PreparedStatements.FilesQuery = "SELECT path, type, link_target, size, mtime, ctime, owner, permissions, checksum, " +
-		"checksum_type, encrypted, job_id, targets FROM files WHERE path = ?"
+		"checksum_type, encrypted, job_id FROM files WHERE path = ?"
 	PreparedStatements.FilesQueryStmt, err = db.Prepare(PreparedStatements.FilesQuery)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL query statement, encountered error: '%s'", err)
@@ -41,8 +41,8 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// insert statement - having it as text to as it will be used in transactions too
 	PreparedStatements.FilesInsert = "INSERT INTO files (path, type, link_target, size, mtime, " +
-		"ctime, owner, permissions, checksum, checksum_type, encrypted, job_id, targets) VALUES " +
-		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		"ctime, owner, permissions, checksum, checksum_type, encrypted, job_id) VALUES " +
+		"(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	PreparedStatements.FilesInsertStmt, err = db.Prepare(PreparedStatements.FilesInsert)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL insert statement, encountered error: '%s'", err)
@@ -56,7 +56,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// update statement - having it as text to as it will be used in transactions too
 	PreparedStatements.FilesUpdate = "UPDATE files SET type=?, link_target=?, size=?, mtime=?, " +
-		"ctime=?, owner=?, permissions=?, checksum=?, checksum_type=?, encrypted=?, job_id=?, targets=? WHERE path=?"
+		"ctime=?, owner=?, permissions=?, checksum=?, checksum_type=?, encrypted=?, job_id=? WHERE path=?"
 	PreparedStatements.FilesUpdateStmt, err = db.Prepare(PreparedStatements.FilesUpdate)
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
@@ -79,6 +79,51 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	//  query statement used to figure out the largest version for a particular path and target name pair
 	PreparedStatements.RemoteFilesQueryNewestVersion = "SELECT version FROM remote_files WHERE local_path = ? AND target = ? ORDER BY version DESC LIMIT 1"
+
+	// query statement used to figure out the uuid of the largest version for a particular path and target name pair as long as they are not a delete marker
+	PreparedStatements.RemoteFilesQueryNewestVersionUuidStmt, err = db.Prepare("SELECT uuid FROM remote_files WHERE local_path=? AND target = ? AND delete_marker=0 ORDER BY version DESC LIMIT 1")
+	if err != nil {
+		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
+		// close other opened statements before returning
+		err2 := PreparedStatements.FilesQueryStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesQueryStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.FilesInsertStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesInsertStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.FilesUpdateStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesInsertStmt' received error: '%s'", err2)
+		}
+		return PreparedStatements, err
+	}
+
+	// insert statement - having it as text and prepared as it is going to be used in transactions and outside transactions
+	PreparedStatements.BackupCollectionsInsert = "INSERT INTO backup_collections (file_uuid, job_id, target) VALUES (?, ?, ?)"
+	PreparedStatements.BackupCollectionsInsertStmt, err = db.Prepare(PreparedStatements.BackupCollectionsInsert)
+	if err != nil {
+		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
+		// close other opened statements before returning
+		err2 := PreparedStatements.FilesQueryStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesQueryStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.FilesInsertStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesInsertStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.FilesUpdateStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesInsertStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.RemoteFilesQueryNewestVersionUuidStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesInsertStmt' received error: '%s'", err2)
+		}
+		return PreparedStatements, err
+	}
 
 	return PreparedStatements, nil
 }

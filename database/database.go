@@ -31,7 +31,7 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	sqlStmt := `
 	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
 	ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, checksum_type, encrypted INTEGER, job_id TEXT,
-	targets TEXT, FOREIGN KEY(job_id) REFERENCES jobs(id));
+	FOREIGN KEY(job_id) REFERENCES jobs(id));
 	
 	CREATE INDEX files_job_id ON files(job_id);
 
@@ -50,8 +50,8 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	CREATE INDEX remote_files_local_path ON remote_files(local_path);
 	CREATE INDEX remote_files_upload_date ON remote_files(upload_date);
 
-	CREATE TABLE backup_collections (file_uuid TEXT, job_id TEXT, FOREIGN KEY(file_uuid) REFERENCES remote_files(uuid), 
-	FOREIGN KEY(job_id) REFERENCES jobs(id));
+	CREATE TABLE backup_collections (file_uuid TEXT, job_id TEXT, target TEST, FOREIGN KEY(file_uuid) REFERENCES remote_files(uuid), 
+	FOREIGN KEY(job_id) REFERENCES jobs(id), FOREIGN KEY(target) REFERENCES targets(name));
 	
 	CREATE INDEX backup_collections_jobid ON backup_collections(job_id);
 

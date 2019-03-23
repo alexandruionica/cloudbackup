@@ -70,7 +70,20 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 						return cancelled, err
 					} else {
 						// object is up to date (aka we got a copy in the backup)
-						updateCounters(backupJobsState, backupConfig.Name, "up_to_date", updatedDbRecord.Type, path, nil)
+						// add entry to backup_collections so this file would also be included in a restore
+						var foundErr error
+						for _, objStore := range objectStores {
+							targetName, _ := objStore.GetStoreDetails()
+							remoteFilesUuid, err := getNewestRemoteFileUuid(dbData, path, targetName)
+							_, err = dbData.PreparedStatements.BackupCollectionsInsertStmt.Exec(remoteFilesUuid, jobUuid, targetName)
+							if err != nil {
+								foundErr = errors.New(fmt.Sprintf("Despite no change detected for '%s', could not add entry to backup_collections"+
+									" table due to error %s . This means that if a restore is selected for this particular backup job id, then this file "+
+									"won't be restored despite the fact that a previous run ensured it is backed up", path, err))
+								logger.Error(foundErr)
+							}
+						}
+						updateCounters(backupJobsState, backupConfig.Name, "up_to_date", updatedDbRecord.Type, path, foundErr)
 					}
 				}
 				// no db record found so this is the first time this object is backed up
@@ -90,68 +103,12 @@ func backupExistingWithMetadataChange(ctx context.Context, path string, stat os.
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, updatedDbRecord shared.BackedUpFileProperties, jobUuid string) (bool, error) {
 	if updatedDbRecord.Type == "unknown" {
 		// report it as a "failed_to_upload_unknown" instead of updated_metadata as we don't support "unknown" files but we want to report somehow this issue
-		updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type, path, errors.New("unsupported file type"))
+		updateCounters(backupJobsState, backupConfig.Name, "update", updatedDbRecord.Type, path, errors.New("unsupported file type"))
 		return false, errors.New("unsupported file type")
 	}
 
-	dbtx, err := dbData.Db.Begin()
-	if err != nil {
-		// could not start a database transaction so we can't proceed to backup this file.
-		updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-		return false, errors.New(fmt.Sprintf("While trying to start a database transaction "+
-			"encountered error: %s", err))
-	}
-	_, err = dbtx.Exec(dbData.PreparedStatements.FilesUpdate, updatedDbRecord.Type,
-		updatedDbRecord.LinkTarget, updatedDbRecord.Size, updatedDbRecord.Mtime.Format(time.RFC3339Nano),
-		updatedDbRecord.Ctime.Format(time.RFC3339Nano), updatedDbRecord.Owner,
-		updatedDbRecord.Permissons, updatedDbRecord.Checksum, updatedDbRecord.ChecksumType, updatedDbRecord.Encrypted,
-		updatedDbRecord.JobUuid, updatedDbRecord.Targets, updatedDbRecord.Path)
-
-	encounteredError := 0
-	var encounteredErrorObject error
-	// back up the object metadata to one or more remote object stores
-	for _, objectStore := range objectStores {
-		// the remote: changed owner is probably something we want to flag, but not much else)
-		// back up the object to one or more remote object stores
-		remotePath, cancelled, err := UpdateObjectMetadata(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
-		if err != nil {
-			encounteredError++
-			encounteredErrorObject = err
-		}
-		if cancelled {
-			txerr := dbtx.Rollback()
-			if txerr != nil {
-				logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
-			}
-			return true, nil
-		}
-		targetName, _ := objectStore.GetStoreDetails()
-		// TODO - replace first returned value _ with $remoteUuid var name and use it to insert content in the backup_collections table
-		// TODO - ensure that $remotePath + $version is unique ; if not and another figure out what to do
-		_, err = addEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, updatedDbRecord)
-	}
-	if encounteredError > 0 {
-		txerr := dbtx.Rollback()
-		if txerr != nil {
-			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
-		}
-		if len(objectStores) > 1 {
-			// TODO - ENSURE THAT ANY SUCCESSFULLY UPLOADED FILE/DIR/SYMLINK IS REMOVED
-			logger.Warnf("Failed upload of '%s' to %d out of %d targets. All targets are be "+
-				"considered failed (even the ones where the backup was successful) for this item.",
-				path, encounteredError, len(objectStores))
-		}
-		updateCounters(backupJobsState, backupConfig.Name, "update", updatedDbRecord.Type, path, encounteredErrorObject)
-		return false, encounteredErrorObject
-	}
-	txerr := dbtx.Commit()
-	if txerr != nil {
-		return false, errors.New(fmt.Sprintf("Could not commit transaction due to error: %s", err))
-	}
-
-	// backup successful
-	updateCounters(backupJobsState, backupConfig.Name, "update", updatedDbRecord.Type, path, nil)
-	return false, nil
+	cancelled, err := UploadAndUpdateDB("metadata-update", ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobUuid, updatedDbRecord)
+	return cancelled, err
 }
 
 // Performs the backup for an existing file/dir/folder for which it has been established that it's content changed
@@ -159,67 +116,14 @@ func backupExistingWithMetadataChange(ctx context.Context, path string, stat os.
 func backupExistingWithContentChange(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, updatedDbRecord shared.BackedUpFileProperties, jobUuid string) (bool, error) {
 
-	encounteredError := 0
 	if updatedDbRecord.Type == "unknown" {
 		updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type,
 			path, errors.New("unsupported file type"))
 		return false, errors.New("unsupported file type")
 	}
 
-	dbtx, err := dbData.Db.Begin()
-	if err != nil {
-		// could not start a database transaction so we can't proceed to backup this file.
-		updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-		return false, errors.New(fmt.Sprintf("While trying to start a database transaction "+
-			"encountered error: %s", err))
-	}
-	_, err = dbtx.Exec(dbData.PreparedStatements.FilesUpdate, updatedDbRecord.Type,
-		updatedDbRecord.LinkTarget, updatedDbRecord.Size, updatedDbRecord.Mtime.Format(time.RFC3339Nano),
-		updatedDbRecord.Ctime.Format(time.RFC3339Nano), updatedDbRecord.Owner,
-		updatedDbRecord.Permissons, updatedDbRecord.Checksum, updatedDbRecord.ChecksumType, updatedDbRecord.Encrypted,
-		updatedDbRecord.JobUuid, updatedDbRecord.Targets, updatedDbRecord.Path)
-
-	var encounteredErrorObject error
-	// back up the object to one or more remote object stores
-	for _, objectStore := range objectStores {
-		remotePath, cancelled, err := UploadObject(ctx, path, updatedDbRecord, backupConfig, objectStore, backupJobsState)
-		if err != nil {
-			encounteredError++
-			encounteredErrorObject = err
-		}
-		if cancelled {
-			txerr := dbtx.Rollback()
-			if txerr != nil {
-				logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
-			}
-			return true, nil
-		}
-		targetName, _ := objectStore.GetStoreDetails()
-		// TODO - replace first returned value _ with $remoteUuid var name and use it to insert content in the backup_collections table
-		_, err = addEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, updatedDbRecord)
-	}
-	if encounteredError > 0 {
-		txerr := dbtx.Rollback()
-		if txerr != nil {
-			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
-		}
-		if len(objectStores) > 1 {
-			// TODO - ENSURE THAT ANY SUCCESSFULLY UPLOADED FILE/DIR/SYMLINK IS REMOVED
-			logger.Warnf("Failed upload of '%s' to %d out of %d targets. All targets are be "+
-				"considered failed (even the ones where the backup was successful) for this item.",
-				path, encounteredError, len(objectStores))
-		}
-		updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type, path, encounteredErrorObject)
-		return false, encounteredErrorObject
-	}
-	txerr := dbtx.Commit()
-	if txerr != nil {
-		return false, errors.New(fmt.Sprintf("Could not commit transaction due to error: %s", err))
-	}
-
-	// backup successful
-	updateCounters(backupJobsState, backupConfig.Name, "upload", updatedDbRecord.Type, path, nil)
-	return false, nil
+	cancelled, err := UploadAndUpdateDB("content-update", ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobUuid, updatedDbRecord)
+	return cancelled, err
 }
 
 // Performs the backup for a new file/dir/folder. This function being called means its established this item has never
@@ -249,50 +153,91 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 			errors.New("unsupported file type"))
 		return false, errors.New("unsupported file type")
 	}
+	cancelled, err := UploadAndUpdateDB("new", ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobUuid, newDbRecord)
+	return cancelled, err
+}
+
+// Wraps around the DB transaction needed and also the file/dir upload & metadata update code
+// $operation must be one of "new", "content-update", "metadata-update"; $dbData is the constructed DB rectord struct needed for the "files" table.
+func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
+	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string, DbRecord shared.BackedUpFileProperties) (bool, error) {
+	// $operationType is used for counters and status messages
+	var operationType string
+	switch operation {
+	case "new":
+		operationType = "upload"
+	case "content-update":
+		operationType = "upload"
+	case "metadata-update":
+		operationType = "update"
+	default:
+		return false, errors.New(fmt.Sprintf("Unknown operation: %s . Allowed operations are:  'new', 'content-update', 'metadata-update'", operation))
+	}
 
 	dbtx, err := dbData.Db.Begin()
 	if err != nil {
 		// could not start a database transaction so we can't proceed to backup this file.
-		updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
+		updateCounters(backupJobsState, backupConfig.Name, operationType, utils.FileType(stat), path, err)
 		return false, errors.New(fmt.Sprintf("While trying to start a database transaction "+
 			"encountered error: %s", err))
 	}
-	_, err = dbtx.Exec(dbData.PreparedStatements.FilesInsert, newDbRecord.Path, newDbRecord.Type,
-		newDbRecord.LinkTarget, newDbRecord.Size, newDbRecord.Mtime.Format(time.RFC3339Nano),
-		newDbRecord.Ctime.Format(time.RFC3339Nano), newDbRecord.Owner,
-		newDbRecord.Permissons, newDbRecord.Checksum, newDbRecord.ChecksumType, newDbRecord.Encrypted,
-		newDbRecord.JobUuid, newDbRecord.Targets)
+	if operation == "new" {
+		_, err = dbtx.Exec(dbData.PreparedStatements.FilesInsert, DbRecord.Path, DbRecord.Type,
+			DbRecord.LinkTarget, DbRecord.Size, DbRecord.Mtime.Format(time.RFC3339Nano),
+			DbRecord.Ctime.Format(time.RFC3339Nano), DbRecord.Owner,
+			DbRecord.Permissons, DbRecord.Checksum, DbRecord.ChecksumType, DbRecord.Encrypted,
+			DbRecord.JobUuid)
+	} else {
+		_, err = dbtx.Exec(dbData.PreparedStatements.FilesUpdate, DbRecord.Type,
+			DbRecord.LinkTarget, DbRecord.Size, DbRecord.Mtime.Format(time.RFC3339Nano),
+			DbRecord.Ctime.Format(time.RFC3339Nano), DbRecord.Owner,
+			DbRecord.Permissons, DbRecord.Checksum, DbRecord.ChecksumType, DbRecord.Encrypted,
+			DbRecord.JobUuid, DbRecord.Path)
+	}
+
 	if err != nil {
+		logger.Errorf("function passed uuid %s vs dbrecord obj uuid: %s", jobUuid, DbRecord.JobUuid)
 		txerr := dbtx.Rollback()
 		if txerr != nil {
 			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
 		}
 		// could not add dbentry to the database so we can't proceed to backup this file.
-		updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
+		updateCounters(backupJobsState, backupConfig.Name, operationType, utils.FileType(stat), path, err)
 		return false, errors.New(fmt.Sprintf("While trying to add new file object DB entry "+
 			"encountered error: %s", err))
 	}
 	encounteredError := 0
 	var encounteredErrorObject error
+	var JobCancelled bool
 	// back up the object to one or more remote object stores
 	for _, objectStore := range objectStores {
-		remotePath, cancelled, err := UploadObject(ctx, path, newDbRecord, backupConfig, objectStore, backupJobsState)
+		remotePath, cancelled, err := UploadObject(ctx, path, DbRecord, backupConfig, objectStore, backupJobsState)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
+			break
 		}
 		if cancelled {
-			txerr := dbtx.Rollback()
-			if txerr != nil {
-				logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
-			}
-			return true, nil
+			JobCancelled = true
+			break
 		}
 		targetName, _ := objectStore.GetStoreDetails()
-		// TODO - replace first returned value _ with $remoteUuid var name and use it to insert content in the backup_collections table
-		_, err = addEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, newDbRecord)
+		// TODO - if $operation == "content-update" then ensure that $remotePath + $version is unique ; if not and another one or figure out what to do
+		remoteUuid, err := addEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, DbRecord)
+		if err != nil {
+			encounteredError++
+			encounteredErrorObject = err
+			break
+		}
+		_, err = dbtx.Exec(dbData.PreparedStatements.BackupCollectionsInsert, remoteUuid, jobUuid, targetName)
+		if err != nil {
+			encounteredError++
+			encounteredErrorObject = errors.New(fmt.Sprintf("For '%s' could not add entry to backup_collections"+
+				" table due to error %s", path, err))
+			break
+		}
 	}
-	if encounteredError > 0 {
+	if encounteredError > 0 || JobCancelled {
 		txerr := dbtx.Rollback()
 		if txerr != nil {
 			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
@@ -303,17 +248,20 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 				"considered failed (even the ones where the backup was successful) for this item.",
 				path, encounteredError, len(objectStores))
 		}
-
-		updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, encounteredErrorObject)
-		return false, encounteredErrorObject
+		if JobCancelled {
+			return true, nil
+		} else {
+			updateCounters(backupJobsState, backupConfig.Name, operationType, DbRecord.Type, path, encounteredErrorObject)
+			return false, encounteredErrorObject
+		}
 	}
 
 	txerr := dbtx.Commit()
 	if txerr != nil {
 		return false, errors.New(fmt.Sprintf("Could not commit transaction due to error: %s", err))
 	}
-	// backup successful
-	updateCounters(backupJobsState, backupConfig.Name, "upload", newDbRecord.Type, path, nil)
+	// if we got here then all was good
+	updateCounters(backupJobsState, backupConfig.Name, operationType, DbRecord.Type, path, nil)
 	return false, nil
 }
 
@@ -327,7 +275,7 @@ func addEntryToRemoteFiles(remotePath string, target string, jobUuid string, del
 	entryUuid := uuid.NewV4().String()
 	// TODO - calculate version (select from remote_files all entries matching "local_path" with the current item, and then look at their version field and increment the largest value found
 	version, err := getRemoteFileVersion(dbData, dbtx, fileDbRecord.Path, target)
-	logger.Debugf("Adding entry to remote_files for %s", fileDbRecord.Path)
+	// logger.Debugf("Adding entry to remote_files for %s", fileDbRecord.Path)
 	if err != nil {
 		return "", err
 	}
@@ -384,6 +332,50 @@ func getRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, 
 	}
 }
 
+// for a given pair of file/dir/symlink path and backup config target, find the uuid for the newest backed up version which is not a delete marker
+func getNewestRemoteFileUuid(dbData shared.DbData, localPath string, targetName string) (string, error) {
+	rows, err := dbData.PreparedStatements.RemoteFilesQueryNewestVersionUuidStmt.Query(localPath, targetName)
+	if err != nil {
+		logger.Errorf("While querying the database in order to get the uuid of the newest remote version for "+
+			"'%s', the following error was encountered: %s", localPath, err)
+		return "", err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() a prepared statement for querying the database in order to "+
+				"get the uuid of the newest remote version for %s, encountered error: %s", localPath, err)
+		}
+	}()
+	var remoteUuid string
+	entryFound := false
+	for rows.Next() {
+		entryFound = true
+		// the sqlite3 driver produces an error when fetching a string and converting it to time.time so we have to
+		// manually do the conversion
+		err := rows.Scan(&remoteUuid)
+		if err != nil {
+			logger.Errorf("While retrieving from the database the remote uuid for '%s' the following error was encountered:"+
+				" '%s'", localPath, err)
+			return "", err
+		}
+		break
+	}
+	if err = rows.Err(); err != nil {
+		logger.Error("While enumerating the results of querying the database for the remote uuid for '%s' "+
+			", the following error was encountered: %s", localPath, err)
+		return "", err
+	}
+	if !entryFound {
+		return "", errors.New(fmt.Sprintf("Could not find the uuid for previously backed up object '%s'", localPath))
+	}
+
+	if remoteUuid == "" {
+		return "", errors.New(fmt.Sprintf("Found an empty uuid for previously backed up object '%s'", localPath))
+	}
+	return remoteUuid, nil
+}
+
 // check if a given path exists in the Database;
 // returns the following values: bool depicting if an entry was found or not; if found a populated
 // shared.BackedUpFileProperties object containing all of the properties of given object as extracted from the DB
@@ -415,7 +407,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 		var tmpMtime, tmpCtime string
 		err := rows.Scan(&dbRecord.Path, &dbRecord.Type, &dbRecord.LinkTarget, &dbRecord.Size, &tmpMtime,
 			&tmpCtime, &dbRecord.Owner, &dbRecord.Permissons, &dbRecord.Checksum,
-			&dbRecord.ChecksumType, &dbRecord.Encrypted, &dbRecord.JobUuid, &dbRecord.Targets)
+			&dbRecord.ChecksumType, &dbRecord.Encrypted, &dbRecord.JobUuid)
 		if err != nil {
 			logger.Errorf("While retrieving the database record for '%s' the following error was encountered:"+
 				" '%s'", path, err)
@@ -537,11 +529,6 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 		onDiskObjectProperties.LinkTarget, err = os.Readlink(path)
 		return onDiskObjectProperties, err
 	}
-	var targets []string
-	for _, t := range backupConfig.Target {
-		targets = append(targets, t.Name)
-	}
-	onDiskObjectProperties.Targets = strings.Join(targets, ",")
 
 	// if we got here than all was fine
 	return onDiskObjectProperties, nil

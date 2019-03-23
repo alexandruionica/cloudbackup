@@ -284,7 +284,7 @@ func TestPrepare1(t *testing.T) {
 
 	// test Prepared Insert
 	_, err = preparedStatements.FilesInsertStmt.Exec(path, "file", "", 1234, time.Now(), time.Now(), "testuser1", "", "",
-		"none", 0, jobId, "a_target")
+		"none", 0, jobId)
 	if err != nil {
 		t.Fatalf("While trying to use prepared statement with preparedStatements.FilesInsertStmt.Exec() for checking "+
 			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
@@ -292,7 +292,7 @@ func TestPrepare1(t *testing.T) {
 
 	// test Prepared Update
 	_, err = preparedStatements.FilesUpdateStmt.Exec("file", "", 1234, time.Now(), time.Now(), "testuser2", "", "",
-		"none", 0, jobId, "a_target", path)
+		"none", 0, jobId, path)
 	if err != nil {
 		t.Fatalf("While trying to use prepared statement with preparedStatements.FilesUpdateStmt.Exec() for checking "+
 			"if '%s' has been previously backed up, the following error was encountered: %s", path, err)
