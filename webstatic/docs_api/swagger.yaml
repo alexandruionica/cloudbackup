@@ -714,7 +714,7 @@ definitions:
             type: integer
             description: >-
               How may non regular files (excluding symlinks and directories)
-              where examined. Example of non regular files are sockets, device
+              were examined. Example of non regular files are sockets, device
               drivers (/dev/sda1), etc.
             example: 0
           failed_to_examine:
@@ -744,7 +744,7 @@ definitions:
           excluded:
             type: integer
             description: >-
-              How many files or directories where excluded due to matching some
+              How many files or directories were excluded due to matching some
               exclusion rule provided by the user (in the configuration file).
             example: 7
           up_to_date_files:
@@ -864,19 +864,19 @@ definitions:
             example: 0
           failed_to_mark_deleted_files:
             type: integer
-            description: During the "marked_deleted_files" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items where deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
+            description: During the "marked_deleted_files" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items were deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
             example: 0
           failed_to_mark_deleted_directories:
             type: integer
-            description: During the "marked_deleted_directories" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items where deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
+            description: During the "marked_deleted_directories" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items were deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
             example: 0
           failed_to_mark_deleted_symlinks:
             type: integer
-            description: During the "marked_deleted_symlinks" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items where deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
+            description: During the "marked_deleted_symlinks" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items were deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
             example: 0
           failed_to_find_deleted:
             type: integer
-            description: How many errors where encountered when trying to build the list of deleted files/directories/symlinks. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items where deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
+            description: How many errors were encountered when trying to build the list of deleted files/directories/symlinks. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items were deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
           failed_to_update_metadata_for_files:
             type: integer
             description: >-
