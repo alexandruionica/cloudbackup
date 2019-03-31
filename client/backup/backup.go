@@ -540,6 +540,14 @@ func printBackupStatus(decodedJson shared.BackupJobStatus) {
 		fmt.Printf("User provided scripts number/ran/failed: %d/%d/%d\n",
 			decodedJson.StatsCounters["scripts_num"], decodedJson.StatsCounters["scripts_ran"],
 			decodedJson.StatsCounters["scripts_failed"])
+		//
+		fmt.Printf("Errors encountered while building the list of deleted files/symlinks/dirs: %d\n", decodedJson.StatsCounters["failed_to_find_deleted"])
+		fmt.Printf("Deleted directories for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_directories"])
+		fmt.Printf("Deleted files for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_files"])
+		fmt.Printf("Deleted symlinks for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_symlinks"])
+		fmt.Printf("Directories detected to have been deleted and for which internal state was updated: %d\n", decodedJson.StatsCounters["marked_deleted_directories"])
+		fmt.Printf("Files detected to have been deleted and for which internal state was updated: %d\n", decodedJson.StatsCounters["marked_deleted_files"])
+		fmt.Printf("Symlinks detected to have been deleted and for which internal state was updated: %d\n", decodedJson.StatsCounters["marked_deleted_symlinks"])
 		// text stats
 		fmt.Printf("Current directory being processed: %s\n", decodedJson.StatsText["current_directory"])
 		fmt.Printf("Current file being processed: %s\n", decodedJson.StatsText["current_file"])
