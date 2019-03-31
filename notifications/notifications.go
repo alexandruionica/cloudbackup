@@ -286,6 +286,27 @@ func prepareHtmlEmail(emailTextBody []string, decodedJson shared.BackupJobStatus
 	result += tr + "Directories for which properties where successfully uploaded" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["uploaded_directories"])
 	result += tr + "Symlinks for which properties where successfully uploaded" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["uploaded_symlinks"])
 	result += tr + "Files for which metadata only updates took place" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["updated_metadata_for_files"])
+	//
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_find_deleted"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Errors encountered while building the list of deleted files/symlinks/dirs" + tdTmp + fmt.Sprintf(" %d\n", decodedJson.StatsCounters["failed_to_find_deleted"])
+
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_mark_deleted_directories"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Deleted directories for which updating internal state failed" + tdTmp + fmt.Sprintf(" %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_directories"])
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_mark_deleted_files"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Deleted symlinks for which updating internal state failed" + tdTmp + fmt.Sprintf(" %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_files"])
+	if tdTmp = td; decodedJson.StatsCounters["failed_to_mark_deleted_symlinks"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Errors encountered while building the list of deleted files/symlinks/dirs" + tdTmp + fmt.Sprintf(" %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_symlinks"])
+	result += tr + "Directories detected to have been deleted and for which internal state was updated" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["marked_deleted_directories"])
+	result += tr + "Files detected to have been deleted and for which internal state was updated" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["marked_deleted_files"])
+	result += tr + "Symlinks detected to have been deleted and for which internal state was updated" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["marked_deleted_symlinks"])
 	result += tr + "Directories for which metadata only updates took place" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["updated_metadata_for_directories"])
 	result += tr + "Symlinks for which metadata only updates took place" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["updated_metadata_for_symlinks"])
 	// how many bytes (file content only) were read from disk
