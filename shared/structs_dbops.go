@@ -19,9 +19,11 @@ type DbPreparedStatements struct {
 	FilesInsertStmt                       *sql.Stmt
 	FilesUpdate                           string
 	FilesUpdateStmt                       *sql.Stmt
+	FilesDelete                           string
 	RemoteFilesInsert                     string
 	RemoteFilesQueryNewestVersion         string
 	RemoteFilesQueryNewestVersionUuidStmt *sql.Stmt
 	BackupCollectionsInsert               string
 	BackupCollectionsInsertStmt           *sql.Stmt
+	FindDeletedItemsStmt                  *sql.Stmt
 }

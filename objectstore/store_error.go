@@ -36,3 +36,7 @@ func (object *StoreError) MetadataUpdate(path string, newDbRecord shared.BackedU
 func (object *StoreError) GetStoreDetails() (StoreName string, StoreType string) {
 	return object.storeName, object.storeType
 }
+
+func (object *StoreError) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
+	return "", false, errors.New(fmt.Sprintf("unsupported backend of type: '%s'", object.storeType))
+}

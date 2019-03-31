@@ -24,14 +24,16 @@ type ObjectStore interface {
 	Upload(path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface) (result string, cancelled bool, err error)
 	// update or create a metadata entry
 	MetadataUpdate(path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error)
-	//
+	// returned value $StoreName is the same as a target name in a Backup section of the config file; $StoreType represents target type
 	GetStoreDetails() (StoreName string, StoreType string)
+	// marks a given object as deleted. Depending on object store type this may have very different implementations. This must NOT actually delete an object.
+	MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error)
 }
 
 type FileReader struct {
 	// we need the original file reader in order to call Close() when we finished reading or want to close the file handle
 	origFileReader *os.File
-	// if rate limiting is not enabled than this will be a null pointer
+	// if rate limiting is not enabled than thinews will be a null pointer
 	bucket *rate.Limiter
 	// needed in order to increment the rate counters used for statistics/reporting
 	backupJobsState shared.BackupJobsStateInterface

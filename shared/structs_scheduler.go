@@ -148,6 +148,7 @@ type BackupJobsStateInterface interface {
 	AddBytesRead(BackupJobName string, bytesRead uint64)
 	IncrementCounter(BackupJobName string, counterName string, Path string, fileType string, OperationType string, Error string)
 	IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool)
+	// The Sequence is used when sending messages to Watch clients about objects being uploaded, up to date or marked as deleted
 	IncrementSequence(BackupJobName string)
 	UpdateStatsText(BackupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
 }
@@ -301,10 +302,20 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"failed_to_upload_directories": 0,
 			"failed_to_upload_symlinks":    0,
 			// this counter will always increment whenever we encounter an object different from "file", "dir", "symlink" types
-			"failed_to_upload_unknown":                  0,
-			"updated_metadata_for_files":                0,
-			"updated_metadata_for_directories":          0,
-			"updated_metadata_for_symlinks":             0,
+			"failed_to_upload_unknown":         0,
+			"updated_metadata_for_files":       0,
+			"updated_metadata_for_directories": 0,
+			"updated_metadata_for_symlinks":    0,
+			// items discovered to no longer exist on the local disk (but we've previously backed them up)
+			"marked_deleted_files":       0,
+			"marked_deleted_directories": 0,
+			"marked_deleted_symlinks":    0,
+			// during the "mark_deleted_*" operation an error was encountered and it could not be fullfilled.
+			"failed_to_mark_deleted_files":       0,
+			"failed_to_mark_deleted_directories": 0,
+			"failed_to_mark_deleted_symlinks":    0,
+			// some kind of database related error was encountered when trying to find deleted items
+			"failed_to_find_deleted":                    0,
 			"failed_to_update_metadata_for_files":       0,
 			"failed_to_update_metadata_for_directories": 0,
 			"failed_to_update_metadata_for_symlinks":    0,
@@ -402,7 +413,7 @@ MainLoop:
 			// don't send a message to the multiplexer for the below $counterName
 			switch counterName {
 			case
-				"examined_files", "examined_directories", "examined_symlinks", "examined_unknown", "scripts_failed":
+				"examined_files", "examined_directories", "examined_symlinks", "examined_unknown", "scripts_failed", "failed_to_find_deleted":
 				break MainLoop
 			}
 			// if this is a file, and no errors were encountered and this was a content upload then don't send a

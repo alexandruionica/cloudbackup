@@ -79,7 +79,7 @@ func (object *StoreTestNull) Upload(path string, newDbRecord shared.BackedUpFile
 		}
 	} else {
 		// TODO - build metadata for dir / symlink and then proceed to discard it
-		return "test_null_discarded_" + newDbRecord.Type + "_" + path, false, nil
+		return "test_null_discarded:" + newDbRecord.Type + "_" + path, false, nil
 	}
 }
 
@@ -89,4 +89,9 @@ func (object *StoreTestNull) MetadataUpdate(path string, newDbRecord shared.Back
 
 func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType string) {
 	return object.storeName, object.storeType
+}
+
+// pretend to place a delete marker
+func (object *StoreTestNull) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
+	return "test_null_discarded:__delete_marker__" + existingDbRecord.Type + "_" + path, false, nil
 }

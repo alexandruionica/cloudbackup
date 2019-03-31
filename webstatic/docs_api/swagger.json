@@ -943,11 +943,47 @@
             },
             "updated_metadata_for_directories": {
               "type": "integer",
-              "description": "How many directories were detected to have had a properties change so a metadata only updated was done as part of this backup run."
+              "description": "How many directories were detected to have had a properties change so a metadata only updated was done as part of this backup run.",
+              "example": 3
             },
             "updated_metadata_for_symlinks": {
               "type": "integer",
-              "description": "How many symlinks were detected to have had a properties change so a metadata only updated was done as part of this backup run. "
+              "description": "How many symlinks were detected to have had a properties change so a metadata only updated was done as part of this backup run.",
+              "example": 0
+            },
+            "marked_deleted_files": {
+              "type": "integer",
+              "description": "How many files were detected to have been deleted but were previously backed up. If before this backup job ran, a previously backed up file was deleted and then a different object (for example a directory) was created with the same name then this counter won't increment.",
+              "example": 21
+            },
+            "marked_deleted_directories": {
+              "type": "integer",
+              "description": "How many directories were detected to have been deleted but were previously backed up. If before this backup job ran, a previously backed up directory was deleted and then a different object (for example a file) was created with the same name then this counter won't increment.",
+              "example": 1
+            },
+            "marked_deleted_symlinks": {
+              "type": "integer",
+              "description": "How many symbolic links were detected to have been deleted but were previously backed up. If before this backup job ran a previously backed up symbolic link was deleted and then a different object (for example a regular file) was created with the same name then this counter won't increment.",
+              "example": 0
+            },
+            "failed_to_mark_deleted_files": {
+              "type": "integer",
+              "description": "During the \"marked_deleted_files\" operation an irrecoverable error was encountered and the operation could not be completed.",
+              "example": 0
+            },
+            "failed_to_mark_deleted_directories": {
+              "type": "integer",
+              "description": "During the \"marked_deleted_directories\" operation an irrecoverable error was encountered and the operation could not be completed.",
+              "example": 0
+            },
+            "failed_to_mark_deleted_symlinks": {
+              "type": "integer",
+              "description": "During the \"marked_deleted_symlinks\" operation an irrecoverable error was encountered and the operation could not be completed.",
+              "example": 0
+            },
+            "failed_to_find_deleted": {
+              "type": "integer",
+              "description": "How many errors where encountered when trying to build the list of deleted files/directories/symlinks. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items where deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved."
             },
             "failed_to_update_metadata_for_files": {
               "type": "integer",
@@ -1057,8 +1093,8 @@
         "operation_type": {
           "type": "string",
           "example": "upload",
-          "pattern": "^(excluded|examine|upload|metadata|up_to_date)$",
-          "description": "One of \"excluded\", \"examine\", \"upload\", \"metadata\" or \"up_to_date\" depicting if the message represents an examination of an object in order to determine if a backup is needed, content upload and metadata upload/update. The \"excluded\" value is reported only for excluded from backup objects(those are items which are located within the paths selected for backup but for which a configuration file entry has been set to purposely exclude them from the backup). The \"examine\" value is reported only when an error was produced during the examination step as otherwise a message won't be produced if this step is successful. The \"upload\" value is reported only for file content upload. The \"metadata\" value is reported when a properties change was detected for an already known (to be previously backed up) object or when a directory or symlink is backed up (as only properties and not actual content is uploaded for those). The value \"up_to_date\" depicts that no action was needed as the object has previusly been backed up and the copy in the backup is up to date with the on disk item."
+          "pattern": "^(excluded|examine|upload|metadata|up_to_date|mark_deleted)$",
+          "description": "One of \"excluded\", \"examine\", \"upload\", \"metadata\", \"up_to_date\" or \"mark_deleted\" depicting if the message represents an examination of an object in order to determine if a backup is needed, content upload and metadata upload/update. The \"excluded\" value is reported only for excluded from backup objects(those are items which are located within the paths selected for backup but for which a configuration file entry has been set to purposely exclude them from the backup). The \"examine\" value is reported only when an error was produced during the examination step as otherwise a message won't be produced if this step is successful. The \"upload\" value is reported only for file content upload. The \"metadata\" value is reported when a properties change was detected for an already known (to be previously backed up) object or when a directory or symlink is backed up (as only properties and not actual content is uploaded for those). The value \"up_to_date\" depicts that no action was needed as the object has previusly been backed up and the copy in the backup is up to date with the on disk item. The mark_deleted signals and object which has been deleted from the local file system so the database record will be updated and also the object store may need a marker added in order to make it clear that the file is no longer on the system's file system."
         },
         "error": {
           "type": "string",
