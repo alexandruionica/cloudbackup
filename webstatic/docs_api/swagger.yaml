@@ -864,15 +864,15 @@ definitions:
             example: 0
           failed_to_mark_deleted_files:
             type: integer
-            description: During the "marked_deleted_files" operation an irrecoverable error was encountered and the operation could not be completed.
+            description: During the "marked_deleted_files" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items where deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
             example: 0
           failed_to_mark_deleted_directories:
             type: integer
-            description: During the "marked_deleted_directories" operation an irrecoverable error was encountered and the operation could not be completed.
+            description: During the "marked_deleted_directories" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items where deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
             example: 0
           failed_to_mark_deleted_symlinks:
             type: integer
-            description: During the "marked_deleted_symlinks" operation an irrecoverable error was encountered and the operation could not be completed.
+            description: During the "marked_deleted_symlinks" operation an irrecoverable error was encountered and the operation could not be completed. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items where deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
             example: 0
           failed_to_find_deleted:
             type: integer
