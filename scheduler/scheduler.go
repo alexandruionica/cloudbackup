@@ -340,6 +340,13 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 			}
 		}
 	}
+	// if we got here then now we need to figure out what entries in the "files" table no longer represent on DISK status
+	// TODO - test with 3 as $MaxResults
+	cancelled := backup.FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobUuid, 5000)
+	if cancelled {
+		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil)
+	}
+	// if we got here than all was probably good (or "mostly" good) and the job did not get cancelled
 	cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, nil)
 }
 

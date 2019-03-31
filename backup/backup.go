@@ -42,7 +42,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 			dbEntryFound, dbRecordProperties, err := getBackedupObjectPropertiesFromDb(path, dbData)
 			if err != nil {
 				updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-				return false, errors.New(fmt.Sprintf("While searching the database for a file object record,"+
+				return false, errors.New(fmt.Sprintf("While searching the database for an object record,"+
 					" encountered error: %s", err))
 			}
 			// if a db entry is found then this object has been previously backed up so it needs to be verified if the
@@ -668,6 +668,28 @@ func updateCounters(backupJobsState shared.BackupJobsStateInterface, backupName 
 				backupJobsState.IncrementCounter(backupName, "up_to_date_symlinks", path, fileType, "up_to_date", "")
 			}
 		}
+	case "mark_deleted":
+		{
+			if err != nil {
+				switch fileType {
+				case "file":
+					backupJobsState.IncrementCounter(backupName, "failed_to_mark_deleted_files", path, fileType, "mark_deleted", err.Error())
+				case "dir":
+					backupJobsState.IncrementCounter(backupName, "failed_to_mark_deleted_directories", path, fileType, "mark_deleted", err.Error())
+				case "symlink":
+					backupJobsState.IncrementCounter(backupName, "failed_to_mark_deleted_symlinks", path, fileType, "mark_deleted", err.Error())
+				}
+			} else {
+				switch fileType {
+				case "file":
+					backupJobsState.IncrementCounter(backupName, "marked_deleted_files", path, fileType, "mark_deleted", "")
+				case "dir":
+					backupJobsState.IncrementCounter(backupName, "marked_deleted_directories", path, fileType, "mark_deleted", "")
+				case "symlink":
+					backupJobsState.IncrementCounter(backupName, "marked_deleted_symlinks", path, fileType, "mark_deleted", "")
+				}
+			}
+		}
 	default:
 		logger.Errorf("Tried to update counters for operation of type '%s' during a backup having name '%s' "+
 			"for object '%s'. This is bug, please report it.", operationType, backupName, path)
@@ -694,4 +716,208 @@ func RunPrePostScript(path string, scriptType string, backupName string, jobId s
 	}
 	// if we got here, all was good
 	return nil
+}
+
+// this must be ran after a backup job has completed and it will mark deleted all files/dir/symlinks which are not
+// listed in the current backup and also don't exist any more on this but are mentioned in the "files" table
+// $maxResults represents how many records should be fetched from the DB for processing. If the limit is hit then
+// after processing the results, the function will recurse, calling itself again with said limit until all DB records
+// are processed
+// returns: true if cancelled (via context)
+func FindAndMarkDeleted(ctx context.Context, backupConfig config.Backup, dbData shared.DbData,
+	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string, maxResults int) bool {
+	// locate all objects which are not mentioned in the current backup
+
+	var foundEntries []string
+	// the first target name should be sufficient as both targets
+	rows, err := dbData.PreparedStatements.FindDeletedItemsStmt.Query(jobUuid, backupConfig.Target[0].Name, maxResults)
+	if err != nil {
+		logger.Errorf("While querying the database in order to find files which are deleted, encountered error: %s", err)
+		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", "", "", "mark_deleted", err.Error())
+		return false
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() a prepared statement for finding deleted items, the "+
+				"following error was encountered: %s", err)
+		}
+	}()
+	for rows.Next() {
+		select {
+		case <-ctx.Done():
+			{
+				logger.Infof("cancelling running backup job '%s'", backupConfig.Name)
+				err := rows.Close()
+				if err != nil {
+					logger.Warningf("While trying to close/cancel a DB query, encountered error: %s", err)
+				}
+				return true
+			}
+		default:
+			var path string
+			err := rows.Scan(&path)
+			if err != nil {
+				logger.Errorf("While retrieving the database record for deleted item, the following error "+
+					"was encountered: '%s'", err)
+				backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", "", "", "mark_deleted", err.Error())
+				continue
+			}
+			// we build first the list of found items (in a slice) and then process them (after the DB query is completed)
+			// in order to avoid blocking (forever) when we try to start a new DB transaction due to this query still
+			// being in progress. This is due to various limitations of Sqlite and how we work with it. There are
+			// alternatives but they have caveats.
+			foundEntries = append(foundEntries, path)
+		}
+	}
+	for _, path := range foundEntries {
+		select {
+		case <-ctx.Done():
+			{
+				logger.Infof("cancelling running backup job '%s'", backupConfig.Name)
+				err := rows.Close()
+				if err != nil {
+					logger.Warningf("While trying to close/cancel a DB query, encountered error: %s", err)
+				}
+				return true
+			}
+		default:
+			{
+				dbEntryFound, dbRecordProperties, err := getBackedupObjectPropertiesFromDb(path, dbData)
+				if err != nil {
+					backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", path, "", "mark_deleted", err.Error())
+					logger.Warningf("While searching the database for an object record for path: '%s',"+
+						" encountered error: %s", path, err)
+					continue
+				}
+				if dbEntryFound {
+					// process path (mark it as deleted in the files table and in remote object store)
+					logger.Debugf("Marking '%s' '%s' as deleted as it no longer exists on disk", dbRecordProperties.Type, path)
+					backupJobsState.IncrementSequence(backupConfig.Name) // <-- needed so Watch clients consider the message as for a different item than the previous one
+					cancelled, err := markDeleted(dbRecordProperties, backupConfig, dbData, objectStores, backupJobsState, jobUuid)
+					if cancelled {
+						return true
+					}
+					updateCounters(backupJobsState, backupConfig.Name, "mark_deleted", dbRecordProperties.Type, dbRecordProperties.Path, err)
+				} else {
+					backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", path, "", "mark_deleted", err.Error())
+					logger.Warningf("Path '%s' no longer appears in the file table so it can't be properly marked as deleted", path)
+					continue
+				}
+			}
+		}
+	}
+	if err = rows.Err(); err != nil {
+		logger.Error("While enumerating the results of querying the database in order to find deleted items, "+
+			"the following error was encountered: %s", err)
+		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", "", "", "mark_deleted", err.Error())
+		return false
+	}
+
+	// if the DB query returned the max number of results then recurse until we get less that $maxResults results
+	if len(foundEntries) >= maxResults {
+		cancelled := FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobUuid, maxResults)
+		return cancelled
+	}
+	return false
+}
+
+// for a given $path, it marks it as deleted by adjusting the DB entries and also updating metadata on the objectstore(s)
+// returns true if the function was cancelled, false otherwise; encountered error if any
+func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig config.Backup, dbData shared.DbData,
+	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string) (bool, error) {
+	// for each found object check if it exists on disk. This must be done because there is a chance that the backup
+	// failed for some items and so they don't appear in the list of backed up items but they still exist on disk so
+	// their reference from the "files" table should not be removed
+	if ObjectDbRecord.Type == "dir" {
+		// in this context, dereferencing does not make sense no matter what is in the config file
+		_, err := utils.DirExists(ObjectDbRecord.Path, false)
+		if err == nil {
+			// dir still exists on disk , skip marking it deleted
+			return false, nil
+		}
+	} else {
+		// in this context, dereferencing does not make sense no matter what is in the config file
+		_, err := utils.FileExists(ObjectDbRecord.Path, false)
+		if err == nil {
+			// file/symlink path still exists on disk,, skip marking it deleted
+			return false, nil
+		}
+	}
+	/*
+		There is a chance that the above will cause an inconsistency if the object type changed from dir to file/symlink
+		(or the other way around) and also during the backup this path failed to be uploaded. In this case it will be marked
+		as deleted and the next backup should pick it up. The inconsistencu is that in the DB it will appear as dir -> deleted -> file
+		for that path (or the other way around) but in reality the "deleted" state may have been very short lived. In order
+		to avoid this we would have to double the amount of "stat" system calls and that is expensive for getting rid of
+		this edge case
+	*/
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to backup this file.
+		return false, errors.New(fmt.Sprintf("While trying to start a database transaction for deletion marking, "+
+			"encountered error: %s", err))
+	}
+
+	// delete path entry for this path, from the "files" table
+	_, err = dbtx.Exec(dbData.PreparedStatements.FilesDelete, ObjectDbRecord.Path)
+	if err != nil {
+		logger.Errorf("While trying to delete from the 'files' table the entry for '%s', encountered error: %s", ObjectDbRecord.Path, err)
+		txerr := dbtx.Rollback()
+		if txerr != nil {
+			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", ObjectDbRecord.Path, txerr)
+		}
+		return false, err
+	}
+
+	encounteredError := 0
+	var encounteredErrorObject error
+	var JobCancelled bool
+	// back up the object to one or more remote object stores
+	for _, objectStore := range objectStores {
+		remotePath, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord.Path, ObjectDbRecord)
+		if err != nil {
+			encounteredError++
+			encounteredErrorObject = err
+			break
+		}
+		if cancelled {
+			JobCancelled = true
+			break
+		}
+		targetName, _ := objectStore.GetStoreDetails()
+		_, err = addEntryToRemoteFiles(remotePath, targetName, jobUuid, 1, dbData, dbtx, ObjectDbRecord)
+		if err != nil {
+			encounteredError++
+			encounteredErrorObject = err
+			break
+		}
+		// We will NOT add an entries to backup collections as during a restore there is nothing to do with a delete
+		// marker (and the purpose of the backup_collections table is to list what needs to be restored)
+	}
+	if encounteredError > 0 || JobCancelled {
+		txerr := dbtx.Rollback()
+		if txerr != nil {
+			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", ObjectDbRecord.Path, txerr)
+		}
+		if len(objectStores) > 1 {
+			// TODO - ENSURE THAT ANY SUCCESSFULLY ADDED DELETE_MARKER (FOR OTHER OBJECT STORES WHICH SUCCEEDED) IS REMOVED
+			logger.Warnf("Failed adding delete marker for '%s' to %d out of %d targets. All targets are to be "+
+				"considered failed (even the ones where adding the delete marker was successful) for this item.",
+				ObjectDbRecord.Path, encounteredError, len(objectStores))
+		}
+		if JobCancelled {
+			return true, nil
+		} else {
+			return false, encounteredErrorObject
+		}
+	}
+
+	// end, all was good until here
+	txerr := dbtx.Commit()
+	if txerr != nil {
+		return false, errors.New(fmt.Sprintf("Could not commit transaction due to error: %s", err))
+	}
+	return false, nil
 }
