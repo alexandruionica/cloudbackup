@@ -826,32 +826,45 @@ func FindAndMarkDeleted(ctx context.Context, backupConfig config.Backup, dbData 
 // returns true if the function was cancelled, false otherwise; encountered error if any
 func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig config.Backup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string) (bool, error) {
-	// for each found object check if it exists on disk. This must be done because there is a chance that the backup
-	// failed for some items and so they don't appear in the list of backed up items but they still exist on disk so
-	// their reference from the "files" table should not be removed
-	if ObjectDbRecord.Type == "dir" {
-		// in this context, dereferencing does not make sense no matter what is in the config file
-		_, err := utils.DirExists(ObjectDbRecord.Path, false)
-		if err == nil {
-			// dir still exists on disk , skip marking it deleted
-			return false, nil
+	// establish it path is part of exclusions. This is to cover an edge case where a previously backed up path has been
+	// added to the exclusions list. If this is the case then we want to have it mark deleted (and skip checking further
+	// below if the path exists on disk)
+	isExcluded, _, _ := utils.IsPathExcluded(backupConfig.Exclusions, ObjectDbRecord.Path) // #nosec
+	// establish if path is included in paths to be backed up. If not then we want to have it marked as deleted as this
+	// is an edge case where a a particular path has been removed from the Backup configuration but previously backed
+	// up files located underneath the path are still mentioned in the DB. Even if the files are still on disk, we want
+	// to remove mentions from the "files" table and also from the object store as for all intents and purposes the
+	// file is as "deleted" from that point of view
+	isIncluded, _ := utils.IsPathIncluded(backupConfig.Paths, ObjectDbRecord.Path)
+
+	if (!isExcluded) && isIncluded {
+		// for each found object check if it exists on disk. This must be done because there is a chance that the backup
+		// failed for some items and so they don't appear in the list of backed up items but they still exist on disk so
+		// their reference from the "files" table should not be removed
+		if ObjectDbRecord.Type == "dir" {
+			// in this context, dereferencing does not make sense no matter what is in the config file
+			_, err := utils.DirExists(ObjectDbRecord.Path, false)
+			if err == nil {
+				// dir still exists on disk , skip marking it deleted
+				return false, nil
+			}
+		} else {
+			// in this context, dereferencing does not make sense no matter what is in the config file
+			_, err := utils.FileExists(ObjectDbRecord.Path, false)
+			if err == nil {
+				// file/symlink path still exists on disk,, skip marking it deleted
+				return false, nil
+			}
 		}
-	} else {
-		// in this context, dereferencing does not make sense no matter what is in the config file
-		_, err := utils.FileExists(ObjectDbRecord.Path, false)
-		if err == nil {
-			// file/symlink path still exists on disk,, skip marking it deleted
-			return false, nil
-		}
+		/*
+			There is a chance that the above will cause an inconsistency if the object type changed from dir to file/symlink
+			(or the other way around) and also during the backup this path failed to be uploaded. In this case it will be marked
+			as deleted and the next backup should pick it up. The inconsistencu is that in the DB it will appear as dir -> deleted -> file
+			for that path (or the other way around) but in reality the "deleted" state may have been very short lived. In order
+			to avoid this we would have to double the amount of "stat" system calls and that is expensive for getting rid of
+			this edge case
+		*/
 	}
-	/*
-		There is a chance that the above will cause an inconsistency if the object type changed from dir to file/symlink
-		(or the other way around) and also during the backup this path failed to be uploaded. In this case it will be marked
-		as deleted and the next backup should pick it up. The inconsistencu is that in the DB it will appear as dir -> deleted -> file
-		for that path (or the other way around) but in reality the "deleted" state may have been very short lived. In order
-		to avoid this we would have to double the amount of "stat" system calls and that is expensive for getting rid of
-		this edge case
-	*/
 
 	dbtx, err := dbData.Db.Begin()
 	if err != nil {

@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/bmatcuk/doublestar"
 	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -195,4 +197,38 @@ func FileType(stat os.FileInfo) string {
 		return "file"
 	}
 	return "unknown"
+}
+
+// check if $path is matches any of the Globstar elements of the $exclusions array. If a match is found then true
+// is returned followed also by the exclusion rule which matched and nil; if an error is encountered then the last
+// element will be the error message
+func IsPathExcluded(exclusions []string, path string) (bool, string, error) {
+	for _, excludedPath := range exclusions {
+		match, err := doublestar.PathMatch(excludedPath, path)
+		if err != nil {
+			return false, "", err
+		}
+		if match {
+			return true, excludedPath, nil
+		}
+	}
+	return false, "", nil
+}
+
+// check if a path has a parent one of the paths in $includedPaths ; returns true/false if matched and also a string
+// with the matched parent path (if true)
+func IsPathIncluded(includedPaths []string, path string) (bool, string) {
+	for _, incPath := range includedPaths {
+		if path == incPath {
+			return true, incPath
+		}
+		if path == strings.TrimSuffix(incPath, string(os.PathSeparator)) || strings.TrimSuffix(path, string(os.PathSeparator)) == incPath {
+			return true, incPath
+		}
+		// if $path begins with $incpath + path separater (for this OS)
+		if strings.HasPrefix(path, strings.TrimSuffix(incPath, string(os.PathSeparator))+string(os.PathSeparator)) {
+			return true, incPath
+		}
+	}
+	return false, ""
 }

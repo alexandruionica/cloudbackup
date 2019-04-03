@@ -11,7 +11,6 @@ import (
 	"cloudbackup/daemon/globals"
 	"cloudbackup/shared"
 	"context"
-	"github.com/bmatcuk/doublestar"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -168,7 +167,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 			backupJobsState.IncrementSequence(backupConfig.Name)
 			childPath := filepath.Join(path, name)
 			logger.Debugf("Getting details for %s", childPath)
-			excluded, excludedExpr, err := isExcluded(backupConfig.Exclusions, childPath)
+			excluded, excludedExpr, err := utils.IsPathExcluded(backupConfig.Exclusions, childPath)
 			if err != nil {
 				logger.Warnf("While trying to check if %s should be excluded from being backed up, the following "+
 					"error was encountered '%s'", childPath, err)
@@ -249,20 +248,4 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig confi
 		}
 	}
 	return false, nil
-}
-
-// check if $path is matches any of the Globstar elements of the $exclusions array. If a match is found then true
-// is returned followed also by the exclusion rule which matched and nil; if an error is encountered then the last
-// element will be the error message
-func isExcluded(exclusions []string, path string) (bool, string, error) {
-	for _, excludedPath := range exclusions {
-		match, err := doublestar.PathMatch(excludedPath, path)
-		if err != nil {
-			return false, "", err
-		}
-		if match {
-			return true, excludedPath, nil
-		}
-	}
-	return false, "", nil
 }
