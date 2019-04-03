@@ -1771,7 +1771,7 @@ func TestIsExcluded1(t *testing.T) {
 	path := string(filepath.Separator) + "file1.txt"
 	//exclusions := []string{"**" + string(filepath.Separator) + "file{1,2}.txt"}
 	exclusions := []string{"bla1234"}
-	excluded, exclusionRule, err := isExcluded(exclusions, path)
+	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1789,7 +1789,7 @@ func TestIsExcluded2(t *testing.T) {
 	path := string(filepath.Separator) + "file1.txt"
 	//exclusions := []string{"**" + string(filepath.Separator) + "file{1,2}.txt"}
 	exclusions := []string{string(filepath.Separator) + "file1.txt"}
-	excluded, exclusionRule, err := isExcluded(exclusions, path)
+	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1807,7 +1807,7 @@ func TestIsExcluded2(t *testing.T) {
 func TestIsExcluded3(t *testing.T) {
 	path := string(filepath.Separator) + "file1.txt"
 	exclusions := []string{string(filepath.Separator) + "file?.txt"}
-	excluded, exclusionRule, err := isExcluded(exclusions, path)
+	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1825,7 +1825,7 @@ func TestIsExcluded3(t *testing.T) {
 func TestIsExcluded4(t *testing.T) {
 	path := string(filepath.Separator) + "file1.txt"
 	exclusions := []string{string(filepath.Separator) + "file*.txt"}
-	excluded, exclusionRule, err := isExcluded(exclusions, path)
+	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1844,7 +1844,7 @@ func TestIsExcluded5(t *testing.T) {
 	path := string(filepath.Separator) + "adir" + string(filepath.Separator) + "anotherDir" +
 		string(filepath.Separator) + "file1.txt"
 	exclusions := []string{"**" + string(filepath.Separator) + "*.txt"}
-	excluded, exclusionRule, err := isExcluded(exclusions, path)
+	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1863,7 +1863,7 @@ func TestIsExcluded6(t *testing.T) {
 	path := string(filepath.Separator) + "adir" + string(filepath.Separator) + "anotherDir" +
 		string(filepath.Separator) + "file1.txt"
 	exclusions := []string{"*.txt"}
-	excluded, exclusionRule, err := isExcluded(exclusions, path)
+	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
 	if err != nil {
 		t.Fatal(err)
 	}
