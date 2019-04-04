@@ -477,3 +477,113 @@ func TestFileType3(t *testing.T) {
 		t.Fatalf("Was expecting FileType() to return value 'file' (due to de-referencing) but it returned '%s'", filetype)
 	}
 }
+
+// should not match exclusion
+func TestIsExcluded1(t *testing.T) {
+	path := string(filepath.Separator) + "file1.txt"
+	//exclusions := []string{"**" + string(filepath.Separator) + "file{1,2}.txt"}
+	exclusions := []string{"bla1234"}
+	excluded, exclusionRule, err := IsPathExcluded(exclusions, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if excluded {
+		t.Fatalf("Exclusion rule '%s' matched but it wasn't expected that it would match", exclusionRule)
+	}
+	if exclusionRule != "" {
+		t.Fatalf("When a match is NOT found, it is expected that the matched exclusion pattern (second "+
+			"argument in reply) is empty but instead we got: '%s'", exclusionRule)
+	}
+}
+
+// should match simple exclusion
+func TestIsExcluded2(t *testing.T) {
+	path := string(filepath.Separator) + "file1.txt"
+	//exclusions := []string{"**" + string(filepath.Separator) + "file{1,2}.txt"}
+	exclusions := []string{string(filepath.Separator) + "file1.txt"}
+	excluded, exclusionRule, err := IsPathExcluded(exclusions, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !excluded {
+		t.Fatalf("Exclusion rule '%s' did not match but it was expected that it would match", exclusions[0])
+	}
+	if exclusionRule == "" {
+		t.Fatal("When a match is found, it is expected that the matched exclusion pattern (second " +
+			"argument in reply) is a non empty string representing the matche pattern, but instead we got an empty " +
+			"string")
+	}
+}
+
+// should match shellglob exclusion
+func TestIsExcluded3(t *testing.T) {
+	path := string(filepath.Separator) + "file1.txt"
+	exclusions := []string{string(filepath.Separator) + "file?.txt"}
+	excluded, exclusionRule, err := IsPathExcluded(exclusions, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !excluded {
+		t.Fatalf("Exclusion rule '%s' did not match but it was expected that it would match", exclusions[0])
+	}
+	if exclusionRule == "" {
+		t.Fatal("When a match is found, it is expected that the matched exclusion pattern (second " +
+			"argument in reply) is a non empty string representing the matche pattern, but instead we got an empty " +
+			"string")
+	}
+}
+
+// should match shellglob exclusion
+func TestIsExcluded4(t *testing.T) {
+	path := string(filepath.Separator) + "file1.txt"
+	exclusions := []string{string(filepath.Separator) + "file*.txt"}
+	excluded, exclusionRule, err := IsPathExcluded(exclusions, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !excluded {
+		t.Fatalf("Exclusion rule '%s' did not match but it was expected that it would match", exclusions[0])
+	}
+	if exclusionRule == "" {
+		t.Fatal("When a match is found, it is expected that the matched exclusion pattern (second " +
+			"argument in reply) is a non empty string representing the matche pattern, but instead we got an empty " +
+			"string")
+	}
+}
+
+// should match shellglob exclusion with dir descend
+func TestIsExcluded5(t *testing.T) {
+	path := string(filepath.Separator) + "adir" + string(filepath.Separator) + "anotherDir" +
+		string(filepath.Separator) + "file1.txt"
+	exclusions := []string{"**" + string(filepath.Separator) + "*.txt"}
+	excluded, exclusionRule, err := IsPathExcluded(exclusions, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !excluded {
+		t.Fatalf("Exclusion rule '%s' did not match but it was expected that it would match", exclusions[0])
+	}
+	if exclusionRule == "" {
+		t.Fatal("When a match is found, it is expected that the matched exclusion pattern (second " +
+			"argument in reply) is a non empty string representing the matche pattern, but instead we got an empty " +
+			"string")
+	}
+}
+
+// should NOT match shellglob exclusion due to lack of dir descend
+func TestIsExcluded6(t *testing.T) {
+	path := string(filepath.Separator) + "adir" + string(filepath.Separator) + "anotherDir" +
+		string(filepath.Separator) + "file1.txt"
+	exclusions := []string{"*.txt"}
+	excluded, exclusionRule, err := IsPathExcluded(exclusions, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if excluded {
+		t.Fatalf("Exclusion rule '%s' matched but it wasn't expected that it would match", exclusionRule)
+	}
+	if exclusionRule != "" {
+		t.Fatalf("When a match is NOT found, it is expected that the matched exclusion pattern (second "+
+			"argument in reply) is empty but instead we got: '%s'", exclusionRule)
+	}
+}
