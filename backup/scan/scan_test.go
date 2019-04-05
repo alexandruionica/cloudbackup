@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"cloudbackup/backup"
 	"cloudbackup/config"
 	"cloudbackup/database"
 	"cloudbackup/database/dbops"
@@ -22,7 +23,9 @@ import (
 func compareWithWatchMessages(t *testing.T, backupJobsState *shared.BackupJobsState) {
 	// check that the Sequence is the sum of all examined_ stats
 	sumExamined := backupJobsState.Running[0].StatsCounters["examined_directories"] + backupJobsState.Running[0].StatsCounters["examined_files"] +
-		backupJobsState.Running[0].StatsCounters["examined_symlinks"] + backupJobsState.Running[0].StatsCounters["examined_unknown"]
+		backupJobsState.Running[0].StatsCounters["examined_symlinks"] + backupJobsState.Running[0].StatsCounters["examined_unknown"] +
+		backupJobsState.Running[0].StatsCounters["marked_deleted_directories"] + backupJobsState.Running[0].StatsCounters["marked_deleted_files"] +
+		backupJobsState.Running[0].StatsCounters["marked_deleted_symlinks"]
 	if sumExamined != backupJobsState.Running[0].Sequence {
 		// dump all messages on the channel in order to use them for understanding what went wrong
 	OUTERLOOP:
@@ -38,13 +41,17 @@ func compareWithWatchMessages(t *testing.T, backupJobsState *shared.BackupJobsSt
 		}
 
 		t.Fatalf("Sequence has value %d and it doesn't match the sum of examined_directories + "+
-			"examined_files + examined_symlinks +  examined_unknown; map containig those "+
+			"examined_files + examined_symlinks +  examined_unknown + marked_deleted_directories + marked_deleted_files "+
+			"+ marked_deleted_symlinks ; map containig those "+
 			"is: %+v", backupJobsState.Running[0].Sequence, backupJobsState.Running[0].StatsCounters)
 	}
 	// loop over the Watcher channel and see if messages match expectations
 	previousMsg := shared.WatchMessage{Sequence: 0}
 	var examinedDirectories, examinedFiles, examinedSymlinks, examinedUnknown, failedToExamine, failedToEnumerate uint64 = 0, 0, 0, 0, 0, 0
+	var markedToDeleteDirectories, markedToDeleteFiles, markedToDeleteSymlinks uint64 = 0, 0, 0
 	var uploadedDirectories, uploadedFiles, uploadedSymlinks uint64 = 0, 0, 0
+	//var updatedMetadataSymlinks uint64 = 0
+	var upToDateDirectories, upToDateFiles, upToDateSymlinks uint64 = 0, 0, 0
 OUTERLOOP2:
 	for {
 		select {
@@ -67,7 +74,11 @@ OUTERLOOP2:
 				case "dir":
 					{
 						if msg.Error == "" {
-							examinedDirectories += 1
+							if msg.OperationType == "mark_deleted" {
+								markedToDeleteDirectories += 1
+							} else {
+								examinedDirectories += 1
+							}
 						}
 						if msg.PercentDone != 100 && msg.Error == "" {
 							t.Fatalf("For watch() message %+v reported percent done is %d which != 100 . If no "+
@@ -83,14 +94,24 @@ OUTERLOOP2:
 						if msg.OperationType == "enumerate" && msg.Error != "" {
 							failedToEnumerate += 1
 						}
-						if msg.PercentDone == 100 && msg.Error == "" {
+						if msg.OperationType == "up_to_date" && msg.Error == "" {
+							upToDateDirectories += 1
+						}
+						if (msg.OperationType == "upload" || msg.OperationType == "metadata") && msg.PercentDone == 100 && msg.Error == "" {
 							uploadedDirectories += 1
 						}
+						//if msg.OperationType == "metadata" && msg.PercentDone == 100 && msg.Error == "" {
+						//	updatedMetadataDirectories += 1
+						//}
 					}
 				case "symlink":
 					{
 						if msg.Error == "" {
-							examinedSymlinks += 1
+							if msg.OperationType == "mark_deleted" {
+								markedToDeleteSymlinks += 1
+							} else {
+								examinedSymlinks += 1
+							}
 						}
 						if msg.PercentDone != 100 && msg.Error == "" {
 							t.Fatalf("For watch() message %+v reported percent done is %d which != 100 . If no "+
@@ -104,20 +125,33 @@ OUTERLOOP2:
 							}
 
 						}
-						if msg.PercentDone == 100 && msg.Error == "" {
+						if msg.OperationType == "up_to_date" && msg.Error == "" {
+							upToDateSymlinks += 1
+						}
+						if (msg.OperationType == "upload" || msg.OperationType == "metadata") && msg.PercentDone == 100 && msg.Error == "" {
 							uploadedSymlinks += 1
 						}
+						//if msg.OperationType == "metadata" && msg.PercentDone == 100 && msg.Error == "" {
+						//	updatedMetadataSymlinks += 1
+						//}
+
 					}
 				case "file":
 					{
-						if previousMsg.Sequence != 0 && msg.Error == "" && previousMsg.Path != msg.Path {
+						if msg.OperationType == "mark_deleted" && msg.Error == "" {
+							markedToDeleteFiles += 1
+						}
+						if previousMsg.Sequence != 0 && msg.Error == "" && previousMsg.Path != msg.Path && msg.OperationType != "mark_deleted" {
 							examinedFiles += 1
 						} else {
-							if msg.PercentDone == 100 {
+							if msg.PercentDone == 100 && msg.OperationType != "mark_deleted" {
 								examinedFiles += 1
 							}
 						}
-						if msg.PercentDone == 100 && msg.Error == "" {
+						if msg.OperationType == "up_to_date" && msg.Error == "" {
+							upToDateFiles += 1
+						}
+						if (msg.OperationType == "upload" || msg.OperationType == "metadata") && msg.PercentDone == 100 && msg.Error == "" {
 							uploadedFiles += 1
 						}
 					}
@@ -154,6 +188,36 @@ OUTERLOOP2:
 			"counted from watch() messages is %d and it should be equal",
 			backupJobsState.Running[0].StatsCounters["examined_symlinks"], examinedSymlinks)
 	}
+	if backupJobsState.Running[0].StatsCounters["marked_deleted_directories"] != markedToDeleteDirectories {
+		t.Fatalf("marked_deleted_directories reported by stats_counters is %d but marked_deleted_directories as "+
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["marked_deleted_directories"], markedToDeleteDirectories)
+	}
+	if backupJobsState.Running[0].StatsCounters["marked_deleted_files"] != markedToDeleteFiles {
+		t.Fatalf("marked_deleted_files reported by stats_counters is %d but marked_deleted_files as "+
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["marked_deleted_files"], markedToDeleteFiles)
+	}
+	if backupJobsState.Running[0].StatsCounters["marked_deleted_symlinks"] != markedToDeleteSymlinks {
+		t.Fatalf("marked_deleted_symlinks reported by stats_counters is %d but marked_deleted_symlinks as "+
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["marked_deleted_symlinks"], markedToDeleteSymlinks)
+	}
+	if backupJobsState.Running[0].StatsCounters["up_to_date_directories"] != upToDateDirectories {
+		t.Fatalf("up_to_date_directories reported by stats_counters is %d but up_to_date_directories as "+
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["up_to_date_directories"], upToDateDirectories)
+	}
+	if backupJobsState.Running[0].StatsCounters["up_to_date_files"] != upToDateFiles {
+		t.Fatalf("up_to_date_files reported by stats_counters is %d but up_to_date_files as "+
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["up_to_date_files"], upToDateFiles)
+	}
+	if backupJobsState.Running[0].StatsCounters["up_to_date_symlinks"] != upToDateSymlinks {
+		t.Fatalf("up_to_date_symlinks reported by stats_counters is %d but up_to_date_symlinks as "+
+			"counted from watch() messages is %d and it should be equal",
+			backupJobsState.Running[0].StatsCounters["up_to_date_symlinks"], upToDateSymlinks)
+	}
 	if backupJobsState.Running[0].StatsCounters["examined_unknown"] != examinedUnknown {
 		t.Fatalf("examined_unknown reported by stats_counters is %d but examined_unknown as "+
 			"counted from watch() messages is %d and it should be equal",
@@ -174,16 +238,26 @@ OUTERLOOP2:
 			"counted from watch() messages is %d and it should be equal",
 			backupJobsState.Running[0].StatsCounters["uploaded_directories"], uploadedDirectories)
 	}
-	if backupJobsState.Running[0].StatsCounters["uploaded_symlinks"] != uploadedSymlinks {
-		t.Fatalf("uploaded_symlinks reported by stats_counters is %d but uploaded_symlinks as "+
+	if backupJobsState.Running[0].StatsCounters["uploaded_symlinks"]+backupJobsState.Running[0].StatsCounters["updated_metadata_for_symlinks"] != uploadedSymlinks {
+		t.Fatalf("(uploaded_symlinks + updated_metadata_for_symlinks) reported by stats_counters is %d but (uploaded_symlinks + updated_metadata_for_symlinks) as "+
 			"counted from watch() messages is %d and it should be equal",
-			backupJobsState.Running[0].StatsCounters["uploaded_symlinks"], uploadedSymlinks)
+			backupJobsState.Running[0].StatsCounters["uploaded_symlinks"]+backupJobsState.Running[0].StatsCounters["updated_metadata_for_symlinks"], uploadedSymlinks)
 	}
 	if backupJobsState.Running[0].StatsCounters["uploaded_files"] != uploadedFiles {
 		t.Fatalf("uploaded_files reported by stats_counters is %d but uploaded_files as "+
 			"counted from watch() messages is %d and it should be equal",
 			backupJobsState.Running[0].StatsCounters["uploaded_files"], uploadedFiles)
 	}
+	//if backupJobsState.Running[0].StatsCounters["updated_metadata_for_symlinks"] != updatedMetadataSymlinks {
+	//	t.Fatalf("updated_metadata_for_symlinks reported by stats_counters is %d but updated_metadata_for_symlinks as "+
+	//		"counted from watch() messages is %d and it should be equal",
+	//		backupJobsState.Running[0].StatsCounters["updated_metadata_for_symlinks"], updatedMetadataSymlinks)
+	//}
+	//if backupJobsState.Running[0].StatsCounters["updated_metadata_for_directories"] != updatedMetadataDirectories {
+	//	t.Fatalf("updated_metadata_for_directories reported by stats_counters is %d but updated_metadata_for_directories as "+
+	//		"counted from watch() messages is %d and it should be equal",
+	//		backupJobsState.Running[0].StatsCounters["updated_metadata_for_directories"], updatedMetadataDirectories)
+	//}
 }
 
 // test number of examined files as reported by Path() when  dereference=true
@@ -1485,9 +1559,9 @@ func TestPath12(t *testing.T) {
 
 // test number of examined files as reported by Path() when  dereference=true and when using an actual DB
 func TestPath13(t *testing.T) {
-	path, _ := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	//defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
 	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1497,10 +1571,10 @@ func TestPath13(t *testing.T) {
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
 	defer func() {
-		//err = os.RemoveAll(backupDirPath) // #nosec
-		//if err != nil {
-		//	t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
-		//}
+		err = os.RemoveAll(backupDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
 	}()
 	backupConfig := result.Config.Backup[0]
 	// overwrite whatever was in the mock config with the tmp path we want to test
@@ -1766,112 +1840,250 @@ func TestPath14(t *testing.T) {
 	}
 }
 
-// should not match exclusion
-func TestIsExcluded1(t *testing.T) {
-	path := string(filepath.Separator) + "file1.txt"
-	//exclusions := []string{"**" + string(filepath.Separator) + "file{1,2}.txt"}
-	exclusions := []string{"bla1234"}
-	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if excluded {
-		t.Fatalf("Exclusion rule '%s' matched but it wasn't expected that it would match", exclusionRule)
-	}
-	if exclusionRule != "" {
-		t.Fatalf("When a match is NOT found, it is expected that the matched exclusion pattern (second "+
-			"argument in reply) is empty but instead we got: '%s'", exclusionRule)
-	}
-}
+// test the backup.FindAndMarkDeleted() function when there are no mark deleted items reported - due to a cyclical import .. we can't really properly test it in the backup/ folder
+func TestPath15(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-// should match simple exclusion
-func TestIsExcluded2(t *testing.T) {
-	path := string(filepath.Separator) + "file1.txt"
-	//exclusions := []string{"**" + string(filepath.Separator) + "file{1,2}.txt"}
-	exclusions := []string{string(filepath.Separator) + "file1.txt"}
-	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
+	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	if !excluded {
-		t.Fatalf("Exclusion rule '%s' did not match but it was expected that it would match", exclusions[0])
-	}
-	if exclusionRule == "" {
-		t.Fatal("When a match is found, it is expected that the matched exclusion pattern (second " +
-			"argument in reply) is a non empty string representing the matche pattern, but instead we got an empty " +
-			"string")
-	}
-}
 
-// should match shellglob exclusion
-func TestIsExcluded3(t *testing.T) {
-	path := string(filepath.Separator) + "file1.txt"
-	exclusions := []string{string(filepath.Separator) + "file?.txt"}
-	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
+	// folder with some mock files and symlinks
+	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
+	defer func() {
+		err = os.RemoveAll(backupDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+	backupConfig := result.Config.Backup[0]
+	// overwrite whatever was in the mock config with the tmp path we want to test
+	backupConfig.Paths = []string{backupDirPath}
+	// set dereference to False
+	backupConfig.Dereference = false
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+	// populate state object with default values
+	jobId := uuid.NewV4().String()
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !excluded {
-		t.Fatalf("Exclusion rule '%s' did not match but it was expected that it would match", exclusions[0])
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
 	}
-	if exclusionRule == "" {
-		t.Fatal("When a match is found, it is expected that the matched exclusion pattern (second " +
-			"argument in reply) is a non empty string representing the matche pattern, but instead we got an empty " +
-			"string")
-	}
-}
 
-// should match shellglob exclusion
-func TestIsExcluded4(t *testing.T) {
-	path := string(filepath.Separator) + "file1.txt"
-	exclusions := []string{string(filepath.Separator) + "file*.txt"}
-	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
+	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
-	if !excluded {
-		t.Fatalf("Exclusion rule '%s' did not match but it was expected that it would match", exclusions[0])
+	db, err := database.Start(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.Start() returned error: '%s'", err)
 	}
-	if exclusionRule == "" {
-		t.Fatal("When a match is found, it is expected that the matched exclusion pattern (second " +
-			"argument in reply) is a non empty string representing the matche pattern, but instead we got an empty " +
-			"string")
+	preparedStatements, err := dbops.Prepare(db)
+	if err != nil {
+		t.Fatalf("dbops.Prepare() returned error: '%s'", err)
+		database.CloseDb(db, backupConfig.Name)
 	}
-}
 
-// should match shellglob exclusion with dir descend
-func TestIsExcluded5(t *testing.T) {
-	path := string(filepath.Separator) + "adir" + string(filepath.Separator) + "anotherDir" +
-		string(filepath.Separator) + "file1.txt"
-	exclusions := []string{"**" + string(filepath.Separator) + "*.txt"}
-	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
+	dbData := shared.DbData{
+		Db:                 db,
+		Connected:          true,
+		PreparedStatements: preparedStatements,
+	}
+	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("While trying to ensure all backup config targets have a DB entry, got error: %s", err)
 	}
-	if !excluded {
-		t.Fatalf("Exclusion rule '%s' did not match but it was expected that it would match", exclusions[0])
-	}
-	if exclusionRule == "" {
-		t.Fatal("When a match is found, it is expected that the matched exclusion pattern (second " +
-			"argument in reply) is a non empty string representing the matche pattern, but instead we got an empty " +
-			"string")
-	}
-}
 
-// should NOT match shellglob exclusion due to lack of dir descend
-func TestIsExcluded6(t *testing.T) {
-	path := string(filepath.Separator) + "adir" + string(filepath.Separator) + "anotherDir" +
-		string(filepath.Separator) + "file1.txt"
-	exclusions := []string{"*.txt"}
-	excluded, exclusionRule, err := utils.IsPathExcluded(exclusions, path)
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
+	// add entry to "jobs" DB table
+	err = dbops.AddJobDetails(dbData.Db, jobId, backupConfig.Target[0].Name, "backup", time.Now())
+	if err != nil {
+		t.Fatalf("Could not add job details to 'jobs' table")
+	}
+
+	for _, backupPath := range backupConfig.Paths {
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores, jobId)
+		if err != nil {
+			t.Fatalf("1. Failed to walk backup directory path %s. Error was: %s", backupPath, err)
+		}
+	}
+
+	expectedStats := map[string]uint64{
+		"examined_directories":                      7,
+		"examined_files":                            10,
+		"examined_symlinks":                         2,
+		"examined_unknown":                          0,
+		"failed_to_examine":                         0,
+		"failed_to_enumerate":                       0,
+		"excluded":                                  0,
+		"up_to_date_directories":                    0,
+		"up_to_date_files":                          0,
+		"up_to_date_symlinks":                       0,
+		"uploaded_directories":                      7,
+		"uploaded_files":                            10,
+		"uploaded_symlinks":                         2,
+		"failed_to_upload_directories":              0,
+		"failed_to_upload_files":                    0,
+		"failed_to_upload_symlinks":                 0,
+		"failed_to_upload_unknown":                  0,
+		"failed_to_find_deleted":                    0,
+		"failed_to_mark_deleted_directories":        0,
+		"failed_to_mark_deleted_files":              0,
+		"failed_to_mark_deleted_symlinks":           0,
+		"marked_deleted_directories":                0,
+		"marked_deleted_files":                      0,
+		"marked_deleted_symlinks":                   0,
+		"scripts_failed":                            0,
+		"scripts_ran":                               0,
+		"scripts_num":                               0,
+		"updated_metadata_for_files":                0,
+		"updated_metadata_for_directories":          0,
+		"updated_metadata_for_symlinks":             0,
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files":       0,
+		"failed_to_update_metadata_for_symlinks":    0,
+	}
+	if !reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
+		t.Fatalf("1. Stats reported by Path() are %+v don't match expected %+v",
+			backupJobsState.Running[0].StatsCounters, expectedStats)
+	}
+	// check how many bytes were read
+	var expectedBytesRead uint64 = 168 // 168 bytes total
+	if backupJobsState.Running[0].FileContentBytesRead != expectedBytesRead {
+		t.Fatalf("The total file content was expected to be %d bytes but it is actually reported to be %d bytes", expectedBytesRead, backupJobsState.Running[0].FileContentBytesRead)
+	}
+
+	// maxResult = 2 so we force it to recurse
+	backup.FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobId, 2)
+	if !reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
+		t.Fatalf("2. Stats reported by Path() are %+v don't match expected %+v",
+			backupJobsState.Running[0].StatsCounters, expectedStats)
+	}
+	// a lot of testing goes in this function - compares messages on the Watch channel with the backupJobsState stats
+	compareWithWatchMessages(t, backupJobsState)
+	err = backupJobsState.MarkStopped(backupConfig.Name, "unittest_backup_scan", jobId, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if excluded {
-		t.Fatalf("Exclusion rule '%s' matched but it wasn't expected that it would match", exclusionRule)
+	dbops.CloseStatementsAndDb(dbData)
+
+	// ######## walk again path - first we need to re-init stuff #########
+	// populate state object with default values
+	jobId = uuid.NewV4().String()
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if exclusionRule != "" {
-		t.Fatalf("When a match is NOT found, it is expected that the matched exclusion pattern (second "+
-			"argument in reply) is empty but instead we got: '%s'", exclusionRule)
+	ctx, err = backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
 	}
+
+	db, err = database.Start(result.Config.DataDir, backupConfig.Name)
+	if err != nil {
+		t.Fatalf("database.Start() returned error: '%s'", err)
+	}
+	preparedStatements, err = dbops.Prepare(db)
+	if err != nil {
+		t.Fatalf("dbops.Prepare() returned error: '%s'", err)
+		database.CloseDb(db, backupConfig.Name)
+	}
+
+	dbData = shared.DbData{
+		Db:                 db,
+		Connected:          true,
+		PreparedStatements: preparedStatements,
+	}
+	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
+	if err != nil {
+		t.Fatalf("While trying to ensure all backup config targets have a DB entry, got error: %s", err)
+	}
+
+	objectStores, err = objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
+	// add entry to "jobs" DB table
+	err = dbops.AddJobDetails(dbData.Db, jobId, backupConfig.Target[0].Name, "backup", time.Now())
+	if err != nil {
+		t.Fatalf("Could not add job details to 'jobs' table")
+	}
+
+	// remove dir1/dir2/dir3
+	dirToRemove := backupConfig.Paths[0] + string(filepath.Separator) + filepath.Join("dir1", "dir2", "dir3")
+	err = os.RemoveAll(dirToRemove)
+	if err != nil {
+		t.Fatalf("Could not remove: %s", dirToRemove)
+	}
+	for _, backupPath := range backupConfig.Paths {
+		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores, jobId)
+		if err != nil {
+			t.Fatalf("1. Failed to walk backup directory path %s. Error was: %s", backupPath, err)
+		}
+	}
+	expectedStats = map[string]uint64{
+		"examined_directories":                      5, // 7 in total - 2 dirs which where deleted via rm dir1/dir2/dir3
+		"examined_files":                            7, // 10 in total - 3 which where deleted via rm dir1/dir2/dir3
+		"examined_symlinks":                         2,
+		"examined_unknown":                          0,
+		"failed_to_examine":                         0,
+		"failed_to_enumerate":                       0,
+		"excluded":                                  0,
+		"up_to_date_directories":                    4,
+		"up_to_date_files":                          7,
+		"up_to_date_symlinks":                       0,
+		"uploaded_directories":                      1, // 1 which contained the removed dir ... TODO - figure out if this should have been shown via updated_metadata_for_directories property
+		"uploaded_files":                            0, // all is up to date as this is a second run
+		"uploaded_symlinks":                         0,
+		"failed_to_upload_directories":              0,
+		"failed_to_upload_files":                    0,
+		"failed_to_upload_symlinks":                 0,
+		"failed_to_upload_unknown":                  0,
+		"failed_to_find_deleted":                    0,
+		"failed_to_mark_deleted_directories":        0,
+		"failed_to_mark_deleted_files":              0,
+		"failed_to_mark_deleted_symlinks":           0,
+		"marked_deleted_directories":                2,
+		"marked_deleted_files":                      3,
+		"marked_deleted_symlinks":                   0,
+		"scripts_failed":                            0,
+		"scripts_ran":                               0,
+		"scripts_num":                               0,
+		"updated_metadata_for_files":                0,
+		"updated_metadata_for_directories":          0,
+		"updated_metadata_for_symlinks":             2, // TODO - this should be 0 and we should have up_to_date_symlinks == 2
+		"failed_to_update_metadata_for_directories": 0,
+		"failed_to_update_metadata_for_files":       0,
+		"failed_to_update_metadata_for_symlinks":    0,
+	}
+
+	// maxResult = 2 so we force it to recurse
+	backup.FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobId, 2)
+
+	if !reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		utils.Pp(backupJobsState.Running[0].StatsCounters)
+		t.Fatalf("3. Stats reported by Path() are %+v don't match expected %+v",
+			backupJobsState.Running[0].StatsCounters, expectedStats)
+	}
+	// a lot of testing goes in this function - compares messages on the Watch channel with the backupJobsState stats
+	compareWithWatchMessages(t, backupJobsState)
+
+	dbops.CloseStatementsAndDb(dbData)
 }
