@@ -9,6 +9,7 @@ import (
 	"cloudbackup/shared"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
+	"fmt"
 	"github.com/satori/go.uuid"
 	"io/ioutil"
 	"os"
@@ -1958,9 +1959,11 @@ func TestPath15(t *testing.T) {
 		"failed_to_update_metadata_for_symlinks":    0,
 	}
 	if !reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		fmt.Println("########## REPORTED #############")
 		utils.Pp(backupJobsState.Running[0].StatsCounters)
-		t.Fatalf("1. Stats reported by Path() are %+v don't match expected %+v",
-			backupJobsState.Running[0].StatsCounters, expectedStats)
+		fmt.Println("########## EXPECTED #############")
+		utils.Pp(expectedStats)
+		t.Fatal("1. Stats reported by Path() don't match expected one. See above")
 	}
 	// check how many bytes were read
 	var expectedBytesRead uint64 = 168 // 168 bytes total
@@ -1971,9 +1974,11 @@ func TestPath15(t *testing.T) {
 	// maxResult = 2 so we force it to recurse
 	backup.FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobId, 2)
 	if !reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		fmt.Println("########## REPORTED #############")
 		utils.Pp(backupJobsState.Running[0].StatsCounters)
-		t.Fatalf("2. Stats reported by Path() are %+v don't match expected %+v",
-			backupJobsState.Running[0].StatsCounters, expectedStats)
+		fmt.Println("########## EXPECTED #############")
+		utils.Pp(expectedStats)
+		t.Fatal("2. Stats reported by Path() don't match expected one. See above")
 	}
 	// a lot of testing goes in this function - compares messages on the Watch channel with the backupJobsState stats
 	compareWithWatchMessages(t, backupJobsState)
@@ -2035,7 +2040,7 @@ func TestPath15(t *testing.T) {
 	for _, backupPath := range backupConfig.Paths {
 		_, err = Path(ctx, backupPath, backupConfig, backupJobsState, false, dbData, objectStores, jobId)
 		if err != nil {
-			t.Fatalf("1. Failed to walk backup directory path %s. Error was: %s", backupPath, err)
+			t.Fatalf("2. Failed to walk backup directory path %s. Error was: %s", backupPath, err)
 		}
 	}
 	expectedStats = map[string]uint64{
@@ -2078,9 +2083,11 @@ func TestPath15(t *testing.T) {
 	backup.FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobId, 2)
 
 	if !reflect.DeepEqual(expectedStats, backupJobsState.Running[0].StatsCounters) {
+		fmt.Println("########## REPORTED #############")
 		utils.Pp(backupJobsState.Running[0].StatsCounters)
-		t.Fatalf("3. Stats reported by Path() are %+v don't match expected %+v",
-			backupJobsState.Running[0].StatsCounters, expectedStats)
+		fmt.Println("########## EXPECTED #############")
+		utils.Pp(expectedStats)
+		t.Fatal("3. Stats reported by Path() don't match expected one. See above")
 	}
 	// a lot of testing goes in this function - compares messages on the Watch channel with the backupJobsState stats
 	compareWithWatchMessages(t, backupJobsState)
