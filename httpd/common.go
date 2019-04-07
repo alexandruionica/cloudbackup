@@ -113,7 +113,7 @@ func (srvSrc *SrvData) BasicAuth(handle httprouter.Handle) httprouter.Handle {
 			}
 			runtimeCfg.Mutex.RUnlock()
 
-			if isAuthenticated == false {
+			if !isAuthenticated {
 				logger.Debug("Could not find any matching username + password(hash) in the config")
 			}
 		}
@@ -136,7 +136,7 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// Get the Basic Authentication credentials
 		httpUser, _, hasAuth := r.BasicAuth()
-		if hasAuth != true {
+		if !hasAuth {
 			msg := fmt.Sprintf("CheckAccess() called for an unauthenticated session for path '%s' and HTTP "+
 				"method '%s'. Please submit a bug report", r.URL.Path, r.Method)
 			logger.Error(msg)
@@ -322,5 +322,4 @@ func dryRunBackupPaths(ctx context.Context, backupConfig config.Backup, backupJo
 	// message HttpEval handler that scan.Path() has completed successfully its run
 	scanPathExit <- true
 	logger.Debug("dryRunBackupPaths() has successfully completed its run and is exiting")
-	return
 }

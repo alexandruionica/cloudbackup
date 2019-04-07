@@ -33,5 +33,4 @@ func (srvSrc SrvData) handlerPostNotificationTest(w http.ResponseWriter, r *http
 	}
 
 	JSONSuccess(w, "success", fmt.Sprintf("Test completed successfully for job id '%s'", jobId))
-	return
 }

@@ -104,7 +104,7 @@ func (srv *SrvData) Start() {
 			err = srv.httpsrv.ListenAndServe()
 		}
 		srvCopy := srv.GetCopyWithLock(loggingContext)
-		if err != nil && srvCopy.serverExiting == false {
+		if err != nil && !srvCopy.serverExiting {
 			logger.Errorf("%s server could not be started or encountered an error during it's operation",
 				extraMsg)
 			logger.Error(err)

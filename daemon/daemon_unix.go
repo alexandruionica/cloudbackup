@@ -27,7 +27,7 @@ func WaitForEvent(httpServer *httpd.SrvData, rcvCfgChangeFromHttpd <-chan bool, 
 		case s := <-signalChan:
 			ProcessSignal(s, httpServer, shutdownScheduler)
 			// received an event
-		case _ = <-rcvCfgChangeFromHttpd:
+		case <-rcvCfgChangeFromHttpd:
 			logger.Debug("Notifying scheduler to reload configuration")
 			sndCfgChangeToScheduler <- true
 			if len(sndCfgChangeToScheduler) > 5 {
@@ -49,7 +49,7 @@ func ProcessSignal(s os.Signal, httpServer *httpd.SrvData, shutdownScheduler cha
 		// tell scheduler to stop (and also stop running backups / restores )
 		shutdownScheduler <- true
 		// scheduler will reply back on the same channel when it has exited
-		_ = <-shutdownScheduler
+		<-shutdownScheduler
 		logger.Info("Exiting")
 		os.Exit(0)
 
