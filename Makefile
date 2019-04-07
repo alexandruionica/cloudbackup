@@ -5,11 +5,7 @@ GLIDECMD=glide
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
-ERRCHKCMD=$(GOPATH)/bin/errcheck
-ALIGNCHECKCMD=$(GOPATH)/bin/aligncheck
-STRUCTCHECKCMD=$(GOPATH)/bin/structcheck
-VARCHECKCMD=$(GOPATH)/bin/varcheck
-GOASTCMD=$(GOPATH)/bin/gosec
+GOLANGCILINTCMD=golangci-lint
 BINARY_NAME=cloudbackup
 COVERAGE_FILE=coverage.out
 
@@ -25,16 +21,8 @@ testcp:
 	@$(GOCMD) version
 	@echo "############ Running: go fmt - ensure standard formatting ############"
 	$(GOCMD) fmt ./...
-	@echo "############ Running: go vet - checking for suspicious constructs ############"
-	$(GOCMD) vet ./...
-	@echo "############ Running: errcheck - checking unhandled errors ############"
-	$(ERRCHKCMD) -verbose -abspath ./...
-	@echo "############ Running: structcheck - checking for unused struct fields ############"
-	$(STRUCTCHECKCMD) ./...
-	@echo "############ Running: varcheck - checking for unused global variables and constants ############"
-	$(VARCHECKCMD) ./...
-	@echo "############ Running: gosec - inspects source code for security problems by scanning the Go AST ############"
-	$(GOASTCMD) ./...
+	@echo "############ Running: golangci-lint ############"
+	$(GOLANGCILINTCMD) run --disable ineffassign --enable gosec
 gotest:
 ifeq ($(OS),Windows_NT)
 	@echo "Running on Windows"
@@ -70,18 +58,6 @@ else
 endif
 cover: 
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)
-testdeps:
-	$(GOCMD) get -u github.com/kisielk/errcheck
-	$(GOCMD) install github.com/kisielk/errcheck
-	$(GOCMD) get -u github.com/opennota/check/cmd/aligncheck
-	$(GOCMD) install github.com/opennota/check/cmd/aligncheck
-	$(GOCMD) get -u github.com/opennota/check/cmd/structcheck
-	$(GOCMD) install github.com/opennota/check/cmd/structcheck
-	$(GOCMD) get -u github.com/opennota/check/cmd/varcheck
-	$(GOCMD) install github.com/opennota/check/cmd/varcheck
-	$(GOCMD) get -u github.com/securego/gosec/cmd/gosec/...
-	$(GOCMD) install github.com/securego/gosec/cmd/gosec
-
 clean: $(GOCMD) clean
 
 run:
