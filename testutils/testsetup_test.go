@@ -3,6 +3,7 @@ package testutils
 import (
 	"bufio"
 	"cloudbackup/utils"
+	"io"
 	"os"
 	"testing"
 )
@@ -28,6 +29,11 @@ func TestSetupFakeFile(t *testing.T) {
 	}
 	reader := bufio.NewReader(file)
 	result, err := reader.ReadString('\n')
+	if err != nil {
+		if err != io.EOF {
+			t.Fatal(err)
+		}
+	}
 	if result != fileContent {
 		t.Fatal("Sample input for the fake file did not match what we actually read from the file")
 	}

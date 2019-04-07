@@ -46,9 +46,9 @@ func PpJson(input []byte) error {
 	if err != nil {
 		logger.Debugf("provided message is not valid JSON. Received error was: '%s' and provided message was:"+
 			" %s ", err, string(input))
-		return errors.New(fmt.Sprintf("provided message is not valid JSON. Received error was: '%s'", err))
+		return fmt.Errorf("provided message is not valid JSON. Received error was: '%s'", err)
 	}
-	fmt.Println(string(prettyJSON.Bytes()))
+	fmt.Println(prettyJSON.String())
 	return nil
 }
 
@@ -67,7 +67,7 @@ func FileExists(path string, dereference bool) (os.FileInfo, error) {
 	}
 
 	if dereference {
-		if stat.Mode().IsRegular() != true {
+		if !stat.Mode().IsRegular() {
 			return stat, ErrNotRegularFile
 		}
 	} else {
@@ -76,7 +76,7 @@ func FileExists(path string, dereference bool) (os.FileInfo, error) {
 			return stat, nil
 		} else {
 			// Not a symlink
-			if stat.Mode().IsRegular() != true {
+			if !stat.Mode().IsRegular() {
 				return stat, ErrNotRegularFile
 			}
 		}
@@ -193,7 +193,7 @@ func FileType(stat os.FileInfo) string {
 	if stat.IsDir() {
 		return "dir"
 	}
-	if stat.Mode().IsRegular() == true {
+	if stat.Mode().IsRegular() {
 		return "file"
 	}
 	return "unknown"

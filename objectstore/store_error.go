@@ -4,7 +4,6 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
-	"errors"
 	"fmt"
 )
 
@@ -25,11 +24,11 @@ func InitialiseStoreError(ctx context.Context, backupConfig config.Backup, store
 }
 
 func (object *StoreError) Upload(path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
-	return "", false, errors.New(fmt.Sprintf("unsupported backend of type: '%s'", object.storeType))
+	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }
 
 func (object *StoreError) MetadataUpdate(path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
-	return "", false, errors.New(fmt.Sprintf("unsupported backend of type: '%s'", object.storeType))
+	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }
 
 // GetStoreDetails()(StoreName string, StoreType string)
@@ -38,5 +37,5 @@ func (object *StoreError) GetStoreDetails() (StoreName string, StoreType string)
 }
 
 func (object *StoreError) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
-	return "", false, errors.New(fmt.Sprintf("unsupported backend of type: '%s'", object.storeType))
+	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }

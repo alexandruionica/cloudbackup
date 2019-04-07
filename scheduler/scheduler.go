@@ -47,7 +47,6 @@ func Start(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerF
 	go eventProcessor(cfgChange, SchedulerCommBackup, backupJobsState, configuration)
 	// components which relays to clients real time info about the file/dir/symlink currently being backed up or restores
 	go watcher.Start(backupJobsState.Watcher)
-	return
 }
 
 func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
@@ -61,7 +60,7 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 	// infinite loop
 	for {
 		select {
-		case _ = <-SchedulerCommBackup.Shutdown:
+		case <-SchedulerCommBackup.Shutdown:
 			{
 				logger.Debug("Scheduler requested to stop any running backups or restores and then exit")
 				// TODO - add code to stop restores too (right now only backups are stopped)
@@ -77,7 +76,7 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 				logger.Debug("Scheduler completed cleanup and is exiting.")
 				return
 			}
-		case _ = <-cfgChange:
+		case <-cfgChange:
 			{
 				logger.Info("Scheduler reloading configuration")
 
