@@ -51,7 +51,7 @@ func TestBasicAuth1(t *testing.T) {
 func TestBasicAuth2(t *testing.T) {
 	//
 	username := "testuser1"
-	password := "HV}H/y?<9$]Z5N4N"
+	password := "HV}H/y?<9$]Z5N4N" //nolint:gosec
 	// load config file
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -88,7 +88,7 @@ func TestBasicAuth2(t *testing.T) {
 func TestBasicAuth3(t *testing.T) {
 	//
 	username := "testuser1"
-	password := "@#$@#$"
+	password := "@#$@#$" //nolint:gosec
 	// load config file
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -125,7 +125,7 @@ func TestBasicAuth3(t *testing.T) {
 func TestBasicAuth4(t *testing.T) {
 	//
 	username := "justauser"
-	password := "HV}H/y?<9$]Z5N4N"
+	password := "HV}H/y?<9$]Z5N4N" //nolint:gosec
 	// load config file
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -162,7 +162,7 @@ func TestBasicAuth4(t *testing.T) {
 func TestBasicAuth5(t *testing.T) {
 	//
 	username := "justauser"
-	password := "some-pass"
+	password := "some-pass" //nolint:gosec
 	// load config file
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -237,7 +237,7 @@ func TestCheckAccess1(t *testing.T) {
 func TestCheckAccess2(t *testing.T) {
 	// this user has "write" access which means access to anything
 	username := "testuser1"
-	password := "HV}H/y?<9$]Z5N4N"
+	password := "HV}H/y?<9$]Z5N4N" //nolint:gosec
 	// load config file
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -276,7 +276,7 @@ func TestCheckAccess2(t *testing.T) {
 func TestCheckAccess3(t *testing.T) {
 	// this user has "write" access which means access to anything
 	username := "testuser2"
-	password := "Oonaawai8Eep]eethe8eefa$"
+	password := "Oonaawai8Eep]eethe8eefa$" //nolint:gosec
 	// load config file
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -316,7 +316,7 @@ func TestCheckAccess3(t *testing.T) {
 func TestCheckAccess4(t *testing.T) {
 	// this user has "write" access which means access to anything
 	username := "testuser2"
-	password := "Oonaawai8Eep]eethe8eefa$"
+	password := "Oonaawai8Eep]eethe8eefa$" //nolint:gosec
 	// load config file
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_httpd_common_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded

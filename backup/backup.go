@@ -42,8 +42,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 			dbEntryFound, dbRecordProperties, err := getBackedupObjectPropertiesFromDb(path, dbData)
 			if err != nil {
 				updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-				return false, errors.New(fmt.Sprintf("While searching the database for an object record,"+
-					" encountered error: %s", err))
+				return false, fmt.Errorf("while searching the database for an object record, encountered error: %s", err)
 			}
 			// if a db entry is found then this object has been previously backed up so it needs to be verified if the
 			// object has changed
@@ -56,8 +55,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
 					// backup this file
 					updateCounters(backupJobsState, backupConfig.Name, "upload", utils.FileType(stat), path, err)
-					return false, errors.New(fmt.Sprintf("Could not prepare an updated db record due to "+
-						"error: %s", err))
+					return false, fmt.Errorf("could not prepare an updated db record due to error: %s", err)
 				}
 				if contentChanged {
 					logger.Debugf("Content change detected for %s", path)
@@ -75,12 +73,17 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 						for _, objStore := range objectStores {
 							targetName, _ := objStore.GetStoreDetails()
 							remoteFilesUuid, err := getNewestRemoteFileUuid(dbData, path, targetName)
-							_, err = dbData.PreparedStatements.BackupCollectionsInsertStmt.Exec(remoteFilesUuid, jobUuid, targetName)
 							if err != nil {
-								foundErr = errors.New(fmt.Sprintf("Despite no change detected for '%s', could not add entry to backup_collections"+
-									" table due to error %s . This means that if a restore is selected for this particular backup job id, then this file "+
-									"won't be restored despite the fact that a previous run ensured it is backed up", path, err))
+								foundErr = err
 								logger.Error(foundErr)
+							} else {
+								_, err = dbData.PreparedStatements.BackupCollectionsInsertStmt.Exec(remoteFilesUuid, jobUuid, targetName)
+								if err != nil {
+									foundErr = fmt.Errorf("despite no change detected for '%s', could not add entry to backup_collections"+
+										" table due to error %s . This means that if a restore is selected for this particular backup job id, then this file "+
+										"won't be restored despite the fact that a previous run ensured it is backed up", path, err)
+									logger.Error(foundErr)
+								}
 							}
 						}
 						updateCounters(backupJobsState, backupConfig.Name, "up_to_date", updatedDbRecord.Type, path, foundErr)
@@ -136,6 +139,11 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 	checksum := ""
 	if backupConfig.Checksum && utils.FileType(stat) == "file" {
 		checksum, err = utils.GetFileMD5Sum(path)
+		if err != nil {
+			logger.Errorf("While trying to calculate MD5 for '%s' encountered error: %s . Will use a UUID as a "+
+				"checksum in order to have the correct one added during the next backup run", path, err)
+			checksum = uuid.NewV4().String()
+		}
 	}
 	ctime, err := fileproperties.GetCtime(path)
 	if err != nil {
@@ -171,15 +179,15 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 	case "metadata-update":
 		operationType = "update"
 	default:
-		return false, errors.New(fmt.Sprintf("Unknown operation: %s . Allowed operations are:  'new', 'content-update', 'metadata-update'", operation))
+		return false, fmt.Errorf("unknown operation: %s . Allowed operations are:  'new', 'content-update', 'metadata-update'", operation)
 	}
 
 	dbtx, err := dbData.Db.Begin()
 	if err != nil {
 		// could not start a database transaction so we can't proceed to backup this file.
 		updateCounters(backupJobsState, backupConfig.Name, operationType, utils.FileType(stat), path, err)
-		return false, errors.New(fmt.Sprintf("While trying to start a database transaction "+
-			"encountered error: %s", err))
+		return false, fmt.Errorf("while trying to start a database transaction "+
+			"encountered error: %s", err)
 	}
 	if operation == "new" {
 		_, err = dbtx.Exec(dbData.PreparedStatements.FilesInsert, DbRecord.Path, DbRecord.Type,
@@ -203,8 +211,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		}
 		// could not add dbentry to the database so we can't proceed to backup this file.
 		updateCounters(backupJobsState, backupConfig.Name, operationType, utils.FileType(stat), path, err)
-		return false, errors.New(fmt.Sprintf("While trying to add new file object DB entry "+
-			"encountered error: %s", err))
+		return false, fmt.Errorf("while trying to add new file object DB entry encountered error: %s", err)
 	}
 	encounteredError := 0
 	var encounteredErrorObject error
@@ -232,8 +239,8 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		_, err = dbtx.Exec(dbData.PreparedStatements.BackupCollectionsInsert, remoteUuid, jobUuid, targetName)
 		if err != nil {
 			encounteredError++
-			encounteredErrorObject = errors.New(fmt.Sprintf("For '%s' could not add entry to backup_collections"+
-				" table due to error %s", path, err))
+			encounteredErrorObject = fmt.Errorf("for '%s' could not add entry to backup_collections"+
+				" table due to error %s", path, err)
 			break
 		}
 	}
@@ -258,7 +265,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 
 	txerr := dbtx.Commit()
 	if txerr != nil {
-		return false, errors.New(fmt.Sprintf("Could not commit transaction due to error: %s", err))
+		return false, fmt.Errorf("could not commit transaction due to error: %s", err)
 	}
 	// if we got here then all was good
 	updateCounters(backupJobsState, backupConfig.Name, operationType, DbRecord.Type, path, nil)
@@ -285,8 +292,8 @@ func addEntryToRemoteFiles(remotePath string, target string, jobUuid string, del
 		fileDbRecord.Ctime.Format(time.RFC3339Nano), fileDbRecord.Owner,
 		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("While trying to add a db record for '%s' in the remote_files table, "+
-			"encountered error: %s", fileDbRecord.Path, err))
+		return "", fmt.Errorf("while trying to add a db record for '%s' in the remote_files table, "+
+			"encountered error: %s", fileDbRecord.Path, err)
 	}
 	return entryUuid, nil
 }
@@ -318,7 +325,7 @@ func getRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, 
 				" '%s'", targetName, err)
 			return 0, err
 		}
-		break
+		break //nolint:staticcheck
 	}
 	if err = rows.Err(); err != nil {
 		logger.Error("While enumerating the results of querying the database in order calculate a version number"+
@@ -359,7 +366,7 @@ func getNewestRemoteFileUuid(dbData shared.DbData, localPath string, targetName 
 				" '%s'", localPath, err)
 			return "", err
 		}
-		break
+		break //nolint:staticcheck
 	}
 	if err = rows.Err(); err != nil {
 		logger.Error("While enumerating the results of querying the database for the remote uuid for '%s' "+
@@ -367,11 +374,11 @@ func getNewestRemoteFileUuid(dbData shared.DbData, localPath string, targetName 
 		return "", err
 	}
 	if !entryFound {
-		return "", errors.New(fmt.Sprintf("Could not find the uuid for previously backed up object '%s'", localPath))
+		return "", fmt.Errorf("could not find the uuid for previously backed up object '%s'", localPath)
 	}
 
 	if remoteUuid == "" {
-		return "", errors.New(fmt.Sprintf("Found an empty uuid for previously backed up object '%s'", localPath))
+		return "", fmt.Errorf("found an empty uuid for previously backed up object '%s'", localPath)
 	}
 	return remoteUuid, nil
 }
@@ -419,8 +426,8 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 				if err != nil {
 					logger.Error("While converting mtime property of database record for '%s' the following "+
 						"error was encountered: %s", path, err)
-					return false, shared.BackedUpFileProperties{}, errors.New(fmt.Sprintf("While converting "+
-						"mtime property encountered error: %s", err))
+					return false, shared.BackedUpFileProperties{}, fmt.Errorf("while converting "+
+						"mtime property encountered error: %s", err)
 				}
 			}
 			if tmpCtime != "" {
@@ -428,8 +435,8 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 				if err != nil {
 					logger.Error("While converting ctime property of database record for '%s' the following "+
 						"error was encountered: %s", path, err)
-					return false, shared.BackedUpFileProperties{}, errors.New(fmt.Sprintf("While converting "+
-						"ctime property encountered error: %s", err))
+					return false, shared.BackedUpFileProperties{}, fmt.Errorf("while converting "+
+						"ctime property encountered error: %s", err)
 				}
 			}
 		}
@@ -800,7 +807,7 @@ func FindAndMarkDeleted(ctx context.Context, backupConfig config.Backup, dbData 
 					}
 					updateCounters(backupJobsState, backupConfig.Name, "mark_deleted", dbRecordProperties.Type, dbRecordProperties.Path, err)
 				} else {
-					backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", path, "", "mark_deleted", err.Error())
+					backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", path, "", "mark_deleted", "")
 					logger.Warningf("Path '%s' no longer appears in the file table so it can't be properly marked as deleted", path)
 					continue
 				}
@@ -869,8 +876,8 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 	dbtx, err := dbData.Db.Begin()
 	if err != nil {
 		// could not start a database transaction so we can't proceed to backup this file.
-		return false, errors.New(fmt.Sprintf("While trying to start a database transaction for deletion marking, "+
-			"encountered error: %s", err))
+		return false, fmt.Errorf("while trying to start a database transaction for deletion marking, "+
+			"encountered error: %s", err)
 	}
 
 	// delete path entry for this path, from the "files" table
@@ -930,7 +937,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 	// end, all was good until here
 	txerr := dbtx.Commit()
 	if txerr != nil {
-		return false, errors.New(fmt.Sprintf("Could not commit transaction due to error: %s", err))
+		return false, fmt.Errorf("could not commit transaction due to error: %s", err)
 	}
 	return false, nil
 }

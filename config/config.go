@@ -247,12 +247,12 @@ func Save(runtimeCfg *RuntimeConfig, newConfig CfgTemplate) error {
 	}()
 	toWrite, err := yaml.Marshal(newConfig)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Could not marshall YAML when preparing for write the configuration "+
-			"file. The error received was: %s", err.Error()))
+		return fmt.Errorf("could not marshall YAML when preparing for write the configuration "+
+			"file. The error received was: %s", err.Error())
 	}
 	if err := ioutil.WriteFile(runtimeCfg.Path, toWrite, 0644); err != nil {
-		return errors.New(fmt.Sprintf("Could not write to configuration file '%s' . Received error was: %s",
-			runtimeCfg.Path, err))
+		return fmt.Errorf("could not write to configuration file '%s' . Received error was: %s",
+			runtimeCfg.Path, err)
 	}
 	logger.Debug("Updating in-memory configuration")
 	runtimeCfg.Config = newConfig
@@ -330,7 +330,7 @@ func ValidateBackup(backups []Backup, logError bool) error {
 			return errors.New(msg)
 		}
 
-		if backup.VersionsMaxAge != "0" {
+		if backup.VersionsMaxAge != "0" { //nolint:staticcheck
 			// TODO - validate that the AGE string is valid (to figure out what valid means)
 			//msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +
 			//	"'versions_max_age=%s' . Enable versioning or remove the 'versions_max_age' setting", i, backup.Name,
@@ -391,7 +391,7 @@ func ValidatePrePostRunScript(path string, scriptType string, backupName string,
 
 // validate HTTPS section of the config
 func ValidateHttps(config CfgTemplate, logError bool) error {
-	if config.Https.Enabled == true {
+	if config.Https.Enabled {
 		if config.Https.SslCertPath == "" {
 			msg := fmt.Sprintf("https: enabled=true  but https: ssl_cert_path  is not set")
 			if logError {
@@ -469,7 +469,7 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 		}
 
 		// check ratelimit is not < 0
-		if ratelimit < 0 {
+		if ratelimit < 0 { //nolint:staticcheck
 			msg := fmt.Sprintf("Target '%s' for backup '%s' has ratelimit defined as %d which is a negative "+
 				"number. Only 0 and positive numbers are allowed", target.Name, BackupName, ratelimit)
 			if logError {
@@ -783,6 +783,9 @@ func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) e
 
 	// compared config.Notification.Email.Pass entries
 	err = CopyPasswordsFromOldConfigNotificationsEmails(newConfig.Notifications.Email, oldConfig.Notifications.Email)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -807,10 +810,10 @@ func CopyPasswordsFromOldConfigUser(newConfigUser []User, oldConfigUser []User) 
 					break
 				}
 			}
-			if foundMatch != true {
-				return errors.New(fmt.Sprintf("Username '%s' has a password of '%s' which implies the password "+
+			if !foundMatch {
+				return fmt.Errorf("username '%s' has a password of '%s' which implies the password "+
 					"should be copied from the current(active) configuration but no such username was found in "+
-					"the current configuration", newConfigUser[i].Name, newConfigUser[i].Pass))
+					"the current configuration", newConfigUser[i].Name, newConfigUser[i].Pass)
 			}
 		}
 	}
@@ -839,12 +842,12 @@ func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []Notif
 					break
 				}
 			}
-			if foundMatch != true {
-				return errors.New(fmt.Sprintf("In the notifications section, username '%s' configured for "+
+			if !foundMatch {
+				return fmt.Errorf("in the notifications section, username '%s' configured for "+
 					"email(SMTP) server '%s' has a password "+
 					"of '%s' which implies the password should be copied from the current(active) configuration but no "+
 					"such username + server address was found in the current configuration",
-					newNotificationsEmail[i].User, newNotificationsEmail[i].Server, oldNotificationsEmail[i].Pass))
+					newNotificationsEmail[i].User, newNotificationsEmail[i].Server, oldNotificationsEmail[i].Pass)
 			}
 		}
 	}
@@ -872,17 +875,17 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup 
 						newConfigBackup[i].EncryptPass = oldConfigBackup[j].EncryptPass
 						break
 					} else {
-						return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' "+
+						return fmt.Errorf("backup having name '%s' has an 'encrypt_pass' of '%s' "+
 							"which implies the password should be copied from the current(active) configuration but "+
 							"in the current configuration there isn't a password set for 'encrypt_pass' so there "+
-							"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].EncryptPass))
+							"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].EncryptPass)
 					}
 				}
 			}
-			if foundMatch != true {
-				return errors.New(fmt.Sprintf("Backup having name '%s' has an 'encrypt_pass' of '%s' which implies the password "+
+			if !foundMatch {
+				return fmt.Errorf("backup having name '%s' has an 'encrypt_pass' of '%s' which implies the password "+
 					"should be copied from the current(active) configuration but no backup with the same name was found in "+
-					"the current configuration", newConfigBackup[i].Name, newConfigBackup[i].EncryptPass))
+					"the current configuration", newConfigBackup[i].Name, newConfigBackup[i].EncryptPass)
 			}
 		}
 
@@ -904,32 +907,32 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup 
 									newConfigBackup[i].Target[j].Pass = oldConfigBackup[k].Target[l].Pass
 									break
 								} else {
-									return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an "+
+									return fmt.Errorf("backup having name '%s' and target '%s' has an "+
 										"'pass' of '%s' which implies the password "+
 										"should be copied from the current(active) configuration but in the current "+
 										"configuration there isn't a password set for the same target name so there "+
 										"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
-										newConfigBackup[i].Target[j].Pass))
+										newConfigBackup[i].Target[j].Pass)
 								}
 							}
 						}
-						if foundTargetMatch != true {
-							return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an "+
+						if !foundTargetMatch {
+							return fmt.Errorf("backup having name '%s' and target '%s' has an "+
 								"'pass' of '%s' which implies the password "+
 								"should be copied from the current(active) configuration but no 'target' with the "+
 								"same name was found in the current configuration for a Backup having the same"+
 								" name", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
-								newConfigBackup[i].Target[j].Pass))
+								newConfigBackup[i].Target[j].Pass)
 						}
 
 					}
 				}
-				if foundMatch != true {
-					return errors.New(fmt.Sprintf("Backup having name '%s' and target '%s' has an "+
+				if !foundMatch {
+					return fmt.Errorf("backup having name '%s' and target '%s' has an "+
 						"'pass' of '%s' which implies the password "+
 						"should be copied from the current(active) configuration but no 'backup' with the "+
 						"same name was found in the current configuration", newConfigBackup[i].Name,
-						newConfigBackup[i].Target[j].Name, newConfigBackup[i].Target[j].Pass))
+						newConfigBackup[i].Target[j].Name, newConfigBackup[i].Target[j].Pass)
 				}
 			}
 		}

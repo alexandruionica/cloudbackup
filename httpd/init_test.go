@@ -111,7 +111,7 @@ func TestStartAndCloseHttps(t *testing.T) {
 	}
 	// disable SSL cert verification as we're using a self signed cert
 	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 	}
 	client := &http.Client{Transport: tr}
 	_, err = client.Get("https://" + addrSsl + "/")

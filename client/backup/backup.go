@@ -493,7 +493,7 @@ func printBackupStatus(decodedJson shared.BackupJobStatus) {
 		fmt.Printf("Current operation: %s\n", decodedJson.StatsText["current_operation"])
 		fmt.Printf("Job id: %s\n", decodedJson.BackupJobId)
 		fmt.Printf("Start time: %s\n", decodedJson.StartTime.String())
-		fmt.Printf("Duration so far: %s\n", time.Now().Sub(decodedJson.StartTime).Round(time.Second))
+		fmt.Printf("Duration so far: %s\n", time.Since(decodedJson.StartTime).Round(time.Second))
 		if len(decodedJson.ObjectStoreRates) < 2 {
 			fmt.Printf(" 1 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate1Min)))
 			fmt.Printf(" 5 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate5Min)))

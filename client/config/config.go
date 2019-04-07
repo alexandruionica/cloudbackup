@@ -41,13 +41,13 @@ func Load(path string, debug bool, cliUsername string, cliPassword string, cliAd
 
 	// if a mix of command line options + env vars supplies all needed options then don't check if the config file
 	// exists
-	if CheckIfOptionOrEnvVars(cliUsername, EnvPrefix+"_Username", EnvPrefix+"_USERNAME") == false {
+	if !CheckIfOptionOrEnvVars(cliUsername, EnvPrefix+"_Username", EnvPrefix+"_USERNAME") {
 		fileCheckRequired = true
 	}
-	if CheckIfOptionOrEnvVars(cliPassword, EnvPrefix+"_Password", EnvPrefix+"_PASSWORD") == false {
+	if !CheckIfOptionOrEnvVars(cliPassword, EnvPrefix+"_Password", EnvPrefix+"_PASSWORD") {
 		fileCheckRequired = true
 	}
-	if CheckIfOptionOrEnvVars(cliAddress, EnvPrefix+"_Address", EnvPrefix+"_ADDRESS") == false {
+	if !CheckIfOptionOrEnvVars(cliAddress, EnvPrefix+"_Address", EnvPrefix+"_ADDRESS") {
 		fileCheckRequired = true
 	}
 
@@ -125,7 +125,7 @@ func Validate(config Client) error {
 
 func CheckConfigOptionNotEmpty(value string, name string) error {
 	if value == "" {
-		return errors.New(fmt.Sprintf("no '%s' was provided or provided value is an empty string", name))
+		return fmt.Errorf("no '%s' was provided or provided value is an empty string", name)
 	}
 
 	r, err := regexp.Compile(`^[[:space:]]+$`)
@@ -137,7 +137,7 @@ func CheckConfigOptionNotEmpty(value string, name string) error {
 	}
 
 	if r.MatchString(value) {
-		return errors.New(fmt.Sprintf("value of '%s' is made only out of whitespace", name))
+		return fmt.Errorf("value of '%s' is made only out of whitespace", name)
 	}
 
 	return nil
@@ -151,10 +151,10 @@ func ValidateAddress(address string) error {
 			" field. The error was: %s \n", err)
 		os.Exit(2)
 	}
-	if r.MatchString(address) == false {
-		return errors.New(fmt.Sprintf("supplied 'address' having value '%s' does not match the pattern "+
+	if !r.MatchString(address) {
+		return fmt.Errorf("supplied 'address' having value '%s' does not match the pattern "+
 			"'http://IP-ADDRESS:port' 'https://IP-ADDRESS:port' 'http://hostname:port' 'https://hostname:port'",
-			address))
+			address)
 	}
 
 	return nil
@@ -168,12 +168,12 @@ func RetrieveClientConfigFilePath(inPath string) (string, error) {
 	if runtime.GOOS == "windows" {
 		// %HomeDrive%%HomePath%
 		homeDrive, found := os.LookupEnv("HomeDrive")
-		if found == false {
+		if !found {
 			return "", errors.New("environment variable %HomeDrive% is not set so the path to the default client " +
 				"configuration file can't be established")
 		}
 		homePath, found := os.LookupEnv("HomePath")
-		if found == false {
+		if !found {
 			return "", errors.New("environment variable %HomePath% is not set so the path to the default client " +
 				"configuration file can't be established")
 		}
@@ -181,7 +181,7 @@ func RetrieveClientConfigFilePath(inPath string) (string, error) {
 		// otherwise we're running Linux or some kind of Unix derivate so $HOME is the path to the user's home
 	} else {
 		home, found := os.LookupEnv("HOME")
-		if found == false {
+		if !found {
 			return "", errors.New("environment variable %HOME% is not set so the path to the default client " +
 				"configuration file can't be established")
 		}
@@ -193,7 +193,7 @@ func RetrieveClientConfigFilePath(inPath string) (string, error) {
 func CheckIfOptionOrEnvVars(cliOption string, envVar1 string, envVar2 string) bool {
 	_, envOk1 := os.LookupEnv(envVar1)
 	_, envOk2 := os.LookupEnv(envVar2)
-	if cliOption == "" && envOk1 == false && envOk2 == false {
+	if cliOption == "" && !envOk1 && !envOk2 {
 		return false
 	}
 	return true
