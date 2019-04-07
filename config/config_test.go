@@ -56,7 +56,6 @@ func TestLoad3(t *testing.T) {
 
 // test loading valid yaml but invalid config file
 func TestLoad4(t *testing.T) {
-	var compare = &RuntimeConfig{}
 	var invalidConfig = []byte(`zzzzzz
 some: value`)
 	path, err := utils.SetupTmpFileWithContent(invalidConfig, "unittest_config_test_")
@@ -71,12 +70,9 @@ some: value`)
 		}
 	}()
 
-	result, err := Load(path, true, &sync.RWMutex{})
+	_, err = Load(path, true, &sync.RWMutex{})
 	if err == nil {
 		t.Fatal("Invalid yaml config file should have caused an eror but didn't")
-	}
-	// we just ensure that we have the same type in the result as what we expect
-	if compare == result {
 	}
 }
 

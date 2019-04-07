@@ -178,9 +178,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 
 	result, err := db.Exec(`DELETE FROM targets WHERE name="aws_2"`)
 	if err != nil {
-		if err != nil {
-			t.Fatalf("Attempting to delete 1 record from 'targets' returned error: '%s'", err)
-		}
+		t.Fatalf("Attempting to delete 1 record from 'targets' returned error: '%s'", err)
 	}
 	rowCount, _ := result.RowsAffected()
 	if rowCount == 0 {
