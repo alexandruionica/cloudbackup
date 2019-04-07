@@ -254,9 +254,7 @@ func EnsureTargetsInDb(db *sql.DB, backupConfig config.Backup) error {
 		}
 		// else just add all target names in the config to the list of names to insert in the DB
 	} else {
-		for _, configTarget := range configFoundTargetNames {
-			targetNamesToAdd = append(targetNamesToAdd, configTarget)
-		}
+		targetNamesToAdd = append(targetNamesToAdd, configFoundTargetNames...)
 	}
 
 	// if any targets were found to be mentioned only in the config file then add them to the DB too
@@ -311,7 +309,7 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 		}
 		// any result row means we had a match
 		logger.Debugf("Found in the database a record of job id '%s'", jobid)
-		return true, nil
+		return true, nil // nolint:staticcheck
 	}
 	err = rows.Err()
 	if err != nil {

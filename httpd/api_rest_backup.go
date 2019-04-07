@@ -29,6 +29,10 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 	}
 	var decodedJson BackupJob
 	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
 	if decodedJson.Name == "" {
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
 			" is needed in order to know what backup job you're requesting to be started"))
@@ -49,7 +53,7 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 	}
 	configCopy.Mutex.RUnlock()
 
-	if found == false {
+	if !found {
 		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job was found matching name:"+
 			" %s", decodedJson.Name))
 		return
@@ -91,7 +95,7 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 	case result = <-srvCopy.commWithSchedulerForBackup.SendResponse:
 		{
 			logger.Debugf("Received response %+v from scheduling component", result)
-			if result.Err == false {
+			if !result.Err {
 				requestResult := BackupJob{
 					Name:  decodedJson.Name,
 					JobId: result.BackupJobId,
@@ -130,6 +134,10 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 	}
 	var decodedJson BackupJob
 	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
 	if decodedJson.Name == "" {
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
 			" is needed in order to know what backup job you're requesting to be stopped"))
@@ -138,7 +146,7 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 	// while a copy, some of the data is pointers so locking is still needed
 	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostBackupStop")
 
-	if srvCopy.backupJobsState.IsRunning(decodedJson.Name, decodedJson.JobId, loggingContext+".handlerPostBackupStart") == false {
+	if !srvCopy.backupJobsState.IsRunning(decodedJson.Name, decodedJson.JobId, loggingContext+".handlerPostBackupStart") {
 		var errorMsg string
 		if decodedJson.JobId != "" && srvCopy.backupJobsState.IsRunning(decodedJson.Name, "", loggingContext+".handlerPostBackupStart") {
 			errorMsg = fmt.Sprintf("Backup for job having name '%s' and a backup job id of '%s' is not "+
@@ -194,7 +202,7 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 	case result = <-srvCopy.commWithSchedulerForBackup.SendResponse:
 		{
 			logger.Debugf("Received response %+v from scheduling component", result)
-			if result.Err == false {
+			if !result.Err {
 				requestResult := BackupJob{
 					Name:  decodedJson.Name,
 					JobId: result.BackupJobId,
@@ -245,6 +253,10 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 	}
 	var decodedJson BackupJob
 	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
 	if decodedJson.Name == "" {
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
 			" is needed in order to know what backup job you're requesting to be started"))
@@ -268,7 +280,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 	}
 	configCopy.Mutex.RUnlock()
 
-	if found == false {
+	if !found {
 		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job was found matching name:"+
 			" %s", decodedJson.Name))
 		return
@@ -344,7 +356,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 				}
 			}
 		// scan.Path completed it's run (a cancel may have been requested)
-		case _ = <-scanPathExit:
+		case <-scanPathExit:
 			{
 				logger.Debug("scan.Path() triggered by handlerPostBackupDryRun() has completed its run so the " +
 					"http handler will exit now")
@@ -385,6 +397,10 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 	}
 	var decodedJson BackupJob
 	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
 	if decodedJson.Name == "" {
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
 			" is needed in order to know what backup job you're requesting to watch"))
@@ -394,7 +410,7 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 	// while a copy, some of the data is pointers so locking is still needed
 	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostBackupDryRun")
 
-	if srvCopy.backupJobsState.IsRunning(decodedJson.Name, decodedJson.JobId, loggingContext+".handlerPostBackupWatch") == false {
+	if !srvCopy.backupJobsState.IsRunning(decodedJson.Name, decodedJson.JobId, loggingContext+".handlerPostBackupWatch") {
 		var errorMsg string
 		if decodedJson.JobId != "" && srvCopy.backupJobsState.IsRunning(decodedJson.Name, "", loggingContext+".handlerPostBackupWatch") {
 			errorMsg = fmt.Sprintf("Backup for job having name '%s' and a backup job id of '%s' is not "+

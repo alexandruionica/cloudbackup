@@ -161,7 +161,6 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 	JSONSuccess(w, "success", "Successfully updated server configuration. Any changes to SSL "+
 		"certificates, ports and addresses to listen on and if to use http or https will require a server restart in"+
 		" order to take effect")
-	return
 }
 
 // process POST for $api_prefix/config/backup . If successful then it updates the whole daemon config
@@ -251,7 +250,7 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 	}
 
 	// if no match found then this is a new "Backup" entry so append it to the existing slice of Backup entries
-	if matchFound == false {
+	if !matchFound {
 		NewConfig.Backup = append(NewConfig.Backup, NewConfigBackup)
 	}
 
@@ -305,5 +304,4 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 	JSONSuccess(w, "success", "Successfully updated server configuration. Any changes to SSL "+
 		"certificates, ports and addresses to listen on and if to use http or https will require a server restart in"+
 		" order to take effect")
-	return
 }

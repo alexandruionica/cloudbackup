@@ -31,9 +31,7 @@ func TestBasicAuth1(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	auth := fakeSrvData.BasicAuth(handle)
@@ -69,9 +67,7 @@ func TestBasicAuth2(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	auth := fakeSrvData.BasicAuth(handle)
@@ -106,9 +102,7 @@ func TestBasicAuth3(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	auth := fakeSrvData.BasicAuth(handle)
@@ -143,9 +137,7 @@ func TestBasicAuth4(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	auth := fakeSrvData.BasicAuth(handle)
@@ -183,9 +175,7 @@ func TestBasicAuth5(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	auth := fakeSrvData.BasicAuth(handle)
@@ -217,9 +207,7 @@ func TestCheckAccess1(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://example.com/api/v1/config", nil)
 	// req.SetBasicAuth(username, password)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	acc := fakeSrvData.CheckAccess(handle)
@@ -255,9 +243,7 @@ func TestCheckAccess2(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	acc := fakeSrvData.BasicAuth(fakeSrvData.CheckAccess(handle))
@@ -294,9 +280,7 @@ func TestCheckAccess3(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://example.com/foo", nil)
 	req.SetBasicAuth(username, password)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	acc := fakeSrvData.BasicAuth(fakeSrvData.CheckAccess(handle))
@@ -334,9 +318,7 @@ func TestCheckAccess4(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://example.com/api/v1/config", nil)
 	req.SetBasicAuth(username, password)
 	w := httptest.NewRecorder()
-	var handle httprouter.Handle
-	handle = func(http.ResponseWriter, *http.Request, httprouter.Params) {
-		return
+	handle := func(http.ResponseWriter, *http.Request, httprouter.Params) {
 	}
 
 	acc := fakeSrvData.BasicAuth(fakeSrvData.CheckAccess(handle))
