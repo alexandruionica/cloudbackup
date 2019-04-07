@@ -59,8 +59,8 @@ func Execute(config config.CfgTemplate, JobId string, JobType string, JobState s
 		}
 	}
 	if numErrors > 0 {
-		return failedScripts, errors.New(fmt.Sprintf("%d notification definitions were run and %d encountered "+
-			"errors. The errors were: %s", numNotificators, numErrors, totalErrors))
+		return failedScripts, fmt.Errorf("%d notification definitions were run and %d encountered "+
+			"errors. The errors were: %s", numNotificators, numErrors, totalErrors)
 	}
 	// if we got here then all was good
 	return failedScripts, nil

@@ -194,7 +194,7 @@ func (jobs *BackupJobsState) Get(cfgCopy config.CfgTemplate, logContext string) 
 	cfgCopy.Mutex.RLock()
 	// add state of stopped jobs (what is not part of running must be stopped)
 	for _, backupJob := range cfgCopy.Backup {
-		if _, foundMatch := runningList[backupJob.Name]; foundMatch == false {
+		if _, foundMatch := runningList[backupJob.Name]; !foundMatch {
 			result = append(result, BackupJobStatus{
 				Name:  backupJob.Name,
 				State: "stopped",
@@ -369,7 +369,7 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
 			if BackupJobId == "" {
 				found = true
-				if stopped == false {
+				if !stopped {
 					job.State = "stopping"
 					updatedJobsRunning = append(updatedJobsRunning, job)
 				}
@@ -377,7 +377,7 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 			} else {
 				if BackupJobId != "" && job.BackupJobId == BackupJobId {
 					found = true
-					if stopped == false {
+					if !stopped {
 						job.State = "stopping"
 						updatedJobsRunning = append(updatedJobsRunning, job)
 					}

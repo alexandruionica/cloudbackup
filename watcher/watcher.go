@@ -85,7 +85,7 @@ func TellClientsJobFinished(JobType string, JobName string, JobId string, WatchM
 		JobFailed:       JobFailed,
 	}
 	// if JobFailed then it means the backup job failed to start
-	if JobFailed == false && JobCancelled == false {
+	if !JobFailed && !JobCancelled {
 		msg.JobCompleted = true
 	}
 	shared.SendMsgToWatcher(msg, WatchMsgReceiver)
@@ -110,7 +110,7 @@ func sendMsgToClients(multiplexer *shared.WatchMultiplexer, msg shared.WatchMess
 				// the current event which could not be sent. Basically act like a ring buffer.
 				default:
 					select {
-					case _ = <-client.CommChan:
+					case <-client.CommChan:
 						select {
 						// try to send again the message to the client
 						case client.CommChan <- msg:

@@ -3,7 +3,6 @@ package testutils
 import (
 	"bytes"
 	"cloudbackup/utils"
-	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"io/ioutil"
@@ -265,8 +264,7 @@ func WaitForServerToStart(host string, port string, t *testing.T) error {
 			}
 		} else {
 			if counter > 200 {
-				return errors.New(fmt.Sprintf("After 20 seconds of waiting, nothing is listening on %s:%s",
-					host, port))
+				return fmt.Errorf("ffter 20 seconds of waiting, nothing is listening on %s:%s", host, port)
 			}
 		}
 		counter += 1
@@ -283,9 +281,8 @@ address: http://127.0.0.1:8080
 // folder with some files to test backing up; user must delete folder afterwards
 func SetupBackupDir(testName string, t *testing.T) string {
 	var path = utils.SetupTmpDir("unittest_backup_scan_test_"+testName, t)
-	var err error
 	// something like /tmp/$RANDOM/dir1/dir2/dir3/dir4
-	err = os.MkdirAll(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+	err := os.MkdirAll(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
 		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"dir4", 0755) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
