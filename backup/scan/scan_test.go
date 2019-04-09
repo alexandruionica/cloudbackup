@@ -11,6 +11,7 @@ import (
 	"cloudbackup/utils"
 	"fmt"
 	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -1986,6 +1987,9 @@ func TestPath15(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if len(backupJobsState.Running) > 0 {
+		t.Fatal("No jobs should be running")
+	}
 	dbops.CloseStatementsAndDb(dbData)
 
 	// ######## walk again path - first we need to re-init stuff #########
@@ -1999,6 +2003,9 @@ func TestPath15(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get signalling context. Error was: %s", err)
 	}
+
+	log.SetLevel(log.DebugLevel)
+	logger.Debugf("############## Second run ##############")
 
 	db, err = database.Start(result.Config.DataDir, backupConfig.Name)
 	if err != nil {

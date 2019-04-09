@@ -67,6 +67,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 						cancelled, err := backupExistingWithMetadataChange(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, updatedDbRecord, jobUuid)
 						return cancelled, err
 					} else {
+						logger.Debugf("No change detected(it's up to date) for %s", path)
 						// object is up to date (aka we got a copy in the backup)
 						// add entry to backup_collections so this file would also be included in a restore
 						var foundErr error
@@ -469,11 +470,17 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 		if err != nil {
 			// if we got any errors means we could not calculate the checksum so to be safe, we consider that the file needs to be uploaded
 			contentChanged = true
+			logger.Debugf("Checksum could not be calculated for '%s' so its safer to consider the content to be changed", path)
 		} else if checksum != dbRecordProperties.Checksum {
+			logger.Debugf("Checksum change detected for '%s'", path)
 			contentChanged = true
 		}
 		// if size or mtime differs then we got a file change
-	} else if stat.Size() != dbRecordProperties.Size || stat.ModTime() != dbRecordProperties.Mtime {
+	} else if stat.Size() != dbRecordProperties.Size {
+		logger.Debugf("Size change detected for '%s'", path)
+		contentChanged = true
+	} else if !stat.ModTime().Equal(dbRecordProperties.Mtime) {
+		logger.Debugf("Mtime change detected for '%s'", path)
 		contentChanged = true
 		// if type changed then we need to back it up (for example in the DB it's marked as a symlink but on disk it's a file now
 	} else if objectType != dbRecordProperties.Type {
@@ -482,9 +489,11 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 	ctime, err = fileproperties.GetCtime(path)
 	// in case of error we just treat it as the metadata changed as we can't know for sure if it didn't and it's better to be safe and just back it up
 	if err != nil {
+		logger.Debugf("Could not get ctime so to be safe considering that Ctime change detected for '%s'", path)
 		metadataChanged = true
 	} else {
-		if ctime != dbRecordProperties.Ctime {
+		if !ctime.Equal(dbRecordProperties.Ctime) {
+			logger.Debugf("Ctime change detected for '%s'", path)
 			metadataChanged = true
 		}
 	}
@@ -493,9 +502,11 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 		linkTarget, err := os.Readlink(path)
 		// in case of error we just treat it as the metadata changed as we can't know for sure if it didn't and it's better to be safe and just back it up
 		if err != nil {
+			logger.Debugf("Could not get link target so to be safe considering that link target change detected for '%s'", path)
 			metadataChanged = true
 		} else {
 			if linkTarget != dbRecordProperties.LinkTarget {
+				logger.Debugf("Link target change detected for '%s'", path)
 				metadataChanged = true
 			}
 		}
