@@ -1,5 +1,6 @@
 GO_VERSION = "1.12.2"
 GLIDE_VERSION = "0.13.1"
+GOLANGCI_LINT_VERSION = "1.16.0"
 
 Vagrant.configure("2") do |config|
 
@@ -37,7 +38,7 @@ Vagrant.configure("2") do |config|
         # Display the VirtualBox GUI when booting the machine
         vb.gui = true
         # Customize the amount of memory on the VM:
-        vb.memory = "1024"
+        vb.memory = "2048"
       end
       freebsd.vm.guest = :freebsd
       freebsd.ssh.shell = "sh"
@@ -91,7 +92,7 @@ Vagrant.configure("2") do |config|
         # Display the VirtualBox GUI when booting the machine
         vb.gui = true
         # Customize the amount of memory on the VM:
-        vb.memory = "1024"
+        vb.memory = "2048"
       end
 
         linux.vm.guest = :linux
@@ -104,5 +105,72 @@ Vagrant.configure("2") do |config|
         linux.vm.provision "shell", inline: "sudo DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
         linux.vm.provision "shell", inline: "sudo apt-get -y install virtualenv python3-virtualenv python3-pip make wget openjdk-8-jre docker.io"
         linux.vm.provision "shell", inline: "sudo usermod -aG docker ubuntu"
+
+        # install GO
+        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || wget https://dl.google.com/go/go#{GO_VERSION}.linux-amd64.tar.gz"
+        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || tar -xzf go#{GO_VERSION}.linux-amd64.tar.gz"
+        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || mv go /usr/local/go/"
+        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || rm -f go#{GO_VERSION}.linux-amd64.tar.gz"
+        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || ln -s /usr/local/go/bin/go /usr/local/bin/"
+
+        # install GO linter
+        linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || wget https://github.com/golangci/golangci-lint/releases/download/v#{GOLANGCI_LINT_VERSION}/golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+        linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || tar -xzf golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+        linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || cp golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint /usr/local/bin/"
+        linux.vm.provision "shell", inline: "rm -rf golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64 golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+
+        # Install Glide
+        linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || wget https://github.com/Masterminds/glide/releases/download/v#{GLIDE_VERSION}/glide-v#{GLIDE_VERSION}-linux-amd64.tar.gz"
+        linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || tar -xzf glide-v#{GLIDE_VERSION}-linux-amd64.tar.gz"
+        linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || chmod +x linux-amd64/glide"
+        linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || cp linux-amd64/glide /usr/local/bin/"
+        linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || rm -rf glide-v#{GLIDE_VERSION}-linux-amd64.tar.gz linux-amd64/"
+
+        linux.vm.provision "shell", inline: 'grep -q GOPATH /home/vagrant/.profile || echo "export GOPATH=/home/vagrant/Documents/golang/" >> /home/vagrant/.profile'
     end
+
+
+  config.vm.define "ubuntu18.04", autostart: false do |linux|
+      linux.vm.box = "ubuntu/bionic64"
+
+        linux.vm.provider "virtualbox" do |vb|
+          # Display the VirtualBox GUI when booting the machine
+          vb.gui = true
+          # Customize the amount of memory on the VM:
+          vb.memory = "2048"
+        end
+
+          linux.vm.guest = :linux
+
+          linux.vm.synced_folder "../..", "/home/vagrant/Documents/golang"
+          # disable default shared folder
+          linux.vm.synced_folder ".", "/vagrant", disabled: true
+
+          linux.vm.provision "shell", inline: "sudo apt-get update"
+          linux.vm.provision "shell", inline: "sudo DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
+          linux.vm.provision "shell", inline: "sudo apt-get -y install virtualenv python3-virtualenv python3-pip make wget openjdk-8-jre docker.io"
+          linux.vm.provision "shell", inline: "sudo usermod -aG docker ubuntu"
+
+          # install GO
+          linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || wget https://dl.google.com/go/go#{GO_VERSION}.linux-amd64.tar.gz"
+          linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || tar -xzf go#{GO_VERSION}.linux-amd64.tar.gz"
+          linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || mv go /usr/local/go/"
+          linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || rm -f go#{GO_VERSION}.linux-amd64.tar.gz"
+          linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || ln -s /usr/local/go/bin/go /usr/local/bin/"
+
+          # install GO linter
+          linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || wget https://github.com/golangci/golangci-lint/releases/download/v#{GOLANGCI_LINT_VERSION}/golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+          linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || tar -xzf golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+          linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || cp golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint /usr/local/bin/"
+          linux.vm.provision "shell", inline: "rm -rf golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64 golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
+
+          # Install Glide
+          linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || wget https://github.com/Masterminds/glide/releases/download/v#{GLIDE_VERSION}/glide-v#{GLIDE_VERSION}-linux-amd64.tar.gz"
+          linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || tar -xzf glide-v#{GLIDE_VERSION}-linux-amd64.tar.gz"
+          linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || chmod +x linux-amd64/glide"
+          linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || cp linux-amd64/glide /usr/local/bin/"
+          linux.vm.provision "shell", inline: "test -f /usr/local/bin/glide || rm -rf glide-v#{GLIDE_VERSION}-linux-amd64.tar.gz linux-amd64/"
+
+          linux.vm.provision "shell", inline: 'grep -q GOPATH /home/vagrant/.profile || echo "export GOPATH=/home/vagrant/Documents/golang/" >> /home/vagrant/.profile'
+      end
 end
