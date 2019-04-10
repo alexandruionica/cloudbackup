@@ -148,6 +148,7 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 	}
 	ctime, err := fileproperties.GetCtime(path)
 	if err != nil {
+		logger.Debugf("For '%s' could not establish ctime due to error: %s ; using current time as ctime", path, err)
 		ctime = time.Time{}
 	}
 	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobUuid)
@@ -387,7 +388,7 @@ func getNewestRemoteFileUuid(dbData shared.DbData, localPath string, targetName 
 // check if a given path exists in the Database;
 // returns the following values: bool depicting if an entry was found or not; if found a populated
 // shared.BackedUpFileProperties object containing all of the properties of given object as extracted from the DB
-// record; an error object is an error is encountered
+// record; an error object if an error is encountered
 func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool, shared.BackedUpFileProperties, error) {
 	rows, err := dbData.PreparedStatements.FilesQueryStmt.Query(path)
 	if err != nil {
@@ -519,11 +520,7 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 // time of the object and is passed in as it's an expensive system call and other function will most likely already
 // have obtained the value
 func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup, ctime time.Time, checksum string, jobUuid string) (shared.BackedUpFileProperties, error) {
-	ctime, err := fileproperties.GetCtime(path)
-	if err != nil {
-		ctime = time.Time{}
-	}
-
+	var err error
 	// even if we get an error (and we don't have complete or any file properties) we will still attempt to back it up
 	owner, permissions, _ := fileproperties.GetObjectPermissions(path, stat) // #nosec
 	onDiskObjectProperties := shared.BackedUpFileProperties{
@@ -553,8 +550,7 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 }
 
 // uploads an object (file / dir / symlink) to the remote object storage. For dirs/symlinks it only uploads metadata
-// for files it uploads both content and metadata. This function is also responsible for adding data in the
-// remote_files DB table
+// for files it uploads both content and metadata.
 // return values: string with the remote object path(for example bucket_name/path/to/file), bool with true if backup
 // got cancelled, false otherwise ; error if error encountered
 func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,

@@ -12,3 +12,5 @@ private_documentation/__pycache__
 *.pyc
 *~
 .vagrant/
+ubuntu-bionic-18.04-cloudimg-console.log
+ubuntu-xenial-16.04-cloudimg-console.log
