@@ -220,7 +220,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 	var JobCancelled bool
 	// back up the object to one or more remote object stores
 	for _, objectStore := range objectStores {
-		remotePath, cancelled, err := UploadObject(ctx, path, DbRecord, backupConfig, objectStore, backupJobsState)
+		remotePath, cancelled, err := UploadObject(path, DbRecord, backupConfig, objectStore, backupJobsState)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
@@ -282,7 +282,6 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 func addEntryToRemoteFiles(remotePath string, target string, jobUuid string, deleteMarker int, dbData shared.DbData,
 	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) (string, error) {
 	entryUuid := uuid.NewV4().String()
-	// TODO - calculate version (select from remote_files all entries matching "local_path" with the current item, and then look at their version field and increment the largest value found
 	version, err := getRemoteFileVersion(dbData, dbtx, fileDbRecord.Path, target)
 	// logger.Debugf("Adding entry to remote_files for %s", fileDbRecord.Path)
 	if err != nil {
@@ -553,9 +552,8 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 // for files it uploads both content and metadata.
 // return values: string with the remote object path(for example bucket_name/path/to/file), bool with true if backup
 // got cancelled, false otherwise ; error if error encountered
-func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,
+func UploadObject(path string, newDbRecord shared.BackedUpFileProperties,
 	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (string, bool, error) {
-	// TODO - use the context and pass it further down
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", path)
 	} else {
@@ -584,9 +582,8 @@ func UploadObject(ctx context.Context, path string, newDbRecord shared.BackedUpF
 // of this backup as represented in the config file
 // return values: string with the remote object path(for example bucket_name/path/to/file), bool with true if backup
 // got cancelled, false otherwise ; error if error encountered
-func UpdateObjectMetadata(ctx context.Context, path string, newDbRecord shared.BackedUpFileProperties,
+func UpdateObjectMetadata(path string, newDbRecord shared.BackedUpFileProperties,
 	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (string, bool, error) {
-	// TODO - use the context and pass it further down
 	logger.Debugf("Updating remote stored metadata for previously backed up and unchanged '%s'", path)
 
 	result, cancelled, err := objectStore.MetadataUpdate(path, newDbRecord)
