@@ -29,7 +29,7 @@ func TestPrepareFileRecord1(t *testing.T) {
 	jobId := uuid.NewV4().String()
 
 	fileContent := "just a string"
-	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "TestPrepareFileRecord1_sample_file_")
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestPrepareFileRecord1_sample_file_")
 	if err != nil {
 		err2 := os.RemoveAll(path)
 		if err2 != nil {
@@ -43,7 +43,7 @@ func TestPrepareFileRecord1(t *testing.T) {
 		t.Fatalf("While running os.Stat() got error: %s", err)
 	}
 
-	ctime, err := fileproperties.GetCtime(path)
+	ctime, err := fileproperties.GetCtime(path, true)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
 		ctime = time.Time{}
@@ -82,7 +82,7 @@ func TestPrepareFileRecord2(t *testing.T) {
 	jobId := uuid.NewV4().String()
 
 	fileContent := "just a string"
-	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "TestPrepareFileRecord1_sample_file_")
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestPrepareFileRecord1_sample_file_")
 	if err != nil {
 		err2 := os.RemoveAll(path)
 		if err2 != nil {
@@ -96,7 +96,7 @@ func TestPrepareFileRecord2(t *testing.T) {
 		t.Fatalf("While running os.Stat() got error: %s", err)
 	}
 
-	ctime, err := fileproperties.GetCtime(path)
+	ctime, err := fileproperties.GetCtime(path, true)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
 		ctime = time.Time{}
@@ -135,7 +135,7 @@ func TestPrepareFileRecord3(t *testing.T) {
 	jobId := uuid.NewV4().String()
 
 	fileContent := "just a string"
-	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "TestPrepareFileRecord1_sample_file_")
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestPrepareFileRecord1_sample_file_")
 	if err != nil {
 		err2 := os.RemoveAll(path)
 		if err2 != nil {
@@ -146,7 +146,7 @@ func TestPrepareFileRecord3(t *testing.T) {
 	defer testutils.DeleteTestFilesAndDirs([]string{path})
 
 	// ########
-	symlinkPath := testutils.GenerateTmpFilePath("backup_test_symlink_", "_to_plain_File")
+	symlinkPath := testutils.GenerateTmpFilePath("cloudbackup_backup_test_symlink_", "_to_plain_File")
 	err = os.Symlink(path, symlinkPath)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -159,7 +159,72 @@ func TestPrepareFileRecord3(t *testing.T) {
 		t.Fatalf("While running os.Stat() got error: %s", err)
 	}
 
-	ctime, err := fileproperties.GetCtime(symlinkPath)
+	ctime, err := fileproperties.GetCtime(symlinkPath, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+		ctime = time.Time{}
+	}
+	checksum := ""
+
+	newDbRecord, err := PrepareFileRecord(symlinkPath, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+	if newDbRecord.JobUuid != jobId {
+		t.Fatalf("Expected jobid %s but got %s", jobId, newDbRecord.JobUuid)
+	}
+	if newDbRecord.Path != symlinkPath {
+		t.Fatalf("Expected path %s but got %s", symlinkPath, newDbRecord.Path)
+	}
+	if newDbRecord.ChecksumType != "" {
+		t.Fatalf("Expected ChecksumType to be empty string but got %s", newDbRecord.ChecksumType)
+	}
+	if newDbRecord.LinkTarget != path {
+		t.Fatalf("Expected LinkTarget to be %s string but got %s", path, newDbRecord.LinkTarget)
+	}
+}
+
+// setup filerecord for a symlink which has a broken target
+func TestPrepareFileRecord4(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	backupConfig := result.Config.Backup[0]
+	jobId := uuid.NewV4().String()
+
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestPrepareFileRecord1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+
+	// ########
+	symlinkPath := testutils.GenerateTmpFilePath("cloudbackup_backup_test_symlink_", "_to_plain_File")
+	err = os.Symlink(path, symlinkPath)
+	if err != nil {
+		_ = os.RemoveAll(path) // #nosec
+		t.Fatal(err)
+	}
+	//defer testutils.DeleteTestFilesAndDirs([]string{symlinkPath})
+	// remove symlink target so we get a broken link
+	testutils.DeleteTestFilesAndDirs([]string{path})
+
+	stat, err := os.Lstat(symlinkPath)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(symlinkPath, false)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
 		ctime = time.Time{}

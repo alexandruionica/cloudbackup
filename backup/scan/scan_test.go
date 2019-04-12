@@ -2060,7 +2060,7 @@ func TestPath15(t *testing.T) {
 		"excluded":                                  0,
 		"up_to_date_directories":                    4,
 		"up_to_date_files":                          7,
-		"up_to_date_symlinks":                       0,
+		"up_to_date_symlinks":                       2,
 		"uploaded_directories":                      1, // 1 which contained the removed dir ... TODO - figure out if this should have been shown via updated_metadata_for_directories property
 		"uploaded_files":                            0, // all is up to date as this is a second run
 		"uploaded_symlinks":                         0,
@@ -2080,7 +2080,7 @@ func TestPath15(t *testing.T) {
 		"scripts_num":                               0,
 		"updated_metadata_for_files":                0,
 		"updated_metadata_for_directories":          0,
-		"updated_metadata_for_symlinks":             2, // TODO - this should be 0 and we should have up_to_date_symlinks == 2
+		"updated_metadata_for_symlinks":             0,
 		"failed_to_update_metadata_for_directories": 0,
 		"failed_to_update_metadata_for_files":       0,
 		"failed_to_update_metadata_for_symlinks":    0,

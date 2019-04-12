@@ -49,7 +49,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 			if dbEntryFound {
 				logger.Debugf("Found DB entry for %s", path)
 				// check if properties match between DB record and os.FileInfo
-				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum)
+				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum, backupConfig.Dereference)
 				updatedDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobUuid)
 				if err != nil {
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
@@ -146,7 +146,7 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 			checksum = uuid.NewV4().String()
 		}
 	}
-	ctime, err := fileproperties.GetCtime(path)
+	ctime, err := fileproperties.GetCtime(path, backupConfig.Dereference)
 	if err != nil {
 		logger.Debugf("For '%s' could not establish ctime due to error: %s ; using current time as ctime", path, err)
 		ctime = time.Time{}
@@ -455,13 +455,15 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 	return true, dbRecord, nil
 }
 
-// compares on disk state vs db and returns:
+// compares on disk state vs db ; in terms of parameters $dereference is true if symlinks should be dereferenced
+// (this basically corresponds to the entry in the backup configuration file)
+// and returns:
 // bool with value true if file changed and it needs upload (this implies a metadata upload is needed too); bool with
 // value true when a metadata change was detected but the file content itself remains unchanged  ; time.Time containing
 // ctime populated when either file content or metadata change was detected. This is done because it is expensive to
 // get ctime (1 system call) and we want to avoid calling this again later; $checksum empty if an error was encountered
 // while trying to calculate it or if checksum comparison was not requested, otherwise ascii string with md5 sum
-func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.BackedUpFileProperties, compareChecksum bool) (contentChanged bool,
+func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.BackedUpFileProperties, compareChecksum bool, dereference bool) (contentChanged bool,
 	metadataChanged bool, ctime time.Time, checksum string) {
 	var err error
 	objectType := utils.FileType(stat)
@@ -486,7 +488,7 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 	} else if objectType != dbRecordProperties.Type {
 		contentChanged = true
 	}
-	ctime, err = fileproperties.GetCtime(path)
+	ctime, err = fileproperties.GetCtime(path, dereference)
 	// in case of error we just treat it as the metadata changed as we can't know for sure if it didn't and it's better to be safe and just back it up
 	if err != nil {
 		logger.Debugf("Could not get ctime so to be safe considering that Ctime change detected for '%s'", path)
