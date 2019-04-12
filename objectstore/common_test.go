@@ -231,6 +231,8 @@ func TestNewFileReader2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("while running NewFileReader() got error: %s ", err)
 	}
+	// sleep 3 seconds before starting the test in order to give the OS a chance to settle a bit as we measure how fast the operation took and if the OS is busy it could make the test flaky
+	time.Sleep(3 * time.Second)
 	// create a 1 KB buffer to hold read content
 	p := make([]byte, 1024)
 	startTime := time.Now()
@@ -248,7 +250,7 @@ InfiniteLoop:
 						t.Fatalf("Reading the rate limited file should have taken 2 seconds but it took %f",
 							duration.Seconds())
 					}
-					if duration.Seconds() > 2.1 {
+					if duration.Seconds() > 2.2 {
 						t.Fatalf("Reading the rate limited file should have taken a bit over 2 seconds but it took %f",
 							duration.Seconds())
 					}

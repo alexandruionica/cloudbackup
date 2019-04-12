@@ -22,7 +22,7 @@ testcp:
 	@echo "############ Running: go fmt - ensure standard formatting ############"
 	$(GOCMD) fmt ./...
 	@echo "############ Running: golangci-lint ############"
-	$(GOLANGCILINTCMD) run --disable ineffassign --enable gosec
+	$(GOLANGCILINTCMD) run --disable ineffassign --enable gosec --deadline=5m
 gotest:
 ifeq ($(OS),Windows_NT)
 	@echo "Running on Windows"
