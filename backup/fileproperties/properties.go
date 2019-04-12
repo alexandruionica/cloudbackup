@@ -25,13 +25,15 @@ var (
 	ErrWhileRetrievingCtime       = errors.New("encountered an error while trying to get file or directory change time property")
 )
 
-// get a file or directory's Ctime
-func GetCtime(path string) (time.Time, error) {
-	/*
-		package: github.com/djherbis/times MUST HAVE version based on commit d25002f62be22438b4cd804b9d3c8db1231164d0
-		or newer as release 1.0.1 is too old
-	*/
-	t, err := times.Stat(path)
+// get a file or directory's Ctime; if $dereference == true then follow symlinks
+func GetCtime(path string, dereference bool) (time.Time, error) {
+	var t times.Timespec
+	var err error
+	if dereference {
+		t, err = times.Stat(path)
+	} else {
+		t, err = times.Lstat(path)
+	}
 	if err != nil {
 		logger.Warnf("while trying to get change time for '%s' the following error was encountered: %s", path, err)
 		return time.Time{}, ErrWhileRetrievingCtime
