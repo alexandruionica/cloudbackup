@@ -62,7 +62,8 @@ func testGetcTime(t *testing.T, path string, timestart time.Time, dereference bo
 	// update file ctime and see we can see a different result from GetCtime
 	if err := os.Chmod(target, 0444); err != nil {
 		// if the symlink target is relative chmod() fails and its fine to skip this test
-		if (strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "The system cannot find the file specified")) && isSymlink && dereference {
+		if (strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "The system cannot find the file specified") ||
+			strings.Contains(err.Error(), "The system cannot find the path specified")) && isSymlink && dereference {
 			return
 		}
 		t.Fatalf("While trying to chmod() file %s got error: %s", target, err)
