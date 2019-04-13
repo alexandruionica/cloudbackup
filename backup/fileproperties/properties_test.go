@@ -5,7 +5,6 @@ import (
 	"cloudbackup/utils"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -21,58 +20,65 @@ func testGetcTime(t *testing.T, path string, timestart time.Time, dereference bo
 		t.Fatalf("File creation time for %s is reported to be before this test started. Ctime: %s; test "+
 			"start: %s", path, fileCtime, timestart)
 	}
+	stat, err := os.Lstat(path)
+	if err != nil {
+		t.Fatalf("Could not get os.Lstat() for %s due to err: %s", path, err)
+	}
+	isSymlink := false
+	if utils.FileType(stat) == "symlink" {
+		isSymlink = true
+	}
+
 	time.Sleep(20 * time.Millisecond)
 	time1stTest := time.Now()
 	if fileCtime.After(time1stTest) {
 		t.Fatalf("Ctime for %s is reported to be %s which is in the future", path, fileCtime)
 	}
 	// Symlinks on windows don't seem to have their ctime updated so we'll skip the test on this platform only
-	if !(strings.Contains(path, "symlink") && runtime.GOOS == "windows") {
-		time.Sleep(20 * time.Millisecond)
-		target := path
-		// for Symlinks, if we dereference then change the property of the link target, not one of the symlink itself
-		if strings.Contains(path, "symlink") {
-			linkTarget, err := os.Readlink(path)
-			if err != nil {
-				t.Fatalf("While trying to read the symlink target for %s got error %s", path, err)
-			}
-			if dereference {
-				// if dereference then changes should be done on the target itself, not the symlink
-				target = linkTarget
-			} else {
-				// remove and add back the symlink so this ends up with a newer Ctime for the link itself
-				err := os.RemoveAll(path)
-				if err != nil {
-					t.Fatalf("While trying to delete %s, got error: %s", path, err)
-				}
-				err = os.Symlink(linkTarget, path)
-				if err != nil {
-					t.Fatalf("While creating back the Symlink %s got error: %s", path, err)
-				}
-			}
-
-		}
-		// update file ctime and see we can see a different result from GetCtime
-		if err := os.Chmod(target, 0444); err != nil {
-			// if the symlink target is relative chmod() fails and its fine to skip this test
-			if strings.Contains(err.Error(), "no such file or directory") && strings.Contains(path, "symlink") && dereference {
-				return
-			}
-			t.Fatalf("While trying to chmod() file %s got error: %s", target, err)
-		}
-		if err := os.Chmod(target, 0700); err != nil {
-			t.Fatalf("While trying to chmod() file %s got error: %s", target, err)
-		}
-		fileCtime2, err := GetCtime(path, dereference)
+	time.Sleep(20 * time.Millisecond)
+	target := path
+	// for Symlinks, if we dereference then change the property of the link target, not one of the symlink itself
+	if isSymlink {
+		linkTarget, err := os.Readlink(path)
 		if err != nil {
-			t.Fatalf("2. While trying to get ctime for %s got error: %s", path, err)
+			t.Fatalf("While trying to read the symlink target for %s got error %s", path, err)
 		}
-		if fileCtime.Equal(fileCtime2) {
-			t.Fatalf("File %s ctime should have changed after chmod but it's reported to be the same: %s vs %s", path, fileCtime, fileCtime2)
+		if dereference {
+			// if dereference then changes should be done on the target itself, not the symlink
+			target = linkTarget
+		} else {
+			// remove and add back the symlink so this ends up with a newer Ctime for the link itself
+			err := os.RemoveAll(path)
+			if err != nil {
+				t.Fatalf("While trying to delete %s, got error: %s", path, err)
+			}
+			err = os.Symlink(linkTarget, path)
+			if err != nil {
+				t.Fatalf("While creating back the Symlink %s got error: %s", path, err)
+			}
 		}
-		if fileCtime2.Before(time1stTest) {
-			t.Fatal("After chmod() the 2nd file ctime should be newer but it isn't")
+
+	}
+	// update file ctime and see we can see a different result from GetCtime
+	if err := os.Chmod(target, 0444); err != nil {
+		// if the symlink target is relative chmod() fails and its fine to skip this test
+		if (strings.Contains(err.Error(), "no such file or directory") || strings.Contains(err.Error(), "The system cannot find the file specified")) && isSymlink && dereference {
+			return
 		}
+		t.Fatalf("While trying to chmod() file %s got error: %s", target, err)
+	}
+	if err := os.Chmod(target, 0700); err != nil {
+		t.Fatalf("While trying to chmod() file %s got error: %s", target, err)
+	}
+	fileCtime2, err := GetCtime(path, dereference)
+	if err != nil {
+		t.Fatalf("2. While trying to get ctime for %s got error: %s", path, err)
+	}
+	if fileCtime.Equal(fileCtime2) {
+		t.Fatalf("File %s ctime should have changed after chmod but it's reported to be the same: %s vs %s", path, fileCtime, fileCtime2)
+	}
+	if fileCtime2.Before(time1stTest) {
+		t.Fatal("After chmod() the 2nd file ctime should be newer but it isn't")
 	}
 }
 
