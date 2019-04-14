@@ -505,8 +505,8 @@ func TestGetRemoteFileVersion1(t *testing.T) {
 
 }
 
-// test function works as expected when there is a DB match
-func TestGetRemoteFileVersion2(t *testing.T) {
+// test function works as expected when there is a DB match and also test getNewestRemoteFileUuid()
+func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
@@ -538,7 +538,7 @@ func TestGetRemoteFileVersion2(t *testing.T) {
 	dbtx, err := dbData.Db.Begin()
 	if err != nil {
 		// could not start a database transaction so we can't proceed to test
-		t.Fatalf("could not start a database transaction so we can't proceed to test; error was: %s", err)
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
 	}
 
 	// cleanup
@@ -580,9 +580,12 @@ func TestGetRemoteFileVersion2(t *testing.T) {
 		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
 	}
 
-	_, err = addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord)
+	file1stTimeUuid, err := addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord)
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+	if file1stTimeUuid == "" {
+		t.Fatal("1. addDbEntryToRemoteFiles() returned an empty uuid")
 	}
 
 	// if the file has only 1 entry in the DB then we should get a version of 2
@@ -603,9 +606,35 @@ func TestGetRemoteFileVersion2(t *testing.T) {
 		t.Fatalf("3. Was expecting returned version to be 2 but instead we got: %d", version)
 	}
 
-	_, err = addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord)
+	err = dbtx.Commit()
+	if err != nil {
+		t.Fatalf("1. Could not commit transaction due to error: %s", err)
+	}
+
+	retrieveUuid, err := getNewestRemoteFileUuid(dbData, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("While running getNewestRemoteFileUuid() for path %s got error: %s", path, err)
+	}
+
+	if retrieveUuid != file1stTimeUuid {
+		t.Fatalf("1. remote file uuid retrieved by getNewestRemoteFileUuid() is %s and it doesn't match what we expected it to be: %s", retrieveUuid, file1stTimeUuid)
+	}
+
+	dbtx, err = dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("2. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+
+	file2ndTimeUuid, err := addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord)
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+	if file2ndTimeUuid == "" {
+		t.Fatal("2. addDbEntryToRemoteFiles() returned an empty uuid")
+	}
+	if file1stTimeUuid == file2ndTimeUuid {
+		t.Fatalf("addDbEntryToRemoteFiles() returned two idential UUIDs, for 2 runs. The uuid was: %s", file1stTimeUuid)
 	}
 
 	// if the file has only 2 entries in the DB then we should get a version of 3
@@ -615,6 +644,56 @@ func TestGetRemoteFileVersion2(t *testing.T) {
 	}
 	if version != 3 {
 		t.Fatalf("4. Was expecting returned version to be 3 but instead we got: %d", version)
+	}
+
+	err = dbtx.Commit()
+	if err != nil {
+		t.Fatalf("2. Could not commit transaction due to error: %s", err)
+	}
+
+	retrieveUuid, err = getNewestRemoteFileUuid(dbData, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("While running getNewestRemoteFileUuid() for path %s got error: %s", path, err)
+	}
+	if retrieveUuid != file2ndTimeUuid {
+		t.Fatalf("2. remote file uuid retrieved by getNewestRemoteFileUuid() is %s and it doesn't match what we expected it to be: %s", retrieveUuid, file1stTimeUuid)
+	}
+
+	// ensure the DB has target name info for the second backup (first target in this backup will be used)
+	err = dbops.EnsureTargetsInDb(dbData.Db, result.Config.Backup[1])
+	// the backup can not run as we can't ensure the database has the needed data before we commence
+	// comparing/adding/updating entries about files
+	if err != nil {
+		t.Fatalf("Cloud not ensure the DB has target name info for the second backup due to error: %s", err)
+	}
+
+	// add another entry to the table, this time for a different target so the uuid should now appear in the return of getNewestRemoteFileUuid()
+	dbtx, err = dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("3. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+
+	file3ndTimeUuid, err := addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", result.Config.Backup[1].Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	if file1stTimeUuid == file3ndTimeUuid || file2ndTimeUuid == file3ndTimeUuid {
+		t.Fatalf("addDbEntryToRemoteFiles() returned for a new target name uuid: %s but it equals a previous uuid", file1stTimeUuid)
+	}
+
+	err = dbtx.Commit()
+	if err != nil {
+		t.Fatalf("3. Could not commit transaction due to error: %s", err)
+	}
+
+	retrieveUuid, err = getNewestRemoteFileUuid(dbData, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("While running getNewestRemoteFileUuid() for path %s got error: %s", path, err)
+	}
+	if retrieveUuid != file2ndTimeUuid {
+		t.Fatalf("3. remote file uuid retrieved by getNewestRemoteFileUuid() is %s and it doesn't match what we expected it to be: %s", retrieveUuid, file1stTimeUuid)
 	}
 
 }
