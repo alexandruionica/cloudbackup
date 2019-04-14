@@ -192,21 +192,12 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 			"encountered error: %s", err)
 	}
 	if operation == "new" {
-		_, err = dbtx.Exec(dbData.PreparedStatements.FilesInsert, DbRecord.Path, DbRecord.Type,
-			DbRecord.LinkTarget, DbRecord.Size, DbRecord.Mtime.Format(time.RFC3339Nano),
-			DbRecord.Ctime.Format(time.RFC3339Nano), DbRecord.Owner,
-			DbRecord.Permissons, DbRecord.Checksum, DbRecord.ChecksumType, DbRecord.Encrypted,
-			DbRecord.JobUuid)
+		err = addDbEntryToFiles(dbData, dbtx, DbRecord)
 	} else {
-		_, err = dbtx.Exec(dbData.PreparedStatements.FilesUpdate, DbRecord.Type,
-			DbRecord.LinkTarget, DbRecord.Size, DbRecord.Mtime.Format(time.RFC3339Nano),
-			DbRecord.Ctime.Format(time.RFC3339Nano), DbRecord.Owner,
-			DbRecord.Permissons, DbRecord.Checksum, DbRecord.ChecksumType, DbRecord.Encrypted,
-			DbRecord.JobUuid, DbRecord.Path)
+		err = updateDbEntryInFiles(dbData, dbtx, DbRecord)
 	}
 
 	if err != nil {
-		logger.Errorf("function passed uuid %s vs dbrecord obj uuid: %s", jobUuid, DbRecord.JobUuid)
 		txerr := dbtx.Rollback()
 		if txerr != nil {
 			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
@@ -232,7 +223,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		}
 		targetName, _ := objectStore.GetStoreDetails()
 		// TODO - if $operation == "content-update" then ensure that $remotePath + $version is unique ; if not and another one or figure out what to do
-		remoteUuid, err := addEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, DbRecord)
+		remoteUuid, err := addDbEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, DbRecord)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
@@ -279,7 +270,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 // $deleteMarker: 1 for true, 0 for false. If 1 it means the file was deleted from the local filesystem
 //
 // Returns the uuid value for this entry and if an error was encountered or not. If err then ignore the uuid value.
-func addEntryToRemoteFiles(remotePath string, target string, jobUuid string, deleteMarker int, dbData shared.DbData,
+func addDbEntryToRemoteFiles(remotePath string, target string, jobUuid string, deleteMarker int, dbData shared.DbData,
 	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) (string, error) {
 	entryUuid := uuid.NewV4().String()
 	version, err := getRemoteFileVersion(dbData, dbtx, fileDbRecord.Path, target)
@@ -297,6 +288,26 @@ func addEntryToRemoteFiles(remotePath string, target string, jobUuid string, del
 			"encountered error: %s", fileDbRecord.Path, err)
 	}
 	return entryUuid, nil
+}
+
+// adds one entry to "files" table and returns whatever error is encountered
+func addDbEntryToFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) error {
+	_, err := dbtx.Exec(dbData.PreparedStatements.FilesInsert, fileDbRecord.Path, fileDbRecord.Type,
+		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.Format(time.RFC3339Nano),
+		fileDbRecord.Ctime.Format(time.RFC3339Nano), fileDbRecord.Owner,
+		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
+		fileDbRecord.JobUuid)
+	return err
+}
+
+// updates and entry in the "files" table and returns whatever error is encountered
+func updateDbEntryInFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) error {
+	_, err := dbtx.Exec(dbData.PreparedStatements.FilesUpdate, fileDbRecord.Type,
+		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.Format(time.RFC3339Nano),
+		fileDbRecord.Ctime.Format(time.RFC3339Nano), fileDbRecord.Owner,
+		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
+		fileDbRecord.JobUuid, fileDbRecord.Path)
+	return err
 }
 
 // For a given file path and a backup target name calculate version
@@ -913,7 +924,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 			break
 		}
 		targetName, _ := objectStore.GetStoreDetails()
-		_, err = addEntryToRemoteFiles(remotePath, targetName, jobUuid, 1, dbData, dbtx, ObjectDbRecord)
+		_, err = addDbEntryToRemoteFiles(remotePath, targetName, jobUuid, 1, dbData, dbtx, ObjectDbRecord)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
