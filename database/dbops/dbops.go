@@ -26,7 +26,8 @@ func CloseStatementsAndDb(dbData shared.DbData) {
 }
 
 // prepare the most used SQL statements. This should increase performance and also help with SQL injection prevention
-// returns: a shared.DbPreparedStatements and an error object
+// returns: a shared.DbPreparedStatements and an error object ;
+// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
 func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	var err error
 	var PreparedStatements shared.DbPreparedStatements
@@ -74,6 +75,8 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 		}
 		return PreparedStatements, err
 	}
+
+	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
 
 	// insert statement - having it as text only and not an actual prepared statement (as this will be used only in transactions, and called generally once per transaction)
 	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, remote_path, local_path, target, upload_date, " +
@@ -128,6 +131,8 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 		return PreparedStatements, err
 	}
 
+	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
+
 	// find which items are not listed in the last backup but still mentioned in the "files" table
 	PreparedStatements.FindDeletedItemsStmt, err = db.Prepare("SELECT path FROM files EXCEPT SELECT local_path FROM remote_files rf INNER JOIN backup_collections bc ON bc.file_uuid == rf.uuid  WHERE bc.job_id=? AND bc.target=? LIMIT ?")
 	if err != nil {
@@ -179,6 +184,25 @@ func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements) {
 		err := dbPreparedStatements.FilesUpdateStmt.Close()
 		if err != nil {
 			logger.Warnf("Could not close the db update statement for common operations")
+		}
+	}
+
+	if dbPreparedStatements.RemoteFilesQueryNewestVersionUuidStmt != nil {
+		err := dbPreparedStatements.RemoteFilesQueryNewestVersionUuidStmt.Close()
+		if err != nil {
+			logger.Warnf("Could not close the db query statement for calculating the newest version of an object")
+		}
+	}
+	if dbPreparedStatements.BackupCollectionsInsertStmt != nil {
+		err := dbPreparedStatements.BackupCollectionsInsertStmt.Close()
+		if err != nil {
+			logger.Warnf("Could not close the db insert statement for adding entries to backup collections")
+		}
+	}
+	if dbPreparedStatements.FindDeletedItemsStmt != nil {
+		err := dbPreparedStatements.FindDeletedItemsStmt.Close()
+		if err != nil {
+			logger.Warnf("Could not close the db query statement for finding deleted items")
 		}
 	}
 }
