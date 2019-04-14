@@ -245,7 +245,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 		return
 	}
 
-	dbData, err := prepareDbForBackup(name, jobUuid, serverConfigCopy, backupJobsState, backupConfig)
+	dbData, err := dbops.PrepareDbForBackup(name, jobUuid, serverConfigCopy, backupJobsState, backupConfig)
 	if err != nil {
 		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
@@ -311,49 +311,6 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	}
 	// if we got here than all was probably good (or "mostly" good) and the job did not get cancelled
 	cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, nil)
-}
-
-// setup all Database related prerequisites required for running a backup and return a shared.DbData struct containing the DB handlers and prepared statements
-func prepareDbForBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
-	backupJobsState *shared.BackupJobsState, backupConfig config.Backup) (shared.DbData, error) {
-	var err error
-	dbData := shared.DbData{Connected: false, Name: name}
-	// get DB connection pointer
-	dbData.Db, err = database.Start(serverConfigCopy.DataDir, name)
-	// the backup can not run as we can't initialise/connect to the database
-	if err != nil {
-		return dbData, err
-	} else {
-		dbData.Connected = true
-	}
-
-	// ensure the DB has all needed info in the tables
-	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
-	// the backup can not run as we can't ensure the database has the needed data before we commence
-	// comparing/adding/updating entries about files
-	if err != nil {
-		return dbData, err
-	}
-
-	// get DB prepared statements for the most common operations
-	dbData.PreparedStatements, err = dbops.Prepare(dbData.Db)
-	if err != nil {
-		return dbData, err
-	}
-
-	// get Job start time
-	jobStartTime, err := backupJobsState.GetStartTime(name, jobUuid, loggingContext+".runBackup")
-	if err != nil {
-		return dbData, err
-	}
-
-	// add entry to "jobs" DB table
-	err = dbops.AddJobDetails(dbData.Db, jobUuid, name, "backup", jobStartTime)
-	if err != nil {
-		return dbData, err
-	}
-	// if we got here then all was good
-	return dbData, nil
 }
 
 // TODO - figure out how to deal with the SQL connection sharing
