@@ -621,25 +621,6 @@ func TestValidate19(t *testing.T) {
 	}
 }
 
-// check that commas are now allowed in target names
-func TestValidate20(t *testing.T) {
-	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
-	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
-
-	result, err := Load(path, false, &sync.RWMutex{})
-	if err != nil {
-		t.Fatalf("Could not load fake config file. Error was: %s", err)
-	}
-
-	result.Config.Backup[0].Target[0].Name = "AnInva,LidTargetName"
-	err = Validate(result.Config, false)
-	if err == nil {
-		t.Fatal("Config file loaded successfully but should have failed due to a comma being present in a " +
-			"target name")
-	}
-}
-
 // check that a backup "Name" containing non ASCII characters is not permitted
 func TestValidate21(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
