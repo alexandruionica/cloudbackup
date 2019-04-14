@@ -397,3 +397,47 @@ func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, 
 	}
 	return nil
 }
+
+// setup all Database related prerequisites required for running a backup and return a shared.DbData struct containing the DB handlers and prepared statements
+// $BackupJobName must be already marked as "running" in $backupJobsState or otherwise this function will error
+func PrepareDbForBackup(BackupJobName string, jobUuid string, serverConfigCopy config.CfgTemplate,
+	backupJobsState *shared.BackupJobsState, backupConfig config.Backup) (shared.DbData, error) {
+	var err error
+	dbData := shared.DbData{Connected: false, Name: BackupJobName}
+	// get DB connection pointer
+	dbData.Db, err = database.Start(serverConfigCopy.DataDir, BackupJobName)
+	// the backup can not run as we can't initialise/connect to the database
+	if err != nil {
+		return dbData, err
+	} else {
+		dbData.Connected = true
+	}
+
+	// ensure the DB has all needed info in the tables
+	err = EnsureTargetsInDb(dbData.Db, backupConfig)
+	// the backup can not run as we can't ensure the database has the needed data before we commence
+	// comparing/adding/updating entries about files
+	if err != nil {
+		return dbData, err
+	}
+
+	// get DB prepared statements for the most common operations
+	dbData.PreparedStatements, err = Prepare(dbData.Db)
+	if err != nil {
+		return dbData, err
+	}
+
+	// get Job start time
+	jobStartTime, err := backupJobsState.GetStartTime(BackupJobName, jobUuid, loggingContext+".runBackup")
+	if err != nil {
+		return dbData, err
+	}
+
+	// add entry to "jobs" DB table
+	err = AddJobDetails(dbData.Db, jobUuid, BackupJobName, "backup", jobStartTime)
+	if err != nil {
+		return dbData, err
+	}
+	// if we got here then all was good
+	return dbData, nil
+}
