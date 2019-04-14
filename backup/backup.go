@@ -273,7 +273,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 func addDbEntryToRemoteFiles(remotePath string, target string, jobUuid string, deleteMarker int, dbData shared.DbData,
 	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) (string, error) {
 	entryUuid := uuid.NewV4().String()
-	version, err := getRemoteFileVersion(dbData, dbtx, fileDbRecord.Path, target)
+	version, err := calcRemoteFileVersion(dbData, dbtx, fileDbRecord.Path, target)
 	// logger.Debugf("Adding entry to remote_files for %s", fileDbRecord.Path)
 	if err != nil {
 		return "", err
@@ -312,7 +312,7 @@ func updateDbEntryInFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord share
 
 // For a given file path and a backup target name calculate version
 // returns an increment of the largest found version and nil; if an error is encountered then it returns 0 and the error; if no entry is found then it returns 1 and nil
-func getRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string) (int, error) {
+func calcRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string) (int, error) {
 	// rows, err := dbData.PreparedStatements.RemoteFilesQueryNewestVersionStmt.Query(localPath, targetName)
 	rows, err := dbtx.Query(dbData.PreparedStatements.RemoteFilesQueryNewestVersion, localPath, targetName)
 	if err != nil {
