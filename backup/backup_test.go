@@ -346,39 +346,23 @@ func TestAddEntryToRemoteFiles1(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 	backupConfig := result.Config.Backup[0]
-	err = database.ValidateAndCreate(result.Config.DataDir, backupConfig.Name, false)
-	if err != nil {
-		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
-	}
 
 	jobId := uuid.NewV4().String()
 
-	db, err := database.Start(result.Config.DataDir, backupConfig.Name)
-	if err != nil {
-		t.Fatalf("database.Start() returned error: '%s'", err)
-	}
-	preparedStatements, err := dbops.Prepare(db)
-	if err != nil {
-		t.Fatalf("dbops.Prepare() returned error: '%s'", err)
-		database.CloseDb(db, backupConfig.Name)
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
 	}
 
-	dbData := shared.DbData{
-		Db:                 db,
-		Connected:          true,
-		PreparedStatements: preparedStatements,
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	// ensure the DB has all needed info in the tables
-	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
 	if err != nil {
-		t.Fatalf("EnsureTargetsInDb() returned: %s", err)
-	}
-
-	// add entry to "jobs" DB table
-	err = dbops.AddJobDetails(dbData.Db, jobId, backupConfig.Target[0].Name, "backup", time.Now())
-	if err != nil {
-		t.Fatalf("Could not add job details to 'jobs' table")
+		t.Fatalf("Could not setup DB prerequisite due to error: %s", err)
 	}
 
 	dbtx, err := dbData.Db.Begin()
