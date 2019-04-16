@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"os"
+	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -335,7 +337,8 @@ func TestUpdateCounters1(t *testing.T) {
 	}
 }
 
-func TestAddEntryToRemoteFiles1(t *testing.T) {
+// test  addEntryToRemoteFiles() and getBackedupObjectPropertiesFromDb() and updateDbEntryInFiles()
+func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T) {
 	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
@@ -361,15 +364,14 @@ func TestAddEntryToRemoteFiles1(t *testing.T) {
 
 	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
 	if err != nil {
-		t.Fatalf("Could not setup DB prerequisite due to error: %s", err)
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
 
 	dbtx, err := dbData.Db.Begin()
 	if err != nil {
 		// could not start a database transaction so we can't proceed to test
-		t.Fatalf("could not start a database transaction so we can't proceed to test; error was: %s", err)
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
 	}
-
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
@@ -440,6 +442,86 @@ func TestAddEntryToRemoteFiles1(t *testing.T) {
 	if numEntries != 1 {
 		t.Fatalf("Was expecting 1 row to be found in the DB but instead %d were found", numEntries)
 	}
+
+	err = dbtx.Commit()
+	if err != nil {
+		t.Fatalf("1. Could not commit transaction due to error: %s", err)
+	}
+	found, retrievedDbRecord, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("1. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("1. Did not find a record in the DB for path %s", path)
+	}
+	if !reflect.DeepEqual(newDbRecord, retrievedDbRecord) {
+		fmt.Println("########## RETRIEVED #############")
+		utils.Pp(retrievedDbRecord)
+		fmt.Println("########## EXPECTED #############")
+		utils.Pp(newDbRecord)
+		t.Fatal("1. Retrieved DB record doesn't match what we've sent (see above for details)")
+	}
+
+	dbtx, err = dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("2. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// change Size so we have something to update in the DB and then validate the update worked
+	newDbRecord.Size = 123455432
+	err = updateDbEntryInFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("1. Failed to update db record due to error: %s", err)
+	}
+
+	err = dbtx.Commit()
+	if err != nil {
+		t.Fatalf("2. Could not commit transaction due to error: %s", err)
+	}
+
+	found, retrievedDbRecord2, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("2. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("2. Did not find a record in the DB for path %s", path)
+	}
+	if !reflect.DeepEqual(newDbRecord, retrievedDbRecord2) {
+		fmt.Println("########## RETRIEVED #############")
+		utils.Pp(retrievedDbRecord2)
+		fmt.Println("########## EXPECTED #############")
+		utils.Pp(newDbRecord)
+		t.Fatal("2. Retrieved DB record doesn't match what we've sent (see above for details)")
+	}
+
+	dbtx, err = dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("3. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+	// try to change for an inexisting path, should return an error
+	newDbRecord.Path = "a_path_which_does_not_exist"
+	err = updateDbEntryInFiles(dbData, dbtx, newDbRecord)
+	if err == nil {
+		t.Fatal("updateDbEntryInFiles() should have returned an error but didn't")
+	} else {
+		if !strings.Contains(err.Error(), "update should have changed 1 row for but it changed 0 rows") {
+			t.Fatalf("Was expecting updateDbEntryInFiles() to return an error containing: 'update should "+
+				"have changed 1 row for but it changed 0 rows' but instead it returned: %s", err)
+		}
+	}
+
 }
 
 // test function works as expected when there isn't a DB match
