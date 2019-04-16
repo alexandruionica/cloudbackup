@@ -302,12 +302,22 @@ func addDbEntryToFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord shared.B
 
 // updates and entry in the "files" table and returns whatever error is encountered
 func updateDbEntryInFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) error {
-	_, err := dbtx.Exec(dbData.PreparedStatements.FilesUpdate, fileDbRecord.Type,
+	result, err := dbtx.Exec(dbData.PreparedStatements.FilesUpdate, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.Format(time.RFC3339Nano),
 		fileDbRecord.Ctime.Format(time.RFC3339Nano), fileDbRecord.Owner,
 		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
 		fileDbRecord.JobUuid, fileDbRecord.Path)
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows != 1 {
+		return fmt.Errorf("update should have changed 1 row for but it changed %d rows", rows)
+	}
+	return nil
 }
 
 // For a given file path and a backup target name calculate version
