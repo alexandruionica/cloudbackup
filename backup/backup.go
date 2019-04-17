@@ -280,8 +280,8 @@ func addDbEntryToRemoteFiles(remotePath string, target string, jobUuid string, d
 	}
 	_, err = dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, remotePath, fileDbRecord.Path, target,
 		time.Now().UnixNano(), jobUuid, deleteMarker, version, runtime.GOOS, fileDbRecord.Type,
-		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.Format(time.RFC3339Nano),
-		fileDbRecord.Ctime.Format(time.RFC3339Nano), fileDbRecord.Owner,
+		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
+		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
 		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted)
 	if err != nil {
 		return "", fmt.Errorf("while trying to add a db record for '%s' in the remote_files table, "+
@@ -293,8 +293,8 @@ func addDbEntryToRemoteFiles(remotePath string, target string, jobUuid string, d
 // adds one entry to "files" table and returns whatever error is encountered
 func addDbEntryToFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) error {
 	_, err := dbtx.Exec(dbData.PreparedStatements.FilesInsert, fileDbRecord.Path, fileDbRecord.Type,
-		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.Format(time.RFC3339Nano),
-		fileDbRecord.Ctime.Format(time.RFC3339Nano), fileDbRecord.Owner,
+		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
+		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
 		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
 		fileDbRecord.JobUuid)
 	return err
@@ -303,8 +303,8 @@ func addDbEntryToFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord shared.B
 // updates and entry in the "files" table and returns whatever error is encountered
 func updateDbEntryInFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) error {
 	result, err := dbtx.Exec(dbData.PreparedStatements.FilesUpdate, fileDbRecord.Type,
-		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.Format(time.RFC3339Nano),
-		fileDbRecord.Ctime.Format(time.RFC3339Nano), fileDbRecord.Owner,
+		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
+		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
 		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
 		fileDbRecord.JobUuid, fileDbRecord.Path)
 	if err != nil {
@@ -433,7 +433,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 		entryFound = true
 		// the sqlite3 driver produces an error when fetching a string and converting it to time.time so we have to
 		// manually do the conversion
-		var tmpMtime, tmpCtime string
+		var tmpMtime, tmpCtime int64
 		err := rows.Scan(&dbRecord.Path, &dbRecord.Type, &dbRecord.LinkTarget, &dbRecord.Size, &tmpMtime,
 			&tmpCtime, &dbRecord.Owner, &dbRecord.Permissons, &dbRecord.Checksum,
 			&dbRecord.ChecksumType, &dbRecord.Encrypted, &dbRecord.JobUuid)
@@ -443,23 +443,17 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 			return false, shared.BackedUpFileProperties{}, err
 		} else {
 			// convert string to time for  mtime  and  ctime
-			if tmpMtime != "" {
-				dbRecord.Mtime, err = time.Parse(time.RFC3339Nano, tmpMtime)
-				if err != nil {
-					logger.Error("While converting mtime property of database record for '%s' the following "+
-						"error was encountered: %s", path, err)
-					return false, shared.BackedUpFileProperties{}, fmt.Errorf("while converting "+
-						"mtime property encountered error: %s", err)
-				}
+			if tmpMtime > 0 {
+				dbRecord.Mtime = time.Unix(0, tmpMtime)
+			} else {
+				logger.Errorf("The database record for '%s' has Mtime in nanoseconds %d which is an invalid value", path, tmpMtime)
+				return false, shared.BackedUpFileProperties{}, errors.New("mtime read from DB is <= 0")
 			}
-			if tmpCtime != "" {
-				dbRecord.Ctime, err = time.Parse(time.RFC3339Nano, tmpCtime)
-				if err != nil {
-					logger.Error("While converting ctime property of database record for '%s' the following "+
-						"error was encountered: %s", path, err)
-					return false, shared.BackedUpFileProperties{}, fmt.Errorf("while converting "+
-						"ctime property encountered error: %s", err)
-				}
+			if tmpCtime > 0 {
+				dbRecord.Ctime = time.Unix(0, tmpCtime)
+			} else {
+				logger.Errorf("The database record for '%s' has Ctime in nanoseconds %d which is an invalid value", path, tmpCtime)
+				return false, shared.BackedUpFileProperties{}, errors.New("ctime read from DB is <= 0")
 			}
 		}
 	}
