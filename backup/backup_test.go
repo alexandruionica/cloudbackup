@@ -454,6 +454,19 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	if !found {
 		t.Fatalf("1. Did not find a record in the DB for path %s", path)
 	}
+
+	if !newDbRecord.Ctime.Equal(retrievedDbRecord.Ctime) || !newDbRecord.Mtime.Equal(retrievedDbRecord.Mtime) {
+		fmt.Println("########## RETRIEVED #############")
+		utils.Pp(retrievedDbRecord)
+		fmt.Println("########## EXPECTED  #############")
+		utils.Pp(newDbRecord)
+		t.Fatal("1. Retrieved DB record Ctime or Mtime doesn't match what we've sent (see above for details)")
+	} else {
+		// reflect.DeepEqual below will fail due to some fields in time.Time not matching so we just overwrite the
+		// fields (once we know that Time.Equal is true) in order to have a proper comparison done by reflect
+		retrievedDbRecord.Ctime = newDbRecord.Ctime
+		retrievedDbRecord.Mtime = newDbRecord.Mtime
+	}
 	if !reflect.DeepEqual(newDbRecord, retrievedDbRecord) {
 		fmt.Println("########## RETRIEVED #############")
 		utils.Pp(retrievedDbRecord)

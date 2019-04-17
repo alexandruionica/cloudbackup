@@ -29,8 +29,8 @@ var logger = log.WithFields(log.Fields{
 func CreateDb(db *sql.DB, dbfilepath string) error {
 
 	sqlStmt := `
-	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime TEXT, 
-	ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, checksum_type, encrypted INTEGER, job_id TEXT,
+	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime INTEGER, 
+	ctime INTEGER, owner TEXT, permissions TEXT, checksum TEXT, checksum_type, encrypted INTEGER, job_id TEXT,
 	FOREIGN KEY(job_id) REFERENCES jobs(id));
 	
 	CREATE INDEX files_job_id ON files(job_id);
@@ -42,7 +42,7 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 
 	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target TEXT, 
 	upload_date INTEGER, job_id TEXT, delete_marker INTEGER, version INTEGER, src_os TEXT, type TEXT, 
-	link_target TEXT, size INTEGER, mtime TEXT, ctime TEXT, owner TEXT, permissions TEXT, checksum TEXT, 
+	link_target TEXT, size INTEGER, mtime INTEGER, ctime INTEGER, owner TEXT, permissions TEXT, checksum TEXT, 
 	checksum_type, encrypted INTEGER,
 	FOREIGN KEY(target) REFERENCES targets(name), FOREIGN KEY(job_id) REFERENCES jobs(id));
 	
