@@ -290,7 +290,7 @@ func EnsureTargetsInDb(db *sql.DB, backupConfig config.Backup) error {
 			for _, targetInCfg := range backupConfig.Target {
 				if targetToAdd == targetInCfg.Name {
 					_, err := db.Exec("INSERT INTO targets (name, backup_name, type, date_added) VALUES "+
-						"(?, ?, ?, ?)", targetToAdd, backupConfig.Name, targetInCfg.Type, dateAdded)
+						"(?, ?, ?, ?)", targetToAdd, backupConfig.Name, targetInCfg.Type, dateAdded.UnixNano())
 					if err != nil {
 						logger.Errorf("While trying to add information about target '%s' to the database, the "+
 							"following error was encountered: '%s'", targetToAdd, err)
@@ -348,13 +348,9 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 
 // adds a new record in the "jobs" table for a new job
 func AddJobDetails(db *sql.DB, jobId string, jobName string, jobType string, startTime time.Time) error {
-	/*
-			CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
-		report TEXT);
-	*/
 	_, err := db.Exec("INSERT INTO jobs (id, name, type, start_time, end_time, state, report) "+
 		"VALUES "+
-		"(?, ?, ?, ?, ?, ?, ?)", jobId, jobName, jobType, startTime, "", "started", "")
+		"(?, ?, ?, ?, ?, ?, ?)", jobId, jobName, jobType, startTime.UnixNano(), 0, "started", "")
 	if err != nil {
 		logger.Errorf("While trying to add information about %s job having name '%s' and id '%s' to the "+
 			"database, the following error was encountered: '%s'", jobType, jobName, jobId, err)
@@ -365,12 +361,8 @@ func AddJobDetails(db *sql.DB, jobId string, jobName string, jobType string, sta
 
 // updates an existing job record in the "jobs" table
 func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, endTime time.Time, JobState string, report string) error {
-	/*
-			CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT,
-		report TEXT);
-	*/
 	result, err := db.Exec("UPDATE jobs SET end_time = ?, state = ?, report = ? WHERE id = ? AND name = ? "+
-		"AND type = ?", endTime, JobState, report, jobId, jobName, jobType)
+		"AND type = ?", endTime.UnixNano(), JobState, report, jobId, jobName, jobType)
 	if err != nil {
 		logger.Errorf("While trying to update information about %s job having name '%s' and id '%s' in the "+
 			"database, the following error was encountered: '%s'", jobType, jobName, jobId, err)
