@@ -35,9 +35,9 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	
 	CREATE INDEX files_job_id ON files(job_id);
 
-	CREATE TABLE targets (name TEXT NOT NULL PRIMARY KEY, backup_name TEXT, type TEXT, date_added TEXT);
+	CREATE TABLE targets (name TEXT NOT NULL PRIMARY KEY, backup_name TEXT, type TEXT, date_added INTEGER );
 
-	CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time TEXT, end_time TEXT, state TEXT, 
+	CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time INTEGER, end_time INTEGER, state TEXT, 
 	report TEXT);
 
 	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, remote_path TEXT, local_path TEXT, target TEXT, 
