@@ -600,9 +600,11 @@ definitions:
       bucket:
         type: string
         example: example-com-us-servers
+        description: Storage bucket (or a similar concept depending on Object Store type) where the backup will be stored
       prefix:
         type: string
         example: backup/backups-for-server-51
+        description: Prefix to be added to each backed up item's path, when stored in the bucket. For any given item(file/dire/symlink) backed up in the bucket, the resulting full path will be "prefix" + / + "backup_name" + / + "full_path_of_backed_up_item" where "backup_name" is the name of this backup as defined Backup section of the configuration
       storage_class:
         type: string
         example: standard

@@ -12,6 +12,7 @@ import (
 	"github.com/satori/go.uuid"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -410,8 +411,11 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	if err != nil {
 		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
 	}
-
-	_, err = addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord)
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -679,7 +683,11 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
 	}
 
-	file1stTimeUuid, err := addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord)
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	file1stTimeUuid, err := addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -688,7 +696,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	}
 
 	// if the file has only 1 entry in the DB then we should get a version of 2
-	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	version, err = calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
 	if err != nil {
 		t.Fatalf("2. While trying to get a version, encountered error: %s", err)
 	}
@@ -725,7 +733,11 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 		t.Fatalf("2. could not start a database transaction so we can't proceed to test; error was: %s", err)
 	}
 
-	file2ndTimeUuid, err := addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord)
+	version, err = calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("2. Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	file2ndTimeUuid, err := addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -765,7 +777,11 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 		t.Fatalf("3. could not start a database transaction so we can't proceed to test; error was: %s", err)
 	}
 
-	file3ndTimeUuid, err := addDbEntryToRemoteFiles("my-s3-bucket:/path/to/file", newTargetName, jobId, 0, dbData, dbtx, newDbRecord)
+	version, err = calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("3. Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	file3ndTimeUuid, err := addDbEntryToRemoteFiles(newTargetName, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}

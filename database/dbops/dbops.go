@@ -79,8 +79,8 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
 
 	// insert statement - having it as text only and not an actual prepared statement (as this will be used only in transactions, and called generally once per transaction)
-	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, remote_path, local_path, target, upload_date, " +
-		"job_id, delete_marker, version, src_os, type, link_target, size, mtime, ctime, owner, permissions, " +
+	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, local_path, target, upload_date, " +
+		"job_id, delete_marker, version, remote_version, src_os, type, link_target, size, mtime, ctime, owner, permissions, " +
 		"checksum, checksum_type, encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	//  query statement used to figure out the largest version for a particular path and target name pair
@@ -289,8 +289,8 @@ func EnsureTargetsInDb(db *sql.DB, backupConfig config.Backup) error {
 			// walk each target in the config file until a match is found
 			for _, targetInCfg := range backupConfig.Target {
 				if targetToAdd == targetInCfg.Name {
-					_, err := db.Exec("INSERT INTO targets (name, backup_name, type, date_added) VALUES "+
-						"(?, ?, ?, ?)", targetToAdd, backupConfig.Name, targetInCfg.Type, dateAdded.UnixNano())
+					_, err := db.Exec("INSERT INTO targets (name, backup_name, type, bucket, prefix, date_added) VALUES "+
+						"(?, ?, ?, ?, ?, ?)", targetToAdd, backupConfig.Name, targetInCfg.Type, targetInCfg.Bucket, targetInCfg.Prefix, dateAdded.UnixNano())
 					if err != nil {
 						logger.Errorf("While trying to add information about target '%s' to the database, the "+
 							"following error was encountered: '%s'", targetToAdd, err)

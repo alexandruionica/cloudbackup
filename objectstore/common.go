@@ -21,13 +21,18 @@ var logger = log.WithFields(log.Fields{
 var CouldNotConvertRate = errors.New("could not convert rate to numeric value")
 
 type ObjectStore interface {
-	Upload(path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface) (result string, cancelled bool, err error)
-	// update or create a metadata entry
-	MetadataUpdate(path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error)
+	// uploads an item (if file; if not then just creates some kind of entry); it's up to the implementation to decide if
+	// the provided $version is to be used;
+	// in the returned values, $remoteVersion is the version as returned by the object store (some object stores provide
+	// as a reply to a PUT a version which they generate) or it can also be the value of the input $version(converted to string)
+	Upload(path string, newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error)
 	// returned value $StoreName is the same as a target name in a Backup section of the config file; $StoreType represents target type
 	GetStoreDetails() (StoreName string, StoreType string)
-	// marks a given object as deleted. Depending on object store type this may have very different implementations. This must NOT actually delete an object.
-	MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error)
+	// marks a given object, described by a path, as deleted. Depending on object store type this may have very different
+	// implementations. This must NOT actually delete one or more versions belonging to a given object as depicted by a
+	// path. For input parameter $version and returned $remoteVersion see the description for the Upload() method
+	MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error)
+	// TODO - define a Validate() method which is used to validate that the config and credentials for a given object store are usable/work as expected
 }
 
 type FileReader struct {
@@ -39,7 +44,8 @@ type FileReader struct {
 	backupJobsState shared.BackupJobsStateInterface
 	// used for figuring out which stats counter to increment
 	backupJobName string
-	// used for figuring out which stats counter to increment
+	// used for figuring out which stats counter to increment and also for other cases where the Target Name is not
+	// available from the caller of a particular function but the objectore object is passed in
 	objectStoreName string
 	// used for figuring out which stats counter to increment
 	objectStoreType string
