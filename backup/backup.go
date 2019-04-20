@@ -211,7 +211,21 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 	var JobCancelled bool
 	// back up the object to one or more remote object stores
 	for _, objectStore := range objectStores {
-		remotePath, cancelled, err := UploadObject(path, DbRecord, backupConfig, objectStore, backupJobsState)
+		targetName, _ := objectStore.GetStoreDetails()
+		// figure out the next version number
+		version, err := calcRemoteFileVersion(dbData, dbtx, path, targetName)
+		if err != nil {
+			encounteredError++
+			encounteredErrorObject = err
+			break
+		}
+		var cancelled bool
+		var remoteVersion string
+		if operationType == "upload" {
+			remoteVersion, cancelled, err = UploadObject(path, DbRecord, backupConfig, objectStore, backupJobsState, version)
+		} else { //nolint:staticcheck
+			// TODO - ensure that the DB is still updated but for version is uses whatever was the last version instead of a new one
+		}
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
@@ -221,9 +235,8 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 			JobCancelled = true
 			break
 		}
-		targetName, _ := objectStore.GetStoreDetails()
-		// TODO - if $operation == "content-update" then ensure that $remotePath + $version is unique ; if not and another one or figure out what to do
-		remoteUuid, err := addDbEntryToRemoteFiles(remotePath, targetName, jobUuid, 0, dbData, dbtx, DbRecord)
+		// TODO - if $operation == "metadata-update" then use whatever was the last version instead of a new one
+		remoteUuid, err := addDbEntryToRemoteFiles(targetName, jobUuid, 0, dbData, dbtx, DbRecord, version, remoteVersion)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
@@ -265,21 +278,18 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 	return false, nil
 }
 
-// $remotePath is the path on the remote object store, as returned by objectstore/Upload() or objectstore/MetadataUpdate()
 // $target is one target name for the backup section definition in use. This target is to the objecstore where this file/dir/symlink got sent/updated
 // $deleteMarker: 1 for true, 0 for false. If 1 it means the file was deleted from the local filesystem
+// $version represents the object version number to add in the database for this item while $remoteVersion represents
+// the version as returned by the object store after the PUT operation (there may be a difference between the two, depending on Object Store capabilities)
 //
 // Returns the uuid value for this entry and if an error was encountered or not. If err then ignore the uuid value.
-func addDbEntryToRemoteFiles(remotePath string, target string, jobUuid string, deleteMarker int, dbData shared.DbData,
-	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties) (string, error) {
+func addDbEntryToRemoteFiles(target string, jobUuid string, deleteMarker int, dbData shared.DbData,
+	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties, version int, remoteVersion string) (string, error) {
 	entryUuid := uuid.NewV4().String()
-	version, err := calcRemoteFileVersion(dbData, dbtx, fileDbRecord.Path, target)
-	// logger.Debugf("Adding entry to remote_files for %s", fileDbRecord.Path)
-	if err != nil {
-		return "", err
-	}
-	_, err = dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, remotePath, fileDbRecord.Path, target,
-		time.Now().UnixNano(), jobUuid, deleteMarker, version, runtime.GOOS, fileDbRecord.Type,
+
+	_, err := dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, fileDbRecord.Path, target,
+		time.Now().UnixNano(), jobUuid, deleteMarker, version, remoteVersion, runtime.GOOS, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
 		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
 		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted)
@@ -567,55 +577,29 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 
 // uploads an object (file / dir / symlink) to the remote object storage. For dirs/symlinks it only uploads metadata
 // for files it uploads both content and metadata.
-// return values: string with the remote object path(for example bucket_name/path/to/file), bool with true if backup
-// got cancelled, false otherwise ; error if error encountered
+// return values: the version of the stored item, as returned by the object store;
+// bool with true if backup got cancelled, false otherwise ; error if error encountered
 func UploadObject(path string, newDbRecord shared.BackedUpFileProperties,
-	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (string, bool, error) {
+	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, version int) (string, bool, error) {
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", path)
 	} else {
 		logger.Debugf("Uploading metadata for '%s' which is of type '%s'", path, newDbRecord.Type)
 	}
 
-	result, cancelled, err := objectStore.Upload(path, newDbRecord, backupJobsState)
+	remoteVersion, cancelled, err := objectStore.Upload(path, newDbRecord, version, backupJobsState)
 	if cancelled {
-		return "", true, err
+		return remoteVersion, true, err
 	}
 	if err != nil {
-		return "", false, err
+		return remoteVersion, false, err
 	}
 
 	// $result represents the remote path (in the object store) where the object has been backed up
 	storeName, _ := objectStore.GetStoreDetails()
-	logger.Debugf("'%s' successfully uploaded to object store %s at remote location '%s'", path, storeName, result)
+	logger.Debugf("'%s' successfully uploaded to object store %s", path, storeName)
 
-	return result, false, nil
-}
-
-// updates remote metadata for an object (file / dir / symlink) to the remote object storage. The object must already
-// have been uploaded
-// params: $ctx for canceable context; $path with absolute path to object being backed up; $newDbRecord has all of the
-// details about the object which will be partially used for the metadata; $backupConfig is the struct with the details
-// of this backup as represented in the config file
-// return values: string with the remote object path(for example bucket_name/path/to/file), bool with true if backup
-// got cancelled, false otherwise ; error if error encountered
-func UpdateObjectMetadata(path string, newDbRecord shared.BackedUpFileProperties,
-	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface) (string, bool, error) {
-	logger.Debugf("Updating remote stored metadata for previously backed up and unchanged '%s'", path)
-
-	result, cancelled, err := objectStore.MetadataUpdate(path, newDbRecord)
-	if cancelled {
-		return "", true, err
-	}
-	if err != nil {
-		return "", false, err
-	}
-
-	// $result represents the remote path (in the object store) where the object has been backed up
-	storeName, _ := objectStore.GetStoreDetails()
-	logger.Debugf("'%s' successfully uploaded to object store %s at remote location '%s'", path, storeName, result)
-
-	return result, false, nil
+	return remoteVersion, false, nil
 }
 
 // update counters in the backup job state struct. Params: $backupJobsState is the shared struct (pointer to it)
@@ -917,7 +901,16 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 	var JobCancelled bool
 	// back up the object to one or more remote object stores
 	for _, objectStore := range objectStores {
-		remotePath, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord.Path, ObjectDbRecord)
+
+		targetName, _ := objectStore.GetStoreDetails()
+		version, err := calcRemoteFileVersion(dbData, dbtx, ObjectDbRecord.Path, targetName)
+		if err != nil {
+			encounteredError++
+			encounteredErrorObject = err
+			break
+		}
+
+		remoteVersion, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord.Path, ObjectDbRecord, version)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
@@ -927,8 +920,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 			JobCancelled = true
 			break
 		}
-		targetName, _ := objectStore.GetStoreDetails()
-		_, err = addDbEntryToRemoteFiles(remotePath, targetName, jobUuid, 1, dbData, dbtx, ObjectDbRecord)
+		_, err = addDbEntryToRemoteFiles(targetName, jobUuid, 1, dbData, dbtx, ObjectDbRecord, version, remoteVersion)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err

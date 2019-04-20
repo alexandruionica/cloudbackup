@@ -6,6 +6,7 @@ import (
 	"context"
 	"golang.org/x/time/rate"
 	"io"
+	"strconv"
 )
 
 type StoreTestNull struct {
@@ -42,13 +43,13 @@ func InitialiseStoreTestNull(ctx context.Context, backupConfig config.Backup, ta
 }
 
 // pretend to upload file (actually discarding all read content)
-func (object *StoreTestNull) Upload(path string, newDbRecord shared.BackedUpFileProperties, backupJobsState shared.BackupJobsStateInterface) (result string, cancelled bool, err error) {
+func (object *StoreTestNull) Upload(path string, newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error) {
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
 		reader, err := NewFileReader(path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
 			object.storeType, object.rateLimit, object.burst, newDbRecord.Size, object.ctx)
 		if err != nil {
-			return "", false, err
+			return strconv.Itoa(version), false, err
 		}
 		defer reader.Close()
 
@@ -63,28 +64,24 @@ func (object *StoreTestNull) Upload(path string, newDbRecord shared.BackedUpFile
 				// io.Reader reports io.EOF when reaching the end of the file. This is normal and expected
 				case io.EOF:
 					{
-						return "test_null_discarded:" + path, false, nil
+						return strconv.Itoa(version), false, nil
 					}
 				case context.Canceled:
 					{
-						return "", true, nil
+						return strconv.Itoa(version), true, nil
 					}
 				default:
 					{
 						logger.Warningf("While reading '%s' the following error was encountered: %s", path, err)
-						return "", false, err
+						return strconv.Itoa(version), false, err
 					}
 				}
 			}
 		}
 	} else {
 		// TODO - build metadata for dir / symlink and then proceed to discard it
-		return "test_null_discarded:" + newDbRecord.Type + "_" + path, false, nil
+		return strconv.Itoa(version), false, nil
 	}
-}
-
-func (object *StoreTestNull) MetadataUpdate(path string, newDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
-	return "", false, nil
 }
 
 func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType string) {
@@ -92,6 +89,6 @@ func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType stri
 }
 
 // pretend to place a delete marker
-func (object *StoreTestNull) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties) (result string, cancelled bool, err error) {
-	return "test_null_discarded:__delete_marker__" + existingDbRecord.Type + "_" + path, false, nil
+func (object *StoreTestNull) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error) {
+	return strconv.Itoa(version), false, nil
 }
