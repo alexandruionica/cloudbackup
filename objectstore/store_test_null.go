@@ -10,10 +10,16 @@ import (
 )
 
 type StoreTestNull struct {
-	ctx             context.Context
-	backupName      string
-	storeName       string
-	storeType       string
+	ctx        context.Context
+	backupName string
+	storeName  string
+	storeType  string
+	// name of the object store bucket used for storing content
+	storeBucketName string
+	// prefix to prepend to all backed up items. This normally "backup.target.prefix" + $separator + "backup.name";
+	// ANY CHANGE TO THIS MAY BREAK ALREADY MADE BACKUPS
+	storePrefix string
+	// this is the rate limiter bucket (token bucket); not to be confused with the above $storeBucketName
 	bucket          *rate.Limiter
 	rateLimit       uint64
 	burst           uint64
@@ -33,6 +39,8 @@ func InitialiseStoreTestNull(ctx context.Context, backupConfig config.Backup, ta
 		backupName:      backupConfig.Name,
 		storeName:       target.Name,
 		storeType:       target.Type,
+		storeBucketName: target.Bucket,
+		storePrefix:     target.Prefix + "/" + backupConfig.Name,
 		bucket:          rateLimitBucket,
 		rateLimit:       ratelimit,
 		burst:           burst,
@@ -91,4 +99,11 @@ func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType stri
 // pretend to place a delete marker
 func (object *StoreTestNull) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error) {
 	return strconv.Itoa(version), false, nil
+}
+
+// pretend to delete a particular version for a given path
+func (object *StoreTestNull) Delete(path string, version int, remoteVersion string) error {
+	logger.Debugf("Pretending to delete: '%s' having version: '%d' and remote version: '%s' from object store:"+
+		" '%s' using bucket: '%s' and full remote path: '%s'", path, version, remoteVersion, object.storeName, object.storeBucketName, object.storePrefix+"/"+path)
+	return nil
 }
