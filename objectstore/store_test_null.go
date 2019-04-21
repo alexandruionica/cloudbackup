@@ -101,8 +101,8 @@ func (object *StoreTestNull) MarkDeleted(path string, existingDbRecord shared.Ba
 	return strconv.Itoa(version), false, nil
 }
 
-// pretend to delete a particular version for a given path
-func (object *StoreTestNull) Delete(path string, version int, remoteVersion string) error {
+// pretend to delete a particular version for a given path; $objType is one of "dir"/"file"/"symlink"
+func (object *StoreTestNull) Delete(path string, objType string, version int, remoteVersion string) error {
 	logger.Debugf("Pretending to delete: '%s' having version: '%d' and remote version: '%s' from object store:"+
 		" '%s' using bucket: '%s' and full remote path: '%s'", path, version, remoteVersion, object.storeName, object.storeBucketName, object.storePrefix+"/"+path)
 	return nil

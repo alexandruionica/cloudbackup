@@ -36,6 +36,6 @@ func (object *StoreError) MarkDeleted(path string, existingDbRecord shared.Backe
 	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }
 
-func (object *StoreError) Delete(path string, version int, remoteVersion string) error {
+func (object *StoreError) Delete(path string, objType string, version int, remoteVersion string) error {
 	return nil
 }

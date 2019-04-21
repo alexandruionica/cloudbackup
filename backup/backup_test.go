@@ -690,6 +690,9 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 
 	// we know from the above strconv.Itoa() the version to expect , meaning "1"
 	remoteVersion, err := getRemoteVersionForVersion(dbData, dbtx, newDbRecord.Path, backupConfig.Target[0].Name, version)
+	if err != nil {
+		t.Fatalf("1. getRemoteVersionForVersion() returned error: %s", err)
+	}
 	if remoteVersion != "1" {
 		t.Fatalf("1. was expecting getRemoteVersionForVersion() to return '1' but it returned: '%s'", remoteVersion)
 	}
@@ -749,12 +752,18 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 
 	// we know from the above strconv.Itoa() the version to expect , meaning "2"
 	remoteVersion, err = getRemoteVersionForVersion(dbData, dbtx, newDbRecord.Path, backupConfig.Target[0].Name, version)
+	if err != nil {
+		t.Fatalf("2. getRemoteVersionForVersion() returned error: %s", err)
+	}
 	if remoteVersion != "2" {
 		t.Fatalf("2. was expecting getRemoteVersionForVersion() to return '2' but it returned: '%s'", remoteVersion)
 	}
 
 	// we know from the above strconv.Itoa() the version to expect for input "1" , meaning "1"
 	remoteVersion, err = getRemoteVersionForVersion(dbData, dbtx, newDbRecord.Path, backupConfig.Target[0].Name, 1)
+	if err != nil {
+		t.Fatalf("3. getRemoteVersionForVersion() returned error: %s", err)
+	}
 	if remoteVersion != "1" {
 		t.Fatalf("3. was expecting getRemoteVersionForVersion() to return '1' but it returned: '%s'", remoteVersion)
 	}

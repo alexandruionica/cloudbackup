@@ -34,7 +34,8 @@ type ObjectStore interface {
 	MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error)
 	// for a given $path, deletes a particular $version && $remote_version pair (it's up to the implementation to
 	// decide which of the two makes sense to be used in order to remove the appropiate file)
-	Delete(path string, version int, remoteVersion string) error
+	//  $objType is one of "dir"/"file"/"symlink"
+	Delete(path string, objType string, version int, remoteVersion string) error
 	// TODO - define a Validate() method which is used to validate that the config and credentials for a given object store are usable/work as expected
 }
 
