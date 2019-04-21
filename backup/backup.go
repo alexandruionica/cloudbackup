@@ -26,6 +26,16 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
+// struct use for temporarily accounting what upload or mark_deleted operations where successful
+type successfullyProcessed struct {
+	Path string
+	// one of "file"/"dir"/"symlink"
+	ObjType       string
+	Version       int
+	RemoteVersion string
+	Objectstore   objectstore.ObjectStore
+}
+
 // performs backup of a file or dir
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
 func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
@@ -210,6 +220,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 	encounteredError := 0
 	var encounteredErrorObject error
 	var JobCancelled bool
+	var processed []successfullyProcessed
 	// back up the object to one or more remote object stores
 	for _, objectStore := range objectStores {
 		targetName, _ := objectStore.GetStoreDetails()
@@ -233,6 +244,14 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 				JobCancelled = true
 				break
 			}
+			// append upload details here in case we need to roll back (as we will have to delete the uploaded content)
+			processed = append(processed, successfullyProcessed{
+				Path:          DbRecord.Path,
+				ObjType:       DbRecord.Type,
+				Version:       version,
+				RemoteVersion: remoteVersion,
+				Objectstore:   objectStore,
+			})
 		}
 		// in case of operationType == update we don't have to actually send/update the object store; we'll just update the DB entry
 		if operationType == "update" {
@@ -275,10 +294,16 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
 		}
 		if len(objectStores) > 1 && operationType == "upload" {
-			// TODO - ENSURE THAT ANY SUCCESSFULLY UPLOADED FILE/DIR/SYMLINK IS REMOVED
 			logger.Warnf("Failed upload of '%s' to %d out of %d targets. All targets are be "+
 				"considered failed (even the ones where the backup was successful) for this item.",
 				path, encounteredError, len(objectStores))
+			// ensure that any successfully uploaded file/dir/symlink is removed
+			for _, entry := range processed {
+				err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
+				if err != nil {
+					logger.Warnf("After failed upload for '%s', while trying to cleanup, encountered error: %s", path, err)
+				}
+			}
 		}
 		if JobCancelled {
 			return true, nil
@@ -965,6 +990,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 	encounteredError := 0
 	var encounteredErrorObject error
 	var JobCancelled bool
+	var processed []successfullyProcessed
 	// back up the object to one or more remote object stores
 	for _, objectStore := range objectStores {
 
@@ -986,6 +1012,15 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 			JobCancelled = true
 			break
 		}
+		// append upload(mark deleted generally uploads a "marker") details here in case we need to roll back
+		// (as we will have to delete the uploaded content)
+		processed = append(processed, successfullyProcessed{
+			Path:          ObjectDbRecord.Path,
+			ObjType:       ObjectDbRecord.Type,
+			Version:       version,
+			RemoteVersion: remoteVersion,
+			Objectstore:   objectStore,
+		})
 		_, err = addDbEntryToRemoteFiles(targetName, jobUuid, 1, dbData, dbtx, ObjectDbRecord, version, remoteVersion)
 		if err != nil {
 			encounteredError++
@@ -1001,10 +1036,16 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", ObjectDbRecord.Path, txerr)
 		}
 		if len(objectStores) > 1 {
-			// TODO - ENSURE THAT ANY SUCCESSFULLY ADDED DELETE_MARKER (FOR OTHER OBJECT STORES WHICH SUCCEEDED) IS REMOVED
 			logger.Warnf("Failed adding delete marker for '%s' to %d out of %d targets. All targets are to be "+
 				"considered failed (even the ones where adding the delete marker was successful) for this item.",
 				ObjectDbRecord.Path, encounteredError, len(objectStores))
+			// ensure that any successfully already added delete markers are removed
+			for _, entry := range processed {
+				err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
+				if err != nil {
+					logger.Warnf("While trying to cleanup delete markers, encountered error: %s", err)
+				}
+			}
 		}
 		if JobCancelled {
 			return true, nil
