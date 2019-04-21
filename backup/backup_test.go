@@ -16,7 +16,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 )
 
 // setup filerecord for plain file which doesn't have a checksum
@@ -50,7 +49,6 @@ func TestPrepareFileRecord1(t *testing.T) {
 	ctime, err := fileproperties.GetCtime(path, true)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
-		ctime = time.Time{}
 	}
 	checksum := ""
 
@@ -103,7 +101,6 @@ func TestPrepareFileRecord2(t *testing.T) {
 	ctime, err := fileproperties.GetCtime(path, true)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
-		ctime = time.Time{}
 	}
 	checksum := "abcabfd3423de22"
 
@@ -166,7 +163,6 @@ func TestPrepareFileRecord3(t *testing.T) {
 	ctime, err := fileproperties.GetCtime(symlinkPath, true)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
-		ctime = time.Time{}
 	}
 	checksum := ""
 
@@ -231,7 +227,6 @@ func TestPrepareFileRecord4(t *testing.T) {
 	ctime, err := fileproperties.GetCtime(symlinkPath, false)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
-		ctime = time.Time{}
 	}
 	checksum := ""
 
@@ -398,7 +393,6 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	ctime, err := fileproperties.GetCtime(path, true)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
-		ctime = time.Time{}
 	}
 	checksum := "abcabfd3423de22"
 
@@ -604,7 +598,7 @@ func TestGetRemoteFileVersion1(t *testing.T) {
 
 }
 
-// test function works as expected when there is a DB match and also test getNewestRemoteFileUuid()
+// test function works as expected when there is a DB match and also test getNewestRemoteFileUuid() and getRemoteVersionForVersion()
 func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -669,7 +663,6 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	ctime, err := fileproperties.GetCtime(path, true)
 	if err != nil {
 		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
-		ctime = time.Time{}
 	}
 	checksum := "abcabfd3423de22"
 
@@ -693,6 +686,12 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	}
 	if file1stTimeUuid == "" {
 		t.Fatal("1. addDbEntryToRemoteFiles() returned an empty uuid")
+	}
+
+	// we know from the above strconv.Itoa() the version to expect , meaning "1"
+	remoteVersion, err := getRemoteVersionForVersion(dbData, dbtx, newDbRecord.Path, backupConfig.Target[0].Name, version)
+	if remoteVersion != "1" {
+		t.Fatalf("1. was expecting getRemoteVersionForVersion() to return '1' but it returned: '%s'", remoteVersion)
 	}
 
 	// if the file has only 1 entry in the DB then we should get a version of 2
@@ -746,6 +745,18 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	}
 	if file1stTimeUuid == file2ndTimeUuid {
 		t.Fatalf("addDbEntryToRemoteFiles() returned two idential UUIDs, for 2 runs. The uuid was: %s", file1stTimeUuid)
+	}
+
+	// we know from the above strconv.Itoa() the version to expect , meaning "2"
+	remoteVersion, err = getRemoteVersionForVersion(dbData, dbtx, newDbRecord.Path, backupConfig.Target[0].Name, version)
+	if remoteVersion != "2" {
+		t.Fatalf("2. was expecting getRemoteVersionForVersion() to return '2' but it returned: '%s'", remoteVersion)
+	}
+
+	// we know from the above strconv.Itoa() the version to expect for input "1" , meaning "1"
+	remoteVersion, err = getRemoteVersionForVersion(dbData, dbtx, newDbRecord.Path, backupConfig.Target[0].Name, 1)
+	if remoteVersion != "1" {
+		t.Fatalf("3. was expecting getRemoteVersionForVersion() to return '1' but it returned: '%s'", remoteVersion)
 	}
 
 	// if the file has only 2 entries in the DB then we should get a version of 3
