@@ -23,6 +23,7 @@ type DbPreparedStatements struct {
 	RemoteFilesInsert                     string
 	RemoteFilesQueryNewestVersion         string
 	RemoteFilesQueryNewestVersionUuidStmt *sql.Stmt
+	RemoteFilesQueryRemoteVersion         string
 	BackupCollectionsInsert               string
 	BackupCollectionsInsertStmt           *sql.Stmt
 	FindDeletedItemsStmt                  *sql.Stmt

@@ -35,3 +35,7 @@ func (object *StoreError) GetStoreDetails() (StoreName string, StoreType string)
 func (object *StoreError) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error) {
 	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }
+
+func (object *StoreError) Delete(path string, version int, remoteVersion string) error {
+	return nil
+}

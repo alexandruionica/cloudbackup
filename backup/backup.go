@@ -171,7 +171,8 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 // $operation must be one of "new", "content-update", "metadata-update"; $dbData is the constructed DB rectord struct needed for the "files" table.
 func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string, DbRecord shared.BackedUpFileProperties) (bool, error) {
-	// $operationType is used for counters and status messages
+	// $operationType is used for counters, status messages and also for deciding if the file needs sending to the
+	// remote or if just a DB updated for properties only is needed
 	var operationType string
 	switch operation {
 	case "new":
@@ -223,19 +224,37 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		var remoteVersion string
 		if operationType == "upload" {
 			remoteVersion, cancelled, err = UploadObject(path, DbRecord, backupConfig, objectStore, backupJobsState, version)
-		} else { //nolint:staticcheck
-			// TODO - ensure that the DB is still updated but for version is uses whatever was the last version instead of a new one
+			if err != nil {
+				encounteredError++
+				encounteredErrorObject = err
+				break
+			}
+			if cancelled {
+				JobCancelled = true
+				break
+			}
 		}
-		if err != nil {
-			encounteredError++
-			encounteredErrorObject = err
-			break
+		// in case of operationType == update we don't have to actually send/update the object store; we'll just update the DB entry
+		if operationType == "update" {
+			// use whatever was the last remote_version instead of a new one
+			if version > 1 {
+				// get from db the "remote_version" of the previous $version
+				remoteVersion, err = getRemoteVersionForVersion(dbData, dbtx, path, targetName, version-1)
+				if err != nil {
+					encounteredError++
+					encounteredErrorObject = err
+					break
+				}
+			} else {
+				err = fmt.Errorf("object %s was detected to have had a metadata change but no previous backed "+
+					"up version can be found for it in the database", path)
+				log.Error(err)
+				encounteredError++
+				encounteredErrorObject = err
+				break
+			}
 		}
-		if cancelled {
-			JobCancelled = true
-			break
-		}
-		// TODO - if $operation == "metadata-update" then use whatever was the last version instead of a new one
+
 		remoteUuid, err := addDbEntryToRemoteFiles(targetName, jobUuid, 0, dbData, dbtx, DbRecord, version, remoteVersion)
 		if err != nil {
 			encounteredError++
@@ -255,7 +274,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		if txerr != nil {
 			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", path, txerr)
 		}
-		if len(objectStores) > 1 {
+		if len(objectStores) > 1 && operationType == "upload" {
 			// TODO - ENSURE THAT ANY SUCCESSFULLY UPLOADED FILE/DIR/SYMLINK IS REMOVED
 			logger.Warnf("Failed upload of '%s' to %d out of %d targets. All targets are be "+
 				"considered failed (even the ones where the backup was successful) for this item.",
@@ -333,7 +352,6 @@ func updateDbEntryInFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord share
 // For a given file path and a backup target name calculate version
 // returns an increment of the largest found version and nil; if an error is encountered then it returns 0 and the error; if no entry is found then it returns 1 and nil
 func calcRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string) (int, error) {
-	// rows, err := dbData.PreparedStatements.RemoteFilesQueryNewestVersionStmt.Query(localPath, targetName)
 	rows, err := dbtx.Query(dbData.PreparedStatements.RemoteFilesQueryNewestVersion, localPath, targetName)
 	if err != nil {
 		logger.Errorf("While querying the database in order to calculate a version number for '%s' the "+
@@ -343,31 +361,79 @@ func calcRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string,
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			logger.Warnf("While trying to Close() a prepared statement used for querying the database in order "+
+			logger.Warnf("While trying to Close() a the database query used "+
 				"to calculate a version number for '%s' the following error was encountered: %s", localPath, err)
 		}
 	}()
 	var version int
 	entryFound := false
 	for rows.Next() {
+		if entryFound {
+			logger.Warnf("While querying the database in order to calculate a version number for '%s' belonging"+
+				" to target '%s' found more than one 'highest version' number."+
+				"Using first match and ignoring the rest", localPath, targetName)
+			continue
+		}
 		entryFound = true
 		err := rows.Scan(&version)
 		if err != nil {
-			logger.Errorf("While retrieving the database record for '%s' the following error was encountered:"+
-				" '%s'", targetName, err)
+			logger.Errorf("While retrieving the database record for version belonging to '%s', the"+
+				" following error was encountered: '%s'", targetName, err)
 			return 0, err
 		}
-		break //nolint:staticcheck
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database in order calculate a version number"+
-			" for '%s' , the following error was encountered: %s", localPath, err)
+		logger.Warnf("While trying to Close() a the database query used "+
+			"to calculate a version number for '%s' the following error was encountered: %s", localPath, err)
 		return 0, err
 	}
 	if entryFound {
 		return version + 1, nil
 	} else {
 		return 1, nil
+	}
+}
+
+// for a given $version && $targetName && $localPath return from the DB the "remote_version" field
+func getRemoteVersionForVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string, version int) (string, error) {
+	rows, err := dbtx.Query(dbData.PreparedStatements.RemoteFilesQueryRemoteVersion, localPath, targetName, version)
+	if err != nil {
+		logger.Errorf("While querying the database in order to find the remote_version for '%s' and version '%d' belonging to target '%s' the "+
+			"following error was encountered: %s", localPath, version, targetName, err)
+		return "", err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() a prepared statement used for querying the database in order "+
+				"to calculate a version number for '%s' the following error was encountered: %s", localPath, err)
+		}
+	}()
+	var remoteVersion string
+	entryFound := false
+	for rows.Next() {
+		if entryFound {
+			logger.Warnf("More than one database record for '%s' and version '%d' belonging to target '%s'. "+
+				"Using first match and ignoring the rest", localPath, version, targetName)
+			continue
+		}
+		entryFound = true
+		err := rows.Scan(&remoteVersion)
+		if err != nil {
+			logger.Errorf("While retrieving the database record for remote_file version belonging to '%s', the"+
+				" following error was encountered: '%s'", targetName, err)
+			return "", err
+		}
+	}
+	if err = rows.Err(); err != nil {
+		logger.Error("While enumerating the results of querying the database in order to find the remote_version"+
+			" for '%s' , the following error was encountered: %s", localPath, err)
+		return "", err
+	}
+	if entryFound {
+		return remoteVersion, nil
+	} else {
+		return "", fmt.Errorf("could not find remote_version for %s", localPath)
 	}
 }
 

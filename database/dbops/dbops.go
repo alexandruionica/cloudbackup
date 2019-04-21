@@ -86,6 +86,8 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	//  query statement used to figure out the largest version for a particular path and target name pair
 	PreparedStatements.RemoteFilesQueryNewestVersion = "SELECT version FROM remote_files WHERE local_path = ? AND target = ? ORDER BY version DESC LIMIT 1"
 
+	PreparedStatements.RemoteFilesQueryRemoteVersion = "SELECT remote_version FROM remote_files WHERE local_path = ? AND target = ? AND version = ?"
+
 	// query statement used to figure out the uuid of the largest version for a particular path and target name pair as long as they are not a delete marker
 	PreparedStatements.RemoteFilesQueryNewestVersionUuidStmt, err = db.Prepare("SELECT uuid FROM remote_files WHERE local_path=? AND target = ? AND delete_marker=0 ORDER BY version DESC LIMIT 1")
 	if err != nil {

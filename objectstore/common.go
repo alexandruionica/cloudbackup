@@ -32,13 +32,17 @@ type ObjectStore interface {
 	// implementations. This must NOT actually delete one or more versions belonging to a given object as depicted by a
 	// path. For input parameter $version and returned $remoteVersion see the description for the Upload() method
 	MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error)
+	// for a given $path, deletes a particular $version && $remote_version pair (it's up to the implementation to
+	// decide which of the two makes sense to be used in order to remove the appropiate file)
+	Delete(path string, version int, remoteVersion string) error
 	// TODO - define a Validate() method which is used to validate that the config and credentials for a given object store are usable/work as expected
 }
 
+// see description of the NewFileReader() function in order to understand the purpose of this type
 type FileReader struct {
 	// we need the original file reader in order to call Close() when we finished reading or want to close the file handle
 	origFileReader *os.File
-	// if rate limiting is not enabled than thinews will be a null pointer
+	// if rate limiting is not enabled than this will be a null pointer
 	bucket *rate.Limiter
 	// needed in order to increment the rate counters used for statistics/reporting
 	backupJobsState shared.BackupJobsStateInterface
