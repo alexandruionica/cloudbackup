@@ -7,7 +7,7 @@ import (
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -53,7 +53,11 @@ func TestRunScript1(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 	if err == nil {
 		t.Fatal("Running the notification script did not return an error despite the script not being executable")
@@ -63,7 +67,7 @@ func TestRunScript1(t *testing.T) {
 // test with script having execute bit set (should work) ; leave some fields unpopulated when calling the script
 func TestRunScript2(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_notifications_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScript + fmt.Sprintf("echo $3 > %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
@@ -75,7 +79,11 @@ func TestRunScript2(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = os.Chmod(scriptPath, 0700)
 	if err != nil {
 		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
@@ -103,7 +111,7 @@ func TestRunScript2(t *testing.T) {
 // test with script having execute bit set (should work) ; ensure all fields are populated when calling the script
 func TestRunScript3(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_notifications_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScript + fmt.Sprintf("echo $3 > %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
@@ -116,7 +124,11 @@ func TestRunScript3(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = os.Chmod(scriptPath, 0700)
 	if err != nil {
 		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
@@ -153,7 +165,11 @@ func TestRunScript4(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = os.Chmod(scriptPath, 0700)
 	if err != nil {
 		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)

@@ -4,8 +4,8 @@ import (
 	"cloudbackup/daemon/globals"
 	"cloudbackup/notifications"
 	"fmt"
+	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
-	"github.com/satori/go.uuid"
 	"net/http"
 )
 
@@ -20,15 +20,22 @@ func (srvSrc SrvData) handlerPostNotificationTest(w http.ResponseWriter, r *http
 	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostNotificationTest")
 
 	if notifications.GetNumNotificators(configCopy.Notifications) == 0 {
-		JSONError(w, 500, HttpErrInternalServerError, "Notification test can not be run as there "+
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, "Notification test can not be run as there "+
 			"are no notification entries in the server's configuration file")
 		return
 	}
 
-	jobId := uuid.NewV4().String()
-	_, err := notifications.Execute(configCopy, jobId, "backup", "test", "notifications_test", "", "")
+	u, err := uuid.NewV4()
 	if err != nil {
-		JSONError(w, 500, HttpErrInternalServerError, err.Error())
+		msg := fmt.Sprintf("Could not generate a UUID so the notification test operation can't be started. Encountered error was: %s", err)
+		logger.Error(msg)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return
+	}
+	jobId := u.String()
+	_, err = notifications.Execute(configCopy, jobId, "backup", "test", "notifications_test", "", "")
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
 		return
 	}
 

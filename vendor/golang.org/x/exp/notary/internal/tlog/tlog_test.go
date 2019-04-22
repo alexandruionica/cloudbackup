@@ -33,21 +33,25 @@ func (t testHashStorage) ReadHashes(index []int64) ([]Hash, error) {
 	return out, nil
 }
 
-type testTilesStorage map[Tile][]byte
+type testTilesStorage struct {
+	unsaved int
+	m       map[Tile][]byte
+}
 
 func (t testTilesStorage) Height() int {
 	return 2
 }
 
-func (t testTilesStorage) Reject(tile Tile) {
-	println("REJECT")
+func (t *testTilesStorage) SaveTiles(tiles []Tile, data [][]byte) {
+	t.unsaved -= len(tiles)
 }
 
-func (t testTilesStorage) ReadTiles(tiles []Tile) ([][]byte, error) {
+func (t *testTilesStorage) ReadTiles(tiles []Tile) ([][]byte, error) {
 	out := make([][]byte, len(tiles))
 	for i, tile := range tiles {
-		out[i] = t[tile]
+		out[i] = t.m[tile]
 	}
+	t.unsaved += len(tiles)
 	return out, nil
 }
 
@@ -55,7 +59,7 @@ func TestTree(t *testing.T) {
 	var trees []Hash
 	var leafhashes []Hash
 	var storage testHashStorage
-	tiles := make(testTilesStorage)
+	tiles := make(map[Tile][]byte)
 	const testH = 2
 	for i := int64(0); i < 100; i++ {
 		data := []byte(fmt.Sprintf("leaf %d", i))
@@ -145,7 +149,8 @@ func TestTree(t *testing.T) {
 
 		// Check that leaf proofs work using TileReader.
 		// To prove a leaf that way, all you have to do is read and verify its hash.
-		thr := TileHashReader(Tree{i + 1, th}, tiles)
+		storage := &testTilesStorage{m: tiles}
+		thr := TileHashReader(Tree{i + 1, th}, storage)
 		for j := int64(0); j <= i; j++ {
 			h, err := thr.ReadHashes([]int64{StoredHashIndex(0, j)})
 			if err != nil {
@@ -165,10 +170,16 @@ func TestTree(t *testing.T) {
 				t.Fatalf("CheckRecord(%d, %d, TileHashReader(%d)): %v", i+1, j, i+1, err)
 			}
 		}
+		if storage.unsaved != 0 {
+			t.Fatalf("TileHashReader(%d) did not save %d tiles", i+1, storage.unsaved)
+		}
 
 		// Check that ReadHashes will give an error if the index is not in the tree.
 		if _, err := thr.ReadHashes([]int64{(i + 1) * 2}); err == nil {
 			t.Fatalf("TileHashReader(%d).ReadHashes(%d) for index not in tree <nil>, want err", i, i+1)
+		}
+		if storage.unsaved != 0 {
+			t.Fatalf("TileHashReader(%d) did not save %d tiles", i+1, storage.unsaved)
 		}
 
 		// Check that tree proofs work, for all trees so far, using TileReader.
@@ -184,7 +195,7 @@ func TestTree(t *testing.T) {
 
 			// Even though computing the subtree hash suffices,
 			// check that we can generate the proof too.
-			p, err := ProveTree(i+1, j+1, storage)
+			p, err := ProveTree(i+1, j+1, thr)
 			if err != nil {
 				t.Fatalf("ProveTree(%d, %d): %v", i+1, j+1, err)
 			}
@@ -198,6 +209,9 @@ func TestTree(t *testing.T) {
 				}
 				p[k][0] ^= 1
 			}
+		}
+		if storage.unsaved != 0 {
+			t.Fatalf("TileHashReader(%d) did not save %d tiles", i+1, storage.unsaved)
 		}
 	}
 }
@@ -224,18 +238,31 @@ var tilePaths = []struct {
 	{"tile/3/5/x123/x456/078", Tile{3, 5, 123456078, 8}},
 	{"tile/3/5/x123/x456/078.p/2", Tile{3, 5, 123456078, 2}},
 	{"tile/1/0/x003/x057/500", Tile{1, 0, 3057500, 2}},
+	{"tile/3/5/123/456/078", Tile{}},
+	{"tile/3/-1/123/456/078", Tile{}},
+	{"tile/1/data/x003/x057/500", Tile{1, -1, 3057500, 2}},
 }
 
 func TestTilePath(t *testing.T) {
 	for _, tt := range tilePaths {
-		p := tt.tile.Path()
-		if p != tt.path {
-			t.Errorf("%+v.Path() = %q, want %q", tt.tile, p, tt.path)
+		if tt.tile.H > 0 {
+			p := tt.tile.Path()
+			if p != tt.path {
+				t.Errorf("%+v.Path() = %q, want %q", tt.tile, p, tt.path)
+			}
 		}
 		tile, err := ParseTilePath(tt.path)
 		if err != nil {
+			if tt.tile.H == 0 {
+				// Expected error.
+				continue
+			}
 			t.Errorf("ParseTilePath(%q): %v", tt.path, err)
 		} else if tile != tt.tile {
+			if tt.tile.H == 0 {
+				t.Errorf("ParseTilePath(%q): expected error, got %+v", tt.path, tt.tile)
+				continue
+			}
 			t.Errorf("ParseTilePath(%q) = %+v, want %+v", tt.path, tile, tt.tile)
 		}
 	}

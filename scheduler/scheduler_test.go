@@ -4,7 +4,7 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
 	"cloudbackup/testutils"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"sync"
 	"testing"
 )
@@ -48,7 +48,11 @@ func TestGenerateJobUuid2(t *testing.T) {
 	serverConfigCopy := result.GetCopyWithLock(loggingContext + ".TestGenerateJobUuid1")
 
 	// mark second job as running so we have backupJobsState.Running[] populated
-	otherJobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	otherJobUuid := u.String()
 	err = backupJobsState.MarkRunning(result.Config.Backup[1].Name, "TestGenerateJobUuid2", otherJobUuid)
 	if err != nil {
 		t.Fatal(err)

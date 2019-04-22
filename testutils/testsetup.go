@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"cloudbackup/utils"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"io/ioutil"
 	"net"
 	"os"
@@ -436,7 +436,24 @@ func DeleteTestFilesAndDirs(toDelete []string) {
 }
 
 // produce a tmp file path, not guaranteed to be unique but given an uuid is used, collision chances should be low
-func GenerateTmpFilePath(prefix string, suffix string) string {
-	namePart := uuid.NewV4().String()
+func GenerateTmpFilePath(t *testing.T, prefix string, suffix string) string {
+	var u uuid.UUID
+	var err error
+	found := false
+	// try 20 times to get a UUID
+	for i := 0; i < 20; i++ {
+		u, err = uuid.NewV4()
+		if err != nil {
+			continue
+		} else {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("Could not generate a UUID so a tmp file path can't be generated. Encountered error was: %s", err)
+	}
+
+	namePart := u.String()
 	return filepath.Join(os.TempDir(), prefix+namePart+suffix)
 }

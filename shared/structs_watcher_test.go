@@ -2,7 +2,7 @@ package shared
 
 import (
 	"context"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"sync"
 	"testing"
 )
@@ -23,9 +23,18 @@ func TestAddConsumer1(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier := "192.168.0.43:3423"
-	ClientUuid := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
-	err := multiplexer.AddConsumer("backup", "first_backup", JobUuid, clientMsgChan, ctx, cancel,
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
+	err = multiplexer.AddConsumer("backup", "first_backup", JobUuid, clientMsgChan, ctx, cancel,
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		if err.Error() != MultiplexerNotReady {
@@ -60,10 +69,19 @@ func TestAddConsumerAndRemoveConsumer(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier := "192.168.0.43:3423"
-	ClientUuid := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	multiplexer.Running = true
-	err := multiplexer.AddConsumer("backup", "first_backup", JobUuid, clientMsgChan, ctx, cancel,
+	err = multiplexer.AddConsumer("backup", "first_backup", JobUuid, clientMsgChan, ctx, cancel,
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		t.Fatalf("multiplexer.AddConsumer() returned error: %s", err)

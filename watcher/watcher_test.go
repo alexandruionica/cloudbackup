@@ -3,7 +3,7 @@ package watcher
 import (
 	"cloudbackup/shared"
 	"context"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"strconv"
 	"sync"
 	"testing"
@@ -51,11 +51,20 @@ func TestSendMsgToWatcher1(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier := "192.168.0.43:3423"
-	ClientUuid := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	JobName := "first_backup"
 	multiplexer.Running = true
-	err := multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
+	err = multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		t.Fatalf("multiplexer.AddConsumer() returned error: %s", err)
@@ -153,13 +162,29 @@ func TestSendMsgToWatcher2(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier1 := "192.168.0.43:3423"
-	ClientUuid1 := uuid.NewV4().String()
 	ClientIdentifier2 := "192.168.0.43:3423"
-	ClientUuid2 := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid1 := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid2 := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
+
 	JobName := "first_backup"
 	multiplexer.Running = true
-	err := multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan1, ctx, cancel,
+	err = multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan1, ctx, cancel,
 		ClientIdentifier1, ClientUuid1)
 	if err != nil {
 		t.Fatalf("1. multiplexer.AddConsumer() returned error: %s", err)
@@ -241,11 +266,20 @@ func TestSendMsgToClients1(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier := "192.168.0.43:3423"
-	ClientUuid := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	JobName := "first_backup"
 	multiplexer.Running = true
-	err := multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
+	err = multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		t.Fatalf("multiplexer.AddConsumer() returned error: %s", err)
@@ -284,11 +318,20 @@ func TestSendMsgToClients2(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier := "192.168.0.43:3423"
-	ClientUuid := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	JobName := "first_backup"
 	multiplexer.Running = true
-	err := multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
+	err = multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		t.Fatalf("multiplexer.AddConsumer() returned error: %s", err)
@@ -326,11 +369,20 @@ func TestTellClientsJobFinished1(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier := "192.168.0.43:3423"
-	ClientUuid := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	JobName := "first_backup"
 	multiplexer.Running = true
-	err := multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
+	err = multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		t.Fatalf("multiplexer.AddConsumer() returned error: %s", err)
@@ -380,11 +432,20 @@ func TestTellClientsJobFinished2(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier := "192.168.0.43:3423"
-	ClientUuid := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	JobName := "first_backup"
 	multiplexer.Running = true
-	err := multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
+	err = multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		t.Fatalf("multiplexer.AddConsumer() returned error: %s", err)
@@ -437,11 +498,20 @@ func TestTellClientsJobFinished3(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ClientIdentifier := "192.168.0.43:3423"
-	ClientUuid := uuid.NewV4().String()
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	ClientUuid := u.String()
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	JobName := "first_backup"
 	multiplexer.Running = true
-	err := multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
+	err = multiplexer.AddConsumer("backup", JobName, JobUuid, clientMsgChan, ctx, cancel,
 		ClientIdentifier, ClientUuid)
 	if err != nil {
 		t.Fatalf("multiplexer.AddConsumer() returned error: %s", err)

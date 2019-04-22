@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
 	"strings"
 	"sync"
@@ -489,7 +489,12 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 
 	// try at most 20 times to generate a unique UUID. If this is not sufficient then the program has a serious issue
 	for i := 0; i < 20; i++ {
-		jobUuid := uuid.NewV4().String()
+		u, err := uuid.NewV4()
+		if err != nil {
+			logger.Errorf("Could not generate a UUID due to error: %s", err)
+			continue
+		}
+		jobUuid := u.String()
 
 		// first check the state of running jobs and see if we got a matching UUID
 		log.WithFields(log.Fields{"context": loggingContext + ".GenerateJobUuid"}).Debug("Acquiring read lock before " +

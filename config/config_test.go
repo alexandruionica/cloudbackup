@@ -852,7 +852,7 @@ func TestValidate28(t *testing.T) {
 	if len(result.Config.Backup) == 0 {
 		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
 	}
-	scriptPath := testutils.GenerateTmpFilePath("TestValidate28_missing_file_", ".sh")
+	scriptPath := testutils.GenerateTmpFilePath(t, "TestValidate28_missing_file_", ".sh")
 	result.Config.Backup[0].PostRunScript = scriptPath
 	err = Validate(result.Config, false)
 	if err == nil {
@@ -893,7 +893,7 @@ func TestValidate29(t *testing.T) {
 	if len(result.Config.Backup) == 0 {
 		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
 	}
-	scriptPath := testutils.GenerateTmpFilePath("TestValidate29_missing_file_", ".sh")
+	scriptPath := testutils.GenerateTmpFilePath(t, "TestValidate29_missing_file_", ".sh")
 	result.Config.Backup[0].PreRunScript = scriptPath
 	err = Validate(result.Config, false)
 	if err == nil {
@@ -936,9 +936,9 @@ func TestValidate30(t *testing.T) {
 	}
 	var scriptPath string
 	if runtime.GOOS == "windows" {
-		scriptPath = testutils.GenerateTmpFilePath("TestValidate30_existing_file_", ".ps1")
+		scriptPath = testutils.GenerateTmpFilePath(t, "TestValidate30_existing_file_", ".ps1")
 	} else {
-		scriptPath = testutils.GenerateTmpFilePath("TestValidate30_existing_file_", ".sh")
+		scriptPath = testutils.GenerateTmpFilePath(t, "TestValidate30_existing_file_", ".sh")
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
@@ -1007,9 +1007,9 @@ func TestValidate31(t *testing.T) {
 	}
 	var scriptPath string
 	if runtime.GOOS == "windows" {
-		scriptPath = testutils.GenerateTmpFilePath("TestValidate31_existing_file_", ".ps1")
+		scriptPath = testutils.GenerateTmpFilePath(t, "TestValidate31_existing_file_", ".ps1")
 	} else {
-		scriptPath = testutils.GenerateTmpFilePath("TestValidate31_existing_file_", ".sh")
+		scriptPath = testutils.GenerateTmpFilePath(t, "TestValidate31_existing_file_", ".sh")
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 

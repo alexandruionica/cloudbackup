@@ -9,7 +9,7 @@ import (
 	"cloudbackup/utils"
 	"errors"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"os"
 	"reflect"
 	"strconv"
@@ -29,7 +29,11 @@ func TestPrepareFileRecord1(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 	backupConfig := result.Config.Backup[0]
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	fileContent := "just a string"
 	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestPrepareFileRecord1_sample_file_")
@@ -81,7 +85,11 @@ func TestPrepareFileRecord2(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 	backupConfig := result.Config.Backup[0]
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	fileContent := "just a string"
 	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestPrepareFileRecord1_sample_file_")
@@ -133,7 +141,11 @@ func TestPrepareFileRecord3(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 	backupConfig := result.Config.Backup[0]
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	fileContent := "just a string"
 	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestPrepareFileRecord1_sample_file_")
@@ -147,7 +159,7 @@ func TestPrepareFileRecord3(t *testing.T) {
 	defer testutils.DeleteTestFilesAndDirs([]string{path})
 
 	// ########
-	symlinkPath := testutils.GenerateTmpFilePath("cloudbackup_backup_test_symlink_", "_to_plain_File")
+	symlinkPath := testutils.GenerateTmpFilePath(t, "cloudbackup_backup_test_symlink_", "_to_plain_File")
 	err = os.Symlink(path, symlinkPath)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -195,7 +207,11 @@ func TestPrepareFileRecord4(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 	backupConfig := result.Config.Backup[0]
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	fileContent := "just a string"
 	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestPrepareFileRecord1_sample_file_")
@@ -209,7 +225,7 @@ func TestPrepareFileRecord4(t *testing.T) {
 	defer testutils.DeleteTestFilesAndDirs([]string{path})
 
 	// ########
-	symlinkPath := testutils.GenerateTmpFilePath("cloudbackup_backup_test_symlink_", "_to_plain_File")
+	symlinkPath := testutils.GenerateTmpFilePath(t, "cloudbackup_backup_test_symlink_", "_to_plain_File")
 	err = os.Symlink(path, symlinkPath)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -265,7 +281,11 @@ func TestUpdateCounters1(t *testing.T) {
 		Lock:             &sync.RWMutex{},
 	}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -345,7 +365,11 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	}
 	backupConfig := result.Config.Backup[0]
 
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := &shared.BackupJobsState{
@@ -547,7 +571,11 @@ func TestGetRemoteFileVersion1(t *testing.T) {
 	}
 	backupConfig := result.Config.Backup[0]
 
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := &shared.BackupJobsState{
@@ -614,7 +642,11 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	newTargetName := "another_target"
 	backupConfig.Target[len(backupConfig.Target)-1].Name = newTargetName
 
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := &shared.BackupJobsState{

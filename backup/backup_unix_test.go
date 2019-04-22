@@ -6,7 +6,7 @@ import (
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -29,7 +29,7 @@ fi
 // test PreRunScript having execute bit set (should work)
 func TestRunPrePostScript1(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_backup_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_backup_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScript + fmt.Sprintf("echo $1 > %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
@@ -38,7 +38,11 @@ func TestRunPrePostScript1(t *testing.T) {
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = os.Chmod(scriptPath, 0700)
 	if err != nil {
 		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)
@@ -67,7 +71,7 @@ func TestRunPrePostScript1(t *testing.T) {
 // test PostRunScript having execute bit set (should work)
 func TestRunPrePostScript2(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_backup_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_backup_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScript + fmt.Sprintf("echo $1 > %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
@@ -76,7 +80,11 @@ func TestRunPrePostScript2(t *testing.T) {
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = os.Chmod(scriptPath, 0700)
 	if err != nil {
 		t.Fatalf("Could not make executable %s due to error: %s", scriptPath, err)

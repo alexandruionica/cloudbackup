@@ -10,7 +10,7 @@ import (
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
@@ -290,7 +290,11 @@ func TestPath1(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -393,7 +397,11 @@ func TestPath2(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -507,7 +515,11 @@ func TestPath3(t *testing.T) {
 		backupJobsState := &shared.BackupJobsState{}
 		backupJobsState.Lock = &sync.RWMutex{}
 		// populate state object with default values
-		jobId := uuid.NewV4().String()
+		u, err := uuid.NewV4()
+		if err != nil {
+			t.Fatalf("Could not generate UUID due to error: %s", err)
+		}
+		jobId := u.String()
 		err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 		if err != nil {
 			t.Fatal(err)
@@ -615,7 +627,11 @@ func TestPath4(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -722,7 +738,11 @@ func TestPath5(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -832,7 +852,11 @@ func TestPath6(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -951,7 +975,11 @@ func TestPath7(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -1064,7 +1092,11 @@ func TestPath8(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -1169,7 +1201,11 @@ func TestPath9(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -1274,7 +1310,11 @@ func TestPath10(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -1379,7 +1419,11 @@ func TestPath11(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -1484,7 +1528,11 @@ func TestPath12(t *testing.T) {
 	backupJobsState := &shared.BackupJobsState{}
 	backupJobsState.Lock = &sync.RWMutex{}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -1589,7 +1637,11 @@ func TestPath13(t *testing.T) {
 		Lock:             &sync.RWMutex{},
 	}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -1736,7 +1788,11 @@ func TestPath14(t *testing.T) {
 			Lock:             &sync.RWMutex{},
 		}
 		// populate state object with default values
-		jobId := uuid.NewV4().String()
+		u, err := uuid.NewV4()
+		if err != nil {
+			t.Fatalf("Could not generate UUID due to error: %s", err)
+		}
+		jobId := u.String()
 		err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 		if err != nil {
 			t.Fatal(err)
@@ -1872,7 +1928,11 @@ func TestPath15(t *testing.T) {
 		Lock:             &sync.RWMutex{},
 	}
 	// populate state object with default values
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)
@@ -1994,7 +2054,11 @@ func TestPath15(t *testing.T) {
 
 	// ######## walk again path - first we need to re-init stuff #########
 	// populate state object with default values
-	jobId = uuid.NewV4().String()
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId = u.String()
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_scan", jobId)
 	if err != nil {
 		t.Fatal(err)

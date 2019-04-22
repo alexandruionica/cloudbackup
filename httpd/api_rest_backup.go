@@ -7,8 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
-	"github.com/satori/go.uuid"
 	"net/http"
 	"sync"
 	"time"
@@ -65,10 +65,17 @@ func (srvSrc SrvData) handlerPostBackupStart(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	u, err := uuid.NewV4()
+	if err != nil {
+		msg := fmt.Sprintf("Could not generate a UUID so backup start can't proceed. The encountered error is: %s", err)
+		logger.Error(msg)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return
+	}
 	command := shared.ReceiveBackupCommand{
 		Name:    decodedJson.Name,
 		Command: "start",
-		Id:      uuid.NewV4().String(),
+		Id:      u.String(),
 	}
 	httpUser, _, _ := r.BasicAuth()
 	// send command to scheduling routine - blocks until the other end reads it
@@ -166,10 +173,17 @@ func (srvSrc SrvData) handlerPostBackupStop(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	u, err := uuid.NewV4()
+	if err != nil {
+		msg := fmt.Sprintf("Could not generate a UUID and because of this the backup stop command can't be issued. Encountered error is: %s", err)
+		logger.Error(msg)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return
+	}
 	command := shared.ReceiveBackupCommand{
 		Name:        decodedJson.Name,
 		Command:     "stop",
-		Id:          uuid.NewV4().String(),
+		Id:          u.String(),
 		BackupJobId: decodedJson.JobId,
 	}
 	httpUser, _, _ := r.BasicAuth()
@@ -293,6 +307,14 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	u, err := uuid.NewV4()
+	if err != nil {
+		msg := fmt.Sprintf("Could not generate a UUID so the dry run can't start. Encountered error is: %s", err)
+		logger.Error(msg)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -302,7 +324,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 	backupJobsState := &shared.DryRunBackupJobsState{Lock: &sync.RWMutex{}}
 	reportChan := make(chan shared.ScanEvalItemReport)
 	backupJobsState.ReportChan = reportChan
-	evaljobId := uuid.NewV4().String()
+	evaljobId := u.String()
 	err = backupJobsState.MarkEvaluating(decodedJson.Name, loggingContext+".handlerPostBackupDryRun",
 		evaljobId)
 	if err != nil {
@@ -438,6 +460,14 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	u, err := uuid.NewV4()
+	if err != nil {
+		msg := fmt.Sprintf("Could not generate a UUID so the watch operation can't proceed. The encountered error is: %s", err)
+		logger.Error(msg)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -466,7 +496,7 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 	ctx, cancel := context.WithCancel(context.Background())
 	// buffer up to 100 messages before discarding if the http client is too slow to receive
 	commChan := make(chan shared.WatchMessage, 500)
-	clientUUID := uuid.NewV4().String()
+	clientUUID := u.String()
 	err = srvCopy.backupJobsState.Watcher.AddConsumer("backup", decodedJson.Name, jobid, commChan, ctx, cancel,
 		r.RemoteAddr, clientUUID)
 	// as of this writing, the only possible error is that the Multiplexer is already shutting down

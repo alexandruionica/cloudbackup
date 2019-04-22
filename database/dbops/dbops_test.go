@@ -6,7 +6,7 @@ import (
 	"cloudbackup/shared"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"os"
 	"sync"
 	"testing"
@@ -243,7 +243,11 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 func TestPrepare1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	path := "an_imaginary_file_name"
 	defer func() {
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -385,7 +389,11 @@ func TestCloseStatementsAndDb3(t *testing.T) {
 func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
-	jobid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobid := u.String()
 	defer func() {
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
@@ -442,8 +450,12 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 		t.Fatalf("CheckJobUuidExists() did not find in the DB a match for the job details which just got added")
 	}
 
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
 	// search for record which doesn't exist
-	foundRecordUsingFunction, err = CheckJobUuidExists(db, uuid.NewV4().String())
+	foundRecordUsingFunction, err = CheckJobUuidExists(db, u.String())
 	if err != nil {
 		t.Fatalf("CheckJobUuidExists() wasn't supposed to return an error but did return: '%s'", err)
 	}
@@ -470,8 +482,12 @@ func TestCheckJobUuidExists1(t *testing.T) {
 		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
 	}
 
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
 	// search for record which doesn't exist
-	foundRecordUsingFunction, err := CheckJobUuidExists(db, uuid.NewV4().String())
+	foundRecordUsingFunction, err := CheckJobUuidExists(db, u.String())
 	if err != nil {
 		t.Fatalf("2. CheckJobUuidExists() wasn't supposed to return an error but did return: '%s'", err)
 	}

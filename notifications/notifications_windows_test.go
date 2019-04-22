@@ -7,7 +7,7 @@ import (
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -67,7 +67,11 @@ func TestRunScript1(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	err = runScript(scriptEntry, jobId, "backup", "finished", "a_test_job", "", "")
 	if err == nil {
 		t.Fatal("Running the notification script did not return an error despite the script not having the '.bat' file extension")
@@ -88,7 +92,11 @@ func TestRunScript2(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
 	err = os.Rename(scriptPath, scriptPath+".bat")
@@ -120,7 +128,7 @@ func TestRunScript2(t *testing.T) {
 
 func TestRunScript3(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_notifications_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScript + fmt.Sprintf("echo %%3 > %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
@@ -132,7 +140,11 @@ func TestRunScript3(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
 	err = os.Rename(scriptPath, scriptPath+".bat")
@@ -172,7 +184,11 @@ func TestRunScript4(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
 	err = os.Rename(scriptPath, scriptPath+".bat")
@@ -191,7 +207,7 @@ func TestRunScript4(t *testing.T) {
 
 func TestRunScript5(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_powershell_script_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_notifications_powershell_script_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScriptPowershell + fmt.Sprintf("$args[2] | Out-File -Encoding ASCII -FilePath %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
@@ -203,7 +219,11 @@ func TestRunScript5(t *testing.T) {
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 
 	// ensure the file extension is .bat or otherwise execution will fail on windows
 	err = os.Rename(scriptPath, scriptPath+".ps1")
