@@ -80,7 +80,7 @@ func TestRunScript1(t *testing.T) {
 
 func TestRunScript2(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_notifications_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_notifications_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScript + fmt.Sprintf("echo %%3 > %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
