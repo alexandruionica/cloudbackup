@@ -4,7 +4,7 @@ import (
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -36,7 +36,7 @@ const testScript2 = `if ( $args.Count -ne 1 ) {
 // test PreRunScript with a Windows Batch file
 func TestRunPrePostScript1(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_backup_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_backup_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScript + fmt.Sprintf("echo %%1 > %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
@@ -45,7 +45,11 @@ func TestRunPrePostScript1(t *testing.T) {
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	// ensure the file extension is .bat or otherwise execution will fail on Windows
 	err = os.Rename(scriptPath, scriptPath+".bat")
 	if err != nil {
@@ -77,7 +81,7 @@ func TestRunPrePostScript1(t *testing.T) {
 // test PostRunScript with a Powershell script
 func TestRunPrePostScript2(t *testing.T) {
 	// adjust test shell script to create a file if it was successful
-	resultsFile := testutils.GenerateTmpFilePath("unittest_backup_", "")
+	resultsFile := testutils.GenerateTmpFilePath(t, "unittest_backup_", "")
 	defer testutils.DeleteTestFilesAndDirs([]string{resultsFile})
 	testScript2 := testScript2 + fmt.Sprintf("$args[0] | Out-File -Encoding ASCII -FilePath %s", resultsFile)
 	scriptPath, err := utils.SetupTmpFileWithContent([]byte(testScript2), "unittest_notifications_")
@@ -86,7 +90,11 @@ func TestRunPrePostScript2(t *testing.T) {
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
-	jobId := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
 	// ensure the file extension is .ps1 or otherwise execution will fail on Windows
 	err = os.Rename(scriptPath, scriptPath+".ps1")
 	if err != nil {

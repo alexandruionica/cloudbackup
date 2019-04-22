@@ -1,7 +1,7 @@
 package shared
 
 import (
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"sync"
 	"testing"
 )
@@ -13,8 +13,12 @@ func TestMarkEvaluatingAndGetStatsAndGetCancelAndGetContextForJob(t *testing.T) 
 	jobName := "backupJob1"
 	logContext := "TestMarkEvaluatingAndGetStatsAndGetSignalChanForJob"
 
-	JobUuid := uuid.NewV4().String()
-	err := backupJobsState.MarkEvaluating(jobName, logContext, JobUuid)
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
+	err = backupJobsState.MarkEvaluating(jobName, logContext, JobUuid)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,8 +89,12 @@ func TestIncrementCounter(t *testing.T) {
 	logContext := "TestMarkEvaluatingAndGetStatsAndGetSignalChanForJob"
 	counterName := "examined_files"
 
-	JobUuid := uuid.NewV4().String()
-	err := backupJobsState.MarkEvaluating(jobName, logContext, JobUuid)
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
+	err = backupJobsState.MarkEvaluating(jobName, logContext, JobUuid)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,8 +134,12 @@ func TestUpdateStatsText(t *testing.T) {
 	statName := "current_file"
 	statValue := "dsf9023kjldsfji2894234"
 
-	JobUuid := uuid.NewV4().String()
-	err := backupJobsState.MarkEvaluating(jobName, logContext, JobUuid)
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
+	err = backupJobsState.MarkEvaluating(jobName, logContext, JobUuid)
 	if err != nil {
 		t.Fatal(err)
 	}

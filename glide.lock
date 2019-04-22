@@ -1,5 +1,5 @@
-hash: 0ffccc91b91f3d8f3109a205aa7561bd83608415a420bb02939693cc1630f3b4
-updated: 2019-04-12T17:43:04.608027869+10:00
+hash: f5fafafa5e2656726106c3743d448908268cc65c489f1c2ac19c252d996ee26b
+updated: 2019-04-22T14:00:09.263842952+10:00
 imports:
 - name: github.com/bearmini/go-acl
   version: a423b25ba3ef3afa637b85a6222ccf2abffd01c6
@@ -13,6 +13,8 @@ imports:
   version: 847c5208d8924cea0acea3376ff62aede93afe39
 - name: github.com/dustin/go-humanize
   version: 9f541cc9db5d55bce703bd99987c9d5cb8eea45e
+- name: github.com/gofrs/uuid
+  version: 6b08a5c5172ba18946672b49749cde22873dd7c2
 - name: github.com/howeyc/gopass
   version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
 - name: github.com/jessevdk/go-flags
@@ -27,24 +29,22 @@ imports:
   version: 25ecb14adfc7543176f7d85291ec7dba82c6f7e4
 - name: github.com/paulbellamy/ratecounter
   version: 524851a93235ac051e3540563ed7909357fe24ab
-- name: github.com/satori/go.uuid
-  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/sirupsen/logrus
   version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
   subpackages:
   - hooks/test
 - name: golang.org/x/crypto
-  version: 88737f569e3a9c7ab309cdc09a07fe7fc87233c3
+  version: df01cb2cc480549d72034218dd98bf97671450ac
   subpackages:
   - bcrypt
   - blowfish
   - ssh/terminal
 - name: golang.org/x/exp
-  version: 0480eff6dd7c106a642ab79ed08300700cb6bb3a
+  version: b8972e603456c5ad9da3063f4168da9164295e73
   subpackages:
   - utf8string
 - name: golang.org/x/sys
-  version: b44545bcd369ef9ff9bebcfebf5f3370ef9b1932
+  version: e8e3143a4f4a00f1fafef0dd82ba78223281b01b
   subpackages:
   - unix
   - windows

@@ -4,7 +4,7 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"sync"
 	"testing"
 )
@@ -16,8 +16,12 @@ func TestMarkRunningStoppingAndIsRunningIsStopping(t *testing.T) {
 	jobName := "backupJob1"
 	logContext := "TestMarkRunningStoppingAndIsRunningIsStopping"
 
-	JobUuid := uuid.NewV4().String()
-	err := backupJobsState.MarkRunning(jobName, logContext, JobUuid)
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
+	err = backupJobsState.MarkRunning(jobName, logContext, JobUuid)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +51,12 @@ func TestMarkRunningStoppingAndIsRunningIsStopping(t *testing.T) {
 		t.Fatal("Was expecting that isRunning() reports false for inexisting job but instead we got 'true'")
 	}
 
-	isRunning = backupJobsState.IsRunning(jobName, uuid.NewV4().String(), logContext)
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+
+	isRunning = backupJobsState.IsRunning(jobName, u.String(), logContext)
 	if isRunning {
 		t.Fatal("Was expecting that isRunning() with incorrect jobid reports false for the job but instead we " +
 			"got 'true'")
@@ -58,8 +67,12 @@ func TestMarkRunningStoppingAndIsRunningIsStopping(t *testing.T) {
 		t.Fatal("Was expecting that isStopping() reports false for the job but instead we got 'true'")
 	}
 
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
 	// mark "stopping" should fail when using incorrect job id
-	err = backupJobsState.MarkStopped(jobName, logContext, uuid.NewV4().String(), false)
+	err = backupJobsState.MarkStopped(jobName, logContext, u.String(), false)
 	if err == nil {
 		t.Fatal("backupJobsState.MarkStopped(stopped:=false) should have failed due to incorrect JobId being " +
 			"passed")
@@ -83,7 +96,11 @@ func TestMarkRunningStoppingAndIsRunningIsStopping(t *testing.T) {
 		t.Fatal("Was expecting that isStopping() reports true for the job but instead we got false")
 	}
 
-	isStopping = backupJobsState.IsStopping(jobName, uuid.NewV4().String(), logContext)
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	isStopping = backupJobsState.IsStopping(jobName, u.String(), logContext)
 	if isStopping {
 		t.Fatal("Was expecting that isStopping() reports false for the job when using incorrect job it but" +
 			" instead we got true")
@@ -94,8 +111,12 @@ func TestMarkRunningStoppingAndIsRunningIsStopping(t *testing.T) {
 		t.Fatal("Was expecting that isStopping() reports false for an incorrect job name but instead we got true")
 	}
 
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
 	// mark "stopped" should fail when using incorrect job id
-	err = backupJobsState.MarkStopped(jobName, logContext, uuid.NewV4().String(), true)
+	err = backupJobsState.MarkStopped(jobName, logContext, u.String(), true)
 	if err == nil {
 		t.Fatal("backupJobsState.MarkStopped(stopped:=true) should have failed due to incorrect JobId being " +
 			"passed")
@@ -128,8 +149,12 @@ func TestMarkRunningStoppingAndIsRunningIsStopping2(t *testing.T) {
 	jobName := "backupJob2"
 	logContext := "TestMarkRunningStoppingAndIsRunningIsStopping2"
 
-	JobUuid := uuid.NewV4().String()
-	err := backupJobsState.MarkRunning(jobName, logContext, JobUuid)
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
+	err = backupJobsState.MarkRunning(jobName, logContext, JobUuid)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,8 +164,12 @@ func TestMarkRunningStoppingAndIsRunningIsStopping2(t *testing.T) {
 		t.Fatal("Was expecting that isRunning() reports true for the job but instead we got 'false'")
 	}
 
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
 	// mark "stopped" should fail when using incorrect job id
-	err = backupJobsState.MarkStopped(jobName, logContext, uuid.NewV4().String(), true)
+	err = backupJobsState.MarkStopped(jobName, logContext, u.String(), true)
 	if err == nil {
 		t.Fatal("backupJobsState.MarkStopped(stopped:=true) should have failed due to incorrect JobId being " +
 			"passed")
@@ -185,7 +214,11 @@ func TestIncrementCounterAndGet(t *testing.T) {
 	jobName := serverConfigCopy.Backup[0].Name
 	counterName := "examined_files"
 
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	err = backupJobsState.MarkRunning(jobName, logContext, JobUuid)
 	if err != nil {
 		t.Fatal(err)
@@ -234,7 +267,11 @@ func TestUpdateStatsTextAndGet(t *testing.T) {
 	statName := "current_file"
 	statValue := "dsf9023kjldsfji2894234"
 
-	JobUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	JobUuid := u.String()
 	err = backupJobsState.MarkRunning(jobName, logContext, JobUuid)
 	if err != nil {
 		t.Fatal(err)

@@ -6,7 +6,7 @@ import (
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"context"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"io"
 	"io/ioutil"
 	"os"
@@ -175,7 +175,11 @@ func TestNewFileReader1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("While trying to setup ratelimit bucket got error: %s", err)
 	}
-	fileToOpen := "a_missing_file_" + uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	fileToOpen := "a_missing_file_" + u.String()
 	_, err = NewFileReader(fileToOpen, bucket, backupJobsState, result.Config.Backup[0].Name,
 		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst, 1000, context.TODO())
 	if err == nil {

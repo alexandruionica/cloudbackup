@@ -11,8 +11,6 @@ import:
   subpackages:
   - bcrypt
 - package: github.com/howeyc/gopass
-- package: github.com/satori/go.uuid
-  version: ^1.2.0
 - package: github.com/bmatcuk/doublestar
   version: ^1.0.9
 - package: github.com/bearmini/go-acl
@@ -29,3 +27,5 @@ import:
   version: ^3.0.0
 - package: github.com/djherbis/times
   version: ^1.2.0
+- package: github.com/gofrs/uuid
+  version: ^3.2.0

@@ -10,7 +10,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
@@ -153,7 +153,12 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 		if err != nil {
 			logger.Errorf("While trying to calculate MD5 for '%s' encountered error: %s . Will use a UUID as a "+
 				"checksum in order to have the correct one added during the next backup run", path, err)
-			checksum = uuid.NewV4().String()
+			u, err := uuid.NewV4()
+			if err != nil {
+				logger.Errorf("Could not generate a UUID so the backup for item '%s' can't proceed. Encountered error is: %s", path, err)
+				return false, err
+			}
+			checksum = u.String()
 		}
 	}
 	ctime, err := fileproperties.GetCtime(path, backupConfig.Dereference)
@@ -330,9 +335,14 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 // Returns the uuid value for this entry and if an error was encountered or not. If err then ignore the uuid value.
 func addDbEntryToRemoteFiles(target string, jobUuid string, deleteMarker int, dbData shared.DbData,
 	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties, version int, remoteVersion string) (string, error) {
-	entryUuid := uuid.NewV4().String()
+	u, err := uuid.NewV4()
+	if err != nil {
+		logger.Errorf("Could not generate a UUID so the backup for '%s' can't complete. Encountered error is: %s", fileDbRecord.Path, err)
+		return "", err
+	}
+	entryUuid := u.String()
 
-	_, err := dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, fileDbRecord.Path, target,
+	_, err = dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, fileDbRecord.Path, target,
 		time.Now().UnixNano(), jobUuid, deleteMarker, version, remoteVersion, runtime.GOOS, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
 		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
@@ -1040,6 +1050,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 				"considered failed (even the ones where adding the delete marker was successful) for this item.",
 				ObjectDbRecord.Path, encounteredError, len(objectStores))
 			// ensure that any successfully already added delete markers are removed
+			// TODO - move this in the outer block so in all cases a rollback also ensure the Objectstore entries get removed
 			for _, entry := range processed {
 				err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
 				if err != nil {

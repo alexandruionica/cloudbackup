@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
-	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
@@ -302,7 +302,13 @@ func dryRunBackupPaths(ctx context.Context, backupConfig config.Backup, backupJo
 	for _, path := range backupConfig.Paths {
 		// empty objectStores object as a dry run should never reach an upload function anyway
 		objectStores := make([]objectstore.ObjectStore, 0)
-		jobId := uuid.NewV4().String()
+		u, err := uuid.NewV4()
+		if err != nil {
+			logger.Errorf("Could not generate a UUID so the dry run can't proceed. Encountered error was: %s", err)
+			scanPathExit <- true
+			return
+		}
+		jobId := u.String()
 		// backupJobsState MUST be a pointer
 		exiting, err := scan.Path(ctx, path, backupConfig, backupJobsState, true, shared.DbData{Connected: false}, objectStores, jobId)
 		// Examine FIRST $exit and then $err ;  $exiting means that a signal was sent so scan.Path() exits, on request,

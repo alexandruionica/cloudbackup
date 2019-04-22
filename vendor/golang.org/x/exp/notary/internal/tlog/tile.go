@@ -29,10 +29,14 @@ import (
 // Tile{H: 3, L: 4, N: 1234067, W: 8}'s path
 // is tile/3/4/x001/x234/067.
 // See Tile's Path method and the ParseTilePath function.
+//
+// The special level L=-1 holds raw record data instead of hashes.
+// In this case, the level encodes into a tile path as the path element
+// "data" instead of "-1".
 type Tile struct {
 	H int   // height of tile (1 ≤ H ≤ 30)
-	L int   // level in tiling (1 ≤ H ≤ 63)
-	N int64 // number within level (unbounded)
+	L int   // level in tiling (-1 ≤ L ≤ 63)
+	N int64 // number within level (0 ≤ N, unbounded)
 	W int   // width of tile (1 ≤ W ≤ 2**H; 2**H is complete tile)
 }
 
@@ -138,7 +142,7 @@ func ReadTileData(t Tile, r HashReader) ([]byte, error) {
 		return nil, err
 	}
 	if len(hashes) != len(indexes) {
-		return nil, fmt.Errorf("notary: ReadHashes(%d indexes) = %d hashes", len(indexes), len(hashes))
+		return nil, fmt.Errorf("tlog: ReadHashes(%d indexes) = %d hashes", len(indexes), len(hashes))
 	}
 
 	tile := make([]byte, size*HashSize)
@@ -168,7 +172,13 @@ func (t Tile) Path() string {
 	if t.W != 1<<uint(t.H) {
 		pStr = fmt.Sprintf(".p/%d", t.W)
 	}
-	return fmt.Sprintf("tile/%d/%d/%s%s", t.H, t.L, nStr, pStr)
+	var L string
+	if t.L == -1 {
+		L = "data"
+	} else {
+		L = fmt.Sprintf("%d", t.L)
+	}
+	return fmt.Sprintf("tile/%d/%s/%s%s", t.H, L, nStr, pStr)
 }
 
 // ParseTilePath parses a tile coordinate path.
@@ -178,6 +188,11 @@ func ParseTilePath(path string) (Tile, error) {
 		return Tile{}, &badPathError{path}
 	}
 	h, err1 := strconv.Atoi(f[1])
+	isData := false
+	if f[2] == "data" {
+		isData = true
+		f[2] = "0"
+	}
 	l, err2 := strconv.Atoi(f[2])
 	if err1 != nil || err2 != nil || h < 1 || l < 0 || h > 30 {
 		return Tile{}, &badPathError{path}
@@ -201,6 +216,9 @@ func ParseTilePath(path string) (Tile, error) {
 		}
 		n = n*pathBase + int64(nn)
 	}
+	if isData {
+		l = -1
+	}
 	t := Tile{H: h, L: l, N: n, W: w}
 	if path != t.Path() {
 		return Tile{}, &badPathError{path}
@@ -216,7 +234,7 @@ func (e *badPathError) Error() string {
 	return fmt.Sprintf("malformed tile path %q", e.path)
 }
 
-// A TileReader reads tiles from a notary's log.
+// A TileReader reads tiles from a go.sum database log.
 type TileReader interface {
 	// Height returns the height of the available tiles.
 	Height() int
@@ -228,24 +246,17 @@ type TileReader interface {
 	// (len(data[i]) == tiles[i].W*HashSize).
 	ReadTiles(tiles []Tile) (data [][]byte, err error)
 
-	// Reject marks the tile as invalid.
-	// A caller can call Reject if a returned Tile cannot
-	// be authenticated against a given Tree.
-	// TODO(rsc): The point of this method is to let the cache speculatively
-	// write the downloaded set of tiles to disk during ReadTiles
-	// and then have the caller call back with Reject when it finds
-	// out a tile was inconsistent with a known signed key.
-	// It would be better to let the TileReader implementation
-	// find out whether the tile is good before caching any.
-	Reject(tile Tile)
+	// SaveTiles informs the TileReader that the tile data
+	// returned by ReadTiles has been confirmed as valid
+	// and can be saved in persistent storage (on disk).
+	SaveTiles(tiles []Tile, data [][]byte)
 }
 
 // TileHashReader returns a HashReader that satisfies requests
 // by loading tiles of the given tree.
 //
 // The returned HashReader checks that loaded tiles are
-// valid for the given tree; if not, it calls tr.Reject to report them
-// and returns an error. A consequence is that any hashes returned
+// valid for the given tree. Therefore, any hashes returned
 // by the HashReader are already proven to be in the tree.
 func TileHashReader(tree Tree, tr TileReader) HashReader {
 	return &tileHashReader{tree: tree, tr: tr}
@@ -367,10 +378,7 @@ func (r *tileHashReader) ReadHashes(indexes []int64) ([]Hash, error) {
 	}
 	if th != r.tree.Hash {
 		// The tiles do not support the tree hash.
-		// We know at least one is wrong, but not which one; reject them all.
-		for _, tile := range tiles[:len(stx)] {
-			r.tr.Reject(tile)
-		}
+		// We know at least one is wrong, but not which one.
 		return nil, fmt.Errorf("downloaded inconsistent tile")
 	}
 
@@ -387,13 +395,14 @@ func (r *tileHashReader) ReadHashes(indexes []int64) ([]Hash, error) {
 			return nil, fmt.Errorf("bad math in tileHashReader %d %v: lost hash of %v: %v", r.tree.N, indexes, tile, err)
 		}
 		if h != tileHash(data[i]) {
-			r.tr.Reject(tile)
 			return nil, fmt.Errorf("downloaded inconsistent tile")
 		}
 	}
 
 	// Now we have all the tiles needed for the requested hashes,
 	// and we've authenticated the full tile set against the trusted tree hash.
+	r.tr.SaveTiles(tiles, data)
+
 	// Pull out the requested hashes.
 	hashes := make([]Hash, len(indexes))
 	for i, x := range indexes {
