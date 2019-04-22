@@ -302,12 +302,12 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 			logger.Warnf("Failed upload of '%s' to %d out of %d targets. All targets are be "+
 				"considered failed (even the ones where the backup was successful) for this item.",
 				path, encounteredError, len(objectStores))
-			// ensure that any successfully uploaded file/dir/symlink is removed
-			for _, entry := range processed {
-				err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
-				if err != nil {
-					logger.Warnf("After failed upload for '%s', while trying to cleanup, encountered error: %s", path, err)
-				}
+		}
+		// ensure that any successfully uploaded file/dir/symlink is removed
+		for _, entry := range processed {
+			err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
+			if err != nil {
+				logger.Warnf("After failed upload for '%s', while trying to cleanup, encountered error: %s", path, err)
 			}
 		}
 		if JobCancelled {
@@ -1049,13 +1049,12 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 			logger.Warnf("Failed adding delete marker for '%s' to %d out of %d targets. All targets are to be "+
 				"considered failed (even the ones where adding the delete marker was successful) for this item.",
 				ObjectDbRecord.Path, encounteredError, len(objectStores))
-			// ensure that any successfully already added delete markers are removed
-			// TODO - move this in the outer block so in all cases a rollback also ensure the Objectstore entries get removed
-			for _, entry := range processed {
-				err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
-				if err != nil {
-					logger.Warnf("While trying to cleanup delete markers, encountered error: %s", err)
-				}
+		}
+		// ensure that any successfully already added delete markers are removed
+		for _, entry := range processed {
+			err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
+			if err != nil {
+				logger.Warnf("While trying to cleanup delete markers, encountered error: %s", err)
 			}
 		}
 		if JobCancelled {
