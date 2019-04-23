@@ -608,8 +608,8 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 			logger.Debugf("Checksum change detected for '%s'", path)
 			contentChanged = true
 		}
-		// if size or mtime differs then we got a file change
-	} else if stat.Size() != dbRecordProperties.Size {
+		// if size or mtime differs then we got a file change (we exclude directories from Size check as that represents the number of items in a dir, not a property of the dir itself)
+	} else if dbRecordProperties.Type != "dir" && stat.Size() != dbRecordProperties.Size {
 		logger.Debugf("Size change detected for '%s'", path)
 		contentChanged = true
 	} else if !stat.ModTime().Equal(dbRecordProperties.Mtime) {
@@ -681,6 +681,12 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 		// get symlink target
 		onDiskObjectProperties.LinkTarget, err = os.Readlink(path)
 		return onDiskObjectProperties, err
+	}
+
+	// directories should be recorded as having size 0 as the size value makes no sense for a backup
+	// purpose and size changes would trigger new backups (at least on Linux a directories size will increase as inodes are added)
+	if onDiskObjectProperties.Type == "dir" {
+		onDiskObjectProperties.Size = 0
 	}
 
 	// if we got here than all was fine

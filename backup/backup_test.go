@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // setup filerecord for plain file which doesn't have a checksum
@@ -72,6 +73,14 @@ func TestPrepareFileRecord1(t *testing.T) {
 	if newDbRecord.LinkTarget != "" {
 		t.Fatalf("Expected LinkTarget to be empty string but got %s", newDbRecord.LinkTarget)
 	}
+
+	if newDbRecord.Type != "file" {
+		t.Fatalf("Expected Type to be 'file' string but got %s", newDbRecord.Type)
+	}
+
+	if newDbRecord.Size != stat.Size() {
+		t.Fatalf("Size mismatch between on disk %d and what we got %d", stat.Size(), newDbRecord.Size)
+	}
 }
 
 // setup filerecord for plain file which has a checksum
@@ -127,6 +136,14 @@ func TestPrepareFileRecord2(t *testing.T) {
 	}
 	if newDbRecord.LinkTarget != "" {
 		t.Fatalf("Expected LinkTarget to be empty string but got %s", newDbRecord.LinkTarget)
+	}
+
+	if newDbRecord.Type != "file" {
+		t.Fatalf("Expected Type to be 'file' string but got %s", newDbRecord.Type)
+	}
+
+	if newDbRecord.Size != stat.Size() {
+		t.Fatalf("Size mismatch between on disk %d and what we got %d", stat.Size(), newDbRecord.Size)
 	}
 }
 
@@ -194,6 +211,14 @@ func TestPrepareFileRecord3(t *testing.T) {
 	if newDbRecord.LinkTarget != path {
 		t.Fatalf("Expected LinkTarget to be %s string but got %s", path, newDbRecord.LinkTarget)
 	}
+
+	if newDbRecord.Type != "symlink" {
+		t.Fatalf("Expected Type to be 'symlink' string but got %s", newDbRecord.Type)
+	}
+
+	if newDbRecord.Size != stat.Size() {
+		t.Fatalf("Size mismatch between on disk %d and what we got %d", stat.Size(), newDbRecord.Size)
+	}
 }
 
 // setup filerecord for a symlink which has a broken target
@@ -231,7 +256,7 @@ func TestPrepareFileRecord4(t *testing.T) {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
-	//defer testutils.DeleteTestFilesAndDirs([]string{symlinkPath})
+	defer testutils.DeleteTestFilesAndDirs([]string{symlinkPath})
 	// remove symlink target so we get a broken link
 	testutils.DeleteTestFilesAndDirs([]string{path})
 
@@ -261,6 +286,72 @@ func TestPrepareFileRecord4(t *testing.T) {
 	}
 	if newDbRecord.LinkTarget != path {
 		t.Fatalf("Expected LinkTarget to be %s string but got %s", path, newDbRecord.LinkTarget)
+	}
+
+	if newDbRecord.Type != "symlink" {
+		t.Fatalf("Expected Type to be 'symlink' string but got %s", newDbRecord.Type)
+	}
+
+	if newDbRecord.Size != stat.Size() {
+		t.Fatalf("Size mismatch between on disk %d and what we got %d", stat.Size(), newDbRecord.Size)
+	}
+}
+
+// setup filerecord for directory
+func TestPrepareFileRecord6(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	backupConfig := result.Config.Backup[0]
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := ""
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+	if newDbRecord.JobUuid != jobId {
+		t.Fatalf("Expected jobid %s but got %s", jobId, newDbRecord.JobUuid)
+	}
+	if newDbRecord.Path != path {
+		t.Fatalf("Expected path %s but got %s", path, newDbRecord.Path)
+	}
+	if newDbRecord.ChecksumType != "" {
+		t.Fatalf("Expected ChecksumType to be empty string but got %s", newDbRecord.ChecksumType)
+	}
+	if newDbRecord.LinkTarget != "" {
+		t.Fatalf("Expected LinkTarget to be empty string but got %s", newDbRecord.LinkTarget)
+	}
+
+	if newDbRecord.Type != "dir" {
+		t.Fatalf("Expected Type to be 'dir' string but got %s", newDbRecord.Type)
+	}
+
+	if newDbRecord.Size != 0 {
+		t.Fatalf("Expected Size to be 0 (as we always record directories to have size 0) but got %d", newDbRecord.Size)
 	}
 }
 
@@ -855,4 +946,1843 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 		t.Fatalf("3. remote file uuid retrieved by getNewestRemoteFileUuid() is %s and it doesn't match what we expected it to be: %s", retrieveUuid, file1stTimeUuid)
 	}
 
+}
+
+// on disk file - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum != ""
+func TestNeedsUpload1(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecord, false, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk file - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum == ""
+func TestNeedsUpload2(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := ""
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecord, false, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk file - both DB data and newDbRecord are identical and compareChecksum=true
+func TestNeedsUpload3(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+
+	checksum, err := utils.GetFileMD5Sum(path)
+	if err != nil {
+		t.Fatalf("While trying to calculate MD5 checksum, got error: %s", err)
+	}
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecord, true, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != checksum {
+		t.Fatalf("needsUpload() was called with compareChecksum=true so the returned checksum was expected "+
+			"to equal input checksum %s (as the file did not change) but instead got: %s", checksum, rChecksum)
+	}
+}
+
+// on disk file - both DB data and newDbRecord are identical except the checksum and compareChecksum=true
+func TestNeedsUpload4(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+
+	checksum := "asdasdasdasd"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecord, true, dereference, false)
+	if !contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==true' but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum == checksum {
+		t.Fatalf("needsUpload() was called with compareChecksum=true so the returned checksum was expected "+
+			"to differ input checksum %s (as the input was bogus) but instead got equality", checksum)
+	}
+}
+
+// on disk file - both DB data and newDbRecord are almost identical except the Mtime and compareChecksum=false
+func TestNeedsUpload5(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Mtime = time.Now()
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
+	if !contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==true' as Mtime differs, but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk file - both DB data and newDbRecord are almost identical except the Ctime and compareChecksum=false
+func TestNeedsUpload6(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Ctime = time.Now()
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' but it didn't")
+	}
+	if !metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==true' as Ctime differs, but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk file - both DB data and newDbRecord are almost identical except the file type differs and compareChecksum=false
+func TestNeedsUpload7(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Type = "dir"
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
+	if !contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==true' as file type differs, but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk file - both DB data and newDbRecord are almost identical except the file size differs and compareChecksum=false
+func TestNeedsUpload8(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Size = 1234567890123
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
+	if !contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==true' as file size differs, but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk file - both DB data and newDbRecord are almost identical except the $encrypt differs between the file and the Backup config variable
+func TestNeedsUpload9(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Encrypted = false
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, true)
+	if !contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==true' as encrypt settings differ, but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false', but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum != ""
+func TestNeedsUpload10(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecord, false, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum == ""
+func TestNeedsUpload11(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := ""
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecord, false, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are identical and compareChecksum=true
+func TestNeedsUpload12(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+
+	checksum := ""
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecord, true, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != checksum {
+		t.Fatalf("needsUpload() was called with compareChecksum=true so the returned checksum was expected "+
+			"to equal input checksum %s (as the file did not change) but instead got: %s", checksum, rChecksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are identical except the checksum and compareChecksum=true ; this is a case where nothing should happen as DIR checksums should not be checked/used
+func TestNeedsUpload13(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+
+	checksum := "asdasdasdasd"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecord, true, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' because this is a Dir and checksum comparison doesn't make sense here")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum == checksum {
+		t.Fatalf("needsUpload() was called with compareChecksum=true so the returned checksum was expected "+
+			"to differ input checksum %s (as the input was bogus) but instead got equality", checksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are almost identical except the Mtime and compareChecksum=false
+func TestNeedsUpload14(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Mtime = time.Now()
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
+	if !contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==true' as Mtime differs, but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are almost identical except the Ctime and compareChecksum=false
+func TestNeedsUpload15(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Ctime = time.Now()
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' but it didn't")
+	}
+	if !metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==true' as Ctime differs, but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are almost identical except the file type differs and compareChecksum=false
+func TestNeedsUpload16(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Type = "file"
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
+	if !contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==true' as file type differs, but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are almost identical except the file size differs and compareChecksum=false
+func TestNeedsUpload17(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	fileContent := "just a string"
+	path, err := utils.SetupTmpFileWithContent([]byte(fileContent), "cloudbackup_TestAddEntryToRemoteFiles1_sample_file_")
+	if err != nil {
+		err2 := os.RemoveAll(path)
+		if err2 != nil {
+			fmt.Printf("Failed to delete %s due to error: %s", path, err2)
+		}
+		t.Fatalf("Could not create tmp sample file due to error: %s", err)
+	}
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Size = 1234567890123
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
+	if !contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==true' as file size differs, but it didn't")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false' but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
+}
+
+// on disk dir - both DB data and newDbRecord are almost identical except the $encrypt differs between the file and the Backup config variable
+func TestNeedsUpload18(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	dbtx, err := dbData.Db.Begin()
+	if err != nil {
+		// could not start a database transaction so we can't proceed to test
+		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
+	}
+	// cleanup
+	defer func() {
+		_ = dbtx.Rollback() //nolint:errcheck
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := utils.SetupTmpDir("cloudbackup_TestNeedsUpload_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, true)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := "abcabfd3423de22"
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	err = addDbEntryToFiles(dbData, dbtx, newDbRecord)
+	if err != nil {
+		t.Fatalf("Could not add an entry to the 'files' table due to error: %s", err)
+	}
+	version, err := calcRemoteFileVersion(dbData, dbtx, path, backupConfig.Target[0].Name)
+	if err != nil {
+		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
+	}
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	if err != nil {
+		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
+	}
+
+	newDbRecordCopy := newDbRecord
+	newDbRecordCopy.Encrypted = false
+
+	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, true)
+	if contentChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'contentChanged==false' as encrypt settings differ but this is a 'dir' show they should not matter")
+	}
+	if metadataChanged {
+		t.Fatal("Was expecting that needsUpload() reports 'metadataChanged==false', but it didn't")
+	}
+	if ctime != rCtime {
+		t.Fatalf("DB record ctime of %s does not match ctime %s returned by needsUpload()", ctime, rCtime)
+	}
+	if rChecksum != "" {
+		t.Fatalf("needsUpload() was called with compareChecksum=false so the returned checksum was expected to be an empty string but instead got: %s", rChecksum)
+	}
 }
