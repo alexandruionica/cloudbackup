@@ -22,7 +22,7 @@ type BackedUpFileProperties struct {
 	Owner string
 	// this is a JSON encoded string with platform dependent structure (so far there are 2 variants: one for Unixes
 	// and one for Windows). See getObjectPermissions() in cloudbackup/backup/fileproperties/ for details.
-	Permissons string
+	Permissions string
 	// if checksuming is enabled then this will be non empty
 	Checksum string
 	// if checksuming is enabled then this will hold whatever algorithm was used for checksumming

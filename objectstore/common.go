@@ -36,7 +36,8 @@ type ObjectStore interface {
 	// decide which of the two makes sense to be used in order to remove the appropiate file)
 	//  $objType is one of "dir"/"file"/"symlink"
 	Delete(path string, objType string, version int, remoteVersion string) error
-	// TODO - define a Validate() method which is used to validate that the config and credentials for a given object store are usable/work as expected
+	// Validate that the config and credentials for a given object store are usable/work as expected
+	Validate() error
 }
 
 // see description of the NewFileReader() function in order to understand the purpose of this type
