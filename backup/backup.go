@@ -59,7 +59,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 			if dbEntryFound {
 				logger.Debugf("Found DB entry for %s", path)
 				// check if properties match between DB record and os.FileInfo
-				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum, backupConfig.Dereference)
+				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum, backupConfig.Dereference, backupConfig.Encrypt)
 				updatedDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobUuid)
 				if err != nil {
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
@@ -346,7 +346,7 @@ func addDbEntryToRemoteFiles(target string, jobUuid string, deleteMarker int, db
 		time.Now().UnixNano(), jobUuid, deleteMarker, version, remoteVersion, runtime.GOOS, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
 		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
-		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted)
+		fileDbRecord.Permissions, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted)
 	if err != nil {
 		return "", fmt.Errorf("while trying to add a db record for '%s' in the remote_files table, "+
 			"encountered error: %s", fileDbRecord.Path, err)
@@ -359,7 +359,7 @@ func addDbEntryToFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord shared.B
 	_, err := dbtx.Exec(dbData.PreparedStatements.FilesInsert, fileDbRecord.Path, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
 		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
-		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
+		fileDbRecord.Permissions, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
 		fileDbRecord.JobUuid)
 	return err
 }
@@ -369,7 +369,7 @@ func updateDbEntryInFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord share
 	result, err := dbtx.Exec(dbData.PreparedStatements.FilesUpdate, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
 		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
-		fileDbRecord.Permissons, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
+		fileDbRecord.Permissions, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted,
 		fileDbRecord.JobUuid, fileDbRecord.Path)
 	if err != nil {
 		return err
@@ -546,7 +546,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 		// manually do the conversion
 		var tmpMtime, tmpCtime int64
 		err := rows.Scan(&dbRecord.Path, &dbRecord.Type, &dbRecord.LinkTarget, &dbRecord.Size, &tmpMtime,
-			&tmpCtime, &dbRecord.Owner, &dbRecord.Permissons, &dbRecord.Checksum,
+			&tmpCtime, &dbRecord.Owner, &dbRecord.Permissions, &dbRecord.Checksum,
 			&dbRecord.ChecksumType, &dbRecord.Encrypted, &dbRecord.JobUuid)
 		if err != nil {
 			logger.Errorf("While retrieving the database record for '%s' the following error was encountered:"+
@@ -582,18 +582,23 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 }
 
 // compares on disk state vs db ; in terms of parameters $dereference is true if symlinks should be dereferenced
-// (this basically corresponds to the entry in the backup configuration file)
+// (this basically corresponds to the entry in the backup configuration file); $encrypt corresponds to the Backup config
+// section so we'll check if the already stored file matches the encryption state set in the config
 // and returns:
 // bool with value true if file changed and it needs upload (this implies a metadata upload is needed too); bool with
 // value true when a metadata change was detected but the file content itself remains unchanged  ; time.Time containing
 // ctime populated when either file content or metadata change was detected. This is done because it is expensive to
 // get ctime (1 system call) and we want to avoid calling this again later; $checksum empty if an error was encountered
 // while trying to calculate it or if checksum comparison was not requested, otherwise ascii string with md5 sum
-func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.BackedUpFileProperties, compareChecksum bool, dereference bool) (contentChanged bool,
+func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.BackedUpFileProperties, compareChecksum bool, dereference bool, encrypt bool) (contentChanged bool,
 	metadataChanged bool, ctime time.Time, checksum string) {
 	var err error
 	objectType := utils.FileType(stat)
-	if compareChecksum && objectType == "file" {
+	if dbRecordProperties.Encrypted != encrypt && objectType == "file" {
+		logger.Debugf("For '%s' we got a mismatch between what the config file says regarding encryption and"+
+			" the already stored DB record so we'll consider the content of the file changed and have it backed up", path)
+		contentChanged = true
+	} else if compareChecksum && objectType == "file" {
 		checksum, err = utils.GetFileMD5Sum(path)
 		if err != nil {
 			// if we got any errors means we could not calculate the checksum so to be safe, we consider that the file needs to be uploaded
@@ -614,7 +619,10 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 	} else if objectType != dbRecordProperties.Type {
 		contentChanged = true
 	}
+
 	ctime, err = fileproperties.GetCtime(path, dereference)
+	// Ctime change signals that one of Owner of permissions has changed for this item (so we won't also test for
+	// individual changed owner or permissions)
 	// in case of error we just treat it as the metadata changed as we can't know for sure if it didn't and it's better to be safe and just back it up
 	if err != nil {
 		logger.Debugf("Could not get ctime so to be safe considering that Ctime change detected for '%s'", path)
@@ -649,18 +657,21 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup, ctime time.Time, checksum string, jobUuid string) (shared.BackedUpFileProperties, error) {
 	var err error
 	// even if we get an error (and we don't have complete or any file properties) we will still attempt to back it up
-	owner, permissions, _ := fileproperties.GetObjectPermissions(path, stat) // #nosec
+	owner, permissions, err := fileproperties.GetObjectPermissions(path, stat)
+	if err != nil {
+		logger.Warnf("Could not get permissions for '%s' due to error: %s", path, err)
+	}
 	onDiskObjectProperties := shared.BackedUpFileProperties{
-		Path:       path,
-		Type:       utils.FileType(stat),
-		Size:       stat.Size(),
-		Mtime:      stat.ModTime(),
-		Ctime:      ctime,
-		Owner:      owner,
-		Permissons: permissions,
-		Checksum:   checksum,
-		JobUuid:    jobUuid,
-		Encrypted:  backupConfig.Encrypt,
+		Path:        path,
+		Type:        utils.FileType(stat),
+		Size:        stat.Size(),
+		Mtime:       stat.ModTime(),
+		Ctime:       ctime,
+		Owner:       owner,
+		Permissions: permissions,
+		Checksum:    checksum,
+		JobUuid:     jobUuid,
+		Encrypted:   backupConfig.Encrypt,
 	}
 	if checksum != "" {
 		// for now we support only md5 checksumming, but we have room to implement something else, if needed, later

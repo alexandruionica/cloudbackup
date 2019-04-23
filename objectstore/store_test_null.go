@@ -87,7 +87,6 @@ func (object *StoreTestNull) Upload(path string, newDbRecord shared.BackedUpFile
 			}
 		}
 	} else {
-		// TODO - build metadata for dir / symlink and then proceed to discard it
 		return strconv.Itoa(version), false, nil
 	}
 }
@@ -105,5 +104,11 @@ func (object *StoreTestNull) MarkDeleted(path string, existingDbRecord shared.Ba
 func (object *StoreTestNull) Delete(path string, objType string, version int, remoteVersion string) error {
 	logger.Debugf("Pretending to delete: '%s' having version: '%d' and remote version: '%s' from object store:"+
 		" '%s' using bucket: '%s' and full remote path: '%s'", path, version, remoteVersion, object.storeName, object.storeBucketName, object.storePrefix+"/"+path)
+	return nil
+}
+
+// validated that the config of this object store is correct
+func (object *StoreTestNull) Validate() error {
+	// given this is for tests and it discards data, always return nil (meaning OK)
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
+	"errors"
 	"fmt"
 )
 
@@ -38,4 +39,8 @@ func (object *StoreError) MarkDeleted(path string, existingDbRecord shared.Backe
 
 func (object *StoreError) Delete(path string, objType string, version int, remoteVersion string) error {
 	return nil
+}
+
+func (object *StoreError) Validate() error {
+	return errors.New("this function always returns an error")
 }
