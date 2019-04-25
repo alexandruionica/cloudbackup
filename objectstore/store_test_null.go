@@ -51,10 +51,10 @@ func InitialiseStoreTestNull(ctx context.Context, backupConfig config.Backup, ta
 }
 
 // pretend to upload file (actually discarding all read content)
-func (object *StoreTestNull) Upload(path string, newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error) {
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
-		reader, err := NewFileReader(path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
+		reader, err := NewFileReader(newDbRecord.Path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
 			object.storeType, object.rateLimit, object.burst, newDbRecord.Size, object.ctx)
 		if err != nil {
 			return strconv.Itoa(version), false, err
@@ -80,7 +80,7 @@ func (object *StoreTestNull) Upload(path string, newDbRecord shared.BackedUpFile
 					}
 				default:
 					{
-						logger.Warningf("While reading '%s' the following error was encountered: %s", path, err)
+						logger.Warningf("While reading '%s' the following error was encountered: %s", newDbRecord.Path, err)
 						return strconv.Itoa(version), false, err
 					}
 				}
@@ -96,7 +96,7 @@ func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType stri
 }
 
 // pretend to place a delete marker
-func (object *StoreTestNull) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error) {
 	return strconv.Itoa(version), false, nil
 }
 
