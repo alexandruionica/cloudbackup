@@ -239,7 +239,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		var cancelled bool
 		var remoteVersion string
 		if operationType == "upload" {
-			remoteVersion, cancelled, err = UploadObject(path, DbRecord, backupConfig, objectStore, backupJobsState, version)
+			remoteVersion, cancelled, err = UploadObject(DbRecord, backupConfig, objectStore, backupJobsState, version)
 			if err != nil {
 				encounteredError++
 				encounteredErrorObject = err
@@ -697,15 +697,15 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 // for files it uploads both content and metadata.
 // return values: the version of the stored item, as returned by the object store;
 // bool with true if backup got cancelled, false otherwise ; error if error encountered
-func UploadObject(path string, newDbRecord shared.BackedUpFileProperties,
+func UploadObject(newDbRecord shared.BackedUpFileProperties,
 	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, version int) (string, bool, error) {
 	if newDbRecord.Type == "file" {
-		logger.Debugf("Uploading '%s'", path)
+		logger.Debugf("Uploading '%s'", newDbRecord.Path)
 	} else {
-		logger.Debugf("Uploading metadata for '%s' which is of type '%s'", path, newDbRecord.Type)
+		logger.Debugf("Uploading metadata for '%s' which is of type '%s'", newDbRecord.Path, newDbRecord.Type)
 	}
 
-	remoteVersion, cancelled, err := objectStore.Upload(path, newDbRecord, version, backupJobsState)
+	remoteVersion, cancelled, err := objectStore.Upload(newDbRecord, version, backupJobsState)
 	if cancelled {
 		return remoteVersion, true, err
 	}
@@ -715,7 +715,7 @@ func UploadObject(path string, newDbRecord shared.BackedUpFileProperties,
 
 	// $result represents the remote path (in the object store) where the object has been backed up
 	storeName, _ := objectStore.GetStoreDetails()
-	logger.Debugf("'%s' successfully uploaded to object store %s", path, storeName)
+	logger.Debugf("'%s' successfully uploaded to object store %s", newDbRecord.Path, storeName)
 
 	return remoteVersion, false, nil
 }
@@ -1029,7 +1029,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 			break
 		}
 
-		remoteVersion, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord.Path, ObjectDbRecord, version)
+		remoteVersion, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord, version)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err

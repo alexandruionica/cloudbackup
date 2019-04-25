@@ -4,12 +4,11 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
-	"errors"
 	"fmt"
 )
 
 // this object store is used only for when we have errors due to an unknown store being supplied. Beside satisfying
-// signatures this store is useless
+// signatures this store is useless (except its also used for testing when we want to emulate a store error for a given operation)
 type StoreError struct {
 	storeName string
 	storeType string
@@ -24,7 +23,7 @@ func InitialiseStoreError(ctx context.Context, backupConfig config.Backup, store
 	return result
 }
 
-func (object *StoreError) Upload(path string, newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreError) Upload(newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error) {
 	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }
 
@@ -33,14 +32,14 @@ func (object *StoreError) GetStoreDetails() (StoreName string, StoreType string)
 	return object.storeName, object.storeType
 }
 
-func (object *StoreError) MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreError) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error) {
 	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }
 
 func (object *StoreError) Delete(path string, objType string, version int, remoteVersion string) error {
-	return nil
+	return fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }
 
 func (object *StoreError) Validate() error {
-	return errors.New("this function always returns an error")
+	return fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }

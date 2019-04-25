@@ -25,13 +25,13 @@ type ObjectStore interface {
 	// the provided $version is to be used;
 	// in the returned values, $remoteVersion is the version as returned by the object store (some object stores provide
 	// as a reply to a PUT a version which they generate) or it can also be the value of the input $version(converted to string)
-	Upload(path string, newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error)
+	Upload(newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error)
 	// returned value $StoreName is the same as a target name in a Backup section of the config file; $StoreType represents target type
 	GetStoreDetails() (StoreName string, StoreType string)
-	// marks a given object, described by a path, as deleted. Depending on object store type this may have very different
+	// marks a given object, described by a $existingDbRecord.Path, as deleted. Depending on object store type this may have very different
 	// implementations. This must NOT actually delete one or more versions belonging to a given object as depicted by a
 	// path. For input parameter $version and returned $remoteVersion see the description for the Upload() method
-	MarkDeleted(path string, existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error)
+	MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error)
 	// for a given $path, deletes a particular $version && $remote_version pair (it's up to the implementation to
 	// decide which of the two makes sense to be used in order to remove the appropiate file)
 	//  $objType is one of "dir"/"file"/"symlink"
