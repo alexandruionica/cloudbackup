@@ -4647,7 +4647,7 @@ func TestMarkDeleted1(t *testing.T) {
 	}
 }
 
-// markDeleted() for an already existing 1 DB entry
+// markDeleted() for an already existing 1 DB entry which is under an included path and is not matched by an exclusion rule
 func TestMarkDeleted2(t *testing.T) {
 	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -4900,5 +4900,259 @@ func TestMarkDeleted3(t *testing.T) {
 	if found {
 		t.Fatalf("Found a record in the DB for path %s but there should no longer be one despite the file "+
 			"still existing on disk; this is because while the parent dir is included in the list of directories to backup, the file itself is excluded", path)
+	}
+}
+
+// markDeleted() for an already existing 1 DB entry which is under an included path and is not matched by an exclusion rule but using two datastores, both ok
+func TestMarkDeleted4(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+
+	// setup a tmpdir which then will be set in the config file as the path to be backed up
+	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{dirPath})
+	// its critical for this test that the path used to test on has one of its parent directories mentioned in the config file as a path to be backed up
+	result.Config.Backup[0].Paths = []string{dirPath}
+
+	result.Config.Backup[0].Target = append(result.Config.Backup[0].Target, result.Config.Backup[0].Target[0])
+	result.Config.Backup[0].Target[1].Name = "2nd_store"
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
+	if len(objectStores) != 2 {
+		t.Fatalf("Was expecting 2 object stores but found: %d", len(objectStores))
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	// cleanup
+	defer func() {
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := dirPath + string(filepath.Separator) + "a_test_file.txt"
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("Could not create file %s due to error: %s", path, err)
+	}
+	defer f.Close()
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	_, err = f.WriteString("just a line with some text")
+	if err != nil {
+		t.Fatalf("Could not write %s due to error: %s", path, err)
+	}
+	f.Close()
+
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, dereference)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := ""
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	cancelled, err := UploadAndUpdateDB("new", ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobId, newDbRecord)
+	if cancelled {
+		t.Fatal("Was expecting UploadAndUpdateDB() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("Was expecting UploadAndUpdateDB() to not produce an error but it did: %s", err)
+	}
+
+	found, _, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("1. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("1. Did not find a record in the DB for path %s", path)
+	}
+
+	// delete file from disk so Mark deleted has something to complain about
+	testutils.DeleteTestFilesAndDirs([]string{path})
+
+	cancelled, err = markDeleted(newDbRecord, backupConfig, dbData, objectStores, backupJobsState, jobId)
+	if cancelled {
+		t.Fatal("Was expecting markDeleted() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("Was expecting markDeleted() to not produce an error but it did: %s", err)
+	}
+}
+
+// markDeleted() for an already existing 1 DB entry which is under an included path and is not matched by an exclusion
+// rule but using two datastores with the 2nd always giving errors
+func TestMarkDeleted5(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+
+	// setup a tmpdir which then will be set in the config file as the path to be backed up
+	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{dirPath})
+	// its critical for this test that the path used to test on has one of its parent directories mentioned in the config file as a path to be backed up
+	result.Config.Backup[0].Paths = []string{dirPath}
+
+	result.Config.Backup[0].Target = append(result.Config.Backup[0].Target, result.Config.Backup[0].Target[0])
+	result.Config.Backup[0].Target[1].Name = "2nd_store"
+
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
+	if len(objectStores) != 2 {
+		t.Fatalf("Was expecting 2 object stores but found: %d", len(objectStores))
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	// cleanup
+	defer func() {
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := dirPath + string(filepath.Separator) + "a_test_file.txt"
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("Could not create file %s due to error: %s", path, err)
+	}
+	defer f.Close()
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	_, err = f.WriteString("just a line with some text")
+	if err != nil {
+		t.Fatalf("Could not write %s due to error: %s", path, err)
+	}
+	f.Close()
+
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, dereference)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := ""
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	cancelled, err := UploadAndUpdateDB("new", ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobId, newDbRecord)
+	if cancelled {
+		t.Fatal("Was expecting UploadAndUpdateDB() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("Was expecting UploadAndUpdateDB() to not produce an error but it did: %s", err)
+	}
+
+	found, _, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("1. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("1. Did not find a record in the DB for path %s", path)
+	}
+
+	// replace the 2nd object store with a broken one which has pretends to have the same name and same type (hint: it lies)
+	errObjectStore := objectstore.InitialiseStoreError(ctx, backupConfig, "2nd_store", "test_null", 0)
+	objectStores[1] = errObjectStore
+
+	// delete file from disk so Mark deleted has something to complain about
+	testutils.DeleteTestFilesAndDirs([]string{path})
+
+	cancelled, err = markDeleted(newDbRecord, backupConfig, dbData, objectStores, backupJobsState, jobId)
+	if cancelled {
+		t.Fatal("Was expecting markDeleted() to return cancelled=false but it didn't")
+	}
+	if err == nil {
+		t.Fatal("Was expecting markDeleted() to produce an error but it didn't")
 	}
 }
