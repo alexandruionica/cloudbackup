@@ -971,18 +971,19 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 		// for each found object check if it exists on disk. This must be done because there is a chance that the backup
 		// failed for some items and so they don't appear in the list of backed up items but they still exist on disk so
 		// their reference from the "files" table should not be removed
+		logger.Debugf("'%s' is not excluded and is also included so checking if it exists on disk before marking it as deleted", ObjectDbRecord.Path)
 		if ObjectDbRecord.Type == "dir" {
 			// in this context, dereferencing does not make sense no matter what is in the config file
 			_, err := utils.DirExists(ObjectDbRecord.Path, false)
 			if err == nil {
-				// dir still exists on disk , skip marking it deleted
+				logger.Debugf("Directory '%s' still exists on disk, skipping marking it deleted", ObjectDbRecord.Path)
 				return false, nil
 			}
 		} else {
 			// in this context, dereferencing does not make sense no matter what is in the config file
 			_, err := utils.FileExists(ObjectDbRecord.Path, false)
 			if err == nil {
-				// file/symlink path still exists on disk,, skip marking it deleted
+				logger.Debugf("%s '%s' still exists on disk, skipping marking it deleted", ObjectDbRecord.Type, ObjectDbRecord.Path)
 				return false, nil
 			}
 		}
@@ -1031,6 +1032,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 
 		remoteVersion, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord, version)
 		if err != nil {
+			logger.Debugf("The object store returned an error for the mark deleted operation: %s", err)
 			encounteredError++
 			encounteredErrorObject = err
 			break
@@ -1058,6 +1060,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 		// marker (and the purpose of the backup_collections table is to list what needs to be restored)
 	}
 	if encounteredError > 0 || JobCancelled {
+		logger.Warnf("Could not mark '%s' as deleted as an error was encountered: %s", ObjectDbRecord.Path, encounteredErrorObject)
 		txerr := dbtx.Rollback()
 		if txerr != nil {
 			logger.Warningf("Could not rollback transaction for '%s' due to error: %s", ObjectDbRecord.Path, txerr)
@@ -1086,5 +1089,6 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig conf
 	if txerr != nil {
 		return false, fmt.Errorf("could not commit transaction due to error: %s", err)
 	}
+	logger.Debugf("DB transaction for marking '%s' as deleted was committed", ObjectDbRecord.Path)
 	return false, nil
 }
