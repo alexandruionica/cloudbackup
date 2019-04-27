@@ -23,7 +23,7 @@ import (
 
 // setup filerecord for plain file which doesn't have a checksum
 func TestPrepareFileRecord1(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -87,7 +87,7 @@ func TestPrepareFileRecord1(t *testing.T) {
 
 // setup filerecord for plain file which has a checksum
 func TestPrepareFileRecord2(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -151,7 +151,7 @@ func TestPrepareFileRecord2(t *testing.T) {
 
 // setup filerecord for a symlink which has a real file as a target
 func TestPrepareFileRecord3(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -225,7 +225,7 @@ func TestPrepareFileRecord3(t *testing.T) {
 
 // setup filerecord for a symlink which has a broken target
 func TestPrepareFileRecord4(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -301,7 +301,7 @@ func TestPrepareFileRecord4(t *testing.T) {
 
 // setup filerecord for directory
 func TestPrepareFileRecord6(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -359,7 +359,7 @@ func TestPrepareFileRecord6(t *testing.T) {
 
 // test updating counters
 func TestUpdateCounters1(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -448,7 +448,7 @@ func TestUpdateCounters1(t *testing.T) {
 
 // test  addEntryToRemoteFiles() and getBackedupObjectPropertiesFromDb() and updateDbEntryInFiles()
 func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -654,7 +654,7 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 
 // test function works as expected when there isn't a DB match
 func TestGetRemoteFileVersion1(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -721,7 +721,7 @@ func TestGetRemoteFileVersion1(t *testing.T) {
 
 // test function works as expected when there is a DB match and also test getNewestRemoteFileUuid() and getRemoteVersionForVersion()
 func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -952,7 +952,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum != ""
 func TestNeedsUpload1(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1055,7 +1055,7 @@ func TestNeedsUpload1(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum == ""
 func TestNeedsUpload2(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1158,7 +1158,7 @@ func TestNeedsUpload2(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are identical and compareChecksum=true
 func TestNeedsUpload3(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1266,7 +1266,7 @@ func TestNeedsUpload3(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are identical except the checksum and compareChecksum=true
 func TestNeedsUpload4(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1371,7 +1371,7 @@ func TestNeedsUpload4(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are almost identical except the Mtime and compareChecksum=false
 func TestNeedsUpload5(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1477,7 +1477,7 @@ func TestNeedsUpload5(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are almost identical except the Ctime and compareChecksum=false
 func TestNeedsUpload6(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1583,7 +1583,7 @@ func TestNeedsUpload6(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are almost identical except the file type differs and compareChecksum=false
 func TestNeedsUpload7(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1689,7 +1689,7 @@ func TestNeedsUpload7(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are almost identical except the file size differs and compareChecksum=false
 func TestNeedsUpload8(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1795,7 +1795,7 @@ func TestNeedsUpload8(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are almost identical except the $encrypt differs between the file and the Backup config variable
 func TestNeedsUpload9(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1901,7 +1901,7 @@ func TestNeedsUpload9(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum != ""
 func TestNeedsUpload10(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -1997,7 +1997,7 @@ func TestNeedsUpload10(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum == ""
 func TestNeedsUpload11(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2093,7 +2093,7 @@ func TestNeedsUpload11(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are identical and compareChecksum=true
 func TestNeedsUpload12(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2191,7 +2191,7 @@ func TestNeedsUpload12(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are identical except the checksum and compareChecksum=true ; this is a case where nothing should happen as DIR checksums should not be checked/used
 func TestNeedsUpload13(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2289,7 +2289,7 @@ func TestNeedsUpload13(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are almost identical except the Mtime and compareChecksum=false
 func TestNeedsUpload14(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2388,7 +2388,7 @@ func TestNeedsUpload14(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are almost identical except the Ctime and compareChecksum=false
 func TestNeedsUpload15(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2487,7 +2487,7 @@ func TestNeedsUpload15(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are almost identical except the file type differs and compareChecksum=false
 func TestNeedsUpload16(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2586,7 +2586,7 @@ func TestNeedsUpload16(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are almost identical except the file size differs and compareChecksum=false
 func TestNeedsUpload17(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2692,7 +2692,7 @@ func TestNeedsUpload17(t *testing.T) {
 
 // on disk dir - both DB data and newDbRecord are almost identical except the $encrypt differs between the file and the Backup config variable
 func TestNeedsUpload18(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2791,7 +2791,7 @@ func TestNeedsUpload18(t *testing.T) {
 
 // on disk symlink - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum != ""
 func TestNeedsUpload19(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -2903,7 +2903,7 @@ func TestNeedsUpload19(t *testing.T) {
 
 // on disk symlink - both DB data and newDbRecord are identical and compareChecksum=false and data already saved in the DB has a checksum == ""
 func TestNeedsUpload20(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3015,7 +3015,7 @@ func TestNeedsUpload20(t *testing.T) {
 
 // on disk symlink - both DB data and newDbRecord are identical and compareChecksum=true
 func TestNeedsUpload21(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3132,7 +3132,7 @@ func TestNeedsUpload21(t *testing.T) {
 
 // on disk symlink - both DB data and newDbRecord are identical except the checksum and compareChecksum=true
 func TestNeedsUpload22(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3246,7 +3246,7 @@ func TestNeedsUpload22(t *testing.T) {
 
 // on disk file - both DB data and newDbRecord are almost identical except the Mtime and compareChecksum=false
 func TestNeedsUpload23(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3352,7 +3352,7 @@ func TestNeedsUpload23(t *testing.T) {
 
 // on disk symlink - both DB data and newDbRecord are almost identical except the Ctime and compareChecksum=false
 func TestNeedsUpload24(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3467,7 +3467,7 @@ func TestNeedsUpload24(t *testing.T) {
 
 // on disk symlink - both DB data and newDbRecord are almost identical except the file type differs and compareChecksum=false
 func TestNeedsUpload25(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3582,7 +3582,7 @@ func TestNeedsUpload25(t *testing.T) {
 
 // on disk symlink - both DB data and newDbRecord are almost identical except the file size differs and compareChecksum=false
 func TestNeedsUpload26(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3688,7 +3688,7 @@ func TestNeedsUpload26(t *testing.T) {
 
 // on disk symlink - both DB data and newDbRecord are almost identical except the $encrypt differs between the file and the Backup config variable
 func TestNeedsUpload27(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3802,7 +3802,7 @@ func TestNeedsUpload27(t *testing.T) {
 }
 
 func TestUploadObject(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3892,7 +3892,7 @@ func TestUploadObject(t *testing.T) {
 
 // UploadAndUpdateDB with invalid operation
 func TestUploadAndUpdateDB1(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -3985,7 +3985,7 @@ func TestUploadAndUpdateDB1(t *testing.T) {
 
 // UploadAndUpdateDB with "metadata-update" operation for a file which was not previously backed up
 func TestUploadAndUpdateDB2(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -4086,7 +4086,7 @@ func TestUploadAndUpdateDB2(t *testing.T) {
 
 // UploadAndUpdateDB with "new" and then "metadata-update" operation
 func TestUploadAndUpdateDB3(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -4214,7 +4214,7 @@ func TestUploadAndUpdateDB3(t *testing.T) {
 
 // UploadAndUpdateDB with "new" on an object store which always produces errors
 func TestUploadAndUpdateDB4(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -4308,7 +4308,7 @@ func TestUploadAndUpdateDB4(t *testing.T) {
 
 // UploadAndUpdateDB with "new" on two object stores, with the second supposed to always produce errors
 func TestUploadAndUpdateDB5(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -4406,7 +4406,7 @@ func TestUploadAndUpdateDB5(t *testing.T) {
 
 // UploadAndUpdateDB with "new" and then "content-update" operation
 func TestUploadAndUpdateDB6(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -4531,7 +4531,7 @@ func TestUploadAndUpdateDB6(t *testing.T) {
 
 // markDeleted() for an already existing 1 DB entry but the path itself is no longer included in the paths to be backed up
 func TestMarkDeleted1(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -4649,7 +4649,7 @@ func TestMarkDeleted1(t *testing.T) {
 
 // markDeleted() for an already existing 1 DB entry which is under an included path and is not matched by an exclusion rule
 func TestMarkDeleted2(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -4776,7 +4776,7 @@ func TestMarkDeleted2(t *testing.T) {
 
 // markDeleted() for an already existing 1 DB entry , parent dir is included in list of paths to be backed up but the file itself is under the exclusion list
 func TestMarkDeleted3(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -4905,7 +4905,7 @@ func TestMarkDeleted3(t *testing.T) {
 
 // markDeleted() for an already existing 1 DB entry which is under an included path and is not matched by an exclusion rule but using two datastores, both ok
 func TestMarkDeleted4(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -5030,7 +5030,7 @@ func TestMarkDeleted4(t *testing.T) {
 // markDeleted() for an already existing 1 DB entry which is under an included path and is not matched by an exclusion
 // rule but using two datastores with the 2nd always giving errors
 func TestMarkDeleted5(t *testing.T) {
-	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
@@ -5154,5 +5154,604 @@ func TestMarkDeleted5(t *testing.T) {
 	}
 	if err == nil {
 		t.Fatal("Was expecting markDeleted() to produce an error but it didn't")
+	}
+}
+
+// FindAndMarkDeleted() for a path with 1 file which is under an included path and is not matched by an exclusion
+// rule - more comprehensive tests are in backup_test.go (but coverage doesn't properly show them)
+func TestFindAndMarkDeleted1(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+
+	// setup a tmpdir which then will be set in the config file as the path to be backed up
+	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{dirPath})
+	// its critical for this test that the path used to test on has one of its parent directories mentioned in the config file as a path to be backed up
+	result.Config.Backup[0].Paths = []string{dirPath}
+
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
+	if len(objectStores) < 1 {
+		t.Fatal("No object stores defined in the config so there is nothing to test")
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
+	if err != nil {
+		t.Fatalf("While trying to ensure all backup config targets have a DB entry, got error: %s", err)
+	}
+
+	// cleanup
+	defer func() {
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := dirPath + string(filepath.Separator) + "a_test_file.txt"
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("Could not create file %s due to error: %s", path, err)
+	}
+	defer f.Close()
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	_, err = f.WriteString("just a line with some text")
+	if err != nil {
+		t.Fatalf("Could not write %s due to error: %s", path, err)
+	}
+	f.Close()
+
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	ctime, err := fileproperties.GetCtime(path, dereference)
+	if err != nil {
+		t.Fatalf("Could not get ctime for %s due to error: %s", path, err)
+	}
+	checksum := ""
+
+	newDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobId)
+	if err != nil {
+		t.Fatalf("PrepareFileRecord() returned error: %s", err)
+	}
+
+	cancelled, err := UploadAndUpdateDB("new", ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobId, newDbRecord)
+	if cancelled {
+		t.Fatal("Was expecting UploadAndUpdateDB() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("Was expecting UploadAndUpdateDB() to not produce an error but it did: %s", err)
+	}
+
+	found, _, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("1. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("1. Did not find a record in the DB for path %s", path)
+	}
+
+	// should not actually mark anything as deleted
+	cancelled = FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobId, 10)
+	if cancelled {
+		t.Fatal("Was expecting FindAndMarkDeleted() to return cancelled=false but it didn't")
+	}
+
+	// because the file still exists on disk, the above should haven't actually changed anything
+	found, _, err = getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("2. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("2. Did not find a record in the DB for path %s", path)
+	}
+
+	err = backupJobsState.MarkStopped(backupConfig.Name, "unittest_backup", jobId, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbops.CloseStatementsAndDb(dbData)
+
+	u, err = uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	// get a new JobID as this will force FindAndMarkDeleted() to think anything it finds needs deletion (as long as said thing has been deleted from disk too)
+	jobId = u.String()
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbData, err = dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	ctx, err = backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+	// delete backed up file
+	testutils.DeleteTestFilesAndDirs([]string{path})
+	// should mark above $path as deleted
+
+	cancelled = FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobId, 10)
+	if cancelled {
+		t.Fatal("Was expecting FindAndMarkDeleted() to return cancelled=false but it didn't")
+	}
+
+	// the above should have marked $path as deleted so this call should return an error
+	found, _, err = getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("3. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if found {
+		t.Fatalf("3. Found a record in the DB for path %s despite expecting to not find one", path)
+	}
+}
+
+// backup plain file - without checksum - test backupNewItem() and backupExistingWithContentChange() and backupExistingWithMetadataChange()
+func TestBackupNewItem1(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Checksum = false
+
+	// setup a tmpdir which then will be set in the config file as the path to be backed up
+	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{dirPath})
+	// its critical for this test that the path used to test on has one of its parent directories mentioned in the config file as a path to be backed up
+	result.Config.Backup[0].Paths = []string{dirPath}
+
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
+	if len(objectStores) < 1 {
+		t.Fatal("No object stores defined in the config so there is nothing to test")
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
+	if err != nil {
+		t.Fatalf("While trying to ensure all backup config targets have a DB entry, got error: %s", err)
+	}
+
+	// cleanup
+	defer func() {
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := dirPath + string(filepath.Separator) + "a_test_file.txt"
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("Could not create file %s due to error: %s", path, err)
+	}
+	defer f.Close()
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	_, err = f.WriteString("just a line with some text")
+	if err != nil {
+		t.Fatalf("Could not write %s due to error: %s", path, err)
+	}
+	f.Close()
+
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	cancelled, err := backupNewItem(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobId)
+	if cancelled {
+		t.Fatal("Was expecting backupNewItem() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("backupNewItem() returned an error despite it not being expected: %s", err)
+	}
+
+	found, retrievedDbRecord, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("1. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("1 .Did not find record in the DB for path %s despite it being expected", path)
+	}
+
+	retrievedDbRecordCopy := retrievedDbRecord
+	retrievedDbRecordCopy.Owner = "the-new-owner"
+
+	// we didn't actually have a content chage, we changed the Owner but none the less, this will lead to the DB record being updated
+	cancelled, err = backupExistingWithContentChange(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, retrievedDbRecordCopy, jobId)
+	if cancelled {
+		t.Fatal("Was expecting backupExistingWithContentChange() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("backupExistingWithContentChange() returned an error despite it not being expected: %s", err)
+	}
+
+	found, SecondRetrievedDbRecord, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("2. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("2 .Did not find record in the DB for path %s despite it being expected", path)
+	}
+	if retrievedDbRecordCopy.Owner != SecondRetrievedDbRecord.Owner {
+		t.Fatalf("backupExistingWithContentChange() doesn't seem to have updated the DB record, as expected")
+	}
+
+	SecondRetrievedDbRecord.Owner = "another-new-owner"
+	cancelled, err = backupExistingWithMetadataChange(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, SecondRetrievedDbRecord, jobId)
+	if cancelled {
+		t.Fatal("Was expecting backupExistingWithMetadataChange() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("backupExistingWithMetadataChange() returned an error despite it not being expected: %s", err)
+	}
+
+	found, ThirdRetrievedDbRecord, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("3. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("3 .Did not find record in the DB for path %s despite it being expected", path)
+	}
+	if SecondRetrievedDbRecord.Owner != ThirdRetrievedDbRecord.Owner {
+		t.Fatalf("backupExistingWithMetadataChange() doesn't seem to have updated the DB record, as expected")
+	}
+}
+
+// backup plain file - with checksum enabled - test backupNewItem()
+func TestBackupNewItem2(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Checksum = true
+
+	// setup a tmpdir which then will be set in the config file as the path to be backed up
+	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{dirPath})
+	// its critical for this test that the path used to test on has one of its parent directories mentioned in the config file as a path to be backed up
+	result.Config.Backup[0].Paths = []string{dirPath}
+
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
+	if len(objectStores) < 1 {
+		t.Fatal("No object stores defined in the config so there is nothing to test")
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
+	if err != nil {
+		t.Fatalf("While trying to ensure all backup config targets have a DB entry, got error: %s", err)
+	}
+
+	// cleanup
+	defer func() {
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := dirPath + string(filepath.Separator) + "a_test_file.txt"
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("Could not create file %s due to error: %s", path, err)
+	}
+	defer f.Close()
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	_, err = f.WriteString("just a line with some text")
+	if err != nil {
+		t.Fatalf("Could not write %s due to error: %s", path, err)
+	}
+	f.Close()
+
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	cancelled, err := backupNewItem(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobId)
+	if cancelled {
+		t.Fatal("Was expecting backupNewItem() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("backupNewItem() returned an error despite it not being expected: %s", err)
+	}
+
+	found, _, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("Did not find record in the DB for path %s despite it being expected", path)
+	}
+}
+
+// backup plain file - with checksum disabled - test Do()
+func TestDo(t *testing.T) {
+	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	dereference := false
+
+	result, err := config.Load(cfgpath, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Checksum = false
+
+	// setup a tmpdir which then will be set in the config file as the path to be backed up
+	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
+
+	defer testutils.DeleteTestFilesAndDirs([]string{dirPath})
+	// its critical for this test that the path used to test on has one of its parent directories mentioned in the config file as a path to be backed up
+	result.Config.Backup[0].Paths = []string{dirPath}
+
+	backupConfig := result.Config.Backup[0]
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		t.Fatalf("Could not generate UUID due to error: %s", err)
+	}
+	jobId := u.String()
+
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := &shared.BackupJobsState{
+		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
+		Lock:             &sync.RWMutex{},
+	}
+
+	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, err := backupJobsState.GetContextForJob(backupConfig.Name, jobId)
+	if err != nil {
+		t.Fatalf("Failed to get signalling context. Error was: %s", err)
+	}
+
+	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
+	if err != nil {
+		t.Fatalf("Could not initialise backend object store(s) from the config due to error: %s", err)
+	}
+
+	if len(objectStores) < 1 {
+		t.Fatal("No object stores defined in the config so there is nothing to test")
+	}
+
+	dbData, err := dbops.PrepareDbForBackup(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig)
+	if err != nil {
+		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
+	}
+
+	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
+	if err != nil {
+		t.Fatalf("While trying to ensure all backup config targets have a DB entry, got error: %s", err)
+	}
+
+	// cleanup
+	defer func() {
+		dbops.CloseStatementsAndDb(dbData)
+	}()
+
+	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
+	path := dirPath + string(filepath.Separator) + "a_test_file.txt"
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("Could not create file %s due to error: %s", path, err)
+	}
+	defer f.Close()
+	defer testutils.DeleteTestFilesAndDirs([]string{path})
+	_, err = f.WriteString("just a line with some text")
+	if err != nil {
+		t.Fatalf("Could not write %s due to error: %s", path, err)
+	}
+	f.Close()
+
+	stat, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	// new file, never backed up before
+	cancelled, err := Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobId)
+	if cancelled {
+		t.Fatal("1. Was expecting Do() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("1. Do() returned an error despite it not being expected: %s", err)
+	}
+
+	found, retrievedDbRecord, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("1. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("1. Did not find record in the DB for path %s despite it being expected", path)
+	}
+
+	// file previously backed up and hasn't changed since
+	cancelled, err = Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobId)
+	if cancelled {
+		t.Fatal("2. Was expecting Do() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("2. Do() returned an error despite it not being expected: %s", err)
+	}
+
+	found, secondRetrievedDbRecord, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("2. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("2. Did not find record in the DB for path %s despite it being expected", path)
+	}
+
+	if !reflect.DeepEqual(retrievedDbRecord, secondRetrievedDbRecord) {
+		fmt.Println("########## REPORTED #############")
+		utils.Pp(secondRetrievedDbRecord)
+		fmt.Println("########## EXPECTED #############")
+		utils.Pp(retrievedDbRecord)
+		t.Fatal("2. Retrieved DB record after the second Do() run was supposed to equal the one retrieved before the second run but instead it differs")
+	}
+
+	// change the content of the file
+	f, err = os.OpenFile(path, os.O_RDWR, 0755)
+	if err != nil {
+		t.Fatalf("Could not reopen %s due to err: %s", path, err)
+	}
+	defer f.Close()
+	_, err = f.WriteString("just a line with some new text which should change its contents")
+	if err != nil {
+		t.Fatalf("2. Could not write %s due to error: %s", path, err)
+	}
+	f.Close()
+	stat, err = os.Stat(path)
+	if err != nil {
+		t.Fatalf("While running os.Stat() got error: %s", err)
+	}
+
+	// file previously backed up and HAS had its contents changed since
+	cancelled, err = Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobId)
+	if cancelled {
+		t.Fatal("3. Was expecting Do() to return cancelled=false but it didn't")
+	}
+	if err != nil {
+		t.Fatalf("3. Do() returned an error despite it not being expected: %s", err)
+	}
+
+	found, thirdRetrievedDbRecord, err := getBackedupObjectPropertiesFromDb(path, dbData)
+	if err != nil {
+		t.Fatalf("3. While retrieving from DB the record for path %s got error: %s", path, err)
+	}
+	if !found {
+		t.Fatalf("3. Did not find record in the DB for path %s despite it being expected", path)
+	}
+
+	if reflect.DeepEqual(secondRetrievedDbRecord, thirdRetrievedDbRecord) {
+		t.Fatal("3. Retrieved DB record after the third Do() is equal the one retrieved after the second run but they should differ")
 	}
 }
