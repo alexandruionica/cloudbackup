@@ -64,13 +64,13 @@
           "400": {
             "description": "Invalid input",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "401": {
             "description": "Basic authentication required",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         },
@@ -97,7 +97,7 @@
           "401": {
             "description": "Basic authentication required",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         }
@@ -138,13 +138,13 @@
           "400": {
             "description": "Invalid input",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "401": {
             "description": "Basic authentication required",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         },
@@ -172,7 +172,7 @@
           "401": {
             "description": "Basic authentication required",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         },
@@ -214,25 +214,25 @@
           "400": {
             "description": "Backup already running",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "401": {
             "description": "Basic authentication required",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "404": {
             "description": "No backup job matches the provided name",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "500": {
             "description": "Internal Server Error",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         },
@@ -274,19 +274,19 @@
           "400": {
             "description": "Client Error",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "401": {
             "description": "Basic authentication required",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "500": {
             "description": "Internal Server Error",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         },
@@ -331,21 +331,21 @@
             "description": "Basic authentication required",
             "x-produces": "application/json",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "404": {
             "description": "No backup job matches the provided name",
             "x-produces": "application/json",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "500": {
             "description": "Internal Server Error",
             "x-produces": "application/json",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         },
@@ -390,21 +390,81 @@
             "description": "Basic authentication required",
             "x-produces": "application/json",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "404": {
             "description": "No backup job matches the provided name",
             "x-produces": "application/json",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "500": {
             "description": "Internal Server Error",
             "x-produces": "application/json",
             "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/backup/target/test": {
+      "post": {
+        "tags": [
+          "backup"
+        ],
+        "summary": "Test the targets defined for a given backup job.",
+        "description": "Test all the backup targets for a given backup job name. This will run the routine defined for the configured object stores, in order to validate if the credentials and settings provided in the server's configuration for the defined targets are valid and usable and also that the object store's own configuration satisfies requirements.",
+        "operationId": "BackupTargetTest",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup for which to test targets",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BackupJobName"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
               "$ref": "#/definitions/ApiResponse"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "404": {
+            "description": "No backup job matches the provided name",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "503": {
+            "description": "Backup target(s) failed test",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         },
@@ -437,14 +497,14 @@
             "description": "Basic authentication required",
             "x-produces": "application/json",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           },
           "500": {
             "description": "Internal Server Error",
             "x-produces": "application/json",
             "schema": {
-              "$ref": "#/definitions/ApiResponse"
+              "$ref": "#/definitions/ApiResponseError"
             }
           }
         },
@@ -1187,7 +1247,20 @@
         },
         "message": {
           "type": "string",
-          "example": "success"
+          "example": "brief summary"
+        }
+      }
+    },
+    "ApiResponseError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "error"
+        },
+        "message": {
+          "type": "string",
+          "example": "Reason for error"
         }
       }
     },

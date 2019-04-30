@@ -30,6 +30,7 @@ const (
 	HttpErrIncorrectClientData = "client supplied incorrect data"
 	HttpErrNotFound            = "not found"
 	HttpErrInternalError       = "internal server error"
+	HttpErrServiceUnavailable  = "service unavailable"
 )
 
 type HttpStatusReply struct {

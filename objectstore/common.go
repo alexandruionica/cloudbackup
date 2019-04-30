@@ -37,7 +37,10 @@ type ObjectStore interface {
 	//  $objType is one of "dir"/"file"/"symlink"
 	Delete(path string, objType string, version int, remoteVersion string) error
 	// Validate that the config and credentials for a given object store are usable/work as expected
-	Validate() error
+	// the Validate() function MUST NOT make any use of the $backupJobsState struct which is passed when an object
+	// store is initialised. This is because when validate() is called, the object store is initialised with a "mock" $backupJobsState
+	// Returns a message string (in case of success) and an error message if something went wrong
+	Validate() (string, error)
 }
 
 // see description of the NewFileReader() function in order to understand the purpose of this type
