@@ -4,6 +4,7 @@ import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
+	"fmt"
 	"golang.org/x/time/rate"
 	"io"
 	"strconv"
@@ -108,7 +109,7 @@ func (object *StoreTestNull) Delete(path string, objType string, version int, re
 }
 
 // validated that the config of this object store is correct
-func (object *StoreTestNull) Validate() error {
+func (object *StoreTestNull) Validate() (string, error) {
 	// given this is for tests and it discards data, always return nil (meaning OK)
-	return nil
+	return fmt.Sprintf("%s passed validation", object.storeName), nil
 }

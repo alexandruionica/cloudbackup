@@ -40,6 +40,6 @@ func (object *StoreError) Delete(path string, objType string, version int, remot
 	return fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }
 
-func (object *StoreError) Validate() error {
-	return fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
+func (object *StoreError) Validate() (string, error) {
+	return "", fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
 }

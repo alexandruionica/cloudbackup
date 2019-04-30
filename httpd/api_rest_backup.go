@@ -3,6 +3,7 @@ package httpd
 import (
 	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
+	"cloudbackup/objectstore"
 	"cloudbackup/shared"
 	"context"
 	"encoding/json"
@@ -273,7 +274,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 	}
 	if decodedJson.Name == "" {
 		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
-			" is needed in order to know what backup job you're requesting to be started"))
+			" is needed in order to know what backup job you're requesting to be dry run"))
 		return
 	}
 
@@ -564,5 +565,80 @@ func (srvSrc SrvData) handlerPostBackupWatch(w http.ResponseWriter, r *http.Requ
 			}
 		}
 	}
+}
 
+// for a given backup job name return run the test method of each defined object store
+func (srvSrc SrvData) handlerPostBackupTargetTest(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
+		return
+	}
+	var decodedJson BackupJob
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
+	if decodedJson.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
+			" is needed in order to know for what backup job to test the target configuration"))
+		return
+	}
+
+	// while a copy, some of the data is pointers so locking is still needed
+	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostBackupTargetTest")
+	// while a copy, some of the data is pointers so locking is still needed
+	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostBackupTargetTest")
+	found := false
+	// extract config for this backup job only
+	var backupConfig config.Backup
+	// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
+	// shared with other functions (running in other routines)
+	configCopy.Mutex.RLock()
+	for _, backup := range configCopy.Backup {
+		if backup.Name == decodedJson.Name {
+			found = true
+			// deep copy
+			backupConfig = config.CopyBackupStruct(backup)
+		}
+	}
+	configCopy.Mutex.RUnlock()
+
+	if !found {
+		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job was found matching name:"+
+			" %s", decodedJson.Name))
+		return
+	}
+	backupJobsState := &shared.BackupJobsState{
+		// make this as a non buffered channel, in case something tries to send, it will block
+		// the Object store should not try to use this struct, but it is still needed in order to init the object store
+		WatchMsgReceiver: make(chan shared.WatchMessage),
+		Lock:             &sync.RWMutex{},
+	}
+	defer close(backupJobsState.WatchMsgReceiver)
+
+	resultMsg := ""
+	// get object stores used for backing up files for this job
+	objectStores, err := objectstore.GetObjectStores(context.Background(), backupConfig, backupJobsState)
+	if err != nil {
+		msg := fmt.Sprintf("Could not initialise the object store(s). The encountered error is: %s", err)
+		logger.Error(msg)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return
+	}
+	for _, store := range objectStores {
+		msg, err := store.Validate()
+		if err != nil {
+			storeName, StoreType := store.GetStoreDetails()
+			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable,
+				fmt.Sprintf("Object store '%s' of type '%s' returned error: %s", storeName, StoreType, err))
+			return
+		}
+		resultMsg = resultMsg + msg + "\n"
+	}
+
+	JSONSuccess(w, "success", resultMsg)
 }
