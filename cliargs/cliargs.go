@@ -2,6 +2,7 @@ package cliargs
 
 import (
 	clientBackup "cloudbackup/client/backup"
+	clientBackupTarget "cloudbackup/client/backup/target"
 	clientConfig "cloudbackup/client/config"
 	clientNotification "cloudbackup/client/notification"
 	"cloudbackup/config"
@@ -92,6 +93,11 @@ type ArgsCommandClientBackup struct {
 	Status ArgsCommandClientBackupStatus `command:"status" description:"Show details about a specific backup job."`
 	Watch  ArgsCommandClientBackupWatch  `command:"watch" description:"Continuously watches a specific backup job in order to show file, directory and symlinks backup progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces more events per second than it can handle or if the client can't receive quickly enough events produced by the server.'"`
 	DryRun ArgsCommandClientBackupDryRun `command:"dryrun" description:"Dry run a backup job in order to see what files and directories get evaluated"`
+	Target ArgsCommandClientBackupTarget `command:"target" description:"Backup target (object store) related commands"`
+}
+
+type ArgsCommandClientBackupTarget struct {
+	Test ArgsCommandClientBackupTargetTest `command:"test" description:"For a given backup section name, it will test all defined targets in order to check that the object stores are usable for storing backed up files"`
 }
 
 type ArgsCommandClientBackupStart struct {
@@ -141,6 +147,14 @@ type ArgsCommandClientBackupStatus struct {
 		Name string `positional-arg-name:"job_name" description:"Name of the backup job for which to get the status. This needs to match a backup job as defined in the configuration of the server"`
 	} `positional-args:"yes" required:"yes"`
 	JobId string `short:"i" long:"job-id" description:"Id of the job to stop. Using this ensures that only a particular running job is showed. If the job id doesn't match the id of the running job having the same name then the status operation will exit."`
+}
+
+type ArgsCommandClientBackupTargetTest struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job for which to test all defined targets. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
 }
 
 type ArgsCommandClientConfigValidate struct {
@@ -377,6 +391,24 @@ func (command *ArgsCommandClientBackupDryRun) Execute(args []string) error {
 		os.Exit(1)
 	}
 	clientBackup.DryRun(clConfig, command.Json, command.Job.Name)
+	return nil
+}
+
+func (command *ArgsCommandClientBackupTargetTest) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientBackupTarget.Test(clConfig, command.Json, command.Job.Name)
 	return nil
 }
 
