@@ -64,8 +64,9 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 		logger.Debugf("Closing '%s' and removing the file", dbfilepath)
 		// close connection to the db
 		CloseDb(db, dbfilepath)
+		fExists, _ := DbFileExists(dbfilepath) // #nosec
 		// remove the incorrectly initialised db file
-		if DbFileExists(dbfilepath) {
+		if fExists {
 			err2 := os.Remove(dbfilepath)
 			if err2 != nil {
 				logger.Errorf("An additional error was encountered when trying to remove the incorrectly "+
@@ -140,16 +141,17 @@ func GetDbFilePath(datadir string, backupName string) (string, error) {
 	}
 }
 
-func DbFileExists(dbfilepath string) bool {
+func DbFileExists(dbfilepath string) (bool, error) {
 	_, err := utils.FileExists(dbfilepath, true)
 	if err != nil {
 		if err != utils.ErrNoSuchFile {
 			logger.Errorf("When attempting to read the properties for the database file '%s' the following "+
 				"error was received: ", err)
+			return false, err
 		}
-		return false
+		return false, nil
 	} else {
-		return true
+		return true, nil
 	}
 }
 
@@ -164,7 +166,11 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 		return err
 	}
 	// check if database file exists
-	if !DbFileExists(dbfilepath) {
+	fExists, err := DbFileExists(dbfilepath)
+	if err != nil {
+		return err
+	}
+	if !fExists {
 		if configInit {
 			logger.Warnf("Database file '%s' used to store details for backup job '%s' doesn't exist. This is "+
 				"expected during the first start of the backup server or when configuration file changes affect the"+
