@@ -54,7 +54,10 @@ func TestDbFileExists1(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
 
-	exists := DbFileExists(path)
+	exists, err := DbFileExists(path)
+	if err != nil {
+		t.Fatalf("DbFileExists() returned error: %s", err)
+	}
 	if !exists {
 		t.Fatalf("DbFileExists() was supposed to return true for '%s' but it didn't", path)
 	}
@@ -71,7 +74,10 @@ func TestDbFileExists2(t *testing.T) {
 		}
 	}()
 	path := dbDataDirPath + string(filepath.Separator) + "a_file_which_does_not_exist.sqlite"
-	exists := DbFileExists(path)
+	exists, err := DbFileExists(path)
+	if err != nil {
+		t.Fatalf("DbFileExists() returned error: %s", err)
+	}
 	if exists {
 		t.Fatalf("DbFileExists() was supposed to return false for '%s' but it didn't", path)
 	}
