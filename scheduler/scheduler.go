@@ -36,6 +36,7 @@ func NewJobsState() *shared.BackupJobsState {
 	msgChan := make(chan shared.WatchMessage, watcherChanSize)
 	return &shared.BackupJobsState{
 		Lock:             &sync.RWMutex{},
+		DbOpenAllowed:    make(map[string]*sync.RWMutex),
 		WatchMsgReceiver: msgChan,
 		Watcher:          watcher.New(msgChan),
 	}
@@ -516,7 +517,7 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 		// if we got here, then start a DB connection and check if we got a job (no matter the type) with this UUID
 		// known in the database ; we use the UUID as a primary key in a table so it needs to be unique
 		// get DB connection pointer
-		db, err := database.Start(dataDir, Name)
+		db, err := database.Start(dataDir, Name, backupJobsState)
 		// the backup can not run as we can't initialise/connect to the database
 		if err != nil {
 			logger.Errorf("Could not connect to the SQL database in order to validate uniqueness of UUID for"+

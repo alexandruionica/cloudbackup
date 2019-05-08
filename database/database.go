@@ -1,6 +1,7 @@
 package database
 
 import (
+	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"database/sql"
 	"errors"
@@ -63,7 +64,10 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 			dbfilepath, err)
 		logger.Debugf("Closing '%s' and removing the file", dbfilepath)
 		// close connection to the db
-		CloseDb(db, dbfilepath)
+		err = db.Close()
+		if err != nil {
+			logger.Errorf("Could not close database '%s' due to error: %s", dbfilepath, err)
+		}
 		fExists, _ := DbFileExists(dbfilepath) // #nosec
 		// remove the incorrectly initialised db file
 		if fExists {
@@ -75,25 +79,32 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 		}
 		return err
 	} else {
-		// close connection to the db
-		CloseDb(db, dbfilepath)
+		err = db.Close()
+		if err != nil {
+			logger.Errorf("Could not close database '%s' due to error: %s", dbfilepath, err)
+		}
 	}
 
 	return nil
 }
 
 // opens a connection to the DB and if successful, it returns the *sql.DB
-// params: $datadir is the folder containing the database file; $backupName is the name of the backup (we use if to
-// figure the sql file path); if $fileExists == false then don't attempt to "ping" the DB as it will error
-func OpenDb(datadir string, backupName string, fileExists bool) (*sql.DB, error) {
+// params: $datadir is the folder containing the database file; $backupName is the name of the backup (we use it to
+// figure the sql file path) and this name must match the name of the backup job as defined in the configuration file;
+// if $fileExists == false then don't attempt to "ping" the DB as it will error;
+// $backupJobsState is used to signal that a given database is opened (so it should not be attempted to copy the DB)
+func OpenDb(datadir string, backupName string, fileExists bool, backupJobsState *shared.BackupJobsState) (*sql.DB, error) {
+	backupJobsState.MarkOpenDb(backupName)
 	dbfilepath, err := GetDbFilePath(datadir, backupName)
 	if err != nil {
+		backupJobsState.UnMarkOpenDb(backupName)
 		return &sql.DB{}, err
 	}
 
 	logger.Debugf("Opening database file '%s'", dbfilepath)
 	db, err := sql.Open("sqlite3", dbfilepath+"?"+DbOptions)
 	if err != nil {
+		backupJobsState.UnMarkOpenDb(backupName)
 		logger.Errorf("Could not open database %s due to error: %s", dbfilepath, err)
 		return &sql.DB{}, ErrCouldNotOpenDB
 	}
@@ -113,6 +124,7 @@ func OpenDb(datadir string, backupName string, fileExists bool) (*sql.DB, error)
 	if fileExists {
 		err = db.Ping()
 		if err != nil {
+			backupJobsState.UnMarkOpenDb(backupName)
 			logger.Errorf("Connection test to the database %s returned error: %s", dbfilepath, err)
 			return &sql.DB{}, ErrCouldNotOpenDB
 		}
@@ -121,11 +133,16 @@ func OpenDb(datadir string, backupName string, fileExists bool) (*sql.DB, error)
 	return db, nil
 }
 
-// close a database; the "name" parameter will generally be the name of the backup job or the full path to the DB file
-func CloseDb(db *sql.DB, name string) {
+// close a database; the $name parameter MUST be the name of the backup job as defined in the configuration file
+// $backupJobsState is used to signal that a given database is opened (so it should not be attempted to copy the DB)
+func CloseDb(db *sql.DB, BackupJobName string, backupJobsState *shared.BackupJobsState) {
 	err := db.Close()
+	// purposely remove the lock (the mark that the DB was open). This may lead to issues but otherwise any attempt to make a copy of the DB would hang the whole program
+	backupJobsState.UnMarkOpenDb(BackupJobName)
 	if err != nil {
-		logger.Errorf("While trying to close database '%s' encountered error: '%s'", name, err)
+		logger.Errorf("While trying to close database '%s' encountered error: '%s'. This may lead to any "+
+			"attempts to copy the database (in order to back it up to the remote object store) to produce corrupted DB "+
+			"copies (the original should remain unaffected).", BackupJobName, err)
 	}
 }
 
@@ -156,10 +173,12 @@ func DbFileExists(dbfilepath string) (bool, error) {
 }
 
 // if a db does not exist then it attempts to create one
-// Parameters: "datadir" value from the config file; "backupName" is the name of the backup job; "configInit" if this
-// is called during program startup/config reload and it encounters an error then log a specific error message which is
-// different if this function is called during backup start
-func ValidateAndCreate(datadir string, backupName string, configInit bool) error {
+// Parameters: "datadir" value from the config file; $backupName is the name of the backup (we use it to
+// figure the sql file path) and this name must match the name of the backup job as defined in the configuration file;
+// "configInit" if this is called during program startup/config reload and it encounters an error then log a specific
+// error message which is different if this function is called during backup start
+// $backupJobsState is used to signal that a given database is opened (so it should not be attempted to copy the DB)
+func ValidateAndCreate(datadir string, backupName string, configInit bool, backupJobsState *shared.BackupJobsState) error {
 	// figure out name and absolute path to db file
 	dbfilepath, err := GetDbFilePath(datadir, backupName)
 	if err != nil {
@@ -183,7 +202,7 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 				"established. Creating the database now in order to proceed with the backup.",
 				dbfilepath, backupName)
 		}
-		db, err := OpenDb(datadir, backupName, false)
+		db, err := OpenDb(datadir, backupName, false, backupJobsState)
 		if err != nil {
 			return ErrCouldNotCreateDB
 		}
@@ -200,15 +219,17 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool) error
 }
 
 // Take care of starting the db connection;
-// Parameters: "datadir" value from the config file and the name of the backup job
-func Start(datadir string, backupName string) (*sql.DB, error) {
+// Parameters: $datadir value from the config file; $backupName is the name of the backup (we use it to
+// figure the sql file path) and this name must match the name of the backup job as defined in the configuration file;
+// $backupJobsState is used to signal that a given database is opened (so it should not be attempted to copy the DB)
+func Start(datadir string, backupName string, backupJobsState *shared.BackupJobsState) (*sql.DB, error) {
 	// check if DB exists, if not then create it
-	err := ValidateAndCreate(datadir, backupName, false)
+	err := ValidateAndCreate(datadir, backupName, false, backupJobsState)
 	if err != nil {
 		return &sql.DB{}, err
 	}
 
-	db, err := OpenDb(datadir, backupName, true)
+	db, err := OpenDb(datadir, backupName, true, backupJobsState)
 	if err != nil {
 		return &sql.DB{}, err
 	}
