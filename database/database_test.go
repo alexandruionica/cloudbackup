@@ -1,6 +1,7 @@
 package database
 
 import (
+	"cloudbackup/shared"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"os"
@@ -87,13 +88,14 @@ func TestDbFileExists2(t *testing.T) {
 func TestOpenDb1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
+	backupJobsState := shared.NewJobsState()
 	defer func() {
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	_, err := OpenDb(dbDataDirPath+string(filepath.Separator)+"folder_which_does_not_exist", backupName, true)
+	_, err := OpenDb(dbDataDirPath+string(filepath.Separator)+"folder_which_does_not_exist", backupName, true, backupJobsState)
 	if err == nil {
 		t.Fatal("OpenDb() was supposed to return an error but didn't")
 	}
@@ -103,9 +105,10 @@ func TestOpenDb1(t *testing.T) {
 func TestCreateDb1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
-	db, err := OpenDb(dbDataDirPath, backupName, false)
+	backupJobsState := shared.NewJobsState()
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
 	defer func() {
-		CloseDb(db, backupName)
+		CloseDb(db, backupName, backupJobsState)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
@@ -130,9 +133,10 @@ func TestCreateDb2_1(t *testing.T) {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
+	backupJobsState := shared.NewJobsState()
 	db, err := OpenDb(dbDataDirPath+string(filepath.Separator)+"folder_which_does_not_exist", backupName,
-		false)
-	defer CloseDb(db, backupName)
+		false, backupJobsState)
+	defer CloseDb(db, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -157,8 +161,9 @@ func TestCreateDb3(t *testing.T) {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	db, err := OpenDb(dbDataDirPath, backupName, false)
-	defer CloseDb(db, backupName)
+	backupJobsState := shared.NewJobsState()
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
+	defer CloseDb(db, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -167,8 +172,8 @@ func TestCreateDb3(t *testing.T) {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
 
-	db2, err := OpenDb(dbDataDirPath, backupName, true)
-	defer CloseDb(db2, backupName)
+	db2, err := OpenDb(dbDataDirPath, backupName, true, backupJobsState)
+	defer CloseDb(db2, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -192,7 +197,8 @@ func TestValidateAndCreate1(t *testing.T) {
 		}
 	}()
 
-	err := ValidateAndCreate(dbDataDirPath, backupName, configInit)
+	backupJobsState := shared.NewJobsState()
+	err := ValidateAndCreate(dbDataDirPath, backupName, configInit, backupJobsState)
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
@@ -210,7 +216,8 @@ func TestValidateAndCreate2(t *testing.T) {
 		}
 	}()
 
-	err := ValidateAndCreate(dbDataDirPath, backupName, configInit)
+	backupJobsState := shared.NewJobsState()
+	err := ValidateAndCreate(dbDataDirPath, backupName, configInit, backupJobsState)
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
@@ -228,8 +235,9 @@ func TestValidateAndCreate3(t *testing.T) {
 		}
 	}()
 
-	db, err := OpenDb(dbDataDirPath, backupName, false)
-	defer CloseDb(db, backupName)
+	backupJobsState := shared.NewJobsState()
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
+	defer CloseDb(db, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -238,7 +246,7 @@ func TestValidateAndCreate3(t *testing.T) {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
 
-	err = ValidateAndCreate(dbDataDirPath, backupName, configInit)
+	err = ValidateAndCreate(dbDataDirPath, backupName, configInit, backupJobsState)
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
@@ -256,8 +264,9 @@ func TestValidateAndCreate4(t *testing.T) {
 		}
 	}()
 
-	db, err := OpenDb(dbDataDirPath, backupName, false)
-	defer CloseDb(db, backupName)
+	backupJobsState := shared.NewJobsState()
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
+	defer CloseDb(db, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -266,7 +275,7 @@ func TestValidateAndCreate4(t *testing.T) {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
 
-	err = ValidateAndCreate(dbDataDirPath, backupName, configInit)
+	err = ValidateAndCreate(dbDataDirPath, backupName, configInit, backupJobsState)
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
@@ -283,8 +292,9 @@ func TestStart1(t *testing.T) {
 		}
 	}()
 
-	db, err := Start(dbDataDirPath, backupName)
-	defer CloseDb(db, backupName)
+	backupJobsState := shared.NewJobsState()
+	db, err := Start(dbDataDirPath, backupName, backupJobsState)
+	defer CloseDb(db, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
@@ -301,8 +311,9 @@ func TestStart2(t *testing.T) {
 		}
 	}()
 
-	db, err := OpenDb(dbDataDirPath, backupName, false)
-	defer CloseDb(db, backupName)
+	backupJobsState := shared.NewJobsState()
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
+	defer CloseDb(db, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -310,10 +321,10 @@ func TestStart2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
-	CloseDb(db, backupName)
+	CloseDb(db, backupName, backupJobsState)
 
-	db2, err := Start(dbDataDirPath, backupName)
-	defer CloseDb(db2, backupName)
+	db2, err := Start(dbDataDirPath, backupName, backupJobsState)
+	defer CloseDb(db2, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}

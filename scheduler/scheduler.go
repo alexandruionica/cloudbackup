@@ -17,29 +17,14 @@ import (
 	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
 	"strings"
-	"sync"
 	"time"
 )
 
 const loggingContext = "scheduler"
 
-// 1000 seems to be a good value to allow for fluctuations
-const watcherChanSize = 1000
-
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
-
-// initialise struct which holds jobs state
-func NewJobsState() *shared.BackupJobsState {
-	msgChan := make(chan shared.WatchMessage, watcherChanSize)
-	return &shared.BackupJobsState{
-		Lock:             &sync.RWMutex{},
-		DbOpenAllowed:    make(map[string]*sync.RWMutex),
-		WatchMsgReceiver: msgChan,
-		Watcher:          watcher.New(msgChan),
-	}
-}
 
 func Start(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
 	backupJobsState *shared.BackupJobsState, configuration *shared.RuntimeConfig) {
@@ -413,7 +398,7 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig shared.ConfigB
 	_ = dbops.UpdateJobDetails(dbData.Db, jobUuid, name, "backup", jobEndTime, jobStateCopy.State, jobReport) // #nosec
 
 	// close SQL connection and opened statements
-	dbops.CloseStatementsAndDb(dbData)
+	dbops.CloseStatementsAndDb(dbData, backupJobsState)
 
 }
 
@@ -526,14 +511,14 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 		// check db
 		foundUuidInDB, err := dbops.CheckJobUuidExists(db, jobUuid)
 		if err != nil {
-			database.CloseDb(db, Name)
+			database.CloseDb(db, Name, backupJobsState)
 			return "", err
 		}
 		if foundUuidInDB {
-			database.CloseDb(db, Name)
+			database.CloseDb(db, Name, backupJobsState)
 			continue
 		} else {
-			database.CloseDb(db, Name)
+			database.CloseDb(db, Name, backupJobsState)
 			return jobUuid, nil
 		}
 	}

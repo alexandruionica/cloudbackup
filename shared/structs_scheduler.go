@@ -19,6 +19,9 @@ const ErrUnknownJobType = "unknown job type"
 
 const loggingContext = "shared"
 
+// 1000 seems to be a good value to allow for fluctuations
+const watcherChanSize = 1000
+
 //var logger = log.WithFields(log.Fields{
 //	"context": loggingContext,
 //})
@@ -785,4 +788,15 @@ func (jobs *BackupJobsState) UnMarkOngoingDbBackup(BackupJobName string) {
 	jobs.Lock.RUnlock() // remove readlock ASAP as this struct is used and locked in lots of places
 	val.Unlock()
 	logger.Debugf("Removed lock used to copy database belonging to backup job '%s'", BackupJobName)
+}
+
+// initialise struct which holds jobs state
+func NewJobsState() *BackupJobsState {
+	msgChan := make(chan WatchMessage, watcherChanSize)
+	return &BackupJobsState{
+		Lock:             &sync.RWMutex{},
+		DbOpenAllowed:    make(map[string]*sync.RWMutex),
+		WatchMsgReceiver: msgChan,
+		Watcher:          NewWatcherState(msgChan),
+	}
 }

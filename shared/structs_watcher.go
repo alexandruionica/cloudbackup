@@ -171,3 +171,15 @@ func (multiplexer *WatchMultiplexer) RemoveConsumer(ClientIdentifier string, Cli
 		"likely a bug", ClientIdentifier, ClientUuid)
 
 }
+
+// return an initialised object
+func NewWatcherState(msgReceiver <-chan WatchMessage) *WatchMultiplexer {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &WatchMultiplexer{
+		Mutex:          &sync.RWMutex{},
+		Ctx:            ctx,
+		Cancel:         cancel,
+		Running:        false,
+		WatchMsgSender: msgReceiver,
+	}
+}
