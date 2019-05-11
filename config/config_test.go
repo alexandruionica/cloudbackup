@@ -197,13 +197,13 @@ func TestValidate1(t *testing.T) {
 //		t.Fatalf("Could not load fake config file. Error was: %s", err)
 //	}
 //
-//	result.Config.Backup[0].VersionsMaxAge = "10w"
+//	result.Config.ConfigBackup[0].VersionsMaxAge = "10w"
 //	err = Validate(result.Config, false)
 //	if err == nil {
 //		t.Fatal("Config file loaded successfully but should have failed due to versions_max_age being set and" +
 //			" versioning being disabled ")
 //	}
-//	err = ValidateBackup(result.Config.Backup, true)
+//	err = ValidateBackup(result.Config.ConfigBackup, true)
 //	if err == nil {
 //		t.Fatal("Config struct validated but should have failed due to versions_max_age being set and" +
 //			" versioning being disabled ")

@@ -26,7 +26,7 @@ var logger = log.WithFields(log.Fields{
 })
 
 // returns how many notifications we have defined in the config file
-func GetNumNotificators(notificationDefs config.Notification) int {
+func GetNumNotificators(notificationDefs config.ConfigNotification) int {
 	return len(notificationDefs.Email) + len(notificationDefs.Script)
 }
 

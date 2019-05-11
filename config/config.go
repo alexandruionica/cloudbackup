@@ -41,17 +41,17 @@ var logger = log.WithFields(log.Fields{
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating
-type Backup struct {
+type ConfigBackup struct {
 	Name       string   `required:"true" yaml:"name" json:"name"`
 	Paths      []string `required:"true" yaml:"paths" json:"paths"`
 	Exclusions []string `yaml:"exclusions" json:"exclusions"`
 	// TODO - fix library bug - https://github.com/jinzhu/configor/issues/34
-	Dereference bool     `default:"true" yaml:"dereference" json:"dereference"`
-	Checksum    bool     `default:"false" yaml:"checksum" json:"checksum"`
-	Target      []Target `required:"true" yaml:"target" json:"target"`
-	Schedule    []string `yaml:"schedule" json:"schedule"`
-	Encrypt     bool     `default:"false" yaml:"encrypt" json:"encrypt"`
-	EncryptPass string   `yaml:"encrypt_pass" json:"encrypt_pass"`
+	Dereference bool                 `default:"true" yaml:"dereference" json:"dereference"`
+	Checksum    bool                 `default:"false" yaml:"checksum" json:"checksum"`
+	Target      []ConfigBackupTarget `required:"true" yaml:"target" json:"target"`
+	Schedule    []string             `yaml:"schedule" json:"schedule"`
+	Encrypt     bool                 `default:"false" yaml:"encrypt" json:"encrypt"`
+	EncryptPass string               `yaml:"encrypt_pass" json:"encrypt_pass"`
 	// 0 means unlimited number of versions
 	VersionsMaxNum uint `default:"0" yaml:"versions_max_num" json:"versions_max_num"`
 	// 0 means unlimited number of age
@@ -66,7 +66,7 @@ type Backup struct {
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating
-type Target struct {
+type ConfigBackupTarget struct {
 	Name         string `required:"true" yaml:"name" json:"name"`
 	Type         string `required:"true" yaml:"type" json:"type"`
 	RateLimit    string `default:"0" yaml:"ratelimit" json:"ratelimit"`
@@ -82,7 +82,7 @@ type Target struct {
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating
-type User struct {
+type ConfigUser struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Pass string `required:"true" yaml:"pass" json:"pass"`
 	// allowed options are read or write (write implies read)
@@ -90,12 +90,12 @@ type User struct {
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type Http struct {
+type ConfigHttp struct {
 	BindAddress string `default:"127.0.0.1:8080" yaml:"bind_address" json:"bind_address"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type Https struct {
+type ConfigHttps struct {
 	Enabled     bool   `default:"false" yaml:"enabled" json:"enabled"`
 	BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address" json:"bind_address"`
 	SslCertPath string `yaml:"ssl_cert_path" json:"ssl_cert_path"`
@@ -103,7 +103,7 @@ type Https struct {
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type Notification struct {
+type ConfigNotification struct {
 	Email  []NotificationEmail  `yaml:"email,omitempty" json:"email,omitempty"`
 	Script []NotificationScript `yaml:"script,omitempty" json:"script,omitempty"`
 }
@@ -132,13 +132,13 @@ type NotificationScript struct {
 // this is the "master" struct which keeps all of the config settings (as specified in the config file + env vars)
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type CfgTemplate struct {
-	DataDir       string       `required:"true" yaml:"data_dir" json:"data_dir"`
-	HtmlDir       string       `default:"webstatic" yaml:"html_dir" json:"html_dir"`
-	User          []User       `yaml:"user" json:"user"`
-	Http          Http         `yaml:"http" json:"http"`
-	Https         Https        `yaml:"https" json:"https"`
-	Backup        []Backup     `yaml:"backup" json:"backup"`
-	Notifications Notification `yaml:"notification,omitempty" json:"notification,omitempty"`
+	DataDir       string             `required:"true" yaml:"data_dir" json:"data_dir"`
+	HtmlDir       string             `default:"webstatic" yaml:"html_dir" json:"html_dir"`
+	User          []ConfigUser       `yaml:"user" json:"user"`
+	Http          ConfigHttp         `yaml:"http" json:"http"`
+	Https         ConfigHttps        `yaml:"https" json:"https"`
+	Backup        []ConfigBackup     `yaml:"backup" json:"backup"`
+	Notifications ConfigNotification `yaml:"notification,omitempty" json:"notification,omitempty"`
 	// the mutex is used for locking mainly only when we deal with copies of this struct (which may not have the parent
 	// RuntimeConfig struct containing this struct)
 	Mutex *sync.RWMutex `yaml:"-" json:"-"`
@@ -168,9 +168,9 @@ func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
 	cfgCopy := cfg.Config
 
 	// we need to manually copy slices because by default a pointer to the slice is copied
-	cfgCopy.User = make([]User, len(cfg.Config.User))
+	cfgCopy.User = make([]ConfigUser, len(cfg.Config.User))
 	copy(cfgCopy.User, cfg.Config.User)
-	cfgCopy.Backup = make([]Backup, len(cfg.Config.Backup))
+	cfgCopy.Backup = make([]ConfigBackup, len(cfg.Config.Backup))
 	copy(cfgCopy.Backup, cfg.Config.Backup)
 	// deepcopy the Notification.Email
 	cfgCopy.Notifications.Email = make([]NotificationEmail, len(cfg.Config.Notifications.Email))
@@ -178,7 +178,7 @@ func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
 	// deepcopy the Notification.Script
 	cfgCopy.Notifications.Script = make([]NotificationScript, len(cfg.Config.Notifications.Script))
 	copy(cfgCopy.Notifications.Script, cfg.Config.Notifications.Script)
-	// deepcopy various slices part of the Backup{} struct
+	// deepcopy various slices part of the ConfigBackup{} struct
 	for i := 0; i < len(cfg.Config.Backup); i++ {
 		cfgCopy.Backup[i] = CopyBackupStruct(cfg.Config.Backup[i])
 	}
@@ -293,7 +293,7 @@ func Validate(config CfgTemplate, hiddenPass bool) error {
 }
 
 // validate "Backup" section of the config
-func ValidateBackup(backups []Backup, logError bool) error {
+func ValidateBackup(backups []ConfigBackup, logError bool) error {
 	names := make([]string, 0)
 	i := 0
 	for _, backup := range backups {
@@ -427,7 +427,7 @@ func ValidateHttps(config CfgTemplate, logError bool) error {
 }
 
 // validate "Backup/Target" section of the config
-func ValidateBackupTarget(targets []Target, logError bool, BackupName string) error {
+func ValidateBackupTarget(targets []ConfigBackupTarget, logError bool, BackupName string) error {
 	names := make([]string, 0)
 	for _, target := range targets {
 		// have this as the first check as subsequent ones use the Target name in error output in order to indicate
@@ -494,7 +494,7 @@ func ValidateBackupTarget(targets []Target, logError bool, BackupName string) er
 }
 
 // check Notification.Email and Notification.Script config sections
-func ValidateNotification(notifications Notification, logError bool) error {
+func ValidateNotification(notifications ConfigNotification, logError bool) error {
 	err := ValidateNotificationCommand(notifications.Script, logError)
 	if err != nil {
 		return err
@@ -725,7 +725,7 @@ func SanitizeCfgTemplate(config CfgTemplate) CfgTemplate {
 			config.User[i].Pass = SecretReplace
 		}
 	}
-	// overwrite Backup.EncryptPass and Backup.Target.Pass
+	// overwrite ConfigBackup.EncryptPass and ConfigBackup.Target.Pass
 	for i := 0; i < len(config.Backup); i++ {
 		if config.Backup[i].EncryptPass != "" {
 			config.Backup[i].EncryptPass = SecretReplace
@@ -787,7 +787,7 @@ func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) e
 // can't be extracted
 //
 // a slice is a kind of pointer hence we don't pass in "newConfigUser" as a pointer
-func CopyPasswordsFromOldConfigUser(newConfigUser []User, oldConfigUser []User) error {
+func CopyPasswordsFromOldConfigUser(newConfigUser []ConfigUser, oldConfigUser []ConfigUser) error {
 	// compare User.Password entries
 	for i := 0; i < len(newConfigUser); i++ {
 		if CheckStringIsOnly(newConfigUser[i].Pass, "*") {
@@ -851,10 +851,10 @@ func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []Notif
 // can't be extracted
 //
 // a slice is a kind of pointer hence we don't pass in "newConfigBackup" as a pointer
-func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup []Backup) error {
-	// compare Backup.EncryptPass and Backup.Target.Pass entries
+func CopyPasswordsFromOldConfigBackup(newConfigBackup []ConfigBackup, oldConfigBackup []ConfigBackup) error {
+	// compare ConfigBackup.EncryptPass and ConfigBackup.Target.Pass entries
 	for i := 0; i < len(newConfigBackup); i++ {
-		// compare Backup.EncryptPass
+		// compare ConfigBackup.EncryptPass
 		if CheckStringIsOnly(newConfigBackup[i].EncryptPass, "*") {
 			foundMatch := false
 			// search for a match in the old(active) config
@@ -879,7 +879,7 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []Backup, oldConfigBackup 
 			}
 		}
 
-		// compare Backup.Target.Pass entries
+		// compare ConfigBackup.Target.Pass entries
 		for j := 0; j < len(newConfigBackup[i].Target); j++ {
 			if CheckStringIsOnly(newConfigBackup[i].Target[j].Pass, "*") {
 				foundMatch := false
@@ -934,8 +934,8 @@ func isLocalhost(name string) bool {
 	return name == "localhost" || name == "127.0.0.1" || name == "::1"
 }
 
-// makes a deep copy of a Backup struct
-func CopyBackupStruct(source Backup) Backup {
+// makes a deep copy of a ConfigBackup struct
+func CopyBackupStruct(source ConfigBackup) ConfigBackup {
 	result := source
 	result.Paths = make([]string, len(source.Paths))
 	copy(result.Paths, source.Paths)
@@ -946,7 +946,7 @@ func CopyBackupStruct(source Backup) Backup {
 	result.Schedule = make([]string, len(source.Schedule))
 	copy(result.Schedule, source.Schedule)
 
-	result.Target = make([]Target, len(source.Target))
+	result.Target = make([]ConfigBackupTarget, len(source.Target))
 	copy(result.Target, source.Target)
 
 	return result

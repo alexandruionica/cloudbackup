@@ -166,7 +166,7 @@ func TestBasicAuth5(t *testing.T) {
 	}
 
 	// ensure we don't have any user + pass defined
-	configuration.Config.User = make([]config.User, 0)
+	configuration.Config.User = make([]config.ConfigUser, 0)
 
 	fakeSrvData := SrvData{httpsEnabled: false,
 		Mutex:     &sync.RWMutex{},
