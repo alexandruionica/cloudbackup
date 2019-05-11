@@ -104,12 +104,12 @@ type ConfigHttps struct {
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 type ConfigNotification struct {
-	Email  []NotificationEmail  `yaml:"email,omitempty" json:"email,omitempty"`
-	Script []NotificationScript `yaml:"script,omitempty" json:"script,omitempty"`
+	Email  []ConfigNotificationEmail  `yaml:"email,omitempty" json:"email,omitempty"`
+	Script []ConfigNotificationScript `yaml:"script,omitempty" json:"script,omitempty"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type NotificationEmail struct {
+type ConfigNotificationEmail struct {
 	Server string   `required:"true" yaml:"server" json:"server"`
 	User   string   `yaml:"user,omitempty" json:"user,omitempty"`
 	Pass   string   `yaml:"pass,omitempty" json:"pass,omitempty"`
@@ -123,7 +123,7 @@ type NotificationEmail struct {
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // IF ANY NEW notification mechanism is added here then you MUST updated the function notifications.GetNumNotificators()
-type NotificationScript struct {
+type ConfigNotificationScript struct {
 	Path string `required:"true" yaml:"path" json:"path"`
 	// type is one of: started, finished, failed, cancelled, crashed
 	Type []string `yaml:"type" json:"type" default:"[failed,crashed]"`
@@ -173,10 +173,10 @@ func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
 	cfgCopy.Backup = make([]ConfigBackup, len(cfg.Config.Backup))
 	copy(cfgCopy.Backup, cfg.Config.Backup)
 	// deepcopy the Notification.Email
-	cfgCopy.Notifications.Email = make([]NotificationEmail, len(cfg.Config.Notifications.Email))
+	cfgCopy.Notifications.Email = make([]ConfigNotificationEmail, len(cfg.Config.Notifications.Email))
 	copy(cfgCopy.Notifications.Email, cfg.Config.Notifications.Email)
 	// deepcopy the Notification.Script
-	cfgCopy.Notifications.Script = make([]NotificationScript, len(cfg.Config.Notifications.Script))
+	cfgCopy.Notifications.Script = make([]ConfigNotificationScript, len(cfg.Config.Notifications.Script))
 	copy(cfgCopy.Notifications.Script, cfg.Config.Notifications.Script)
 	// deepcopy various slices part of the ConfigBackup{} struct
 	for i := 0; i < len(cfg.Config.Backup); i++ {
@@ -509,7 +509,7 @@ func ValidateNotification(notifications ConfigNotification, logError bool) error
 	return nil
 }
 
-func ValidateNotificationCommand(commands []NotificationScript, logError bool) error {
+func ValidateNotificationCommand(commands []ConfigNotificationScript, logError bool) error {
 	for _, notificationCommand := range commands {
 		// check supplied file path at least exists (if it's executable is a different story which also may be
 		// platform dependent
@@ -556,7 +556,7 @@ func ValidateNotificationCommand(commands []NotificationScript, logError bool) e
 	return nil
 }
 
-func ValidateNotificationEmail(emails []NotificationEmail, logError bool) error {
+func ValidateNotificationEmail(emails []ConfigNotificationEmail, logError bool) error {
 	for _, notificationEmail := range emails {
 		// check that we're using authentication if not connecting to the localhost SMTP server
 		if notificationEmail.User == "" && notificationEmail.Pass == "" && !isLocalhost(notificationEmail.Server) {
@@ -817,7 +817,7 @@ func CopyPasswordsFromOldConfigUser(newConfigUser []ConfigUser, oldConfigUser []
 // can't be extracted
 //
 // a slice is a kind of pointer hence we don't pass in "newConfigUser" as a pointer
-func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []NotificationEmail, oldNotificationsEmail []NotificationEmail) error {
+func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []ConfigNotificationEmail, oldNotificationsEmail []ConfigNotificationEmail) error {
 	// compare Notification.Email.Pass entries
 	for i := 0; i < len(newNotificationsEmail); i++ {
 		if CheckStringIsOnly(newNotificationsEmail[i].Pass, "*") {
