@@ -69,7 +69,7 @@ func Execute(config config.CfgTemplate, JobId string, JobType string, JobState s
 // Sends one email ...
 // see description of Execute() for most of parameters except $emailEntry which represents email configuration as
 // described in the configuration file
-func sendEmail(emailEntry config.NotificationEmail, JobId string, JobType string, JobState string, JobName string,
+func sendEmail(emailEntry config.ConfigNotificationEmail, JobId string, JobType string, JobState string, JobName string,
 	JobReport string, JobError string) error {
 	logger.Debug("Sending email notification")
 
@@ -146,7 +146,7 @@ func sendEmail(emailEntry config.NotificationEmail, JobId string, JobType string
 }
 
 // runs a Notification script
-func runScript(scriptEntry config.NotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
+func runScript(scriptEntry config.ConfigNotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
 	logger.Infof("Running notification script '%s'", scriptEntry.Path)
 	reportFile, err := utils.SetupTmpFileWithContent([]byte(JobReport), "cloudbackup_job_report_notification_")
 	if err != nil {
