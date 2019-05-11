@@ -4,7 +4,6 @@ import (
 	"cloudbackup/shared"
 	"context"
 	log "github.com/sirupsen/logrus"
-	"sync"
 )
 
 const loggingContext = "watcher"
@@ -12,18 +11,6 @@ const loggingContext = "watcher"
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
-
-// return an initialised object
-func New(msgReceiver <-chan shared.WatchMessage) *shared.WatchMultiplexer {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &shared.WatchMultiplexer{
-		Mutex:          &sync.RWMutex{},
-		Ctx:            ctx,
-		Cancel:         cancel,
-		Running:        false,
-		WatchMsgSender: msgReceiver,
-	}
-}
 
 // this should be started as go routine by the caller
 func Start(multiplexer *shared.WatchMultiplexer) {

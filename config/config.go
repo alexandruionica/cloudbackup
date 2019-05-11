@@ -553,10 +553,10 @@ func ValidateUser(config shared.CfgTemplate, logError bool, hiddenPass bool) err
 // params: config struct to validate; because NO LOCKING IS USED the config struct should not be in use by anything else
 // this function is not called from Validate() as it actually changes things on disk (aka creates DBs) so we want it
 // called only after Validate() and only in specific cases
-func ValidateAndCreateDB(config shared.CfgTemplate) error {
+func ValidateAndCreateDB(config shared.CfgTemplate, backupJobsState *shared.BackupJobsState) error {
 	if len(config.User) > 0 {
 		for _, backup := range config.Backup {
-			err := database.ValidateAndCreate(config.DataDir, backup.Name, true)
+			err := database.ValidateAndCreate(config.DataDir, backup.Name, true, backupJobsState)
 			if err != nil {
 				return err
 			}

@@ -15,12 +15,12 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-func CloseStatementsAndDb(dbData shared.DbData) {
+func CloseStatementsAndDb(dbData shared.DbData, backupJobsState *shared.BackupJobsState) {
 	if dbData.Connected {
 		// close common used prepare statements
 		ClosePreparedStatements(dbData.PreparedStatements)
 		// close db connection
-		database.CloseDb(dbData.Db, dbData.Name)
+		database.CloseDb(dbData.Db, dbData.Name, backupJobsState)
 	}
 }
 
@@ -398,7 +398,7 @@ func PrepareDbForBackup(BackupJobName string, jobUuid string, serverConfigCopy s
 	var err error
 	dbData := shared.DbData{Connected: false, Name: BackupJobName}
 	// get DB connection pointer
-	dbData.Db, err = database.Start(serverConfigCopy.DataDir, BackupJobName)
+	dbData.Db, err = database.Start(serverConfigCopy.DataDir, BackupJobName, backupJobsState)
 	// the backup can not run as we can't initialise/connect to the database
 	if err != nil {
 		return dbData, err

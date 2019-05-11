@@ -369,10 +369,7 @@ func TestUpdateCounters1(t *testing.T) {
 	}
 	backupConfig := result.Config.Backup[0]
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
 	u, err := uuid.NewV4()
 	if err != nil {
@@ -465,10 +462,7 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -488,7 +482,7 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -598,7 +592,7 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// change Size so we have something to update in the DB and then validate the update worked
@@ -636,7 +630,7 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 	// try to change for an inexisting path, should return an error
 	newDbRecord.Path = "a_path_which_does_not_exist"
@@ -671,10 +665,7 @@ func TestGetRemoteFileVersion1(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -695,7 +686,7 @@ func TestGetRemoteFileVersion1(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	path := "a_file_which_does_not_exist"
@@ -742,10 +733,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -766,7 +754,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -972,10 +960,7 @@ func TestNeedsUpload1(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -995,7 +980,7 @@ func TestNeedsUpload1(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1075,10 +1060,7 @@ func TestNeedsUpload2(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1098,7 +1080,7 @@ func TestNeedsUpload2(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1178,10 +1160,7 @@ func TestNeedsUpload3(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1201,7 +1180,7 @@ func TestNeedsUpload3(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1286,10 +1265,7 @@ func TestNeedsUpload4(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1309,7 +1285,7 @@ func TestNeedsUpload4(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1391,10 +1367,7 @@ func TestNeedsUpload5(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1414,7 +1387,7 @@ func TestNeedsUpload5(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1497,10 +1470,7 @@ func TestNeedsUpload6(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1520,7 +1490,7 @@ func TestNeedsUpload6(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1603,10 +1573,7 @@ func TestNeedsUpload7(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1626,7 +1593,7 @@ func TestNeedsUpload7(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1709,10 +1676,7 @@ func TestNeedsUpload8(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1732,7 +1696,7 @@ func TestNeedsUpload8(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1815,10 +1779,7 @@ func TestNeedsUpload9(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1838,7 +1799,7 @@ func TestNeedsUpload9(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1921,10 +1882,7 @@ func TestNeedsUpload10(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -1944,7 +1902,7 @@ func TestNeedsUpload10(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2017,10 +1975,7 @@ func TestNeedsUpload11(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2040,7 +1995,7 @@ func TestNeedsUpload11(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2113,10 +2068,7 @@ func TestNeedsUpload12(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2136,7 +2088,7 @@ func TestNeedsUpload12(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2211,10 +2163,7 @@ func TestNeedsUpload13(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2234,7 +2183,7 @@ func TestNeedsUpload13(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2309,10 +2258,7 @@ func TestNeedsUpload14(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2332,7 +2278,7 @@ func TestNeedsUpload14(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2408,10 +2354,7 @@ func TestNeedsUpload15(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2431,7 +2374,7 @@ func TestNeedsUpload15(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2507,10 +2450,7 @@ func TestNeedsUpload16(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2530,7 +2470,7 @@ func TestNeedsUpload16(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2606,10 +2546,7 @@ func TestNeedsUpload17(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2629,7 +2566,7 @@ func TestNeedsUpload17(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2712,10 +2649,7 @@ func TestNeedsUpload18(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2735,7 +2669,7 @@ func TestNeedsUpload18(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2811,10 +2745,7 @@ func TestNeedsUpload19(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2834,7 +2765,7 @@ func TestNeedsUpload19(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2923,10 +2854,7 @@ func TestNeedsUpload20(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -2946,7 +2874,7 @@ func TestNeedsUpload20(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3035,10 +2963,7 @@ func TestNeedsUpload21(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3058,7 +2983,7 @@ func TestNeedsUpload21(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3152,10 +3077,7 @@ func TestNeedsUpload22(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3175,7 +3097,7 @@ func TestNeedsUpload22(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3266,10 +3188,7 @@ func TestNeedsUpload23(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3289,7 +3208,7 @@ func TestNeedsUpload23(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3372,10 +3291,7 @@ func TestNeedsUpload24(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3395,7 +3311,7 @@ func TestNeedsUpload24(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3487,10 +3403,7 @@ func TestNeedsUpload25(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3510,7 +3423,7 @@ func TestNeedsUpload25(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3602,10 +3515,7 @@ func TestNeedsUpload26(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3625,7 +3535,7 @@ func TestNeedsUpload26(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3708,10 +3618,7 @@ func TestNeedsUpload27(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3731,7 +3638,7 @@ func TestNeedsUpload27(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3822,10 +3729,7 @@ func TestUploadObject(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3912,10 +3816,7 @@ func TestUploadAndUpdateDB1(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -3943,7 +3844,7 @@ func TestUploadAndUpdateDB1(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4005,10 +3906,7 @@ func TestUploadAndUpdateDB2(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4036,7 +3934,7 @@ func TestUploadAndUpdateDB2(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4106,10 +4004,7 @@ func TestUploadAndUpdateDB3(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4137,7 +4032,7 @@ func TestUploadAndUpdateDB3(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4234,10 +4129,7 @@ func TestUploadAndUpdateDB4(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4263,7 +4155,7 @@ func TestUploadAndUpdateDB4(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4328,10 +4220,7 @@ func TestUploadAndUpdateDB5(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4362,7 +4251,7 @@ func TestUploadAndUpdateDB5(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4426,10 +4315,7 @@ func TestUploadAndUpdateDB6(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4457,7 +4343,7 @@ func TestUploadAndUpdateDB6(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4551,10 +4437,7 @@ func TestMarkDeleted1(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4582,7 +4465,7 @@ func TestMarkDeleted1(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4677,10 +4560,7 @@ func TestMarkDeleted2(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4708,7 +4588,7 @@ func TestMarkDeleted2(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4819,10 +4699,7 @@ func TestMarkDeleted3(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4850,7 +4727,7 @@ func TestMarkDeleted3(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	stat, err := os.Stat(path)
@@ -4935,10 +4812,7 @@ func TestMarkDeleted4(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -4966,7 +4840,7 @@ func TestMarkDeleted4(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5061,10 +4935,7 @@ func TestMarkDeleted5(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -5092,7 +4963,7 @@ func TestMarkDeleted5(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5188,10 +5059,7 @@ func TestFindAndMarkDeleted1(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -5224,7 +5092,7 @@ func TestFindAndMarkDeleted1(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5292,7 +5160,7 @@ func TestFindAndMarkDeleted1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dbops.CloseStatementsAndDb(dbData)
+	dbops.CloseStatementsAndDb(dbData, backupJobsState)
 
 	u, err = uuid.NewV4()
 	if err != nil {
@@ -5363,10 +5231,7 @@ func TestBackupNewItem1(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -5399,7 +5264,7 @@ func TestBackupNewItem1(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5512,10 +5377,7 @@ func TestBackupNewItem2(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -5548,7 +5410,7 @@ func TestBackupNewItem2(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5618,10 +5480,7 @@ func TestDo(t *testing.T) {
 	jobId := u.String()
 
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := &shared.BackupJobsState{
-		WatchMsgReceiver: make(chan shared.WatchMessage, 1000),
-		Lock:             &sync.RWMutex{},
-	}
+	backupJobsState := shared.NewJobsState()
 
 	err = backupJobsState.MarkRunning(backupConfig.Name, "unittest_backup_", jobId)
 	if err != nil {
@@ -5654,7 +5513,7 @@ func TestDo(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData)
+		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table

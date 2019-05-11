@@ -87,7 +87,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 	}
 
 	// create DB files, if needed
-	err = config.ValidateAndCreateDB(NewConfig)
+	err = config.ValidateAndCreateDB(NewConfig, srvSrc.backupJobsState)
 	if err != nil {
 		msg := fmt.Sprintf("The new configuration triggered a create for the internal databases used to hold "+
 			"information about backed up files and during this create event the following error was encountered:"+

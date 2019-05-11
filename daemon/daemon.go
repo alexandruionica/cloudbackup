@@ -18,6 +18,10 @@ var logger = log.WithFields(log.Fields{
 })
 
 func Start(configFile string, debug bool) {
+	// backupJobState contains the state of all running backup/restore jobs plus it has some handy methods and also
+	// contains state about opened databases
+	backupJobsState := shared.NewJobsState()
+
 	globals.Stats.IncrementRoutines("other")
 	// we use this to notify the HTTP server that the global config has changed
 	sndCfgChangeToHttpd := make(chan bool, 50)
@@ -32,15 +36,13 @@ func Start(configFile string, debug bool) {
 		os.Exit(1)
 	}
 	// create DB files, if needed
-	err = config.ValidateAndCreateDB(configuration.Config)
+	err = config.ValidateAndCreateDB(configuration.Config, backupJobsState)
 	if err != nil {
 		os.Exit(1)
 	}
 	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
-	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := scheduler.NewJobsState()
 
 	var httpServer *httpd.SrvData
 	if configuration.GetCopyWithLock(loggingContext).Https.Enabled {

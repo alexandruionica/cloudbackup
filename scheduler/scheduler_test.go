@@ -20,7 +20,7 @@ func TestGenerateJobUuid1(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-	backupJobsState := NewJobsState()
+	backupJobsState := shared.NewJobsState()
 	serverConfigCopy := result.GetCopyWithLock(loggingContext + ".TestGenerateJobUuid1")
 
 	startJobUuid, err := GenerateJobUuid(result.Config.Backup[0].Name, backupJobsState, serverConfigCopy, "backup")
@@ -44,7 +44,7 @@ func TestGenerateJobUuid2(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-	backupJobsState := NewJobsState()
+	backupJobsState := shared.NewJobsState()
 	serverConfigCopy := result.GetCopyWithLock(loggingContext + ".TestGenerateJobUuid1")
 
 	// mark second job as running so we have backupJobsState.Running[] populated
@@ -79,7 +79,7 @@ func TestGenerateJobUuid3(t *testing.T) {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
 
-	backupJobsState := NewJobsState()
+	backupJobsState := shared.NewJobsState()
 	serverConfigCopy := result.GetCopyWithLock(loggingContext + ".TestGenerateJobUuid1")
 
 	startJobUuid, err := GenerateJobUuid(result.Config.Backup[0].Name, backupJobsState, serverConfigCopy,
