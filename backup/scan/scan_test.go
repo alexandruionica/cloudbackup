@@ -311,7 +311,11 @@ func TestPath1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
-	dbData := shared.DbData{Db: db, Connected: true}
+	dbData := shared.DbData{
+		Db:        db,
+		Connected: true,
+		Name:      backupConfig.Name,
+	}
 
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
@@ -417,7 +421,11 @@ func TestPath2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
-	dbData := shared.DbData{Db: db, Connected: true}
+	dbData := shared.DbData{
+		Db:        db,
+		Connected: true,
+		Name:      backupConfig.Name,
+	}
 
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
@@ -534,7 +542,11 @@ func TestPath3(t *testing.T) {
 		if err != nil {
 			t.Fatalf("database.OpenDb() returned error: '%s'", err)
 		}
-		dbData := shared.DbData{Db: db, Connected: true}
+		dbData := shared.DbData{
+			Db:        db,
+			Connected: true,
+			Name:      backupConfig.Name,
+		}
 
 		objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 		if err != nil {
@@ -645,7 +657,11 @@ func TestPath4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
-	dbData := shared.DbData{Db: db, Connected: true}
+	dbData := shared.DbData{
+		Db:        db,
+		Connected: true,
+		Name:      backupConfig.Name,
+	}
 
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
@@ -755,7 +771,11 @@ func TestPath5(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
-	dbData := shared.DbData{Db: db, Connected: true}
+	dbData := shared.DbData{
+		Db:        db,
+		Connected: true,
+		Name:      backupConfig.Name,
+	}
 
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
@@ -1538,7 +1558,11 @@ func TestPath12(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.OpenDb() returned error: '%s'", err)
 	}
-	dbData := shared.DbData{Db: db, Connected: true}
+	dbData := shared.DbData{
+		Db:        db,
+		Connected: true,
+		Name:      backupConfig.Name,
+	}
 
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
@@ -1654,6 +1678,7 @@ func TestPath13(t *testing.T) {
 		Db:                 db,
 		Connected:          true,
 		PreparedStatements: preparedStatements,
+		Name:               backupConfig.Name,
 	}
 	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
 	if err != nil {
@@ -1803,6 +1828,7 @@ func TestPath14(t *testing.T) {
 			Db:                 db,
 			Connected:          true,
 			PreparedStatements: preparedStatements,
+			Name:               backupConfig.Name,
 		}
 		err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
 		if err != nil {
@@ -1939,6 +1965,7 @@ func TestPath15(t *testing.T) {
 		Db:                 db,
 		Connected:          true,
 		PreparedStatements: preparedStatements,
+		Name:               backupConfig.Name,
 	}
 	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)
 	if err != nil {
@@ -2063,6 +2090,7 @@ func TestPath15(t *testing.T) {
 	dbData = shared.DbData{
 		Db:                 db,
 		Connected:          true,
+		Name:               backupConfig.Name,
 		PreparedStatements: preparedStatements,
 	}
 	err = dbops.EnsureTargetsInDb(dbData.Db, backupConfig)

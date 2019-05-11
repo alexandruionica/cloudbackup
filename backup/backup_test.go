@@ -479,11 +479,6 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 		// could not start a database transaction so we can't proceed to test
 		t.Fatalf("1. could not start a database transaction so we can't proceed to test; error was: %s", err)
 	}
-	// cleanup
-	defer func() {
-		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
-	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
 	fileContent := "just a string"
@@ -627,11 +622,6 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 		// could not start a database transaction so we can't proceed to test
 		t.Fatalf("3. could not start a database transaction so we can't proceed to test; error was: %s", err)
 	}
-	// cleanup
-	defer func() {
-		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
-	}()
 	// try to change for an inexisting path, should return an error
 	newDbRecord.Path = "a_path_which_does_not_exist"
 	err = updateDbEntryInFiles(dbData, dbtx, newDbRecord)

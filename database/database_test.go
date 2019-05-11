@@ -179,9 +179,13 @@ func TestCreateDb3(t *testing.T) {
 	}
 	err = CreateDb(db2, backupName)
 	expectedErr := "table files already exists"
-	if err.Error() != expectedErr {
-		t.Fatalf("2nd call to CreateDb() was expected to return error: '%s' but it returned: '%s'",
-			expectedErr, err)
+	if err == nil {
+		t.Fatal("Expected CreateDb() to return an error, but it didn't")
+	} else {
+		if err.Error() != expectedErr {
+			t.Fatalf("2nd call to CreateDb() was expected to return error: '%s' but it returned: '%s'",
+				expectedErr, err)
+		}
 	}
 }
 
@@ -313,7 +317,7 @@ func TestStart2(t *testing.T) {
 
 	backupJobsState := shared.NewJobsState()
 	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
-	defer CloseDb(db, backupName, backupJobsState)
+
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
