@@ -225,7 +225,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 
 	// extract config for this backup job only
-	var backupConfig config.Backup
+	var backupConfig config.ConfigBackup
 	serverConfigCopy.Mutex.RLock()
 	for _, backupObject := range serverConfigCopy.Backup {
 		if backupObject.Name == name {
@@ -315,7 +315,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 }
 
 // TODO - figure out how to deal with the SQL connection sharing
-func cleanupAfterBackup(name string, jobUuid string, backupConfig config.Backup, serverConfigCopy config.CfgTemplate,
+func cleanupAfterBackup(name string, jobUuid string, backupConfig config.ConfigBackup, serverConfigCopy config.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error) {
 	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then
 	//  it will leak at least a channel. Calling it for an already cancelled backup will not cause any issue

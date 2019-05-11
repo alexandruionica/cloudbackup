@@ -201,7 +201,7 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	tmpFilePath = tmpFilePath + ".json"
-	var NewConfigBackup = config.Backup{}
+	var NewConfigBackup = config.ConfigBackup{}
 
 	// load new config from tmp file and perform basic validation
 	err = configor.New(&configor.Config{ENVPrefix: config.EnvPrefix}).Load(&NewConfigBackup, tmpFilePath)
@@ -212,8 +212,8 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 		logger.Debug(msg)
 		return
 	}
-	// slice to hold the Backup object as the Validate function expects a slice as input
-	backups := make([]config.Backup, 0)
+	// slice to hold the ConfigBackup object as the Validate function expects a slice as input
+	backups := make([]config.ConfigBackup, 0)
 	backups = append(backups, NewConfigBackup)
 	// perform advanced validation of the above loaded (in a struct) config
 	err = config.ValidateBackup(backups, true)

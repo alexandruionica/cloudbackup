@@ -38,7 +38,7 @@ type successfullyProcessed struct {
 
 // performs backup of a file or dir
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
+func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.ConfigBackup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string) (bool, error) {
 	select {
 	case <-ctx.Done():
@@ -113,7 +113,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig config.
 
 // Performs the backup for an existing file/dir/folder for which it has been established that it's metadata changed
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func backupExistingWithMetadataChange(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
+func backupExistingWithMetadataChange(ctx context.Context, path string, stat os.FileInfo, backupConfig config.ConfigBackup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, updatedDbRecord shared.BackedUpFileProperties, jobUuid string) (bool, error) {
 	if updatedDbRecord.Type == "unknown" {
 		// report it as a "failed_to_upload_unknown" instead of updated_metadata as we don't support "unknown" files but we want to report somehow this issue
@@ -127,7 +127,7 @@ func backupExistingWithMetadataChange(ctx context.Context, path string, stat os.
 
 // Performs the backup for an existing file/dir/folder for which it has been established that it's content changed
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func backupExistingWithContentChange(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
+func backupExistingWithContentChange(ctx context.Context, path string, stat os.FileInfo, backupConfig config.ConfigBackup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, updatedDbRecord shared.BackedUpFileProperties, jobUuid string) (bool, error) {
 
 	if updatedDbRecord.Type == "unknown" {
@@ -143,7 +143,7 @@ func backupExistingWithContentChange(ctx context.Context, path string, stat os.F
 // Performs the backup for a new file/dir/folder. This function being called means its established this item has never
 // been backed up before
 // return values: bool with true if backup got cancelled, false otherwise ; error if error encountered
-func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
+func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupConfig config.ConfigBackup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string) (bool, error) {
 	var err error
 
@@ -184,7 +184,7 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 
 // Wraps around the DB transaction needed and also the file/dir upload & metadata update code
 // $operation must be one of "new", "content-update", "metadata-update"; $dbData is the constructed DB rectord struct needed for the "files" table.
-func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat os.FileInfo, backupConfig config.Backup, dbData shared.DbData,
+func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat os.FileInfo, backupConfig config.ConfigBackup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string, DbRecord shared.BackedUpFileProperties) (bool, error) {
 	// $operationType is used for counters, status messages and also for deciding if the file needs sending to the
 	// remote or if just a DB updated for properties only is needed
@@ -654,7 +654,7 @@ func needsUpload(path string, stat os.FileInfo, dbRecordProperties shared.Backed
 // parameters: $path is the full path to the object, $stat is the result from os.lstat or os.stat; $ctime is the change
 // time of the object and is passed in as it's an expensive system call and other function will most likely already
 // have obtained the value
-func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup, ctime time.Time, checksum string, jobUuid string) (shared.BackedUpFileProperties, error) {
+func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.ConfigBackup, ctime time.Time, checksum string, jobUuid string) (shared.BackedUpFileProperties, error) {
 	var err error
 	// even if we get an error (and we don't have complete or any file properties) we will still attempt to back it up
 	owner, permissions, err := fileproperties.GetObjectPermissions(path, stat)
@@ -698,7 +698,7 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig config.Backup
 // return values: the version of the stored item, as returned by the object store;
 // bool with true if backup got cancelled, false otherwise ; error if error encountered
 func UploadObject(newDbRecord shared.BackedUpFileProperties,
-	backupConfig config.Backup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, version int) (string, bool, error) {
+	backupConfig config.ConfigBackup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, version int) (string, bool, error) {
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", newDbRecord.Path)
 	} else {
@@ -854,7 +854,7 @@ func RunPrePostScript(path string, scriptType string, backupName string, jobId s
 // after processing the results, the function will recurse, calling itself again with said limit until all DB records
 // are processed
 // returns: true if cancelled (via context)
-func FindAndMarkDeleted(ctx context.Context, backupConfig config.Backup, dbData shared.DbData,
+func FindAndMarkDeleted(ctx context.Context, backupConfig config.ConfigBackup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string, maxResults int) bool {
 	// locate all objects which are not mentioned in the current backup
 
@@ -954,7 +954,7 @@ func FindAndMarkDeleted(ctx context.Context, backupConfig config.Backup, dbData 
 
 // for a given $path, it marks it as deleted by adjusting the DB entries and also updating metadata on the objectstore(s)
 // returns true if the function was cancelled, false otherwise; encountered error if any
-func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig config.Backup, dbData shared.DbData,
+func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig config.ConfigBackup, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, jobUuid string) (bool, error) {
 	// establish it path is part of exclusions. This is to cover an edge case where a previously backed up path has been
 	// added to the exclusions list. If this is the case then we want to have it mark deleted (and skip checking further

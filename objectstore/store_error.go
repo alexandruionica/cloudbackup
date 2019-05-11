@@ -14,7 +14,7 @@ type StoreError struct {
 	storeType string
 }
 
-func InitialiseStoreError(ctx context.Context, backupConfig config.Backup, storeName string, storeType string, rateLimitVal int64) *StoreError {
+func InitialiseStoreError(ctx context.Context, backupConfig config.ConfigBackup, storeName string, storeType string, rateLimitVal int64) *StoreError {
 	result := &StoreError{
 		storeName: storeName,
 		storeType: storeType,

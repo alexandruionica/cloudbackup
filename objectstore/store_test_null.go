@@ -27,7 +27,7 @@ type StoreTestNull struct {
 	backupJobsState shared.BackupJobsStateInterface
 }
 
-func InitialiseStoreTestNull(ctx context.Context, backupConfig config.Backup, target config.Target, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreTestNull, error) {
+func InitialiseStoreTestNull(ctx context.Context, backupConfig config.ConfigBackup, target config.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreTestNull, error) {
 	var rateLimitBucket *rate.Limiter
 
 	rateLimitBucket, ratelimit, burst, err := setupRateLimiterBucket(rateLimitStr, target.Name, backupConfig.Name)

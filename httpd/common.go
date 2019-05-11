@@ -298,7 +298,7 @@ func LogHttpRequest(r *http.Request) {
 }
 
 // calls an "evaluate" of the backup paths for a particular job
-func dryRunBackupPaths(ctx context.Context, backupConfig config.Backup, backupJobsState *shared.DryRunBackupJobsState,
+func dryRunBackupPaths(ctx context.Context, backupConfig config.ConfigBackup, backupJobsState *shared.DryRunBackupJobsState,
 	scanPathExit chan bool) {
 	for _, path := range backupConfig.Paths {
 		// empty objectStores object as a dry run should never reach an upload function anyway
