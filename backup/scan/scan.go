@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
 	"cloudbackup/shared"
 	"context"
@@ -23,7 +22,7 @@ var logger = log.WithFields(log.Fields{
 // Path descends into the file tree rooted at $path, calls walk() if $path is a directory and otherwise backup function
 // return: first parameter will be "true" only if it was signalled via closeChan to stop the running backup; second
 // parameter signifies errors
-func Path(ctx context.Context, path string, backupConfig config.ConfigBackup, backupJobsState shared.BackupJobsStateInterface,
+func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, backupJobsState shared.BackupJobsStateInterface,
 	dryRun bool, dbData shared.DbData, objectStores []objectstore.ObjectStore, jobUuid string) (bool, error) {
 	globals.Stats.IncrementFunctions("scan.Path")
 	defer globals.Stats.DecrementFunctions("scan.Path")
@@ -120,7 +119,7 @@ func readDirNames(dirname string) ([]string, error) {
 // parameters: ctx is context for cancellation of the walk(), the 'db' parameters is the DB pointer used for sql ops
 // return: first value will be "true" only if it was signalled via the ctx context to stop the running backup;
 // second value signifies errors
-func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig config.ConfigBackup,
+func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig shared.ConfigBackup,
 	backupJobsState shared.BackupJobsStateInterface, dryRun bool, dbData shared.DbData,
 	objectStores []objectstore.ObjectStore, jobUuid string) (bool, error) {
 	if !dryRun {

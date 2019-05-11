@@ -1,7 +1,6 @@
 package httpd
 
 import (
-	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
 	"cloudbackup/objectstore"
 	"cloudbackup/shared"
@@ -283,7 +282,7 @@ func (srvSrc SrvData) handlerPostBackupDryRun(w http.ResponseWriter, r *http.Req
 	// while a copy, some of the data is pointers so locking is still needed
 	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostBackupDryRun")
 	found := false
-	var backupConfig config.ConfigBackup
+	var backupConfig shared.ConfigBackup
 	// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
 	// shared with other functions (running in other routines)
 	configCopy.Mutex.RLock()
@@ -594,7 +593,7 @@ func (srvSrc SrvData) handlerPostBackupTargetTest(w http.ResponseWriter, r *http
 	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostBackupTargetTest")
 	found := false
 	// extract config for this backup job only
-	var backupConfig config.ConfigBackup
+	var backupConfig shared.ConfigBackup
 	// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
 	// shared with other functions (running in other routines)
 	configCopy.Mutex.RLock()
@@ -602,7 +601,7 @@ func (srvSrc SrvData) handlerPostBackupTargetTest(w http.ResponseWriter, r *http
 		if backup.Name == decodedJson.Name {
 			found = true
 			// deep copy
-			backupConfig = config.CopyBackupStruct(backup)
+			backupConfig = shared.CopyConfigBackupStruct(backup)
 		}
 	}
 	configCopy.Mutex.RUnlock()

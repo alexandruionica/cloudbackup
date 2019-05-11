@@ -1,7 +1,6 @@
 package shared
 
 import (
-	"cloudbackup/config"
 	"context"
 	"errors"
 	"github.com/paulbellamy/ratecounter"
@@ -160,7 +159,7 @@ type BackupJobsStateInterface interface {
 
 // returns a slice with the state of both running and stopped jobs. $cfgCopy MUST be a copy and not a dereference of
 // the actual pointer to the main config (as slices are passed by reference and bad things will happen)
-func (jobs *BackupJobsState) Get(cfgCopy config.CfgTemplate, logContext string) []BackupJobStatus {
+func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []BackupJobStatus {
 	result := make([]BackupJobStatus, 0)
 	runningList := map[string]string{}
 	//log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Acquiring read lock before reading running " +

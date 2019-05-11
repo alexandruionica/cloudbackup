@@ -3,7 +3,6 @@ package scheduler
 import (
 	"cloudbackup/backup"
 	"cloudbackup/backup/scan"
-	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
 	"cloudbackup/database"
 	"cloudbackup/database/dbops"
@@ -43,7 +42,7 @@ func NewJobsState() *shared.BackupJobsState {
 }
 
 func Start(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
-	backupJobsState *shared.BackupJobsState, configuration *config.RuntimeConfig) {
+	backupJobsState *shared.BackupJobsState, configuration *shared.RuntimeConfig) {
 	// start component which listens for messages from http handlers and starts / stops backups & restores according to requests
 	go eventProcessor(cfgChange, SchedulerCommBackup, backupJobsState, configuration)
 	// components which relays to clients real time info about the file/dir/symlink currently being backed up or restores
@@ -51,7 +50,7 @@ func Start(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerF
 }
 
 func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
-	backupJobsState *shared.BackupJobsState, configuration *config.RuntimeConfig) {
+	backupJobsState *shared.BackupJobsState, configuration *shared.RuntimeConfig) {
 	globals.Stats.IncrementRoutines("other")
 	defer globals.Stats.DecrementRoutines("other")
 
@@ -112,7 +111,7 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 }
 
 func processBackupCommand(receivedBackupCommand shared.ReceiveBackupCommand, backupJobsState *shared.BackupJobsState,
-	serverConfigCopy config.CfgTemplate) shared.ResponseBackupCommand {
+	serverConfigCopy shared.CfgTemplate) shared.ResponseBackupCommand {
 	switch receivedBackupCommand.Command {
 	case "start":
 		{
@@ -218,19 +217,19 @@ func processBackupCommand(receivedBackupCommand shared.ReceiveBackupCommand, bac
 	}
 }
 
-func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
+func runBackup(name string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState) {
 	globals.Stats.IncrementRoutines("runBackup")
 	defer globals.Stats.DecrementRoutines("runBackup")
 	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", name, jobUuid)
 
 	// extract config for this backup job only
-	var backupConfig config.ConfigBackup
+	var backupConfig shared.ConfigBackup
 	serverConfigCopy.Mutex.RLock()
 	for _, backupObject := range serverConfigCopy.Backup {
 		if backupObject.Name == name {
 			// deep copy
-			backupConfig = config.CopyBackupStruct(backupObject)
+			backupConfig = shared.CopyConfigBackupStruct(backupObject)
 			break
 		}
 	}
@@ -315,7 +314,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy config.CfgTemplate,
 }
 
 // TODO - figure out how to deal with the SQL connection sharing
-func cleanupAfterBackup(name string, jobUuid string, backupConfig config.ConfigBackup, serverConfigCopy config.CfgTemplate,
+func cleanupAfterBackup(name string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error) {
 	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then
 	//  it will leak at least a channel. Calling it for an already cancelled backup will not cause any issue
@@ -428,7 +427,7 @@ func signalBackupToStop(cancelFunction context.CancelFunc, name string, jobUuid 
 	cancelFunction()
 }
 
-func stopAllBackups(backupJobsState *shared.BackupJobsState, serverConfigCopy config.CfgTemplate) {
+func stopAllBackups(backupJobsState *shared.BackupJobsState, serverConfigCopy shared.CfgTemplate) {
 	if len(backupJobsState.Running) > 0 {
 		logger.Info("Stopping all running backup jobs")
 	}
@@ -476,7 +475,7 @@ func waitForAllBackupToBeStopped(backupJobsState *shared.BackupJobsState) {
 // generate uuid and validate that this is unique in both the running jobs state and also in the SQL DB
 // returns: string with UUID if successful to generate, error object if an error is encountered (if this is the case
 // then the value of the UUID string should be ignored)
-func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serverConfigCopy config.CfgTemplate, jobType string) (string, error) {
+func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serverConfigCopy shared.CfgTemplate, jobType string) (string, error) {
 	// TODO - when implementing restore or purge jobs , add support in this function too
 	if jobType != "backup" {
 		logger.Warnf("generating UUIDs for job of type '%s' is not supported", jobType)

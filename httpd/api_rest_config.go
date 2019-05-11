@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
+	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"encoding/json"
 	"fmt"
@@ -65,7 +66,7 @@ func (srvSrc SrvData) handlerPutConfig(w http.ResponseWriter, r *http.Request, _
 		return
 	}
 	tmpFilePath = tmpFilePath + ".json"
-	var NewConfig = config.CfgTemplate{}
+	var NewConfig = shared.CfgTemplate{}
 
 	// load new config from tmp file and perform basic validation
 	err = configor.New(&configor.Config{ENVPrefix: config.EnvPrefix}).Load(&NewConfig, tmpFilePath)
@@ -201,7 +202,7 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	tmpFilePath = tmpFilePath + ".json"
-	var NewConfigBackup = config.ConfigBackup{}
+	var NewConfigBackup = shared.ConfigBackup{}
 
 	// load new config from tmp file and perform basic validation
 	err = configor.New(&configor.Config{ENVPrefix: config.EnvPrefix}).Load(&NewConfigBackup, tmpFilePath)
@@ -213,7 +214,7 @@ func (srvSrc SrvData) handlerPutConfigBackup(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	// slice to hold the ConfigBackup object as the Validate function expects a slice as input
-	backups := make([]config.ConfigBackup, 0)
+	backups := make([]shared.ConfigBackup, 0)
 	backups = append(backups, NewConfigBackup)
 	// perform advanced validation of the above loaded (in a struct) config
 	err = config.ValidateBackup(backups, true)

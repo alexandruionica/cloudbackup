@@ -2,6 +2,7 @@ package config
 
 import (
 	"cloudbackup/database"
+	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"errors"
 	"fmt"
@@ -36,168 +37,17 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
-//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
-// CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
-// also config.CopyPasswordsFromOldConfig needs updating
-type ConfigBackup struct {
-	Name       string   `required:"true" yaml:"name" json:"name"`
-	Paths      []string `required:"true" yaml:"paths" json:"paths"`
-	Exclusions []string `yaml:"exclusions" json:"exclusions"`
-	// TODO - fix library bug - https://github.com/jinzhu/configor/issues/34
-	Dereference bool                 `default:"true" yaml:"dereference" json:"dereference"`
-	Checksum    bool                 `default:"false" yaml:"checksum" json:"checksum"`
-	Target      []ConfigBackupTarget `required:"true" yaml:"target" json:"target"`
-	Schedule    []string             `yaml:"schedule" json:"schedule"`
-	Encrypt     bool                 `default:"false" yaml:"encrypt" json:"encrypt"`
-	EncryptPass string               `yaml:"encrypt_pass" json:"encrypt_pass"`
-	// 0 means unlimited number of versions
-	VersionsMaxNum uint `default:"0" yaml:"versions_max_num" json:"versions_max_num"`
-	// 0 means unlimited number of age
-	VersionsMaxAge string `default:"0" yaml:"versions_max_age" json:"versions_max_age"`
-	//
-	PreRunScript  string `yaml:"pre_run_script" json:"pre_run_script"`
-	PostRunScript string `yaml:"post_run_script" json:"post_run_script"`
-}
-
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
-//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
-// CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
-// also config.CopyPasswordsFromOldConfig needs updating
-type ConfigBackupTarget struct {
-	Name         string `required:"true" yaml:"name" json:"name"`
-	Type         string `required:"true" yaml:"type" json:"type"`
-	RateLimit    string `default:"0" yaml:"ratelimit" json:"ratelimit"`
-	User         string `yaml:"user" json:"user"`
-	Pass         string `yaml:"pass" json:"pass"`
-	Bucket       string `required:"true" yaml:"bucket" json:"bucket"`
-	Prefix       string `required:"true" yaml:"prefix" json:"prefix"`
-	StorageClass string `yaml:"storage_class" json:"storage_class"`
-}
-
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
-//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
-// CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
-// also config.CopyPasswordsFromOldConfig needs updating
-type ConfigUser struct {
-	Name string `required:"true" yaml:"name" json:"name"`
-	Pass string `required:"true" yaml:"pass" json:"pass"`
-	// allowed options are read or write (write implies read)
-	Access string `default:"read" yaml:"access" json:"access"`
-}
-
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type ConfigHttp struct {
-	BindAddress string `default:"127.0.0.1:8080" yaml:"bind_address" json:"bind_address"`
-}
-
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type ConfigHttps struct {
-	Enabled     bool   `default:"false" yaml:"enabled" json:"enabled"`
-	BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address" json:"bind_address"`
-	SslCertPath string `yaml:"ssl_cert_path" json:"ssl_cert_path"`
-	SslKeyPath  string `yaml:"ssl_key_path" json:"ssl_key_path"`
-}
-
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type ConfigNotification struct {
-	Email  []ConfigNotificationEmail  `yaml:"email,omitempty" json:"email,omitempty"`
-	Script []ConfigNotificationScript `yaml:"script,omitempty" json:"script,omitempty"`
-}
-
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type ConfigNotificationEmail struct {
-	Server string   `required:"true" yaml:"server" json:"server"`
-	User   string   `yaml:"user,omitempty" json:"user,omitempty"`
-	Pass   string   `yaml:"pass,omitempty" json:"pass,omitempty"`
-	Port   string   `yaml:"port" json:"port" default:"25"`
-	From   string   `yaml:"from,omitempty" json:"from,omitempty"`
-	To     string   `required:"true" yaml:"to" json:"to"`
-	CC     []string `yaml:"cc,omitempty" json:"cc,omitempty"`
-	// type is one of: started, finished, failed, cancelled, crashed
-	Type []string `yaml:"type" json:"type" default:"[failed,crashed]"`
-}
-
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-// IF ANY NEW notification mechanism is added here then you MUST updated the function notifications.GetNumNotificators()
-type ConfigNotificationScript struct {
-	Path string `required:"true" yaml:"path" json:"path"`
-	// type is one of: started, finished, failed, cancelled, crashed
-	Type []string `yaml:"type" json:"type" default:"[failed,crashed]"`
-}
-
-// this is the "master" struct which keeps all of the config settings (as specified in the config file + env vars)
-// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
-type CfgTemplate struct {
-	DataDir       string             `required:"true" yaml:"data_dir" json:"data_dir"`
-	HtmlDir       string             `default:"webstatic" yaml:"html_dir" json:"html_dir"`
-	User          []ConfigUser       `yaml:"user" json:"user"`
-	Http          ConfigHttp         `yaml:"http" json:"http"`
-	Https         ConfigHttps        `yaml:"https" json:"https"`
-	Backup        []ConfigBackup     `yaml:"backup" json:"backup"`
-	Notifications ConfigNotification `yaml:"notification,omitempty" json:"notification,omitempty"`
-	// the mutex is used for locking mainly only when we deal with copies of this struct (which may not have the parent
-	// RuntimeConfig struct containing this struct)
-	Mutex *sync.RWMutex `yaml:"-" json:"-"`
-}
-
-// this struct contains the above "master" config struct and also some runtime related parameters and settings
-type RuntimeConfig struct {
-	// lock this before reading or writing the config file or reading / writing the loaded config variables
-	Mutex *sync.RWMutex
-	// path to config file
-	Path string
-	// actual config file
-	Config CfgTemplate
-}
-
-// return a copy of the config struct. Lock while reading the struct. logContext is used for passing the caller's
-// logging context as to make it clear where the call is coming from
-func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
-	// log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying server config struct")
-	cfg.Mutex.RLock()
-	defer func() {
-		cfg.Mutex.RUnlock()
-		//log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying server " +
-		//	"config struct")
-	}()
-	//log.WithFields(log.Fields{"context": logContext}).Debug("Read lock for copying server config acquired")
-	cfgCopy := cfg.Config
-
-	// we need to manually copy slices because by default a pointer to the slice is copied
-	cfgCopy.User = make([]ConfigUser, len(cfg.Config.User))
-	copy(cfgCopy.User, cfg.Config.User)
-	cfgCopy.Backup = make([]ConfigBackup, len(cfg.Config.Backup))
-	copy(cfgCopy.Backup, cfg.Config.Backup)
-	// deepcopy the Notification.Email
-	cfgCopy.Notifications.Email = make([]ConfigNotificationEmail, len(cfg.Config.Notifications.Email))
-	copy(cfgCopy.Notifications.Email, cfg.Config.Notifications.Email)
-	// deepcopy the Notification.Script
-	cfgCopy.Notifications.Script = make([]ConfigNotificationScript, len(cfg.Config.Notifications.Script))
-	copy(cfgCopy.Notifications.Script, cfg.Config.Notifications.Script)
-	// deepcopy various slices part of the ConfigBackup{} struct
-	for i := 0; i < len(cfg.Config.Backup); i++ {
-		cfgCopy.Backup[i] = CopyBackupStruct(cfg.Config.Backup[i])
-	}
-	// new mutex for locking
-	cfgCopy.Mutex = &sync.RWMutex{}
-	return cfgCopy
-}
-
 // load configuration from yaml file at "path" and if boolean "debug" is set then also enable debugging in the yaml
 // config parser library
-func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) {
+func Load(path string, debug bool, mutex *sync.RWMutex) (*shared.RuntimeConfig, error) {
 	logger.Info(fmt.Sprintf("Loading server config file %s", path))
 
-	var Config = CfgTemplate{}
+	var Config = shared.CfgTemplate{}
 	var err error
 
 	if _, err := utils.FileExists(path, true); err != nil {
 		logger.Error(err)
-		return &RuntimeConfig{}, err
+		return &shared.RuntimeConfig{}, err
 	}
 
 	//logger.Debug("Acquiring read lock before reading config file")
@@ -219,26 +69,26 @@ func Load(path string, debug bool, mutex *sync.RWMutex) (*RuntimeConfig, error) 
 		msg := fmt.Sprintf("When parsing the server configuration file %s the following error was encountered:"+
 			" %s", path, err)
 		logger.Error(msg)
-		return &RuntimeConfig{}, errors.New(msg)
+		return &shared.RuntimeConfig{}, errors.New(msg)
 	}
 
 	err = Validate(Config, false)
 	if err != nil {
-		return &RuntimeConfig{}, err
+		return &shared.RuntimeConfig{}, err
 	}
 
 	// rarely used lock (this is to be used only by functions which get the Config struct but don't get also the
 	// parent struct (which has a different lock)
 	Config.Mutex = &sync.RWMutex{}
 
-	return &RuntimeConfig{Mutex: mutex,
+	return &shared.RuntimeConfig{Mutex: mutex,
 		Path:   path,
 		Config: Config,
 	}, nil
 }
 
 // saves new configuration to file
-func Save(runtimeCfg *RuntimeConfig, newConfig CfgTemplate) error {
+func Save(runtimeCfg *shared.RuntimeConfig, newConfig shared.CfgTemplate) error {
 	logger.Debug("Acquiring lock before writing config file")
 	runtimeCfg.Mutex.Lock()
 	defer func() {
@@ -262,7 +112,7 @@ func Save(runtimeCfg *RuntimeConfig, newConfig CfgTemplate) error {
 // validate several config options which depends on other options having certain values. Trying to do this with
 // reflection ends up being harder to understand and still requires application logic in the validator
 // params: config struct to validate; hiddenPass is if to allow obfuscated passwords (meaning strings with value *****)
-func Validate(config CfgTemplate, hiddenPass bool) error {
+func Validate(config shared.CfgTemplate, hiddenPass bool) error {
 	// check if "data_dir" exists
 	if err := ValidateDir(config.DataDir, "data_dir", true); err != nil {
 		return err
@@ -293,7 +143,7 @@ func Validate(config CfgTemplate, hiddenPass bool) error {
 }
 
 // validate "Backup" section of the config
-func ValidateBackup(backups []ConfigBackup, logError bool) error {
+func ValidateBackup(backups []shared.ConfigBackup, logError bool) error {
 	names := make([]string, 0)
 	i := 0
 	for _, backup := range backups {
@@ -390,7 +240,7 @@ func ValidatePrePostRunScript(path string, scriptType string, backupName string,
 }
 
 // validate HTTPS section of the config
-func ValidateHttps(config CfgTemplate, logError bool) error {
+func ValidateHttps(config shared.CfgTemplate, logError bool) error {
 	if config.Https.Enabled {
 		if config.Https.SslCertPath == "" {
 			msg := fmt.Sprintf("https: enabled=true  but https: ssl_cert_path  is not set")
@@ -427,7 +277,7 @@ func ValidateHttps(config CfgTemplate, logError bool) error {
 }
 
 // validate "Backup/Target" section of the config
-func ValidateBackupTarget(targets []ConfigBackupTarget, logError bool, BackupName string) error {
+func ValidateBackupTarget(targets []shared.ConfigBackupTarget, logError bool, BackupName string) error {
 	names := make([]string, 0)
 	for _, target := range targets {
 		// have this as the first check as subsequent ones use the Target name in error output in order to indicate
@@ -494,7 +344,7 @@ func ValidateBackupTarget(targets []ConfigBackupTarget, logError bool, BackupNam
 }
 
 // check Notification.Email and Notification.Script config sections
-func ValidateNotification(notifications ConfigNotification, logError bool) error {
+func ValidateNotification(notifications shared.ConfigNotification, logError bool) error {
 	err := ValidateNotificationCommand(notifications.Script, logError)
 	if err != nil {
 		return err
@@ -509,7 +359,7 @@ func ValidateNotification(notifications ConfigNotification, logError bool) error
 	return nil
 }
 
-func ValidateNotificationCommand(commands []ConfigNotificationScript, logError bool) error {
+func ValidateNotificationCommand(commands []shared.ConfigNotificationScript, logError bool) error {
 	for _, notificationCommand := range commands {
 		// check supplied file path at least exists (if it's executable is a different story which also may be
 		// platform dependent
@@ -556,7 +406,7 @@ func ValidateNotificationCommand(commands []ConfigNotificationScript, logError b
 	return nil
 }
 
-func ValidateNotificationEmail(emails []ConfigNotificationEmail, logError bool) error {
+func ValidateNotificationEmail(emails []shared.ConfigNotificationEmail, logError bool) error {
 	for _, notificationEmail := range emails {
 		// check that we're using authentication if not connecting to the localhost SMTP server
 		if notificationEmail.User == "" && notificationEmail.Pass == "" && !isLocalhost(notificationEmail.Server) {
@@ -657,7 +507,7 @@ func ValidateDir(dir string, paramName string, logError bool) error {
 // validate User section
 // params: config struct to validate; logError is if to log errors or not; hiddenPass is if to allow obfuscated
 // passwords (meaning strings with value *****)
-func ValidateUser(config CfgTemplate, logError bool, hiddenPass bool) error {
+func ValidateUser(config shared.CfgTemplate, logError bool, hiddenPass bool) error {
 	if len(config.User) > 0 {
 		names := make([]string, 0)
 		for _, user := range config.User {
@@ -703,7 +553,7 @@ func ValidateUser(config CfgTemplate, logError bool, hiddenPass bool) error {
 // params: config struct to validate; because NO LOCKING IS USED the config struct should not be in use by anything else
 // this function is not called from Validate() as it actually changes things on disk (aka creates DBs) so we want it
 // called only after Validate() and only in specific cases
-func ValidateAndCreateDB(config CfgTemplate) error {
+func ValidateAndCreateDB(config shared.CfgTemplate) error {
 	if len(config.User) > 0 {
 		for _, backup := range config.Backup {
 			err := database.ValidateAndCreate(config.DataDir, backup.Name, true)
@@ -718,7 +568,7 @@ func ValidateAndCreateDB(config CfgTemplate) error {
 // replace passwords or secrets with **************** within an instance of CfgTemplate type
 // Unfortunately this function doesn't have any smarts so whenever the config struct is changed then also an update to
 // the function is needed
-func SanitizeCfgTemplate(config CfgTemplate) CfgTemplate {
+func SanitizeCfgTemplate(config shared.CfgTemplate) shared.CfgTemplate {
 	// overwrite User.Pass
 	for i := 0; i < len(config.User); i++ {
 		if config.User[i].Pass != "" {
@@ -758,7 +608,7 @@ func CheckStringIsOnly(val string, chars string) bool {
 // one from the old config and in the new config this entry has a password of "*****" (more or less stars) then copy
 // Returns an error if one or more **** based passwords don't have a counterpart in the old config so the old password
 // can't be extracted
-func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) error {
+func CopyPasswordsFromOldConfig(newConfig *shared.CfgTemplate, oldConfig shared.CfgTemplate) error {
 	// compare User.Password entries
 	err := CopyPasswordsFromOldConfigUser(newConfig.User, oldConfig.User)
 	if err != nil {
@@ -787,7 +637,7 @@ func CopyPasswordsFromOldConfig(newConfig *CfgTemplate, oldConfig CfgTemplate) e
 // can't be extracted
 //
 // a slice is a kind of pointer hence we don't pass in "newConfigUser" as a pointer
-func CopyPasswordsFromOldConfigUser(newConfigUser []ConfigUser, oldConfigUser []ConfigUser) error {
+func CopyPasswordsFromOldConfigUser(newConfigUser []shared.ConfigUser, oldConfigUser []shared.ConfigUser) error {
 	// compare User.Password entries
 	for i := 0; i < len(newConfigUser); i++ {
 		if CheckStringIsOnly(newConfigUser[i].Pass, "*") {
@@ -817,7 +667,7 @@ func CopyPasswordsFromOldConfigUser(newConfigUser []ConfigUser, oldConfigUser []
 // can't be extracted
 //
 // a slice is a kind of pointer hence we don't pass in "newConfigUser" as a pointer
-func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []ConfigNotificationEmail, oldNotificationsEmail []ConfigNotificationEmail) error {
+func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []shared.ConfigNotificationEmail, oldNotificationsEmail []shared.ConfigNotificationEmail) error {
 	// compare Notification.Email.Pass entries
 	for i := 0; i < len(newNotificationsEmail); i++ {
 		if CheckStringIsOnly(newNotificationsEmail[i].Pass, "*") {
@@ -851,7 +701,7 @@ func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []Confi
 // can't be extracted
 //
 // a slice is a kind of pointer hence we don't pass in "newConfigBackup" as a pointer
-func CopyPasswordsFromOldConfigBackup(newConfigBackup []ConfigBackup, oldConfigBackup []ConfigBackup) error {
+func CopyPasswordsFromOldConfigBackup(newConfigBackup []shared.ConfigBackup, oldConfigBackup []shared.ConfigBackup) error {
 	// compare ConfigBackup.EncryptPass and ConfigBackup.Target.Pass entries
 	for i := 0; i < len(newConfigBackup); i++ {
 		// compare ConfigBackup.EncryptPass
@@ -932,22 +782,4 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []ConfigBackup, oldConfigB
 
 func isLocalhost(name string) bool {
 	return name == "localhost" || name == "127.0.0.1" || name == "::1"
-}
-
-// makes a deep copy of a ConfigBackup struct
-func CopyBackupStruct(source ConfigBackup) ConfigBackup {
-	result := source
-	result.Paths = make([]string, len(source.Paths))
-	copy(result.Paths, source.Paths)
-
-	result.Exclusions = make([]string, len(source.Exclusions))
-	copy(result.Exclusions, source.Exclusions)
-
-	result.Schedule = make([]string, len(source.Schedule))
-	copy(result.Schedule, source.Schedule)
-
-	result.Target = make([]ConfigBackupTarget, len(source.Target))
-	copy(result.Target, source.Target)
-
-	return result
 }

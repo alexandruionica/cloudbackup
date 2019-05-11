@@ -1,6 +1,7 @@
 package config
 
 import (
+	"cloudbackup/shared"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"os"
@@ -12,7 +13,7 @@ import (
 
 // test loading config file with regular reporting from configor library
 func TestLoad1(t *testing.T) {
-	var compare = &RuntimeConfig{}
+	var compare = &shared.RuntimeConfig{}
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
@@ -30,7 +31,7 @@ func TestLoad1(t *testing.T) {
 
 // test loading config file with DEBUG(actually called Verbose) reporting from configor library
 func TestLoad2(t *testing.T) {
-	var compare = &RuntimeConfig{}
+	var compare = &shared.RuntimeConfig{}
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
