@@ -1,7 +1,6 @@
 package objectstore
 
 import (
-	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
 	"fmt"
@@ -27,7 +26,7 @@ type StoreTestNull struct {
 	backupJobsState shared.BackupJobsStateInterface
 }
 
-func InitialiseStoreTestNull(ctx context.Context, backupConfig config.ConfigBackup, target config.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreTestNull, error) {
+func InitialiseStoreTestNull(ctx context.Context, backupConfig shared.ConfigBackup, target shared.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreTestNull, error) {
 	var rateLimitBucket *rate.Limiter
 
 	rateLimitBucket, ratelimit, burst, err := setupRateLimiterBucket(rateLimitStr, target.Name, backupConfig.Name)

@@ -1,7 +1,6 @@
 package notifications
 
 import (
-	"cloudbackup/config"
 	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"encoding/json"
@@ -26,7 +25,7 @@ var logger = log.WithFields(log.Fields{
 })
 
 // returns how many notifications we have defined in the config file
-func GetNumNotificators(notificationDefs config.ConfigNotification) int {
+func GetNumNotificators(notificationDefs shared.ConfigNotification) int {
 	return len(notificationDefs.Email) + len(notificationDefs.Script)
 }
 
@@ -37,7 +36,7 @@ func GetNumNotificators(notificationDefs config.ConfigNotification) int {
 // $JobName will be non empty only for backup jobs and it represents the name of the job corresponding to the "backup"
 // entry in the config file; JobReport is a JSON encoded string specific to each job type
 // Returns: the number of scripts which failed to run; an error object
-func Execute(config config.CfgTemplate, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) (int, error) {
+func Execute(config shared.CfgTemplate, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) (int, error) {
 	numErrors, numNotificators, failedScripts := 0, 0, 0
 	totalErrors := ""
 	for _, emailEntry := range config.Notifications.Email {
@@ -69,7 +68,7 @@ func Execute(config config.CfgTemplate, JobId string, JobType string, JobState s
 // Sends one email ...
 // see description of Execute() for most of parameters except $emailEntry which represents email configuration as
 // described in the configuration file
-func sendEmail(emailEntry config.ConfigNotificationEmail, JobId string, JobType string, JobState string, JobName string,
+func sendEmail(emailEntry shared.ConfigNotificationEmail, JobId string, JobType string, JobState string, JobName string,
 	JobReport string, JobError string) error {
 	logger.Debug("Sending email notification")
 
@@ -146,7 +145,7 @@ func sendEmail(emailEntry config.ConfigNotificationEmail, JobId string, JobType 
 }
 
 // runs a Notification script
-func runScript(scriptEntry config.ConfigNotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
+func runScript(scriptEntry shared.ConfigNotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
 	logger.Infof("Running notification script '%s'", scriptEntry.Path)
 	reportFile, err := utils.SetupTmpFileWithContent([]byte(JobReport), "cloudbackup_job_report_notification_")
 	if err != nil {

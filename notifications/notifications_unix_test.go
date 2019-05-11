@@ -3,7 +3,7 @@
 package notifications
 
 import (
-	"cloudbackup/config"
+	"cloudbackup/shared"
 	"cloudbackup/testutils"
 	"cloudbackup/utils"
 	"fmt"
@@ -49,7 +49,7 @@ func TestRunScript1(t *testing.T) {
 		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
-	scriptEntry := config.ConfigNotificationScript{
+	scriptEntry := shared.ConfigNotificationScript{
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
@@ -75,7 +75,7 @@ func TestRunScript2(t *testing.T) {
 		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
-	scriptEntry := config.ConfigNotificationScript{
+	scriptEntry := shared.ConfigNotificationScript{
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
@@ -120,7 +120,7 @@ func TestRunScript3(t *testing.T) {
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
 
-	scriptEntry := config.ConfigNotificationScript{
+	scriptEntry := shared.ConfigNotificationScript{
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}
@@ -161,7 +161,7 @@ func TestRunScript4(t *testing.T) {
 		t.Fatalf("Could not setup tmp shell script for testing due to error: %s", err)
 	}
 	defer testutils.DeleteTestFilesAndDirs([]string{scriptPath})
-	scriptEntry := config.ConfigNotificationScript{
+	scriptEntry := shared.ConfigNotificationScript{
 		Path: scriptPath,
 		Type: []string{"finished"},
 	}

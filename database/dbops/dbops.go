@@ -1,7 +1,6 @@
 package dbops
 
 import (
-	"cloudbackup/config"
 	"cloudbackup/database"
 	"cloudbackup/shared"
 	"database/sql"
@@ -215,7 +214,7 @@ func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements) {
 
 // ensures that the database has a record of all targets mentioned in the config file (for a particular backup name)
 // given that a DB is allocated to one backup name only, this should not be an issue
-func EnsureTargetsInDb(db *sql.DB, backupConfig config.ConfigBackup) error {
+func EnsureTargetsInDb(db *sql.DB, backupConfig shared.ConfigBackup) error {
 	logger.Debug("Checking the database has a record for each target mentioned in the config file")
 	var (
 		targetName string
@@ -394,8 +393,8 @@ func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, 
 
 // setup all Database related prerequisites required for running a backup and return a shared.DbData struct containing the DB handlers and prepared statements
 // $BackupJobName must be already marked as "running" in $backupJobsState or otherwise this function will error
-func PrepareDbForBackup(BackupJobName string, jobUuid string, serverConfigCopy config.CfgTemplate,
-	backupJobsState *shared.BackupJobsState, backupConfig config.ConfigBackup) (shared.DbData, error) {
+func PrepareDbForBackup(BackupJobName string, jobUuid string, serverConfigCopy shared.CfgTemplate,
+	backupJobsState *shared.BackupJobsState, backupConfig shared.ConfigBackup) (shared.DbData, error) {
 	var err error
 	dbData := shared.DbData{Connected: false, Name: BackupJobName}
 	// get DB connection pointer

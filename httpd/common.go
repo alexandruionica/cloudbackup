@@ -2,7 +2,6 @@ package httpd
 
 import (
 	"cloudbackup/backup/scan"
-	"cloudbackup/config"
 	"cloudbackup/objectstore"
 	"cloudbackup/password"
 	"cloudbackup/shared"
@@ -51,7 +50,7 @@ type SrvData struct {
 	// when true then the web server is already being shutdown and cleanup is in progress
 	serverExiting bool
 	// pointer to the main configuration object shared across go routines. We use this to read and change configuration
-	globalcfg *config.RuntimeConfig
+	globalcfg *shared.RuntimeConfig
 	// lock this before reading or writing the loaded config variables
 	Mutex *sync.RWMutex
 	// used to send backup (start/stop) commands to the scheduler routine
@@ -298,7 +297,7 @@ func LogHttpRequest(r *http.Request) {
 }
 
 // calls an "evaluate" of the backup paths for a particular job
-func dryRunBackupPaths(ctx context.Context, backupConfig config.ConfigBackup, backupJobsState *shared.DryRunBackupJobsState,
+func dryRunBackupPaths(ctx context.Context, backupConfig shared.ConfigBackup, backupJobsState *shared.DryRunBackupJobsState,
 	scanPathExit chan bool) {
 	for _, path := range backupConfig.Paths {
 		// empty objectStores object as a dry run should never reach an upload function anyway

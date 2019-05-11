@@ -1,7 +1,6 @@
 package httpd
 
 import (
-	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
 	"cloudbackup/shared"
 	"context"
@@ -31,7 +30,7 @@ var ReadAccess = map[string][]string{
 }
 
 // pseudo constructor to setup a new http server
-func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *config.RuntimeConfig, addr string,
+func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *shared.RuntimeConfig, addr string,
 	httpsEnabled bool, SslCertPath string, SslKeyPath string,
 	commWithSchedulerForBackup *shared.CommWithSchedulerForBackup,
 	backupJobsState *shared.BackupJobsState) *SrvData {

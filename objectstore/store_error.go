@@ -1,7 +1,6 @@
 package objectstore
 
 import (
-	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
 	"fmt"
@@ -14,7 +13,7 @@ type StoreError struct {
 	storeType string
 }
 
-func InitialiseStoreError(ctx context.Context, backupConfig config.ConfigBackup, storeName string, storeType string, rateLimitVal int64) *StoreError {
+func InitialiseStoreError(ctx context.Context, backupConfig shared.ConfigBackup, storeName string, storeType string, rateLimitVal int64) *StoreError {
 	result := &StoreError{
 		storeName: storeName,
 		storeType: storeType,

@@ -1,7 +1,6 @@
 package objectstore
 
 import (
-	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
 	"errors"
@@ -70,7 +69,7 @@ type FileReader struct {
 	ctx context.Context
 }
 
-func GetObjectStores(ctx context.Context, backupConfig config.ConfigBackup, backupJobsState shared.BackupJobsStateInterface) ([]ObjectStore, error) {
+func GetObjectStores(ctx context.Context, backupConfig shared.ConfigBackup, backupJobsState shared.BackupJobsStateInterface) ([]ObjectStore, error) {
 	results := make([]ObjectStore, 0)
 	for _, backupTarget := range backupConfig.Target {
 
