@@ -254,7 +254,7 @@ InfiniteLoop:
 						t.Fatalf("Reading the rate limited file should have taken 2 seconds but it took %f",
 							duration.Seconds())
 					}
-					if duration.Seconds() > 2.2 {
+					if duration.Seconds() > 2.4 {
 						t.Fatalf("Reading the rate limited file should have taken a bit over 2 seconds but it took %f",
 							duration.Seconds())
 					}
