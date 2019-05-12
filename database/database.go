@@ -64,9 +64,9 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 			dbfilepath, err)
 		logger.Debugf("Closing '%s' and removing the file", dbfilepath)
 		// close connection to the db
-		err = db.Close()
-		if err != nil {
-			logger.Errorf("Could not close database '%s' due to error: %s", dbfilepath, err)
+		err3 := db.Close()
+		if err3 != nil {
+			logger.Errorf("Could not close database '%s' due to error: %s", dbfilepath, err3)
 		}
 		fExists, _ := DbFileExists(dbfilepath) // #nosec
 		// remove the incorrectly initialised db file
