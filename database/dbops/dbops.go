@@ -391,9 +391,10 @@ func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, 
 	return nil
 }
 
-// setup all Database related prerequisites required for running a backup and return a shared.DbData struct containing the DB handlers and prepared statements
+// setup all Database related prerequisites required for running a backup of files/dirs/symlinks and return a shared.DbData
+// struct containing the DB handlers and prepared statements
 // $BackupJobName must be already marked as "running" in $backupJobsState or otherwise this function will error
-func PrepareDbForBackup(BackupJobName string, jobUuid string, serverConfigCopy shared.CfgTemplate,
+func PrepareDb(BackupJobName string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, backupConfig shared.ConfigBackup) (shared.DbData, error) {
 	var err error
 	dbData := shared.DbData{Connected: false, Name: BackupJobName}
