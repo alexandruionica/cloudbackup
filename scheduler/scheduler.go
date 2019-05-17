@@ -230,7 +230,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 		return
 	}
 
-	dbData, err := dbops.PrepareDbForBackup(name, jobUuid, serverConfigCopy, backupJobsState, backupConfig)
+	dbData, err := dbops.PrepareDb(name, jobUuid, serverConfigCopy, backupJobsState, backupConfig)
 	if err != nil {
 		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
