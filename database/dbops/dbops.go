@@ -3,6 +3,7 @@ package dbops
 import (
 	"cloudbackup/database"
 	"cloudbackup/shared"
+	"cloudbackup/utils"
 	"database/sql"
 	"errors"
 	log "github.com/sirupsen/logrus"
@@ -394,8 +395,9 @@ func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, 
 // setup all Database related prerequisites required for running a backup of files/dirs/symlinks and return a shared.DbData
 // struct containing the DB handlers and prepared statements
 // $BackupJobName must be already marked as "running" in $backupJobsState or otherwise this function will error
+// $newJobRun is true if this back job is starting now, or otherwise it should be false (most of the time you want this to be "true")
 func PrepareDb(BackupJobName string, jobUuid string, serverConfigCopy shared.CfgTemplate,
-	backupJobsState *shared.BackupJobsState, backupConfig shared.ConfigBackup) (shared.DbData, error) {
+	backupJobsState *shared.BackupJobsState, backupConfig shared.ConfigBackup, newJobRun bool) (shared.DbData, error) {
 	var err error
 	dbData := shared.DbData{Connected: false, Name: BackupJobName}
 	// get DB connection pointer
@@ -407,31 +409,57 @@ func PrepareDb(BackupJobName string, jobUuid string, serverConfigCopy shared.Cfg
 		dbData.Connected = true
 	}
 
-	// ensure the DB has all needed info in the tables
-	err = EnsureTargetsInDb(dbData.Db, backupConfig)
-	// the backup can not run as we can't ensure the database has the needed data before we commence
-	// comparing/adding/updating entries about files
-	if err != nil {
-		return dbData, err
-	}
-
 	// get DB prepared statements for the most common operations
 	dbData.PreparedStatements, err = Prepare(dbData.Db)
 	if err != nil {
 		return dbData, err
 	}
 
-	// get Job start time
-	jobStartTime, err := backupJobsState.GetStartTime(BackupJobName, jobUuid, loggingContext+".runBackup")
-	if err != nil {
-		return dbData, err
+	if newJobRun {
+		// ensure the DB has all needed info in the tables
+		err = EnsureTargetsInDb(dbData.Db, backupConfig)
+		// the backup can not run as we can't ensure the database has the needed data before we commence
+		// comparing/adding/updating entries about files
+		if err != nil {
+			return dbData, err
+		}
+
+		// get Job start time
+		jobStartTime, err := backupJobsState.GetStartTime(BackupJobName, jobUuid, loggingContext+".runBackup")
+		if err != nil {
+			return dbData, err
+		}
+
+		// add entry to "jobs" DB table
+		err = AddJobDetails(dbData.Db, jobUuid, BackupJobName, "backup", jobStartTime)
+		if err != nil {
+			return dbData, err
+		}
 	}
 
-	// add entry to "jobs" DB table
-	err = AddJobDetails(dbData.Db, jobUuid, BackupJobName, "backup", jobStartTime)
-	if err != nil {
-		return dbData, err
-	}
 	// if we got here then all was good
 	return dbData, nil
+}
+
+// for a given $jobName, make a copy of the Database file and return back the path to it. It's up to the caller to
+// ensure the Database is in a closed state
+func MakeDbCopy(jobName string, jobUuid string, dataDir string, backupJobsState *shared.BackupJobsState) (string, error) {
+	backupJobsState.MarkOngoingDbBackup(jobName)
+
+	srcFilePath, err := database.GetDbFilePath(dataDir, jobName)
+	if err != nil {
+		return "", err
+	}
+
+	dstFilePath := srcFilePath + ".gz"
+
+	err = utils.GzipFile(srcFilePath, dstFilePath)
+	if err != nil {
+		logger.Errorf("While trying to create a copy of the database belonging to backup job '%s', using as "+
+			"source '%s' and destination '%s', encountered error: %s", jobName, srcFilePath, dstFilePath, err)
+		return "", err
+	}
+
+	backupJobsState.UnMarkOngoingDbBackup(jobName)
+	return dstFilePath, nil
 }

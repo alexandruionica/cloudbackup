@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
+	"os"
 	"strings"
 	"time"
 )
@@ -202,17 +203,19 @@ func processBackupCommand(receivedBackupCommand shared.ReceiveBackupCommand, bac
 	}
 }
 
-func runBackup(name string, jobUuid string, serverConfigCopy shared.CfgTemplate,
+// this function starts the backup for a given $jobName and $jobUuid
+// $jobName MUST match the name of a backup job, as defined in the configuration file
+func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState) {
 	globals.Stats.IncrementRoutines("runBackup")
 	defer globals.Stats.DecrementRoutines("runBackup")
-	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", name, jobUuid)
+	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", jobName, jobUuid)
 
 	// extract config for this backup job only
 	var backupConfig shared.ConfigBackup
 	serverConfigCopy.Mutex.RLock()
 	for _, backupObject := range serverConfigCopy.Backup {
-		if backupObject.Name == name {
+		if backupObject.Name == jobName {
 			// deep copy
 			backupConfig = shared.CopyConfigBackupStruct(backupObject)
 			break
@@ -220,26 +223,26 @@ func runBackup(name string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 	}
 	serverConfigCopy.Mutex.RUnlock()
 
-	ctx, err := backupJobsState.GetContextForJob(name, jobUuid)
+	ctx, err := backupJobsState.GetContextForJob(jobName, jobUuid)
 	// if we got an error than something else has already marked the backup job as != "running"
 	if err != nil {
 		logger.Errorf("It seems that while starting up backup job '%s' having id '%s' another process stopped "+
-			"this backup job run", name, jobUuid)
+			"this backup job run", jobName, jobUuid)
 		// it is assumed that whatever process requested the backup to be stopped will also take care of fully
 		// stopping it
 		return
 	}
 
-	dbData, err := dbops.PrepareDb(name, jobUuid, serverConfigCopy, backupJobsState, backupConfig)
+	dbData, err := dbops.PrepareDb(jobName, jobUuid, serverConfigCopy, backupJobsState, backupConfig, true)
 	if err != nil {
-		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
+		cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
 	}
 
 	// get object stores used for backing up files for this job
 	objectStores, err := objectstore.GetObjectStores(ctx, backupConfig, backupJobsState)
 	if err != nil {
-		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
+		cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 		return
 	}
 
@@ -259,7 +262,7 @@ func runBackup(name string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 		backupJobsState.IncrementCounter(backupConfig.Name, "scripts_ran", "", "", "", "")
 		if err != nil {
 			backupJobsState.IncrementCounter(backupConfig.Name, "scripts_failed", "", "", "", "")
-			cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
+			cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 			return
 		}
 	}
@@ -269,8 +272,8 @@ func runBackup(name string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 		select {
 		case <-ctx.Done():
 			{
-				logger.Infof("Cancelling running backup job '%s' having id '%s'", name, jobUuid)
-				cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil)
+				logger.Infof("Cancelling running backup job '%s' having id '%s'", jobName, jobUuid)
+				cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil)
 				return
 			}
 		default:
@@ -278,12 +281,12 @@ func runBackup(name string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 			cancelled, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData, objectStores, jobUuid)
 			// Examine FIRST $exit and then $err
 			if cancelled {
-				cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil)
+				cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil)
 				return
 			}
 			if err != nil {
 				// some Major event happened which determined the whole backup to be considered failed
-				cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
+				cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, err)
 				return
 			}
 		}
@@ -292,21 +295,23 @@ func runBackup(name string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 	// TODO - test with 3 as $MaxResults
 	cancelled := backup.FindAndMarkDeleted(ctx, backupConfig, dbData, objectStores, backupJobsState, jobUuid, 5000)
 	if cancelled {
-		cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil)
+		cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil)
 	}
 	// if we got here than all was probably good (or "mostly" good) and the job did not get cancelled
-	cleanupAfterBackup(name, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, nil)
+	cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, nil)
 }
 
-// TODO - figure out how to deal with the SQL connection sharing
-func cleanupAfterBackup(name string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
+// does all of the housekeeping needed after a backup job has finished running (or has encountered an error and can't
+// keep running or it was cancelled)
+// $jobName MUST match the name of a backup job, as defined in the configuration file
+func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error) {
 	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then
 	//  it will leak at least a channel. Calling it for an already cancelled backup will not cause any issue
-	cancel, err := backupJobsState.GetCancelFunctionForJob(name, jobUuid)
+	cancel, err := backupJobsState.GetCancelFunctionForJob(jobName, jobUuid)
 	if err != nil {
 		logger.Warnf("While trying cleanup the cancel context for backup '%s' having uuid '%s' the '%s' error "+
-			"was encountered. This will leak some memory.", name, jobUuid, err)
+			"was encountered. This will leak some memory.", jobName, jobUuid, err)
 	} else {
 		cancel()
 	}
@@ -327,7 +332,7 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig shared.ConfigB
 
 	// set state to "stopping"; ignore any errors (job may be set to state "stopping" already if stop was requested
 	//  via the API but stop can also be triggered due to SIGTERM/SIGINT being received
-	_ = backupJobsState.MarkStopped(name, loggingContext+".cleanupAfterBackup", jobUuid, false) // #nosec
+	_ = backupJobsState.MarkStopped(jobName, loggingContext+".cleanupAfterBackup", jobUuid, false) // #nosec
 
 	// sleep for 1 second - cheap way to get tests a chance to verify things or otherwise a new config parameter
 	// would be needed for end to end tests
@@ -338,12 +343,12 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig shared.ConfigB
 	if backupError != nil {
 		backupFailed = true
 	}
-	watcher.TellClientsJobFinished("backup", name, jobUuid, backupJobsState.WatchMsgReceiver, cancelled, backupFailed)
+	watcher.TellClientsJobFinished("backup", jobName, jobUuid, backupJobsState.WatchMsgReceiver, cancelled, backupFailed)
 
 	backupJobsStateCopy := backupJobsState.Get(serverConfigCopy, loggingContext+".cleanupAfterBackup")
 	var jobStateCopy shared.BackupJobStatus
 	for _, j := range backupJobsStateCopy {
-		if name == j.Name {
+		if jobName == j.Name {
 			jobStateCopy = j
 			break
 		}
@@ -370,14 +375,32 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig shared.ConfigB
 	} else {
 		jobReport = string(b)
 	}
-	// TODO - before MarkStopped(stopped=true) save $jobStateCopy from above to the DB
 
 	backupJobErrorMsg := ""
 	if backupError != nil {
 		backupJobErrorMsg = backupError.Error()
 	}
 
-	failedScripts, err := notifications.Execute(serverConfigCopy, jobUuid, "backup", jobStateCopy.State, name, jobReport, backupJobErrorMsg)
+	// Record in the DB the job statatus - if it errors out then UpdateJobDetails() will log. There is nothing we can do with the error here
+	_ = dbops.UpdateJobDetails(dbData.Db, jobUuid, jobName, "backup", jobEndTime, jobStateCopy.State, jobReport) // #nosec
+	// TODO - close the database, put a lock on it, copy & gzip it and then upload the resulting file to the remote object store
+	dbops.CloseStatementsAndDb(dbData, backupJobsState)
+	// do the copy
+	dbCopyPath, err := dbops.MakeDbCopy(jobName, jobUuid, serverConfigCopy.DataDir, backupJobsState)
+	// TODO - upload $dbCopyPath
+
+	err = os.Remove(dbCopyPath)
+	if err != nil {
+		logger.Warnf("Could not delete database copy held in file '%s' due to error: %s", dbCopyPath, err)
+	}
+
+	dbData, err = dbops.PrepareDb(jobName, jobUuid, serverConfigCopy, backupJobsState, backupConfig, false)
+	if err != nil {
+		logger.Errorf("After making a copy of the database, could not reopen the original due to error: %s", err)
+		// TODO - add to job status a new counter and increment it in order to signal that a problem was encountered
+	}
+
+	failedScripts, err := notifications.Execute(serverConfigCopy, jobUuid, "backup", jobStateCopy.State, jobName, jobReport, backupJobErrorMsg)
 	if err != nil {
 		if failedScripts > 0 {
 			logger.Warningf("%d notification scripts exited with a non zero status code. Received errors "+
@@ -387,15 +410,17 @@ func cleanupAfterBackup(name string, jobUuid string, backupConfig shared.ConfigB
 	}
 
 	// set state to "stopped"
-	err = backupJobsState.MarkStopped(name, loggingContext+".cleanupAfterBackup",
+	err = backupJobsState.MarkStopped(jobName, loggingContext+".cleanupAfterBackup",
 		jobUuid, true)
 	if err != nil {
 		logger.Warnf("Encountered an error when trying to mark backup job '%s' having job id '%s' as 'stopped'. "+
-			"The error was: %s", name, jobUuid, err)
+			"The error was: %s", jobName, jobUuid, err)
 	}
 
-	// if it errors out then UpdateJobDetails() will log. There is nothing we can do with the error here
-	_ = dbops.UpdateJobDetails(dbData.Db, jobUuid, name, "backup", jobEndTime, jobStateCopy.State, jobReport) // #nosec
+	// Record again in the DB the job status as the notification scripts or the DB copy may have caused issues (and
+	// anyway when scripts were ok, they increment some counters because they ran). if it errors out then
+	// UpdateJobDetails() will log. There is nothing we can do with the error here.
+	_ = dbops.UpdateJobDetails(dbData.Db, jobUuid, jobName, "backup", jobEndTime, jobStateCopy.State, jobReport) // #nosec
 
 	// close SQL connection and opened statements
 	dbops.CloseStatementsAndDb(dbData, backupJobsState)

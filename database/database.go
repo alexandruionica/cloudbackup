@@ -209,11 +209,14 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool, backu
 
 		err = CreateDb(db, backupName)
 		if err != nil {
+			backupJobsState.UnMarkOpenDb(backupName) // release the lock as CreateDb doesn't deal with the locks
 			logger.Errorf("Backups for job '%s' are not possible as the database file can't be created or "+
 				"initialised",
 				backupName)
 			return err
 		}
+		// close db connection
+		CloseDb(db, backupName, backupJobsState)
 	}
 	return nil
 }

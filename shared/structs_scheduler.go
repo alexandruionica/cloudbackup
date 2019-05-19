@@ -764,13 +764,18 @@ func (jobs *BackupJobsState) MarkOngoingDbBackup(BackupJobName string) {
 	logger.Debugf("Waiting to get lock access in order to get permission for copying the database belonging to"+
 		" backup job '%s'", BackupJobName)
 	jobs.Lock.RLock()
+	logger.Debug("Got read lock in order to examine the JobState structure")
 	val, ok := jobs.DbOpenAllowed[BackupJobName]
 	jobs.Lock.RUnlock()
 	if ok {
+		logger.Debug("1. Waiting to get write lock access on the DbOpenAllowed struct")
 		val.Lock()
+		logger.Debug("1. Got lock on the DbOpenAllowed struct")
 	} else {
+		logger.Debug("2. Waiting to get write lock access on the DbOpenAllowed struct")
 		// $BackupJobName was not yet added to the map
 		jobs.Lock.Lock() // lock BackupJobsState while adding a new map member in DbOpenAllowed
+		logger.Debug("2. Got lock on the DbOpenAllowed struct")
 		jobs.DbOpenAllowed[BackupJobName] = &sync.RWMutex{}
 		val := jobs.DbOpenAllowed[BackupJobName]
 		jobs.Lock.Unlock() // close as soon as possible as if the struct is Locked, actual backups may stop
