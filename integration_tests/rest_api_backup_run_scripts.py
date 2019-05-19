@@ -544,6 +544,10 @@ if ( $found -ne 1 ) {{
                 break
             else:
                 if counter > 60:
+                    logging.info(response['result'])
+                    logging.info("#########")
+                    _, stderr, stdout = self.daemon.stop(get_output=True)
+                    logging.info("Daemon's stdout + stderr were:\n {}".format(stdout + stderr))
                     self.fail("Backup did not complete stopping after 6 seconds of checking (after it entered"
                               " 'stopping' state")
                 time.sleep(0.1)

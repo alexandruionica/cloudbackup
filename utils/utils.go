@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/md5" // #nosec
 	"encoding/json"
 	"errors"
@@ -231,4 +232,50 @@ func IsPathIncluded(includedPaths []string, path string) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+// gzip an existing $srcFilePath file and save it at $dstFilePath
+func GzipFile(srcFilePath string, dstFilePath string) error {
+	srcHandle, err := os.Open(srcFilePath)
+	if err != nil {
+		return err
+	}
+
+	dstHandle, err := os.OpenFile(dstFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		err2 := srcHandle.Close()
+		if err2 != nil {
+			logger.Warnf("Could not close opened file handle for '%s' due to error: %s", srcFilePath, err2)
+		}
+		return err
+	}
+
+	zipWriter := gzip.NewWriter(dstHandle)
+	_, err = io.Copy(zipWriter, srcHandle)
+	if err != nil {
+		err2 := srcHandle.Close()
+		if err2 != nil {
+			logger.Warnf("Could not close opened file handle for '%s' due to error: %s", srcFilePath, err2)
+		}
+		err2 = zipWriter.Close()
+		if err2 != nil {
+			logger.Warnf("While closing the compressor for '%s', encountered error: %s", dstFilePath, err2)
+		}
+		return err
+	}
+
+	err = zipWriter.Close()
+	if err != nil {
+		logger.Warnf("While closing the compressor for '%s', encountered error: %s", dstFilePath, err)
+	}
+	err = srcHandle.Close()
+	if err != nil {
+		logger.Warnf("Could not close opened file handle for '%s' due to error: %s", srcFilePath, err)
+	}
+
+	err = dstHandle.Close()
+	if err != nil {
+		logger.Warnf("Could not close opened file handle for '%s' due to error: %s", dstFilePath, err)
+	}
+	return nil
 }
