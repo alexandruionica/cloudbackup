@@ -387,11 +387,15 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 	dbops.CloseStatementsAndDb(dbData, backupJobsState)
 	// do the copy
 	dbCopyPath, err := dbops.MakeDbCopy(jobName, jobUuid, serverConfigCopy.DataDir, backupJobsState)
-	// TODO - upload $dbCopyPath
-
-	err = os.Remove(dbCopyPath)
 	if err != nil {
-		logger.Warnf("Could not delete database copy held in file '%s' due to error: %s", dbCopyPath, err)
+		// TODO - set some kind of marker that the copy failed
+	} else {
+		// TODO - upload $dbCopyPath
+
+		err = os.Remove(dbCopyPath)
+		if err != nil {
+			logger.Warnf("Could not delete database copy held in file '%s' due to error: %s", dbCopyPath, err)
+		}
 	}
 
 	dbData, err = dbops.PrepareDb(jobName, jobUuid, serverConfigCopy, backupJobsState, backupConfig, false)
