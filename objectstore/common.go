@@ -12,6 +12,8 @@ import (
 
 const MaxBufferSize = 20971520 // 20 MiB = 20971520
 const loggingContext = "objectstore"
+const DataPrepend = "data"
+const MetaDataPrepend = "metadata"
 
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
@@ -21,20 +23,21 @@ var CouldNotConvertRate = errors.New("could not convert rate to numeric value")
 
 type ObjectStore interface {
 	// uploads an item (if file; if not then just creates some kind of entry); it's up to the implementation to decide if
-	// the provided $version is to be used;
+	// the provided $version is to be used; $metadata if set to true means that the object uploaded is not a regular item
+	// to be backed up but instead some internal metadata (like the config file or the internal database)
 	// in the returned values, $remoteVersion is the version as returned by the object store (some object stores provide
 	// as a reply to a PUT a version which they generate) or it can also be the value of the input $version(converted to string)
-	Upload(newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error)
+	Upload(newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error)
 	// returned value $StoreName is the same as a target name in a Backup section of the config file; $StoreType represents target type
 	GetStoreDetails() (StoreName string, StoreType string)
 	// marks a given object, described by a $existingDbRecord.Path, as deleted. Depending on object store type this may have very different
 	// implementations. This must NOT actually delete one or more versions belonging to a given object as depicted by a
-	// path. For input parameter $version and returned $remoteVersion see the description for the Upload() method
-	MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error)
+	// path. For input parameter $version, $metadata and returned $remoteVersion see the description for the Upload() method
+	MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int, metadata bool) (remoteVersion string, cancelled bool, err error)
 	// for a given $path, deletes a particular $version && $remote_version pair (it's up to the implementation to
-	// decide which of the two makes sense to be used in order to remove the appropiate file)
-	//  $objType is one of "dir"/"file"/"symlink"
-	Delete(path string, objType string, version int, remoteVersion string) error
+	// decide which of the two makes sense to be used in order to remove the appropriate file)
+	//  $objType is one of "dir"/"file"/"symlink"; for $metadata see description same parameter in of Upload() method
+	Delete(path string, objType string, version int, remoteVersion string, metadata bool) error
 	// Validate that the config and credentials for a given object store are usable/work as expected
 	// the Validate() function MUST NOT make any use of the $backupJobsState struct which is passed when an object
 	// store is initialised. This is because when validate() is called, the object store is initialised with a "mock" $backupJobsState
@@ -53,7 +56,7 @@ type FileReader struct {
 	// used for figuring out which stats counter to increment
 	backupJobName string
 	// used for figuring out which stats counter to increment and also for other cases where the Target Name is not
-	// available from the caller of a particular function but the objectore object is passed in
+	// available from the caller of a particular function but the objectstore object is passed in
 	objectStoreName string
 	// used for figuring out which stats counter to increment
 	objectStoreType string

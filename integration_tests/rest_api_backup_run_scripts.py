@@ -96,6 +96,7 @@ if ( $found -ne 1 ) {{
         # server - config file
         self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
             suffix='_integration_tests_rest_api_backup_pre_post_run_scripts')
+        self.data_dir = self.to_delete[1]
         # tmp files for tests
         self.tmpdir, self.filelist = setup_dir_with_tmp_files()
         # adjust server config for job to include above tmpdir

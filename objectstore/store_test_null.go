@@ -51,7 +51,16 @@ func InitialiseStoreTestNull(ctx context.Context, backupConfig shared.ConfigBack
 }
 
 // pretend to upload file (actually discarding all read content)
-func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
+	var prepend string
+	if metadata {
+		prepend = MetaDataPrepend
+	} else {
+		prepend = DataPrepend
+	}
+	logger.Debugf("Pretending to upload: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", newDbRecord.Path, version, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+newDbRecord.Path)
+
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
 		reader, err := NewFileReader(newDbRecord.Path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
@@ -66,6 +75,13 @@ func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, v
 		// fake work of uploading file - read all bytes and discard them. Report errors
 		for {
 			_, err := reader.Read(p)
+
+			// TODO - FIX THE BELOW USING A per object store custom parameter
+			// answer instantly metadata==True in order to unblock integration tests until we have per object store custom parameters
+			if metadata {
+				return strconv.Itoa(version), false, nil
+			}
+
 			// logger.Infof("read %d bytes for %s", readyBytes, path)
 			if err != nil {
 				switch err {
@@ -76,6 +92,7 @@ func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, v
 					}
 				case context.Canceled:
 					{
+						logger.Infof("Received cancellation request while uploading '%s'", newDbRecord.Path)
 						return strconv.Itoa(version), true, nil
 					}
 				default:
@@ -96,14 +113,28 @@ func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType stri
 }
 
 // pretend to place a delete marker
-func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int, metadata bool) (remoteVersion string, cancelled bool, err error) {
+	var prepend string
+	if metadata {
+		prepend = MetaDataPrepend
+	} else {
+		prepend = DataPrepend
+	}
+	logger.Debugf("Pretending to mark as deleted: '%s' having version: '%d' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", existingDbRecord.Path, version, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+existingDbRecord.Path)
 	return strconv.Itoa(version), false, nil
 }
 
 // pretend to delete a particular version for a given path; $objType is one of "dir"/"file"/"symlink"
-func (object *StoreTestNull) Delete(path string, objType string, version int, remoteVersion string) error {
+func (object *StoreTestNull) Delete(path string, objType string, version int, remoteVersion string, metadata bool) error {
+	var prepend string
+	if metadata {
+		prepend = MetaDataPrepend
+	} else {
+		prepend = DataPrepend
+	}
 	logger.Debugf("Pretending to delete: '%s' having version: '%d' and remote version: '%s' from object store:"+
-		" '%s' using bucket: '%s' and full remote path: '%s'", path, version, remoteVersion, object.storeName, object.storeBucketName, object.storePrefix+"/"+path)
+		" '%s' using bucket: '%s' and full remote path: '%s'", path, version, remoteVersion, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+path)
 	return nil
 }
 

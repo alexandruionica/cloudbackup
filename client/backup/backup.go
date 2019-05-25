@@ -542,6 +542,7 @@ func printBackupStatus(decodedJson shared.BackupJobStatus) {
 			decodedJson.StatsCounters["scripts_failed"])
 		//
 		fmt.Printf("Errors encountered while building the list of deleted files/symlinks/dirs: %d\n", decodedJson.StatsCounters["failed_to_find_deleted"])
+		fmt.Printf("Errors encountered while making a copy of the metadata database: %d\n", decodedJson.StatsCounters["database_copy_errors"])
 		fmt.Printf("Deleted directories for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_directories"])
 		fmt.Printf("Deleted files for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_files"])
 		fmt.Printf("Deleted symlinks for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_symlinks"])
