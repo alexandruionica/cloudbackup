@@ -238,7 +238,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		var cancelled bool
 		var remoteVersion string
 		if operationType == "upload" {
-			remoteVersion, cancelled, err = UploadObject(DbRecord, backupConfig, objectStore, backupJobsState, version)
+			remoteVersion, cancelled, err = UploadObject(DbRecord, backupConfig, objectStore, backupJobsState, version, false)
 			if err != nil {
 				encounteredError++
 				encounteredErrorObject = err
@@ -304,7 +304,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		}
 		// ensure that any successfully uploaded file/dir/symlink is removed
 		for _, entry := range processed {
-			err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
+			err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion, false)
 			if err != nil {
 				logger.Warnf("After failed upload for '%s', while trying to cleanup, encountered error: %s", path, err)
 			}
@@ -697,14 +697,14 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig shared.Config
 // return values: the version of the stored item, as returned by the object store;
 // bool with true if backup got cancelled, false otherwise ; error if error encountered
 func UploadObject(newDbRecord shared.BackedUpFileProperties,
-	backupConfig shared.ConfigBackup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, version int) (string, bool, error) {
+	backupConfig shared.ConfigBackup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, version int, metadata bool) (string, bool, error) {
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", newDbRecord.Path)
 	} else {
 		logger.Debugf("Uploading metadata for '%s' which is of type '%s'", newDbRecord.Path, newDbRecord.Type)
 	}
 
-	remoteVersion, cancelled, err := objectStore.Upload(newDbRecord, version, backupJobsState)
+	remoteVersion, cancelled, err := objectStore.Upload(newDbRecord, version, backupJobsState, metadata)
 	if cancelled {
 		return remoteVersion, true, err
 	}
@@ -1029,7 +1029,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig shar
 			break
 		}
 
-		remoteVersion, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord, version)
+		remoteVersion, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord, version, false)
 		if err != nil {
 			logger.Debugf("The object store returned an error for the mark deleted operation: %s", err)
 			encounteredError++
@@ -1071,7 +1071,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig shar
 		}
 		// ensure that any successfully already added delete markers are removed
 		for _, entry := range processed {
-			err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion)
+			err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion, false)
 			if err != nil {
 				logger.Warnf("While trying to cleanup delete markers, encountered error: %s", err)
 			}

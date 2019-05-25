@@ -3769,7 +3769,7 @@ func TestUploadObject(t *testing.T) {
 	}
 
 	for _, objectstore := range objectStores {
-		rVersion, cancelled, err := UploadObject(newDbRecord, backupConfig, objectstore, backupJobsState, 1)
+		rVersion, cancelled, err := UploadObject(newDbRecord, backupConfig, objectstore, backupJobsState, 1, false)
 		if err != nil {
 			t.Fatalf("UploadObject() returned error: %s", err)
 		}

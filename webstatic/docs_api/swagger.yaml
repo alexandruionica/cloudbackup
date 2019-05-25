@@ -920,6 +920,10 @@ definitions:
           failed_to_find_deleted:
             type: integer
             description: How many errors were encountered when trying to build the list of deleted files/directories/symlinks. The logs need to be consulted for more details. The implication of this is that deleted items were not marked correctly as so in the remote object store but none the less, a backup restore for this backup job id should lead to the correct items being restored. An examination of the object store will not make it clear that said items were deleted. Subsequent backup runs will correct this as long as the underlying cause for the error is solved.
+          database_copy_errors:
+            type: integer
+            description: How many errors were encountered when creating and uploading a copy of the database. Any value larger than 0 means that this particular backup can not be restored from scratch using the remote object store unless a subsequent backup job completes and an up to date copy of the database is also successfully restored. In this particular scenario, "from scratch restore" means that a restore is attempted on a freshly installed system and no local copy of the database used for holding backup metadata exists.
+            example: 0
           failed_to_update_metadata_for_files:
             type: integer
             description: >-

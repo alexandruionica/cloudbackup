@@ -455,8 +455,8 @@ func MakeDbCopy(jobName string, jobUuid string, dataDir string, backupJobsState 
 
 	err = utils.GzipFile(srcFilePath, dstFilePath)
 	if err != nil {
-		logger.Errorf("While trying to create a copy of the database belonging to backup job '%s', using as "+
-			"source '%s' and destination '%s', encountered error: %s", jobName, srcFilePath, dstFilePath, err)
+		logger.Errorf("While trying to create a copy of the database belonging to backup job '%s', having job id '%s', using as "+
+			"source '%s' and destination '%s', encountered error: %s", jobName, jobUuid, srcFilePath, dstFilePath, err)
 		return "", err
 	}
 

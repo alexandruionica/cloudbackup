@@ -28,6 +28,7 @@ class TestCliBackupWatch(unittest.TestCase):
         # server - config file
         self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
             suffix='_integration_tests_cli_backup_watch_')
+        self.data_dir = self.to_delete[1]
         # client - config file
         tmphandle, self.client_config_file_path = tempfile.mkstemp(suffix='_integration_tests_client_config_file.yaml')
         tmpfile = os.fdopen(tmphandle, "w")
@@ -125,11 +126,14 @@ class TestCliBackupWatch(unittest.TestCase):
                          " be json decoded")
         # add to the list of generated files also the top level dir. This because the dryrun will include it
         self.filelist[self.tmpdir] = 'dir'
+        # add to the list of generated files also the compressed copy of the database as this is also uploaded
+        self.filelist[self.data_dir + os.sep + "first_backup.sqlite.gz"] = "file"
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
         self.assertDictEqual(self.filelist, dryrun_examined)
 
-        self.assertEqual(num_files, examined_files)
+        # add +1 due to also having the DB copy mandatory included
+        self.assertEqual(num_files + 1, examined_files)
         # top level dir counts too so we increment with 1 the initial list of directories
         self.assertEqual(num_dirs + 1, examined_directories)
         self.assertEqual(0, excluded_files_or_dirs)
@@ -205,11 +209,14 @@ class TestCliBackupWatch(unittest.TestCase):
                          " be json decoded")
         # add to the list of generated files also the top level dir. This because the dryrun will include it
         self.filelist[self.tmpdir] = 'dir'
+        # add to the list of generated files also the compressed copy of the database as this is also uploaded
+        self.filelist[self.data_dir + os.sep + "first_backup.sqlite.gz"] = "file"
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
         self.assertDictEqual(self.filelist, dryrun_examined)
 
-        self.assertEqual(num_files, examined_files)
+        # add +1 due to also having the DB copy mandatory included
+        self.assertEqual(num_files + 1, examined_files)
         # top level dir counts too so we increment with 1 the initial list of directories
         self.assertEqual(num_dirs + 1, examined_directories)
         self.assertEqual(0, excluded_files_or_dirs)

@@ -30,6 +30,7 @@ class TestRestAPIBackup(unittest.TestCase):
         # server - config file
         self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
             suffix='_integration_tests_rest_api_backup')
+        self.data_dir = self.to_delete[1]
         # tmp files for tests
         self.tmpdir, self.filelist = setup_dir_with_tmp_files()
         # adjust server config for job to include above tmpdir
@@ -525,6 +526,8 @@ class TestRestAPIBackup(unittest.TestCase):
         filelist_copy = copy.copy(self.filelist)
         # add to the list of generated files also the top level dir. This because the dryrun will include it
         filelist_copy[self.tmpdir] = 'dir'
+        # add to the list of generated files also the compressed copy of the database as this is also uploaded
+        filelist_copy[self.data_dir + os.sep + "first_backup.sqlite.gz"] = "file"
         # dir5 and file9,txt are set to be excluded so let's remove them from the comparison
         for entry in self.filelist:
             if "dir5" in entry or "file9.txt" in entry:
@@ -535,7 +538,8 @@ class TestRestAPIBackup(unittest.TestCase):
 
         # we've excluded 1 folder containing 2 files and also separately excluded 1 file so we know for sure 3 less
         #   files should have been reported
-        self.assertEqual(num_files - 3, examined_files)
+        # add +1 due to also having the DB copy mandatory included
+        self.assertEqual(num_files - 3 + 1, examined_files)
         # top level dir counts too so we increment with 1 the initial list of directories
         # we've excluded 1 folder containing so we know for sure 1 less folder should have been reported
         self.assertEqual(num_dirs + 1 - 1, examined_directories)

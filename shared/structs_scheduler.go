@@ -326,6 +326,8 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"failed_to_update_metadata_for_files":       0,
 			"failed_to_update_metadata_for_directories": 0,
 			"failed_to_update_metadata_for_symlinks":    0,
+			// errors encountered while creating and uploading a copy of the database
+			"database_copy_errors": 0,
 			// pre_run / post_run scripts which have failed will each increment once this counter
 			// (excludes notification scripts)
 			"scripts_failed": 0,
@@ -420,7 +422,8 @@ MainLoop:
 			// don't send a message to the multiplexer for the below $counterName
 			switch counterName {
 			case
-				"examined_files", "examined_directories", "examined_symlinks", "examined_unknown", "scripts_failed", "failed_to_find_deleted":
+				"examined_files", "examined_directories", "examined_symlinks", "examined_unknown", "scripts_failed",
+				"failed_to_find_deleted":
 				break MainLoop
 			}
 			// if this is a file, and no errors were encountered and this was a content upload then don't send a
