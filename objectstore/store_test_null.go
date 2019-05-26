@@ -51,7 +51,7 @@ func InitialiseStoreTestNull(ctx context.Context, backupConfig shared.ConfigBack
 }
 
 // pretend to upload file (actually discarding all read content)
-func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, version int, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
 	var prepend string
 	if metadata {
 		prepend = MetaDataPrepend
@@ -66,7 +66,7 @@ func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, v
 		reader, err := NewFileReader(newDbRecord.Path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
 			object.storeType, object.rateLimit, object.burst, newDbRecord.Size, object.ctx)
 		if err != nil {
-			return strconv.Itoa(version), false, err
+			return strconv.FormatInt(version, 10), false, err
 		}
 		defer reader.Close()
 
@@ -79,7 +79,7 @@ func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, v
 			// TODO - FIX THE BELOW USING A per object store custom parameter
 			// answer instantly metadata==True in order to unblock integration tests until we have per object store custom parameters
 			if metadata {
-				return strconv.Itoa(version), false, nil
+				return strconv.FormatInt(version, 10), false, nil
 			}
 
 			// logger.Infof("read %d bytes for %s", readyBytes, path)
@@ -88,23 +88,23 @@ func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, v
 				// io.Reader reports io.EOF when reaching the end of the file. This is normal and expected
 				case io.EOF:
 					{
-						return strconv.Itoa(version), false, nil
+						return strconv.FormatInt(version, 10), false, nil
 					}
 				case context.Canceled:
 					{
 						logger.Infof("Received cancellation request while uploading '%s'", newDbRecord.Path)
-						return strconv.Itoa(version), true, nil
+						return strconv.FormatInt(version, 10), true, nil
 					}
 				default:
 					{
 						logger.Warningf("While reading '%s' the following error was encountered: %s", newDbRecord.Path, err)
-						return strconv.Itoa(version), false, err
+						return strconv.FormatInt(version, 10), false, err
 					}
 				}
 			}
 		}
 	} else {
-		return strconv.Itoa(version), false, nil
+		return strconv.FormatInt(version, 10), false, nil
 	}
 }
 
@@ -113,7 +113,7 @@ func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType stri
 }
 
 // pretend to place a delete marker
-func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int, metadata bool) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
 	var prepend string
 	if metadata {
 		prepend = MetaDataPrepend
@@ -122,11 +122,11 @@ func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFilePro
 	}
 	logger.Debugf("Pretending to mark as deleted: '%s' having version: '%d' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, version, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+existingDbRecord.Path)
-	return strconv.Itoa(version), false, nil
+	return strconv.FormatInt(version, 10), false, nil
 }
 
 // pretend to delete a particular version for a given path; $objType is one of "dir"/"file"/"symlink"
-func (object *StoreTestNull) Delete(path string, objType string, version int, remoteVersion string, metadata bool) error {
+func (object *StoreTestNull) Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error {
 	var prepend string
 	if metadata {
 		prepend = MetaDataPrepend

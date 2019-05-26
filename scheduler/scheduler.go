@@ -439,11 +439,12 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 
 }
 
-// performs upload of the DB copy to each of the objectstores
+// performs upload of the DB copy to each of the object stores
 func uploadBackupMetadata(jobName string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, objectStores []objectstore.ObjectStore) error {
 	foundError := false
 	var foundErrorMsg error
+	version := time.Now().Unix()
 
 	// increment sequence number so Watch clients get the correct output
 	backupJobsState.IncrementSequence(backupConfig.Name)
@@ -482,9 +483,8 @@ func uploadBackupMetadata(jobName string, jobUuid string, backupConfig shared.Co
 				foundErrorMsg = err
 			} else {
 				for _, objStore := range objectStores {
-					// we won't stop if cancel is received during DB upload as we want to upload all DBs even when a cancel is issued
-					// TODO - figure out what to do with versioning as uploading with version 1 will keep only one copy (which could even be corrupted)
-					_, _, err := backup.UploadObject(newDbRecord, backupConfig, objStore, backupJobsState, 1, true)
+					// versioning wise we use the Unix time (in seconds) as this always increases
+					_, _, err := backup.UploadObject(newDbRecord, backupConfig, objStore, backupJobsState, version, true)
 					if err != nil {
 						backupJobsState.IncrementCounter(backupConfig.Name, "database_copy_errors", dbCopyPath, "file",
 							"upload", err.Error())
