@@ -30,7 +30,7 @@ type successfullyProcessed struct {
 	Path string
 	// one of "file"/"dir"/"symlink"
 	ObjType       string
-	Version       int
+	Version       int64
 	RemoteVersion string
 	Objectstore   objectstore.ObjectStore
 }
@@ -333,7 +333,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 //
 // Returns the uuid value for this entry and if an error was encountered or not. If err then ignore the uuid value.
 func addDbEntryToRemoteFiles(target string, jobUuid string, deleteMarker int, dbData shared.DbData,
-	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties, version int, remoteVersion string) (string, error) {
+	dbtx *sql.Tx, fileDbRecord shared.BackedUpFileProperties, version int64, remoteVersion string) (string, error) {
 	u, err := uuid.NewV4()
 	if err != nil {
 		logger.Errorf("Could not generate a UUID so the backup for '%s' can't complete. Encountered error is: %s", fileDbRecord.Path, err)
@@ -385,7 +385,7 @@ func updateDbEntryInFiles(dbData shared.DbData, dbtx *sql.Tx, fileDbRecord share
 
 // For a given file path and a backup target name calculate version
 // returns an increment of the largest found version and nil; if an error is encountered then it returns 0 and the error; if no entry is found then it returns 1 and nil
-func calcRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string) (int, error) {
+func calcRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string) (int64, error) {
 	rows, err := dbtx.Query(dbData.PreparedStatements.RemoteFilesQueryNewestVersion, localPath, targetName)
 	if err != nil {
 		logger.Errorf("While querying the database in order to calculate a version number for '%s' the "+
@@ -399,7 +399,7 @@ func calcRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string,
 				"to calculate a version number for '%s' the following error was encountered: %s", localPath, err)
 		}
 	}()
-	var version int
+	var version int64
 	entryFound := false
 	for rows.Next() {
 		if entryFound {
@@ -429,7 +429,7 @@ func calcRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string,
 }
 
 // for a given $version && $targetName && $localPath return from the DB the "remote_version" field
-func getRemoteVersionForVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string, version int) (string, error) {
+func getRemoteVersionForVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string, targetName string, version int64) (string, error) {
 	rows, err := dbtx.Query(dbData.PreparedStatements.RemoteFilesQueryRemoteVersion, localPath, targetName, version)
 	if err != nil {
 		logger.Errorf("While querying the database in order to find the remote_version for '%s' and version '%d' belonging to target '%s' the "+
@@ -697,7 +697,7 @@ func PrepareFileRecord(path string, stat os.FileInfo, backupConfig shared.Config
 // return values: the version of the stored item, as returned by the object store;
 // bool with true if backup got cancelled, false otherwise ; error if error encountered
 func UploadObject(newDbRecord shared.BackedUpFileProperties,
-	backupConfig shared.ConfigBackup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, version int, metadata bool) (string, bool, error) {
+	backupConfig shared.ConfigBackup, objectStore objectstore.ObjectStore, backupJobsState shared.BackupJobsStateInterface, version int64, metadata bool) (string, bool, error) {
 	if newDbRecord.Type == "file" {
 		logger.Debugf("Uploading '%s'", newDbRecord.Path)
 	} else {

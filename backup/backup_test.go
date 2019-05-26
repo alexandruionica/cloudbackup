@@ -515,7 +515,7 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -783,7 +783,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	file1stTimeUuid, err := addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	file1stTimeUuid, err := addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -842,7 +842,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("2. Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	file2ndTimeUuid, err := addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	file2ndTimeUuid, err := addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -904,7 +904,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	if err != nil {
 		t.Fatalf("3. Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	file3ndTimeUuid, err := addDbEntryToRemoteFiles(newTargetName, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	file3ndTimeUuid, err := addDbEntryToRemoteFiles(newTargetName, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1008,7 +1008,7 @@ func TestNeedsUpload1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1108,7 +1108,7 @@ func TestNeedsUpload2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1212,7 +1212,7 @@ func TestNeedsUpload3(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1314,7 +1314,7 @@ func TestNeedsUpload4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1415,7 +1415,7 @@ func TestNeedsUpload5(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1518,7 +1518,7 @@ func TestNeedsUpload6(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1621,7 +1621,7 @@ func TestNeedsUpload7(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1724,7 +1724,7 @@ func TestNeedsUpload8(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1827,7 +1827,7 @@ func TestNeedsUpload9(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -1923,7 +1923,7 @@ func TestNeedsUpload10(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2016,7 +2016,7 @@ func TestNeedsUpload11(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2110,7 +2110,7 @@ func TestNeedsUpload12(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2205,7 +2205,7 @@ func TestNeedsUpload13(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2299,7 +2299,7 @@ func TestNeedsUpload14(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2395,7 +2395,7 @@ func TestNeedsUpload15(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2491,7 +2491,7 @@ func TestNeedsUpload16(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2594,7 +2594,7 @@ func TestNeedsUpload17(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2690,7 +2690,7 @@ func TestNeedsUpload18(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2802,7 +2802,7 @@ func TestNeedsUpload19(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -2911,7 +2911,7 @@ func TestNeedsUpload20(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -3024,7 +3024,7 @@ func TestNeedsUpload21(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -3135,7 +3135,7 @@ func TestNeedsUpload22(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -3236,7 +3236,7 @@ func TestNeedsUpload23(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -3348,7 +3348,7 @@ func TestNeedsUpload24(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -3460,7 +3460,7 @@ func TestNeedsUpload25(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -3563,7 +3563,7 @@ func TestNeedsUpload26(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
@@ -3675,7 +3675,7 @@ func TestNeedsUpload27(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not calculate remote version for %s due to error: %s", path, err)
 	}
-	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.Itoa(version))
+	_, err = addDbEntryToRemoteFiles(backupConfig.Target[0].Name, jobId, 0, dbData, dbtx, newDbRecord, version, strconv.FormatInt(version, 10))
 	if err != nil {
 		t.Fatalf("Failed to addDbEntryToRemoteFiles() due to error: %s", err)
 	}
