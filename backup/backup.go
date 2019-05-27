@@ -2,6 +2,7 @@ package backup
 
 import (
 	"cloudbackup/backup/fileproperties"
+	"cloudbackup/database/dbops"
 	"cloudbackup/objectstore"
 	"cloudbackup/shared"
 	"cloudbackup/utils"
@@ -1090,4 +1091,74 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig shar
 	}
 	logger.Debugf("DB transaction for marking '%s' as deleted was committed", ObjectDbRecord.Path)
 	return false, nil
+}
+
+// performs upload of the DB copy to each of the object stores
+func UploadBackupMetadata(jobName string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
+	backupJobsState *shared.BackupJobsState, objectStores []objectstore.ObjectStore) error {
+	foundError := false
+	var foundErrorMsg error
+	version := time.Now().Unix()
+
+	// increment sequence number so Watch clients get the correct output
+	backupJobsState.IncrementSequence(backupConfig.Name)
+	// do the DB copy
+	dbCopyPath, err := dbops.MakeDbCopy(jobName, jobUuid, serverConfigCopy.DataDir, backupJobsState)
+	if err != nil {
+		copyPath := "internal_metadata_database"
+		if dbCopyPath != "" {
+			copyPath = dbCopyPath
+		}
+		backupJobsState.IncrementCounter(backupConfig.Name, "database_copy_errors", copyPath, "file",
+			"upload", err.Error())
+		foundError = true
+		foundErrorMsg = err
+	} else {
+		ctime, err := fileproperties.GetCtime(dbCopyPath, backupConfig.Dereference)
+		if err != nil {
+			logger.Debugf("For '%s' could not establish ctime due to error: %s ; using current time as ctime", dbCopyPath, err)
+			ctime = time.Time{}
+		}
+		stat, err := os.Stat(dbCopyPath)
+		if err != nil {
+			backupJobsState.IncrementCounter(backupConfig.Name, "database_copy_errors", dbCopyPath, "file",
+				"upload", err.Error())
+
+		}
+
+		if !foundError {
+			newDbRecord, err := PrepareFileRecord(dbCopyPath, stat, backupConfig, ctime, "", jobUuid)
+			if err != nil {
+				// something bad enough happened that we don't have a usable db record so we can't proceed to
+				// backup this file.
+				backupJobsState.IncrementCounter(backupConfig.Name, "database_copy_errors", dbCopyPath, "file",
+					"upload", err.Error())
+				foundError = true
+				foundErrorMsg = err
+			} else {
+				for _, objStore := range objectStores {
+					// versioning wise we use the Unix time (in seconds) as this always increases
+					_, _, err := UploadObject(newDbRecord, backupConfig, objStore, backupJobsState, version, true)
+					if err != nil {
+						backupJobsState.IncrementCounter(backupConfig.Name, "database_copy_errors", dbCopyPath, "file",
+							"upload", err.Error())
+						foundError = true
+						foundErrorMsg = err
+					}
+					// else - TODO - delete old copies of DB (for example keep the last 20 copies and not more)
+				}
+
+			}
+
+		}
+		err = os.Remove(dbCopyPath)
+		if err != nil {
+			logger.Warnf("Could not delete database copy held in file '%s' due to error: %s", dbCopyPath, err)
+		}
+	}
+	if foundError {
+		return foundErrorMsg
+	} else {
+		return nil
+	}
 }
