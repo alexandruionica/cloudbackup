@@ -1421,6 +1421,7 @@ func TestNeedsUpload5(t *testing.T) {
 	}
 
 	newDbRecordCopy := newDbRecord
+	time.Sleep(1 * time.Millisecond)
 	newDbRecordCopy.Mtime = time.Now()
 
 	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
@@ -2305,6 +2306,7 @@ func TestNeedsUpload14(t *testing.T) {
 	}
 
 	newDbRecordCopy := newDbRecord
+	time.Sleep(1 * time.Millisecond)
 	newDbRecordCopy.Mtime = time.Now()
 
 	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
@@ -3242,6 +3244,7 @@ func TestNeedsUpload23(t *testing.T) {
 	}
 
 	newDbRecordCopy := newDbRecord
+	time.Sleep(1 * time.Millisecond)
 	newDbRecordCopy.Mtime = time.Now()
 
 	contentChanged, metadataChanged, rCtime, rChecksum := needsUpload(path, stat, newDbRecordCopy, false, dereference, false)
