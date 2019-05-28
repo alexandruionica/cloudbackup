@@ -3,6 +3,7 @@ package scheduler
 import (
 	"cloudbackup/backup"
 	"cloudbackup/backup/scan"
+	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
 	"cloudbackup/database"
 	"cloudbackup/database/dbops"
@@ -377,7 +378,7 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 	if !cancelled && backupError == nil {
 		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 
-		err := backup.UploadBackupMetadata(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, objectStores)
+		err := backup.UploadBackupDatabase(jobName, jobUuid, backupConfig, serverConfigCopy.DataDir, backupJobsState, objectStores)
 		if err != nil {
 			logger.Warnf("While uploading a copy of the internal database, encountered error: %s", err)
 		}
@@ -389,6 +390,15 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 			// attempt to close the DB. This operation is safe even if it did not succeed opening.
 			dbops.CloseStatementsAndDb(dbData, backupJobsState)
 			logger.Errorf("After making a copy of the database, could not reopen the original due to error: %s", err)
+		}
+
+		sanitisedCfgFile, err := config.SaveSanitizedCfgToTmpFile(serverConfigCopy)
+		if err != nil {
+			logger.Errorf("Could not create a copy of the configuration file, in order to upload it to the remote object store, due to error: %s", err)
+		}
+		err = backup.UploadBackupConfigCopy(sanitisedCfgFile, jobUuid, backupConfig, backupJobsState, objectStores)
+		if err != nil {
+			logger.Errorf("Could not upload to the remote object store, a copy of the configuration file, due to error: %s", err)
 		}
 	}
 

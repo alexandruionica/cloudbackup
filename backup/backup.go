@@ -1094,7 +1094,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig shar
 }
 
 // performs upload of the DB copy to each of the object stores
-func UploadBackupMetadata(jobName string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
+func UploadBackupDatabase(jobName string, jobUuid string, backupConfig shared.ConfigBackup, dataDir string,
 	backupJobsState *shared.BackupJobsState, objectStores []objectstore.ObjectStore) error {
 	foundError := false
 	var foundErrorMsg error
@@ -1103,7 +1103,7 @@ func UploadBackupMetadata(jobName string, jobUuid string, backupConfig shared.Co
 	// increment sequence number so Watch clients get the correct output
 	backupJobsState.IncrementSequence(backupConfig.Name)
 	// do the DB copy
-	dbCopyPath, err := dbops.MakeDbCopy(jobName, jobUuid, serverConfigCopy.DataDir, backupJobsState)
+	dbCopyPath, err := dbops.MakeDbCopy(jobName, jobUuid, dataDir, backupJobsState)
 	if err != nil {
 		copyPath := "internal_metadata_database"
 		if dbCopyPath != "" {
@@ -1123,9 +1123,9 @@ func UploadBackupMetadata(jobName string, jobUuid string, backupConfig shared.Co
 		if err != nil {
 			backupJobsState.IncrementCounter(backupConfig.Name, "database_copy_errors", dbCopyPath, "file",
 				"upload", err.Error())
-
+			foundError = true
+			foundErrorMsg = err
 		}
-
 		if !foundError {
 			newDbRecord, err := PrepareFileRecord(dbCopyPath, stat, backupConfig, ctime, "", jobUuid)
 			if err != nil {
@@ -1147,14 +1147,56 @@ func UploadBackupMetadata(jobName string, jobUuid string, backupConfig shared.Co
 					}
 					// else - TODO - delete old copies of DB (for example keep the last 20 copies and not more)
 				}
-
 			}
-
 		}
 		err = os.Remove(dbCopyPath)
 		if err != nil {
 			logger.Warnf("Could not delete database copy held in file '%s' due to error: %s", dbCopyPath, err)
 		}
+	}
+	if foundError {
+		return foundErrorMsg
+	} else {
+		return nil
+	}
+}
+
+func UploadBackupConfigCopy(sanitisedCfgCopyFile string, jobUuid string, backupConfig shared.ConfigBackup,
+	backupJobsState *shared.BackupJobsState, objectStores []objectstore.ObjectStore) error {
+	foundError := false
+	var foundErrorMsg error
+	version := time.Now().Unix()
+
+	// increment sequence number so Watch clients get the correct output
+	backupJobsState.IncrementSequence(backupConfig.Name)
+	ctime, err := fileproperties.GetCtime(sanitisedCfgCopyFile, backupConfig.Dereference)
+	if err != nil {
+		logger.Debugf("For '%s' could not establish ctime due to error: %s ; using current time as ctime", sanitisedCfgCopyFile, err)
+		ctime = time.Time{}
+	}
+	stat, err := os.Stat(sanitisedCfgCopyFile)
+	if err != nil {
+		return err
+	}
+	newDbRecord, err := PrepareFileRecord(sanitisedCfgCopyFile, stat, backupConfig, ctime, "", jobUuid)
+	if err != nil {
+		// something bad enough happened that we don't have a usable db record so we can't proceed to
+		// backup this file.
+		return err
+	} else {
+		for _, objStore := range objectStores {
+			// versioning wise we use the Unix time (in seconds) as this always increases
+			_, _, err := UploadObject(newDbRecord, backupConfig, objStore, backupJobsState, version, true)
+			if err != nil {
+				foundError = true
+				foundErrorMsg = err
+			}
+			// else - TODO - delete old copies of the config file (for example keep the last 5 copies and not more)
+		}
+	}
+	err = os.Remove(sanitisedCfgCopyFile)
+	if err != nil {
+		logger.Warnf("Could not delete the configuration file's copy held in file '%s' due to error: %s", sanitisedCfgCopyFile, err)
 	}
 	if foundError {
 		return foundErrorMsg
