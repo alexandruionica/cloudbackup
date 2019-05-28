@@ -130,10 +130,14 @@ class TestCliBackupWatch(unittest.TestCase):
         self.filelist[self.data_dir + os.sep + "first_backup.sqlite.gz"] = "file"
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
+        # add the tmp copy of the config file to the dict too:
+        for k in dryrun_examined.keys():
+            if "cloudbackup_configuration_file_copy" in k:
+                self.filelist[k] = dryrun_examined[k]
         self.assertDictEqual(self.filelist, dryrun_examined)
 
-        # add +1 due to also having the DB copy mandatory included
-        self.assertEqual(num_files + 1, examined_files)
+        # add +1 due to also having the DB copy mandatory included and +1 as the copy of the config file gets uploaded
+        self.assertEqual(num_files + 1 + 1, examined_files)
         # top level dir counts too so we increment with 1 the initial list of directories
         self.assertEqual(num_dirs + 1, examined_directories)
         self.assertEqual(0, excluded_files_or_dirs)
@@ -213,10 +217,14 @@ class TestCliBackupWatch(unittest.TestCase):
         self.filelist[self.data_dir + os.sep + "first_backup.sqlite.gz"] = "file"
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
+        # add the tmp copy of the config file to the dict too:
+        for k in dryrun_examined.keys():
+            if "cloudbackup_configuration_file_copy" in k:
+                self.filelist[k] = dryrun_examined[k]
         self.assertDictEqual(self.filelist, dryrun_examined)
 
-        # add +1 due to also having the DB copy mandatory included
-        self.assertEqual(num_files + 1, examined_files)
+        # add +1 due to also having the DB copy mandatory included and +1 as the copy of the config file gets uploaded
+        self.assertEqual(num_files + 1 + 1, examined_files)
         # top level dir counts too so we increment with 1 the initial list of directories
         self.assertEqual(num_dirs + 1, examined_directories)
         self.assertEqual(0, excluded_files_or_dirs)

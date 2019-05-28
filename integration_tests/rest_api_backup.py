@@ -532,14 +532,18 @@ class TestRestAPIBackup(unittest.TestCase):
         for entry in self.filelist:
             if "dir5" in entry or "file9.txt" in entry:
                 filelist_copy.pop(entry)
+        # add the tmp copy of the config file to the dict too:
+        for k in watch_examined.keys():
+            if "cloudbackup_configuration_file_copy" in k:
+                filelist_copy[k] = watch_examined[k]
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
         self.assertDictEqual(filelist_copy, watch_examined)
 
         # we've excluded 1 folder containing 2 files and also separately excluded 1 file so we know for sure 3 less
         #   files should have been reported
-        # add +1 due to also having the DB copy mandatory included
-        self.assertEqual(num_files - 3 + 1, examined_files)
+        # add +1 due to also having the DB copy mandatory included and +1 as the copy of the config file gets uploaded
+        self.assertEqual(num_files - 3 + 1 + 1, examined_files)
         # top level dir counts too so we increment with 1 the initial list of directories
         # we've excluded 1 folder containing so we know for sure 1 less folder should have been reported
         self.assertEqual(num_dirs + 1 - 1, examined_directories)
