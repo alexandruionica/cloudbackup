@@ -533,9 +533,7 @@ class TestRestAPIBackup(unittest.TestCase):
             if "dir5" in entry or "file9.txt" in entry:
                 filelist_copy.pop(entry)
         # add the tmp copy of the config file to the dict too:
-        for k in watch_examined.keys():
-            if "cloudbackup_configuration_file_copy" in k:
-                filelist_copy[k] = watch_examined[k]
+        filelist_copy[self.data_dir + os.sep + "config.yaml"] = "file"
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
         self.assertDictEqual(filelist_copy, watch_examined)

@@ -131,9 +131,8 @@ class TestCliBackupWatch(unittest.TestCase):
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
         # add the tmp copy of the config file to the dict too:
-        for k in dryrun_examined.keys():
-            if "cloudbackup_configuration_file_copy" in k:
-                self.filelist[k] = dryrun_examined[k]
+        # add the tmp copy of the config file to the dict too:
+        self.filelist[self.data_dir + os.sep + "config.yaml"] = "file"
         self.assertDictEqual(self.filelist, dryrun_examined)
 
         # add +1 due to also having the DB copy mandatory included and +1 as the copy of the config file gets uploaded
@@ -218,9 +217,8 @@ class TestCliBackupWatch(unittest.TestCase):
         # in case the dicts don't match, show the full diff
         self.maxDiff = None
         # add the tmp copy of the config file to the dict too:
-        for k in dryrun_examined.keys():
-            if "cloudbackup_configuration_file_copy" in k:
-                self.filelist[k] = dryrun_examined[k]
+        # add the tmp copy of the config file to the dict too:
+        self.filelist[self.data_dir + os.sep + "config.yaml"] = "file"
         self.assertDictEqual(self.filelist, dryrun_examined)
 
         # add +1 due to also having the DB copy mandatory included and +1 as the copy of the config file gets uploaded
