@@ -784,7 +784,7 @@ func isLocalhost(name string) bool {
 	return strings.ToLower(name) == "localhost" || name == "127.0.0.1" || name == "::1"
 }
 
-// saves in a tmpfile a sanitised version of the config file (meaning all secrets are replaced with ****) and returns the path to the file
+// saves in $datadir/config.yaml a sanitised version of the config file (meaning all secrets are replaced with ****) and returns the path to the file
 // It's up to the caller to remove the TMP file (if no error was returned)
 func SaveSanitizedCfgToTmpFile(serverConfigCopy shared.CfgTemplate) (string, error) {
 	sanitizedCfg := SanitizeCfgTemplate(serverConfigCopy)
@@ -793,7 +793,8 @@ func SaveSanitizedCfgToTmpFile(serverConfigCopy shared.CfgTemplate) (string, err
 		return fmt.Sprintf("could not marshall YAML when preparing for write the copy of the configuration "+
 			"file. The error received was: %s", err), err
 	}
-	filePath, err := utils.SetupTmpFileWithContent(toWrite, "cloudbackup_configuration_file_copy_")
+	filePath := filepath.Join(serverConfigCopy.DataDir, "config.yaml")
+	err = ioutil.WriteFile(filePath, toWrite, 0600)
 	if err != nil {
 		return fmt.Sprintf("While trying to save a copy of the configuration "+
 			"file, encountered error: %s", err), err
