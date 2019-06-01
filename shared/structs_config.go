@@ -35,14 +35,22 @@ type ConfigBackup struct {
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating
 type ConfigBackupTarget struct {
-	Name         string `required:"true" yaml:"name" json:"name"`
-	Type         string `required:"true" yaml:"type" json:"type"`
-	RateLimit    string `default:"0" yaml:"ratelimit" json:"ratelimit"`
-	User         string `yaml:"user" json:"user"`
-	Pass         string `yaml:"pass" json:"pass"`
-	Bucket       string `required:"true" yaml:"bucket" json:"bucket"`
-	Prefix       string `required:"true" yaml:"prefix" json:"prefix"`
-	StorageClass string `yaml:"storage_class" json:"storage_class"`
+	Name       string                     `required:"true" yaml:"name" json:"name"`
+	Type       string                     `required:"true" yaml:"type" json:"type"`
+	Prefix     string                     `required:"true" yaml:"prefix" json:"prefix"`
+	Bucket     string                     `required:"true" yaml:"bucket" json:"bucket"`
+	Parameters []ConfigBackupTargetParams `yaml:"parameters,omitempty" json:"parameters,omitempty"`
+	RateLimit  string                     `default:"0" yaml:"ratelimit" json:"ratelimit"`
+}
+
+// ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
+//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+// CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
+// also config.CopyPasswordsFromOldConfig needs updating
+type ConfigBackupTargetParams struct {
+	Name  string `required:"true" yaml:"name" json:"name"`
+	Value string `required:"true" yaml:"value" json:"value"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync

@@ -71,14 +71,18 @@ backup:
     target:
       - name: aws_1
         type: aws_s3
-        user: AWS_ACCESS_KEY_ID
-        pass: AWS_SECRET_ACCESS_KEY
         # rate limit uploads to the object store. Specified rate in bytes per second or using a unit like KB/MB/GB etc (Example: 231 KB).
         # Leave unset or set to 0 to have unlimited rate
         ratelimit: 100 KB
         bucket: 'example-com-us-servers'
         prefix: 'backup/backups-for-server-51'
-        storage_class: standard
+        parameters:
+          - name: AWS_ACCESS_KEY_ID
+            value: AKIAIOSFODNN7EXAMPLE
+          - name: AWS_SECRET_ACCESS_KEY
+            value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+          - name: storage_class
+            value: standard
     # Script to run before commencing to backup files. The script must exist or otherwise the backup server will refuse
     # to start. On Unix like operating systems the user executing the script must have execute rights on the script
     # (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply the path to an 
@@ -113,14 +117,12 @@ backup:
         pass: qwqe
         bucket: 'some-stuff-goes-here'
         prefix: 'backup/backups-for-server-51'
-        storage_class: 'infrequent-access'
       - name: google_1
         type: gcp_storage
         user: JANEDOE
         pass: 34324fd
         bucket: 'my-google-bucket'
         prefix: 'backup/backups-for-server-51'
-        storage_class: standard
     encrypt: true
     encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
     schedule:
