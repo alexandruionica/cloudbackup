@@ -1146,7 +1146,18 @@ func TestCopyPasswordsFromOldConfig2(t *testing.T) {
 	NewConfig := result2.Config
 	NewConfig.User[0].Pass = SecretReplace
 	NewConfig.Backup[1].EncryptPass = SecretReplace
-	NewConfig.Backup[0].Target[0].Pass = SecretReplace
+	foundSecretKey := false
+	for _, entry := range NewConfig.Backup[0].Target[0].Parameters {
+		if entry.Name == "AWS_SECRET_ACCESS_KEY" {
+			entry.Value = SecretReplace
+			foundSecretKey = true
+		}
+	}
+
+	if !foundSecretKey {
+		t.Fatal("Sample backup config used does not have a 'AWS_SECRET_ACCESS_KEY' parameter for the first " +
+			"target of the first backup and we expect the config to be built this way, for testing")
+	}
 
 	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
 	if err != nil {
@@ -1162,10 +1173,19 @@ func TestCopyPasswordsFromOldConfig2(t *testing.T) {
 			"having name: '%s') from '%s' to an actual password but did not do so", NewConfig.Backup[1].Name, SecretReplace)
 	}
 
-	if NewConfig.Backup[0].Target[0].Pass == SecretReplace {
-		t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's Backup[0].Target[0].Pass "+
-			"(this is backup having name: '%s' and target name '%s') from '%s' to an actual password but did not do so",
-			NewConfig.Backup[0].Name, NewConfig.Backup[0].Target[0].Name, SecretReplace)
+	foundSecretKey = false
+	for _, entry := range NewConfig.Backup[0].Target[0].Parameters {
+		if entry.Name == "AWS_SECRET_ACCESS_KEY" {
+			if entry.Value == SecretReplace {
+				t.Fatalf("CopyPasswordsFromOldConfig() should have replaced the NewConfig's Backup[0].Target[0].Parameters.'AWS_SECRET_ACCESS_KEY "+
+					"(this is backup having name: '%s' and target name '%s') from '%s' to an actual secret but did not do so",
+					NewConfig.Backup[0].Name, NewConfig.Backup[0].Target[0].Name, SecretReplace)
+			}
+			foundSecretKey = true
+		}
+	}
+	if !foundSecretKey {
+		t.Fatal("CopyPasswordsFromOldConfig() seems to somehow made 'AWS_SECRET_ACCESS_KEY' disappear")
 	}
 }
 
@@ -1260,7 +1280,7 @@ func TestCopyPasswordsFromOldConfig5(t *testing.T) {
 	}
 }
 
-// check that for a Backup.Target with Pass=*** that we get an error if the Target doesn't exist in the old config
+// check that for a Backup.Target.Params with value for AWS_SECRET_ACCESS_KEY *** that we get an error if the Target doesn't exist in the old config
 func TestCopyPasswordsFromOldConfig6(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -1286,7 +1306,18 @@ func TestCopyPasswordsFromOldConfig6(t *testing.T) {
 	oldConfig := result.Config
 	NewConfig := result2.Config
 	NewConfig.Backup[0].Target[0].Name = "bla4832094Target"
-	NewConfig.Backup[0].Target[0].Pass = SecretReplace
+	foundSecretKey := false
+	for i, entry := range NewConfig.Backup[0].Target[0].Parameters {
+		if entry.Name == "AWS_SECRET_ACCESS_KEY" {
+			NewConfig.Backup[0].Target[0].Parameters[i].Value = SecretReplace
+			foundSecretKey = true
+		}
+	}
+
+	if !foundSecretKey {
+		t.Fatal("Sample backup config used does not have a 'AWS_SECRET_ACCESS_KEY' parameter for the first " +
+			"target of the first backup and we expect the config to be built this way, for testing")
+	}
 
 	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
 	if err == nil {
@@ -1321,7 +1352,18 @@ func TestCopyPasswordsFromOldConfig7(t *testing.T) {
 	oldConfig := result.Config
 	NewConfig := result2.Config
 	NewConfig.Backup[0].Name = "bla32847234blaBackup"
-	NewConfig.Backup[0].Target[0].Pass = SecretReplace
+	foundSecretKey := false
+	for i, entry := range NewConfig.Backup[0].Target[0].Parameters {
+		if entry.Name == "AWS_SECRET_ACCESS_KEY" {
+			NewConfig.Backup[0].Target[0].Parameters[i].Value = SecretReplace
+			foundSecretKey = true
+		}
+	}
+
+	if !foundSecretKey {
+		t.Fatal("Sample backup config used does not have a 'AWS_SECRET_ACCESS_KEY' parameter for the first " +
+			"target of the first backup and we expect the config to be built this way, for testing")
+	}
 
 	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
 	if err == nil {
@@ -1355,8 +1397,34 @@ func TestCopyPasswordsFromOldConfig8(t *testing.T) {
 
 	oldConfig := result.Config
 	NewConfig := result2.Config
-	NewConfig.Backup[0].Target[0].Pass = SecretReplace
-	oldConfig.Backup[0].Target[0].Pass = ""
+
+	// change in new config
+	foundSecretKey := false
+	for i, entry := range NewConfig.Backup[0].Target[0].Parameters {
+		if entry.Name == "AWS_SECRET_ACCESS_KEY" {
+			NewConfig.Backup[0].Target[0].Parameters[i].Value = SecretReplace
+			foundSecretKey = true
+		}
+	}
+
+	if !foundSecretKey {
+		t.Fatal("Sample backup config used does not have a 'AWS_SECRET_ACCESS_KEY' parameter for the first " +
+			"target of the first backup and we expect the config to be built this way, for testing")
+	}
+
+	// change in old config
+	foundSecretKey = false
+	for i, entry := range oldConfig.Backup[0].Target[0].Parameters {
+		if entry.Name == "AWS_SECRET_ACCESS_KEY" {
+			oldConfig.Backup[0].Target[0].Parameters[i].Value = ""
+			foundSecretKey = true
+		}
+	}
+
+	if !foundSecretKey {
+		t.Fatal("Sample backup config used does not have a 'AWS_SECRET_ACCESS_KEY' parameter for the first " +
+			"target of the first backup and we expect the config to be built this way, for testing")
+	}
 
 	err = CopyPasswordsFromOldConfig(&NewConfig, oldConfig)
 	if err == nil {
@@ -1388,9 +1456,22 @@ func TestSanitizeCfgTemplate(t *testing.T) {
 	if sanitizedConfig.User[0].Pass != SecretReplace {
 		t.Fatalf("Expected user password to be %s but it remains %s", SecretReplace, sanitizedConfig.User[0].Pass)
 	}
-	if sanitizedConfig.Backup[0].Target[0].Pass != SecretReplace {
-		t.Fatalf("Expected target password to be %s but it remains %s", SecretReplace, sanitizedConfig.Backup[0].Target[0].Pass)
+
+	foundSecretKey := false
+	for _, entry := range sanitizedConfig.Backup[0].Target[0].Parameters {
+		if entry.Name == "AWS_SECRET_ACCESS_KEY" {
+			if entry.Value != SecretReplace {
+				t.Fatalf("Expected target parameter 'AWS_SECRET_ACCESS_KEY' to be %s but it remains %s", SecretReplace, entry.Value)
+			}
+			foundSecretKey = true
+		}
 	}
+
+	if !foundSecretKey {
+		t.Fatal("Sanitised backup config used does not have a 'AWS_SECRET_ACCESS_KEY' parameter for the first " +
+			"target of the first backup and we expect the config to be built this way, for testing")
+	}
+
 	if sanitizedConfig.Backup[1].EncryptPass != SecretReplace {
 		t.Fatalf("Expected Encrypt password to be %s but it remains %s", SecretReplace, sanitizedConfig.Backup[1].EncryptPass)
 	}

@@ -41,11 +41,15 @@ backup:
     target:
       - name: aws_1
         type: test_null
-        user: BLABLA
-        pass: zzzz
         bucket: myawesome-backup
         prefix: backup/backups-for-server-51
-        storage_class: standard
+        parameters:
+          - name: AWS_ACCESS_KEY_ID
+            value: AKIAIOSFODNN7EXAMPLE
+          - name: AWS_SECRET_ACCESS_KEY
+            value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+          - name: storage_class
+            value: standard
     schedule:
       - 05 01 * * *
   - name: second_backup
@@ -55,18 +59,15 @@ backup:
     target:
       - name: aws_2
         type: test_null
-        user: JOHNDOE
-        pass: qwqe
         bucket: some-stuff-goes-here
         prefix: backup/backups-for-server-51
-        storage_class: infrequent-access
+        parameters:
+          - name: storage_class
+            value: standard
       - name: google_1
         type: gcp_storage
-        user: JANEDOE
-        pass: 34324fd
         bucket: my-google-bucket
         prefix: backup/backups-for-server-51
-        storage_class: standard
     encrypt: true
     encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
     schedule:
@@ -92,11 +93,15 @@ backup:
     target:
       - name: aws_1
         type: aws_s3
-        user: BLABLA
-        pass: zzzz
         bucket: myawesome-backup
         prefix: backup/backups-for-server-51
-        storage_class: standard
+        parameters:
+          - name: AWS_ACCESS_KEY_ID
+            value: AKIAIOSFODNN7EXAMPLE
+          - name: AWS_SECRET_ACCESS_KEY
+            value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+          - name: storage_class
+            value: standard
     schedule:
       - 05 01 * * *
     encrypt: true
@@ -107,18 +112,12 @@ backup:
     target:
       - name: aws_2
         type: aws_s3
-        user: JOHNDOE
-        pass: qwqe
         bucket: some-stuff-goes-here
         prefix: backup/backups-for-server-51
-        storage_class: infrequent-access
       - name: google_1
         type: gcp_storage
-        user: JANEDOE
-        pass: 34324fd
         bucket: my-google-bucket
         prefix: backup/backups-for-server-51
-        storage_class: standard
     encrypt: true
     encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
     schedule:
@@ -149,11 +148,15 @@ backup:
     target:
       - name: aws_1
         type: aws_s3
-        user: BLABLA
-        pass: zzzz
         bucket: myawesome-backup
         prefix: backup/backups-for-server-51
-        storage_class: standard
+        parameters:
+          - name: AWS_ACCESS_KEY_ID
+            value: AKIAIOSFODNN7EXAMPLE
+          - name: AWS_SECRET_ACCESS_KEY
+            value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+          - name: storage_class
+            value: standard
     schedule:
       - 05 01 * * *
   - name: second_backup
@@ -163,18 +166,19 @@ backup:
     target:
       - name: aws_2
         type: aws_s3
-        user: JOHNDOE
-        pass: qwqe
         bucket: some-stuff-goes-here
         prefix: backup/backups-for-server-51
-        storage_class: infrequent-access
+        parameters:
+          - name: AWS_ACCESS_KEY_ID
+            value: AKIAIOSFODNN7EXAMPLE
+          - name: AWS_SECRET_ACCESS_KEY
+            value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+          - name: storage_class
+            value: standard
       - name: google_1
         type: gcp_storage
-        user: JANEDOE
-        pass: 34324fd
         bucket: my-google-bucket
         prefix: backup/backups-for-server-51
-        storage_class: standard
     encrypt: true
     encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
     schedule:

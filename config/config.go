@@ -33,6 +33,9 @@ var BackupTargetTypes = [...]string{"aws_s3", "gcp_storage", "azure_blob"}
 // allowed backup target types used for testing purposes only
 var HiddenBackupTargetTypes = [...]string{"test_null"}
 
+// list of keys (of the $Parameters slice) which contain secrets in the .Value entry
+var ParemtersWithSecrets = [...]string{"aws_secret_access_key", "private_key", "password", "pass"}
+
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
@@ -338,7 +341,90 @@ func ValidateBackupTarget(targets []shared.ConfigBackupTarget, logError bool, Ba
 			}
 			return errors.New(msg)
 		}
+		// validate the per target type (object store type) specific parameters
+		err = ValidateBackupTargetParameters(target.Parameters, BackupName, target.Name, target.Type)
+		if err != nil {
+			if logError {
+				logger.Error(err)
+				return err
+			}
+		}
+	}
+	return nil
+}
 
+// validate "Backup/Target/Parameters" section of the config. Different backends will have different rules and expectations
+func ValidateBackupTargetParameters(parameters []shared.ConfigBackupTargetParams, BackupName string, TargetName string, TargetType string) error {
+	if len(parameters) == 0 {
+		return nil
+	}
+	// ensure we don't have duplicate parameters
+	for _, i := range parameters {
+		foundMatches := 0
+		for _, j := range parameters {
+			if strings.ToLower(i.Name) == strings.ToLower(j.Name) {
+				foundMatches += 1
+			}
+			if foundMatches > 1 {
+				return fmt.Errorf("backup target parameter '%s' belonging to backup '%s' and target '%s' of "+
+					"type '%s' is present more than once", i.Name, BackupName, TargetName, TargetType)
+			}
+		}
+	}
+
+	switch TargetType {
+	case "test_null":
+		return ValidateBackupTargetParametersForTestNull(parameters, BackupName, TargetName, TargetType)
+	case "aws_s3":
+		return ValidateBackupTargetParametersForS3(parameters, BackupName, TargetName, TargetType)
+	default:
+		return fmt.Errorf("can not validate parameters for unknown target type of %s for backup %s", TargetType, BackupName)
+	}
+}
+
+// validate "Backup/Target/Parameters" section of the config for the test_null object store type
+func ValidateBackupTargetParametersForTestNull(parameters []shared.ConfigBackupTargetParams, BackupName string, TargetName string, TargetType string) error {
+	//foundBucket := false
+	//for _, entry := range parameters {
+	//	switch strings.ToLower(entry.Name) {
+	//	case "bucket":
+	//		if entry.Value != "" {
+	//			foundBucket = true
+	//		}
+	//	}
+	//}
+	//if !foundBucket {
+	//	return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' is missing required parameter 'bucket'", TargetName, TargetType, BackupName)
+	//}
+	return nil
+}
+
+// validate "Backup/Target/Parameters" section of the config for the aws_s3 object store type
+func ValidateBackupTargetParametersForS3(parameters []shared.ConfigBackupTargetParams, BackupName string, TargetName string, TargetType string) error {
+	foundKeyId, foundPrivateKey := false, false
+	for _, entry := range parameters {
+		switch strings.ToLower(entry.Name) {
+		case "aws_access_key_id":
+			if entry.Value != "" {
+				foundKeyId = true
+			}
+		case "aws_secret_access_key":
+			if entry.Value != "" {
+				foundPrivateKey = true
+			}
+		}
+	}
+	if (foundKeyId && !foundPrivateKey) || (!foundKeyId && foundPrivateKey) {
+		if foundKeyId {
+			return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter "+
+				"'AWS_ACCESS_KEY_ID' but is missing parameter 'AWS_SECRET_ACCESS_KEY'. You must specify a value for both"+
+				" of them or otherwise not specify both of them", TargetName, TargetType, BackupName)
+		}
+		if foundPrivateKey {
+			return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter "+
+				"'AWS_SECRET_ACCESS_KEY' but is missing parameter 'AWS_ACCESS_KEY_ID'. You must specify a value for both"+
+				" of them or otherwise not specify both of them", TargetName, TargetType, BackupName)
+		}
 	}
 	return nil
 }
@@ -581,8 +667,12 @@ func SanitizeCfgTemplate(config shared.CfgTemplate) shared.CfgTemplate {
 			config.Backup[i].EncryptPass = SecretReplace
 		}
 		for j := 0; j < len(config.Backup[i].Target); j++ {
-			if config.Backup[i].Target[j].Pass != "" {
-				config.Backup[i].Target[j].Pass = SecretReplace
+			for k := 0; k < len(config.Backup[i].Target[j].Parameters); k++ {
+				for _, val := range ParemtersWithSecrets {
+					if strings.ToLower(config.Backup[i].Target[j].Parameters[k].Name) == strings.ToLower(val) {
+						config.Backup[i].Target[j].Parameters[k].Value = SecretReplace
+					}
+				}
 			}
 		}
 	}
@@ -615,7 +705,7 @@ func CopyPasswordsFromOldConfig(newConfig *shared.CfgTemplate, oldConfig shared.
 		return err
 	}
 
-	// compare Backup.EncryptPass and Backup.Target.Pass entries
+	// compare Backup.EncryptPass and Backup.Target.Params."different secrets" entries
 	err = CopyPasswordsFromOldConfigBackup(newConfig.Backup, oldConfig.Backup)
 	if err != nil {
 		return err
@@ -702,7 +792,7 @@ func CopyPasswordsFromOldConfigNotificationsEmails(newNotificationsEmail []share
 //
 // a slice is a kind of pointer hence we don't pass in "newConfigBackup" as a pointer
 func CopyPasswordsFromOldConfigBackup(newConfigBackup []shared.ConfigBackup, oldConfigBackup []shared.ConfigBackup) error {
-	// compare ConfigBackup.EncryptPass and ConfigBackup.Target.Pass entries
+	// compare ConfigBackup.EncryptPass entries
 	for i := 0; i < len(newConfigBackup); i++ {
 		// compare ConfigBackup.EncryptPass
 		if CheckStringIsOnly(newConfigBackup[i].EncryptPass, "*") {
@@ -729,51 +819,86 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []shared.ConfigBackup, old
 			}
 		}
 
-		// compare ConfigBackup.Target.Pass entries
+		// compare ConfigBackup.Target.Parameters.* entries and look for the ones with secrets
 		for j := 0; j < len(newConfigBackup[i].Target); j++ {
-			if CheckStringIsOnly(newConfigBackup[i].Target[j].Pass, "*") {
-				foundMatch := false
-				// search for a match in the old(active) config - check if we have a backup with the same name
-				for k := 0; k < len(oldConfigBackup); k++ {
-					if oldConfigBackup[k].Name == newConfigBackup[i].Name {
-						foundMatch = true
-						// search for a target with the same name in the old config
-						foundTargetMatch := false
-						for l := 0; l < len(oldConfigBackup[k].Target); l++ {
-							if oldConfigBackup[k].Target[l].Name == newConfigBackup[i].Target[j].Name {
-								// check if old config Target has a pass and if so copy it
-								if oldConfigBackup[k].Target[l].Pass != "" {
-									foundTargetMatch = true
-									newConfigBackup[i].Target[j].Pass = oldConfigBackup[k].Target[l].Pass
+			for k := 0; k < len(newConfigBackup[i].Target[j].Parameters); k++ {
+				for _, parameter := range ParemtersWithSecrets {
+					if strings.ToLower(newConfigBackup[i].Target[j].Parameters[k].Name) == strings.ToLower(parameter) {
+						// if the new value contains only "*" then copy the secret from the old Value
+						if CheckStringIsOnly(newConfigBackup[i].Target[j].Parameters[k].Value, "*") {
+							// check if the old config has a Backup with the same name
+							foundMatchingBackupName := false
+							var matchingOldBackup shared.ConfigBackup
+							for _, entry := range oldConfigBackup {
+								if entry.Name == newConfigBackup[i].Name {
+									foundMatchingBackupName = true
+									matchingOldBackup = entry
 									break
-								} else {
-									return fmt.Errorf("backup having name '%s' and target '%s' has an "+
-										"'pass' of '%s' which implies the password "+
-										"should be copied from the current(active) configuration but in the current "+
-										"configuration there isn't a password set for the same target name so there "+
-										"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
-										newConfigBackup[i].Target[j].Pass)
 								}
 							}
+							if !foundMatchingBackupName {
+								return fmt.Errorf("backup having name '%s' and target '%s' has secret "+
+									"parameter '%s' with value '%s' which implies the value "+
+									"should be copied from the current(active) configuration but in the current "+
+									"configuration there isn't a backup section having the same name so there "+
+									"is nothing to copy from", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
+									newConfigBackup[i].Target[j].Parameters[k].Name, newConfigBackup[i].Target[j].Parameters[k].Value)
+							}
+							foundMatchingTarget := false
+							var matchingOldTarget shared.ConfigBackupTarget
+							// check if the old config has a target with the same Name and Type
+							for _, target := range matchingOldBackup.Target {
+								if target.Name == newConfigBackup[i].Target[j].Name && target.Type == newConfigBackup[i].Target[j].Type {
+									foundMatchingTarget = true
+									matchingOldTarget = target
+									break
+								}
+							}
+							if !foundMatchingTarget {
+								return fmt.Errorf("backup having name '%s' and target '%s' has secret "+
+									"parameter '%s' with value '%s' which implies the value "+
+									"should be copied from the current(active) configuration but in the current "+
+									"configuration the backup section having the same name does not also have a target "+
+									"with a matching name and matching type so there is nothing to copy from",
+									newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
+									newConfigBackup[i].Target[j].Parameters[k].Name,
+									newConfigBackup[i].Target[j].Parameters[k].Value)
+							}
+							foundMatchingParameter := false
+							// check if the old config has Parameter with the same name
+							for _, oldParameter := range matchingOldTarget.Parameters {
+								if strings.ToLower(oldParameter.Name) == strings.ToLower(newConfigBackup[i].Target[j].Parameters[k].Name) {
+									if oldParameter.Value == "" {
+										return fmt.Errorf("backup having name '%s' and target '%s' has secret "+
+											"parameter '%s' with value '%s' which implies the value "+
+											"should be copied from the current(active) configuration but in the current "+
+											"configuration the backup section having the same name and target "+
+											"with a matching name and matching type does have a '%s' parameter but its value is an empty string",
+											newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
+											newConfigBackup[i].Target[j].Parameters[k].Name,
+											newConfigBackup[i].Target[j].Parameters[k].Value,
+											newConfigBackup[i].Target[j].Parameters[k].Name)
+									}
+									newConfigBackup[i].Target[j].Parameters[k].Value = oldParameter.Value
+									foundMatchingParameter = true
+									break
+								}
+							}
+							if !foundMatchingParameter {
+								return fmt.Errorf("backup having name '%s' and target '%s' has secret "+
+									"parameter '%s' with value '%s' which implies the value "+
+									"should be copied from the current(active) configuration but in the current "+
+									"configuration the backup section having the same name and target "+
+									"with a matching name and matching type does not have a '%s' parameter so the value can't be copied",
+									newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
+									newConfigBackup[i].Target[j].Parameters[k].Name,
+									newConfigBackup[i].Target[j].Parameters[k].Value,
+									newConfigBackup[i].Target[j].Parameters[k].Name)
+							}
 						}
-						if !foundTargetMatch {
-							return fmt.Errorf("backup having name '%s' and target '%s' has an "+
-								"'pass' of '%s' which implies the password "+
-								"should be copied from the current(active) configuration but no 'target' with the "+
-								"same name was found in the current configuration for a Backup having the same"+
-								" name", newConfigBackup[i].Name, newConfigBackup[i].Target[j].Name,
-								newConfigBackup[i].Target[j].Pass)
-						}
-
 					}
 				}
-				if !foundMatch {
-					return fmt.Errorf("backup having name '%s' and target '%s' has an "+
-						"'pass' of '%s' which implies the password "+
-						"should be copied from the current(active) configuration but no 'backup' with the "+
-						"same name was found in the current configuration", newConfigBackup[i].Name,
-						newConfigBackup[i].Target[j].Name, newConfigBackup[i].Target[j].Pass)
-				}
+
 			}
 		}
 	}
