@@ -21,6 +21,9 @@ var logger = log.WithFields(log.Fields{
 
 var CouldNotConvertRate = errors.New("could not convert rate to numeric value")
 
+// When adding a new object store or adjusting the parameters (from the Backup > Target > Parameters section) in order
+// to add secrets, you MUST also adjust cloudbackup/config/CopyPasswordsFromOldConfigBackup() and
+// cloudbackup/config/SanitizeCfgTemplate() in order to ensure secrets are properly catered for
 type ObjectStore interface {
 	// uploads an item (if file; if not then just creates some kind of entry); it's up to the implementation to decide if
 	// the provided $version is to be used; $metadata if set to true means that the object uploaded is not a regular item
