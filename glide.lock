@@ -1,6 +1,32 @@
-hash: f5fafafa5e2656726106c3743d448908268cc65c489f1c2ac19c252d996ee26b
-updated: 2019-04-22T14:00:09.263842952+10:00
+hash: 8d4c8d7731beed63266903d6ba3390eac9a735fe564b65bc9f423972dfc304ed
+updated: 2019-06-02T18:34:19.101023674+10:00
 imports:
+- name: github.com/aws/aws-sdk-go
+  version: 5312c8dac9067d339c4e68d7e0dd5507b2f01849
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/awsutil
+  - aws/client
+  - aws/client/metadata
+  - aws/credentials
+  - aws/endpoints
+  - aws/request
+  - aws/signer/v4
+  - internal/ini
+  - internal/s3err
+  - internal/sdkio
+  - internal/sdkrand
+  - internal/shareddefaults
+  - private/protocol
+  - private/protocol/eventstream
+  - private/protocol/eventstream/eventstreamapi
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/rest
+  - private/protocol/restxml
+  - private/protocol/xml/xmlutil
+  - service/s3
 - name: github.com/bearmini/go-acl
   version: a423b25ba3ef3afa637b85a6222ccf2abffd01c6
   subpackages:
@@ -21,6 +47,8 @@ imports:
   version: 96dc06278ce32a0e9d957d590bb987c81ee66407
 - name: github.com/jinzhu/configor
   version: 4edaf76fe18865e36de734d887f4c01bd05707af
+- name: github.com/jmespath/go-jmespath
+  version: c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5
 - name: github.com/jordan-wright/email
   version: 94ae17dedda217a49e3b47d68f1b54b3c946e16b
 - name: github.com/julienschmidt/httprouter
@@ -34,17 +62,17 @@ imports:
   subpackages:
   - hooks/test
 - name: golang.org/x/crypto
-  version: df01cb2cc480549d72034218dd98bf97671450ac
+  version: 20be4c3c3ed52bfccdb2d59a412ee1a936d175a7
   subpackages:
   - bcrypt
   - blowfish
   - ssh/terminal
 - name: golang.org/x/exp
-  version: b8972e603456c5ad9da3063f4168da9164295e73
+  version: efd6b22b2522a48712e1fd0b3c1ab34d243f5245
   subpackages:
   - utf8string
 - name: golang.org/x/sys
-  version: e8e3143a4f4a00f1fafef0dd82ba78223281b01b
+  version: 4c4f7f33c9ed00de01c4c741d2177abfcfe19307
   subpackages:
   - unix
   - windows
