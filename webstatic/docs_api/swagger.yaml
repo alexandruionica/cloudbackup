@@ -25,7 +25,7 @@ paths:
         - config
       summary: Overwrite whole configuration
       description: >-
-        If a password field is specified with value "******" (number of
+        If a password(secrets) field is specified with value "******" (number of
         asterisks does not matter as long as it is only asterisks) then the
         actual password will be copied from the current running configuration.
         This is because when you fetch the configuration (via GET) passwords do
@@ -632,12 +632,6 @@ definitions:
         description: >-
           Backend type (object store) used for storing backups. Must be one of:
           aws_s3, gcp_storage, azure_blob
-      user:
-        type: string
-        example: AWS_ACCESS_KEY_ID
-      pass:
-        type: string
-        example: AWS_SECRET_ACCESS_KEY
       bucket:
         type: string
         example: example-com-us-servers
@@ -646,14 +640,27 @@ definitions:
         type: string
         example: backup/backups-for-server-51
         description: Prefix to be added to each backed up item's path, when stored in the bucket. For any given item(file/dire/symlink) backed up in the bucket, the resulting full path will be "prefix" + / + "backup_name" + / + "full_path_of_backed_up_item" where "backup_name" is the name of this backup as defined Backup section of the configuration
-      storage_class:
-        type: string
-        example: standard
+      parameters:
+        type: array
+        items:
+          $ref: '#/definitions/BackupTargetParameter'
     required:
       - name
       - type
       - bucket
       - prefix
+  BackupTargetParameter:
+    type: object
+    properties:
+      name:
+        type: string
+        example: AWS_ACCESS_KEY_ID
+        description: >-
+          Name of an object store(target) parameter. The name is case insensitive. Each object store (target) type has specific parameters and values.
+      value:
+        type: string
+        example: AKIAIOSFODNN7EXAMPLE
+        description: Value associated to a "Name" parameter for an object store. Each object store (target) type has specific parameters and values.
   ResultBackupJobStatus:
     type: object
     properties:
