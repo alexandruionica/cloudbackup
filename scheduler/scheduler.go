@@ -250,6 +250,18 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 		return
 	}
 
+	for _, objStor := range objectStores {
+		// check that the object store settings (on the remote side) satisfy requirements and that the credentials we
+		// have provided still grant sufficient access for the backup to be done
+		_, err := objStor.Validate()
+		if err != nil {
+			StoreName, StoreType := objStor.GetStoreDetails()
+			newErr := fmt.Errorf("while validating that backup target '%s' of type '%s' has the required "+
+				"privileges, encountered error: %s", StoreName, StoreType, err)
+			cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, newErr, objectStores)
+		}
+	}
+
 	// give "watch" clients a chance to connect before the backup starts emitting events
 	time.Sleep(1 * time.Second)
 

@@ -69,7 +69,7 @@ backup:
           - name: AWS_SECRET_ACCESS_KEY
             value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
           - name: storage_class
-            value: standard
+            value: STANDARD
     schedule:
       - '05 01 * * *'
   - name: second_backup
@@ -87,7 +87,7 @@ backup:
         prefix: 'backup/backups-for-server-51'
         parameters:
           - name: storage_class
-            value: standard
+            value: STANDARD
       - name: google_1
         type: gcp_storage
         bucket: 'my-google-bucket'

@@ -412,6 +412,25 @@ func ValidateBackupTargetParametersForS3(parameters []shared.ConfigBackupTargetP
 			if entry.Value != "" {
 				foundPrivateKey = true
 			}
+		case "storage_class":
+			allowedClass := [...]string{"STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING"}
+			found := false
+			for _, val := range allowedClass {
+				if entry.Value == val {
+					found = true
+				}
+			}
+			if !found {
+				return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter "+
+					"'%s' with value '%s'. This is not an accepted value; accepted values for this parameter are case "+
+					"sensitive and one of: %+v", TargetName, TargetType, BackupName, entry.Name, entry.Value, allowedClass)
+			}
+		case "region":
+			if entry.Value == "" {
+				return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' is has a parameter "+
+					"with name 'region' set with an empty value. Either specify a value for it or remove the parameter",
+					TargetName, TargetType, BackupName)
+			}
 		}
 	}
 	if (foundKeyId && !foundPrivateKey) || (!foundKeyId && foundPrivateKey) {

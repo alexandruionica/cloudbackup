@@ -1064,6 +1064,43 @@ func TestValidate31(t *testing.T) {
 	}
 }
 
+// duplicate parameter in config/backup/target/params
+func TestValidate33(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_test_")
+	// remove tmpfile which holds the yaml as the config has been parsed and loaded
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+
+	result, err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load fake config file. Error was: %s", err)
+	}
+
+	if len(result.Config.Backup) == 0 {
+		t.Fatal("Config file doesn't have a backup section but we're trying to validate backup related code")
+	}
+
+	if len(result.Config.Backup[0].Target[0].Parameters) == 0 {
+		t.Fatalf("No custom parameters define so there is nothing to test on. Fix the config file used as input")
+	}
+	result.Config.Backup[0].Target[0].Parameters = append(result.Config.Backup[0].Target[0].Parameters, result.Config.Backup[0].Target[0].Parameters[0])
+	err = Validate(result.Config, false)
+	if err == nil {
+		t.Fatalf("1. Config file should have failed to validate successfully but didn't despite having " +
+			"duplicate parameters in the Backup.Target.Parameters section")
+	}
+	// validate also individual functions
+	err = ValidateBackup(result.Config.Backup, true)
+	if err == nil {
+		t.Fatalf("2. Config file should have failed to validate successfully but didn't despite having " +
+			"duplicate parameters in the Backup.Target.Parameters section")
+	}
+	err = ValidateBackupTarget(result.Config.Backup[0].Target, true, result.Config.Backup[0].Name)
+	if err == nil {
+		t.Fatalf("3. Config file should have failed to validate successfully but didn't despite having " +
+			"duplicate parameters in the Backup.Target.Parameters section")
+	}
+}
+
 func TestCheckStringIsOnly(t *testing.T) {
 	if CheckStringIsOnly("************", "*") != true {
 		t.Fatal("CheckStringIsOnly() did not return a match as expected")

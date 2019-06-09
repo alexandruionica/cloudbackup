@@ -193,6 +193,7 @@ Once a target is configured, it is recommended to start the server and then run:
 - `AWS_ACCESS_KEY_ID` - optional parameter. AWS access key id. If not specified then the AWS library will use the standard resolution method. If specified then also the `AWS_SECRET_ACCESS_KEY` needs to be specified.
 - `AWS_SECRET_ACCESS_KEY` - optional parameter. AWS secret key. If not specified then the AWS library will use the standard resolution method. If specified then also the `AWS_ACCESS_KEY_ID` needs to be specified.
 - `storage_class` - optional parameter. If specified, it must be one of "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING". Values correspond to AWS storage tiers for S3.
+- `region` - optional parameter. Must be a valid AWS region, lower cased. For example: "us-east-1" or "ap-southeast-2". If specified, it will be used only in case the region of the S3 bucket can not be programatically determined using the S3 API.
 
 # Notification
 
