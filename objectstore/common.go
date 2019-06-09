@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	"os"
+	"strings"
 )
 
 const MaxBufferSize = 20971520 // 20 MiB = 20971520
@@ -88,6 +89,14 @@ func GetObjectStores(ctx context.Context, backupConfig shared.ConfigBackup, back
 				}
 				results = append(results, store)
 
+			}
+		case "aws_s3":
+			{
+				store, err := InitialiseStoreAwsS3(ctx, backupConfig, backupTarget, backupTarget.RateLimit, backupJobsState)
+				if err != nil {
+					return results, err
+				}
+				results = append(results, store)
 			}
 		// TODO: when implementing aws_s3 backend go back to the config file used for unit tests and add it back there too as it was removed due to tests failing because it was yet to be implemented
 		// also update the config file used be the Python integration tests
@@ -252,6 +261,12 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 	}
 }
 
+// Seek just passes back and forth between the requester and the underlying io.ReadSeeker()
+func (handle *FileReader) Seek(offset int64, whence int) (int64, error) {
+	newOffset, err := handle.origFileReader.Seek(offset, whence)
+	return newOffset, err
+}
+
 // close the underlying file handle
 func (handle *FileReader) Close() {
 	err := handle.origFileReader.Close()
@@ -304,4 +319,19 @@ func setupRateLimiterBucket(rateLimitStr string, targetName string, backupConfig
 			humanize.Bytes(ratelimit), targetName, backupConfigName)
 	}
 	return rateLimitBucket, ratelimit, burst, nil
+}
+
+// iterates through $parameters and if it finds .Name matching $searchedParam then it sets its value to
+// $destinationParam . If no match is found and $defaultValue != "" then $destinationParam gets the specified default
+func GetStringParameter(searchedParam string, destinationParam *string, parameters []shared.ConfigBackupTargetParams, defaultValue string) {
+	found := false
+	for _, entry := range parameters {
+		if strings.ToLower(searchedParam) == strings.ToLower(entry.Name) {
+			found = true
+			*destinationParam = entry.Value
+		}
+	}
+	if !found && defaultValue != "" {
+		*destinationParam = defaultValue
+	}
 }

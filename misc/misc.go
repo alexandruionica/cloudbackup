@@ -82,7 +82,7 @@ backup:
           - name: AWS_SECRET_ACCESS_KEY
             value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
           - name: storage_class
-            value: standard
+            value: STANDARD
     # Script to run before commencing to backup files. The script must exist or otherwise the backup server will refuse
     # to start. On Unix like operating systems the user executing the script must have execute rights on the script
     # (+x flag). On Windows the script must have .bat or .ps1 extension. Alternatively you can supply the path to an 
