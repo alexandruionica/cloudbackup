@@ -55,3 +55,37 @@ For backed up files:
 - filename_encoded (bool) if filename contains unicode chars then convert them to unicode escaped code points
 - link_target (valid only for symlinks)
 - checksum (valid only if checksum is enabled)
+
+## Backup Target(Object Store) Types
+
+### aws_s3 ###
+
+Only files gets sent to the object store. 
+
+Directories and symlinks have their properties stored in the database only as there is no need to upload them to the 
+object store. Despite the fact that AWS S3 does not have the concept of a directory, when using the AWS S3 Console 
+(web interface) you will be presented with a folder structure which is deduced from the path of stored items.
+
+For a given backup, according to the "prefix" setting of "applications/finance/srv01-east.foo.bar" in the configuration
+ file for that backup section, you will end up with the following paths in the S3 bucket:
+ - backed up files being stored under "applications/finance/srv01-east.foo.bar/`data/`"
+ - the database used by the backup software and also a version of the configuration file (which has secrets stripped 
+ out) stored in "applications/finance/srv01-east.foo.bar/`metadata/`"
+ 
+ Any alteration or change to the above structure or to the files stored may lead corruption of the backup. Otherwise, 
+ it is safe to read the data and to manually download any file which has been backed up. Given that versioning is used, 
+ in order to manually retrieve a previous version of a given file, you will have to enable "show previous versions" in 
+ the AWS S3 console. 
+ 
+ Requirements for the S3 bucket configurations:
+ - versioning must be enabled
+ - MFA Delete must be disabled
+ - the credentials provided to the backup software must grant access for:
+     - checking if versioning is enabled
+     - uploading items under the configured prefix
+     - deleting item under the configured prefix
+     - retrieving items under the configured prefix
+     
+It is recommended that the S3 bucket is configured with a lifecycle rule which deletes dangling parts from multipart 
+uploads which are older that several days (assuming that a backup job run takes significantly less than the configured 
+period of the lifecycle rule)

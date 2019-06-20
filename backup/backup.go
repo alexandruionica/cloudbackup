@@ -1030,7 +1030,8 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig shar
 			break
 		}
 
-		remoteVersion, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord, version, false)
+		// MarkDeleted MUST be called only on the current version of a path
+		remoteVersion, cancelled, err := objectStore.MarkDeleted(ObjectDbRecord, false)
 		if err != nil {
 			logger.Debugf("The object store returned an error for the mark deleted operation: %s", err)
 			encounteredError++

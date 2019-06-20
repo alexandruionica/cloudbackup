@@ -64,7 +64,7 @@ func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, v
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
 		reader, err := NewFileReader(newDbRecord.Path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
-			object.storeType, object.rateLimit, object.burst, newDbRecord.Size, object.ctx)
+			object.storeType, object.rateLimit, object.burst, newDbRecord.Size, object.ctx, true)
 		if err != nil {
 			return strconv.FormatInt(version, 10), false, err
 		}
@@ -113,16 +113,16 @@ func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType stri
 }
 
 // pretend to place a delete marker
-func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, metadata bool) (remoteVersion string, cancelled bool, err error) {
 	var prepend string
 	if metadata {
 		prepend = MetaDataPrepend
 	} else {
 		prepend = DataPrepend
 	}
-	logger.Debugf("Pretending to mark as deleted: '%s' having version: '%d' from object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", existingDbRecord.Path, version, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+existingDbRecord.Path)
-	return strconv.FormatInt(version, 10), false, nil
+	logger.Debugf("Pretending to mark as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", existingDbRecord.Path, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+existingDbRecord.Path)
+	return strconv.FormatInt(1, 10), false, nil
 }
 
 // pretend to delete a particular version for a given path; $objType is one of "dir"/"file"/"symlink"

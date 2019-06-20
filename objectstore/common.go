@@ -36,8 +36,8 @@ type ObjectStore interface {
 	GetStoreDetails() (StoreName string, StoreType string)
 	// marks a given object, described by a $existingDbRecord.Path, as deleted. Depending on object store type this may have very different
 	// implementations. This must NOT actually delete one or more versions belonging to a given object as depicted by a
-	// path. For input parameter $version, $metadata and returned $remoteVersion see the description for the Upload() method
-	MarkDeleted(existingDbRecord shared.BackedUpFileProperties, version int64, metadata bool) (remoteVersion string, cancelled bool, err error)
+	// path. For input parameter $version, $metadata and returned $remoteVersion see the description for the Upload() method. This method MUST be called only on the newest version of given path
+	MarkDeleted(existingDbRecord shared.BackedUpFileProperties, metadata bool) (remoteVersion string, cancelled bool, err error)
 	// for a given $path, deletes a particular $version && $remote_version pair (it's up to the implementation to
 	// decide which of the two makes sense to be used in order to remove the appropriate file)
 	//  $objType is one of "dir"/"file"/"symlink"; for $metadata see description same parameter in of Upload() method
@@ -51,7 +51,7 @@ type ObjectStore interface {
 
 // see description of the NewFileReader() function in order to understand the purpose of this type
 type FileReader struct {
-	// we need the original file reader in order to call Close() when we finished reading or want to close the file handle
+	// we need the original file reader in order read bytes from it
 	origFileReader *os.File
 	// if rate limiting is not enabled than this will be a null pointer
 	bucket *rate.Limiter
@@ -66,12 +66,15 @@ type FileReader struct {
 	objectStoreType string
 	rateLimit       uint64
 	burst           uint64
-	// used for error messages during file.Close()
+	// used for error messages during file.Close() and also for JobState messages
 	path string
 	// used to calculate how many bytes can still be requested to be read from the file (makes sense only when rate limiting is in use)
 	fileSize int64
 	// how many bytes where read so far
 	readBytes int64
+	// if to increment the rate counter (this counter represents bytes/sec being backed up; in some cases a different
+	// rate limiter, on the http.Client will increment that)
+	incrementRateCounter bool
 	// for cancelling the job
 	ctx context.Context
 }
@@ -113,25 +116,26 @@ func GetObjectStores(ctx context.Context, backupConfig shared.ConfigBackup, back
 // setup the io.Reader compliant type which records how many bytes were transferred and which also hooks up the
 // rate limiter (if rate limiting is enabled)
 func NewFileReader(path string, bucket *rate.Limiter, backupJobsState shared.BackupJobsStateInterface,
-	BackupJobName string, ObjectStoreName string, ObjectStoreType string, rate uint64, burst uint64, fileSize int64, ctx context.Context) (FileReader, error) {
+	BackupJobName string, ObjectStoreName string, ObjectStoreType string, rate uint64, burst uint64, fileSize int64, ctx context.Context, incrementRateCounter bool) (FileReader, error) {
 	fileReader, err := os.Open(path) // #nosec
 	if err != nil {
 		return FileReader{}, err
 	}
 
 	result := FileReader{
-		origFileReader:  fileReader,
-		bucket:          bucket,
-		backupJobsState: backupJobsState,
-		backupJobName:   BackupJobName,
-		objectStoreName: ObjectStoreName,
-		objectStoreType: ObjectStoreType,
-		rateLimit:       rate,
-		burst:           burst,
-		path:            path,
-		fileSize:        fileSize,
-		readBytes:       0,
-		ctx:             ctx,
+		origFileReader:       fileReader,
+		bucket:               bucket,
+		backupJobsState:      backupJobsState,
+		backupJobName:        BackupJobName,
+		objectStoreName:      ObjectStoreName,
+		objectStoreType:      ObjectStoreType,
+		rateLimit:            rate,
+		burst:                burst,
+		path:                 path,
+		fileSize:             fileSize,
+		readBytes:            0,
+		incrementRateCounter: incrementRateCounter,
+		ctx:                  ctx,
 	}
 
 	return result, nil
@@ -171,12 +175,13 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 				// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 				// messages to be sent to watch clients
 				if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
-					handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
-						handle.objectStoreType, int64(readBytes), handle.path,
-						calculatePercent(handle.fileSize, handle.readBytes), newFile)
+					if handle.incrementRateCounter {
+						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+							handle.objectStoreType, int64(readBytes), handle.path,
+							calculatePercent(handle.fileSize, handle.readBytes), newFile)
+					}
 					handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 				}
-
 				return readBytes, err
 			} else {
 				// bucket.WaitN() allows to read up to burst limit so we need to ensure we don't attempt larger values
@@ -195,9 +200,11 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 					// messages to be sent to watch clients
 					if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
-						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
-							handle.objectStoreType, int64(readBytes), handle.path,
-							calculatePercent(handle.fileSize, handle.readBytes), newFile)
+						if handle.incrementRateCounter {
+							handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+								handle.objectStoreType, int64(readBytes), handle.path,
+								calculatePercent(handle.fileSize, handle.readBytes), newFile)
+						}
 						handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 					}
 					return readBytes, err
@@ -243,9 +250,11 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 					// messages to be sent to watch clients
 					if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
-						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
-							handle.objectStoreType, int64(readBytes), handle.path,
-							calculatePercent(handle.fileSize, handle.readBytes), newFile)
+						if handle.incrementRateCounter {
+							handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
+								handle.objectStoreType, int64(readBytes), handle.path,
+								calculatePercent(handle.fileSize, handle.readBytes), newFile)
+						}
 						handle.backupJobsState.AddBytesRead(handle.backupJobName, uint64(readBytes))
 					}
 					// copy read data to the original slice ;  func copy(dst, src []Type) int
