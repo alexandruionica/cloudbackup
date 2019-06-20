@@ -181,7 +181,7 @@ func TestNewFileReader1(t *testing.T) {
 	}
 	fileToOpen := "a_missing_file_" + u.String()
 	_, err = NewFileReader(fileToOpen, bucket, backupJobsState, result.Config.Backup[0].Name,
-		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst, 1000, context.TODO())
+		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst, 1000, context.TODO(), true)
 	if err == nil {
 		t.Fatalf("NewFileReader() was supposed to return an error because file %s should not exist but it didn't return an error", fileToOpen)
 	}
@@ -231,7 +231,7 @@ func TestNewFileReader2(t *testing.T) {
 
 	reader, err := NewFileReader(fileToOpen, bucket, backupJobsState, result.Config.Backup[0].Name,
 		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst,
-		fileSize, context.TODO())
+		fileSize, context.TODO(), true)
 	if err != nil {
 		t.Fatalf("while running NewFileReader() got error: %s ", err)
 	}
@@ -319,7 +319,7 @@ func TestNewFileReader3(t *testing.T) {
 
 	reader, err := NewFileReader(fileToOpen, bucket, backupJobsState, result.Config.Backup[0].Name,
 		result.Config.Backup[0].Target[0].Name, result.Config.Backup[0].Target[0].Type, ratelimitNumeric, burst,
-		fileSize, context.TODO())
+		fileSize, context.TODO(), true)
 	if err != nil {
 		t.Fatalf("while running NewFileReader() got error: %s ", err)
 	}

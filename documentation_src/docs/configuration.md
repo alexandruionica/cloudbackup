@@ -195,6 +195,11 @@ Once a target is configured, it is recommended to start the server and then run:
 - `storage_class` - optional parameter. If specified, it must be one of "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING". Values correspond to AWS storage tiers for S3.
 - `region` - optional parameter. Must be a valid AWS region, lower cased. For example: "us-east-1" or "ap-southeast-2". If specified, it will be used only in case the region of the S3 bucket can not be programatically determined using the S3 API.
 
+It is highly advisable to:
+- dedicate S3 buckets only for backup only purposes. Mixing use of S3 buckets may lead to backups being corrupted if any other software or persons manage the contents of the S3 buckets
+- make use of the `prefix` backup configuration setting so a given system is the only one making use of any S4 bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. 
+- put a lifecycle rule on the S3 bucket so multipart uploads parts older than several days are automatically purged 
+
 # Notification
 
 
