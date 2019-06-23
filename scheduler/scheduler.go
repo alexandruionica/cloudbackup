@@ -322,7 +322,12 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 // $jobName MUST match the name of a backup job, as defined in the configuration file
 func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error, objectStores []objectstore.ObjectStore) {
-
+	if backupError != nil {
+		logger.Errorf("Backup '%s' having id '%s' did not finish as it encountered an error", jobName, jobUuid)
+	}
+	if cancelled {
+		logger.Errorf("Backup '%s' having id '%s' was cancelled while running", jobName, jobUuid)
+	}
 	// run post-backup script
 	if strings.TrimSpace(backupConfig.PostRunScript) != "" {
 		backupJobsState.UpdateStatsText(backupConfig.Name, "current_operation",
