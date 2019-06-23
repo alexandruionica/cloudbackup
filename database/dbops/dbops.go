@@ -168,6 +168,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 // close a shared.DbPreparedStatements object
 func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements) {
+	logger.Debug("Closing prepared statements")
 	if dbPreparedStatements.FilesQueryStmt != nil {
 		err := dbPreparedStatements.FilesQueryStmt.Close()
 		if err != nil {
