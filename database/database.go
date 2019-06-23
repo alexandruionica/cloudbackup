@@ -136,6 +136,7 @@ func OpenDb(datadir string, backupName string, fileExists bool, backupJobsState 
 // close a database; the $name parameter MUST be the name of the backup job as defined in the configuration file
 // $backupJobsState is used to signal that a given database is opened (so it should not be attempted to copy the DB)
 func CloseDb(db *sql.DB, BackupJobName string, backupJobsState *shared.BackupJobsState) {
+	logger.Debugf("Closing database belonging to backup job '%s'", BackupJobName)
 	err := db.Close()
 	// purposely remove the lock (the mark that the DB was open). This may lead to issues but otherwise any attempt to make a copy of the DB would hang the whole program
 	backupJobsState.UnMarkOpenDb(BackupJobName)

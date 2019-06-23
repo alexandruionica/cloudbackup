@@ -259,6 +259,7 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 			newErr := fmt.Errorf("while validating that backup target '%s' of type '%s' has the required "+
 				"privileges, encountered error: %s", StoreName, StoreType, err)
 			cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, newErr, objectStores)
+			return
 		}
 	}
 
@@ -388,6 +389,7 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 	// if the backup completed then upload the DB and the config file to the object store(s);
 	// $backupError == true means that the backup could not start
 	if !cancelled && backupError == nil {
+		logger.Debugf("Attempting to upload a copy of the DB and of the config belonging to backup job '%s'", jobName)
 		dbops.CloseStatementsAndDb(dbData, backupJobsState)
 
 		err := backup.UploadBackupDatabase(jobName, jobUuid, backupConfig, serverConfigCopy.DataDir, backupJobsState, objectStores)
@@ -412,6 +414,8 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 		if err != nil {
 			logger.Errorf("Could not upload to the remote object store, a copy of the configuration file, due to error: %s", err)
 		}
+	} else {
+		logger.Debugf("Not attempting to upload a copy of the DB and of the config as the backup could not start")
 	}
 
 	// tell any connected Watch clients to exit
