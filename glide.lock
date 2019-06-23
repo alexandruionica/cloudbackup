@@ -1,32 +1,46 @@
-hash: 8d4c8d7731beed63266903d6ba3390eac9a735fe564b65bc9f423972dfc304ed
-updated: 2019-06-02T18:34:19.101023674+10:00
+hash: bb1e3f945443730b69d797431676166a22016300ef745fb5095ca0716969de1b
+updated: 2019-06-23T23:36:10.88184939+10:00
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: 5312c8dac9067d339c4e68d7e0dd5507b2f01849
+  version: dcb92372bfaa5a5e0df8b4f981ee04574970f9c6
   subpackages:
   - aws
   - aws/awserr
   - aws/awsutil
   - aws/client
   - aws/client/metadata
+  - aws/corehandlers
   - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/credentials/processcreds
+  - aws/credentials/stscreds
+  - aws/csm
+  - aws/defaults
+  - aws/ec2metadata
   - aws/endpoints
   - aws/request
+  - aws/session
   - aws/signer/v4
   - internal/ini
   - internal/s3err
   - internal/sdkio
   - internal/sdkrand
+  - internal/sdkuri
   - internal/shareddefaults
   - private/protocol
   - private/protocol/eventstream
   - private/protocol/eventstream/eventstreamapi
+  - private/protocol/json/jsonutil
   - private/protocol/query
   - private/protocol/query/queryutil
   - private/protocol/rest
   - private/protocol/restxml
   - private/protocol/xml/xmlutil
   - service/s3
+  - service/s3/s3iface
+  - service/s3/s3manager
+  - service/sts
 - name: github.com/bearmini/go-acl
   version: a423b25ba3ef3afa637b85a6222ccf2abffd01c6
   subpackages:
@@ -46,7 +60,7 @@ imports:
 - name: github.com/jessevdk/go-flags
   version: 96dc06278ce32a0e9d957d590bb987c81ee66407
 - name: github.com/jinzhu/configor
-  version: 4edaf76fe18865e36de734d887f4c01bd05707af
+  version: 01f68ce1891676869e16fce850fd4779ac681a45
 - name: github.com/jmespath/go-jmespath
   version: c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5
 - name: github.com/jordan-wright/email
@@ -62,7 +76,7 @@ imports:
   subpackages:
   - hooks/test
 - name: golang.org/x/crypto
-  version: 20be4c3c3ed52bfccdb2d59a412ee1a936d175a7
+  version: cc06ce4a13d484c0101a9e92913248488a75786d
   subpackages:
   - bcrypt
   - blowfish
@@ -72,7 +86,7 @@ imports:
   subpackages:
   - utf8string
 - name: golang.org/x/sys
-  version: 4c4f7f33c9ed00de01c4c741d2177abfcfe19307
+  version: d432491b91382bba9c2a91776aa47c9430183a6f
   subpackages:
   - unix
   - windows

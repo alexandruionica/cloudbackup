@@ -3309,7 +3309,8 @@
         "TagSpecifications":{
           "shape":"TagSpecificationList",
           "locationName":"TagSpecification"
-        }
+        },
+        "HostRecovery":{"shape":"HostRecovery"}
       }
     },
     "AllocateHostsResult":{
@@ -3335,7 +3336,8 @@
         "under-assessment",
         "permanent-failure",
         "released",
-        "released-permanent-failure"
+        "released-permanent-failure",
+        "pending"
       ]
     },
     "AllocationStrategy":{
@@ -12650,6 +12652,10 @@
         "Tags":{
           "shape":"TagList",
           "locationName":"tagSet"
+        },
+        "HostRecovery":{
+          "shape":"HostRecovery",
+          "locationName":"hostRecovery"
         }
       }
     },
@@ -12740,6 +12746,13 @@
           "locationName":"totalVCpus"
         }
       }
+    },
+    "HostRecovery":{
+      "type":"string",
+      "enum":[
+        "on",
+        "off"
+      ]
     },
     "HostReservation":{
       "type":"structure",
@@ -14599,6 +14612,13 @@
         "i3.8xlarge",
         "i3.16xlarge",
         "i3.metal",
+        "i3en.large",
+        "i3en.xlarge",
+        "i3en.2xlarge",
+        "i3en.3xlarge",
+        "i3en.6xlarge",
+        "i3en.12xlarge",
+        "i3en.24xlarge",
         "hi1.4xlarge",
         "hs1.8xlarge",
         "c1.medium",
@@ -14618,7 +14638,9 @@
         "c5.2xlarge",
         "c5.4xlarge",
         "c5.9xlarge",
+        "c5.12xlarge",
         "c5.18xlarge",
+        "c5.24xlarge",
         "c5d.large",
         "c5d.xlarge",
         "c5d.2xlarge",
@@ -15906,10 +15928,7 @@
     },
     "ModifyHostsRequest":{
       "type":"structure",
-      "required":[
-        "AutoPlacement",
-        "HostIds"
-      ],
+      "required":["HostIds"],
       "members":{
         "AutoPlacement":{
           "shape":"AutoPlacement",
@@ -15918,7 +15937,8 @@
         "HostIds":{
           "shape":"RequestHostIdList",
           "locationName":"hostId"
-        }
+        },
+        "HostRecovery":{"shape":"HostRecovery"}
       }
     },
     "ModifyHostsResult":{
@@ -21994,7 +22014,8 @@
       "type":"string",
       "enum":[
         "vpc",
-        "vpn"
+        "vpn",
+        "direct-connect-gateway"
       ]
     },
     "TransitGatewayAttachmentState":{
@@ -23290,6 +23311,10 @@
         "Tags":{
           "shape":"TagList",
           "locationName":"tagSet"
+        },
+        "OwnerId":{
+          "shape":"String",
+          "locationName":"ownerId"
         }
       }
     },
@@ -23315,6 +23340,14 @@
         "CreationTimestamp":{
           "shape":"MillisecondDateTime",
           "locationName":"creationTimestamp"
+        },
+        "DnsEntries":{
+          "shape":"DnsEntrySet",
+          "locationName":"dnsEntrySet"
+        },
+        "NetworkLoadBalancerArns":{
+          "shape":"ValueStringList",
+          "locationName":"networkLoadBalancerArnSet"
         }
       }
     },
