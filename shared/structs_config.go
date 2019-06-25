@@ -8,7 +8,7 @@ import (
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
-// also config.CopyPasswordsFromOldConfig needs updating
+// also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigBackup struct {
 	Name       string   `required:"true" yaml:"name" json:"name"`
 	Paths      []string `required:"true" yaml:"paths" json:"paths"`
@@ -33,7 +33,7 @@ type ConfigBackup struct {
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
-// also config.CopyPasswordsFromOldConfig needs updating
+// also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigBackupTarget struct {
 	Name       string                     `required:"true" yaml:"name" json:"name"`
 	Type       string                     `required:"true" yaml:"type" json:"type"`
@@ -47,7 +47,7 @@ type ConfigBackupTarget struct {
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
-// also config.CopyPasswordsFromOldConfig needs updating
+// also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigBackupTargetParams struct {
 	Name  string `required:"true" yaml:"name" json:"name"`
 	Value string `required:"true" yaml:"value" json:"value"`
@@ -57,7 +57,7 @@ type ConfigBackupTargetParams struct {
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
 //  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
-// also config.CopyPasswordsFromOldConfig needs updating
+// also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigUser struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Pass string `required:"true" yaml:"pass" json:"pass"`
@@ -66,11 +66,13 @@ type ConfigUser struct {
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// ; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigHttp struct {
 	BindAddress string `default:"127.0.0.1:8080" yaml:"bind_address" json:"bind_address"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// ; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigHttps struct {
 	Enabled     bool   `default:"false" yaml:"enabled" json:"enabled"`
 	BindAddress string `default:"127.0.0.1:8443" yaml:"bind_address" json:"bind_address"`
@@ -79,12 +81,14 @@ type ConfigHttps struct {
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// ; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigNotification struct {
 	Email  []ConfigNotificationEmail  `yaml:"email,omitempty" json:"email,omitempty"`
 	Script []ConfigNotificationScript `yaml:"script,omitempty" json:"script,omitempty"`
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// ; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigNotificationEmail struct {
 	Server string   `required:"true" yaml:"server" json:"server"`
 	User   string   `yaml:"user,omitempty" json:"user,omitempty"`
@@ -99,6 +103,7 @@ type ConfigNotificationEmail struct {
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // IF ANY NEW notification mechanism is added here then you MUST updated the function notifications.GetNumNotificators()
+// ; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigNotificationScript struct {
 	Path string `required:"true" yaml:"path" json:"path"`
 	// type is one of: started, finished, failed, cancelled, crashed
@@ -107,6 +112,7 @@ type ConfigNotificationScript struct {
 
 // this is the "master" struct which keeps all of the config settings (as specified in the config file + env vars)
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
+// ; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type CfgTemplate struct {
 	DataDir       string             `required:"true" yaml:"data_dir" json:"data_dir"`
 	HtmlDir       string             `default:"webstatic" yaml:"html_dir" json:"html_dir"`
@@ -177,6 +183,12 @@ func CopyConfigBackupStruct(source ConfigBackup) ConfigBackup {
 
 	result.Target = make([]ConfigBackupTarget, len(source.Target))
 	copy(result.Target, source.Target)
+
+	// copy the Parameters slice for each target
+	for k, v := range result.Target {
+		result.Target[k].Parameters = make([]ConfigBackupTargetParams, len(v.Parameters))
+		copy(result.Target[k].Parameters, source.Target[k].Parameters)
+	}
 
 	return result
 }

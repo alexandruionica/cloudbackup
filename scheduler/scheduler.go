@@ -323,10 +323,13 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error, objectStores []objectstore.ObjectStore) {
 	if backupError != nil {
-		logger.Errorf("Backup '%s' having id '%s' did not finish as it encountered an error", jobName, jobUuid)
+		logger.Errorf("Backup '%s' having id '%s' did not finish as it encountered a non recoverable error", jobName, jobUuid)
 	}
 	if cancelled {
 		logger.Errorf("Backup '%s' having id '%s' was cancelled while running", jobName, jobUuid)
+	}
+	if !cancelled && backupError == nil {
+		logger.Infof("Backup '%s' having id '%s' finished running", jobName, jobUuid)
 	}
 	// run post-backup script
 	if strings.TrimSpace(backupConfig.PostRunScript) != "" {
