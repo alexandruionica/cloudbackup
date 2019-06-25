@@ -672,7 +672,7 @@ func ValidateAndCreateDB(config shared.CfgTemplate, backupJobsState *shared.Back
 
 // replace passwords or secrets with **************** within an instance of CfgTemplate type
 // Unfortunately this function doesn't have any smarts so whenever the config struct is changed then also an update to
-// the function is needed
+// the function is needed.
 func SanitizeCfgTemplate(config shared.CfgTemplate) shared.CfgTemplate {
 	// overwrite User.Pass
 	for i := 0; i < len(config.User); i++ {
