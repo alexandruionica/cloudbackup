@@ -76,23 +76,31 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 	GetStringParameter("AWS_SECRET_ACCESS_KEY", &result.awsSecretAccessKey, target.Parameters, "")
 	GetStringParameter("storage_class", &result.storageClass, target.Parameters, "")
 	GetStringParameter("region", &result.region, target.Parameters, "")
+	var awsConfig aws.Config
 	// if we have a key id and secret then use them
 	if result.awsSecretAccessKey != "" && result.awsAccessKeyId != "" {
 		logger.Debugf("Using user specified credentials")
-		result.awsSess, err = session.NewSessionWithOptions(session.Options{
-			Config: aws.Config{Region: aws.String(result.region),
-				Credentials: credentials.NewStaticCredentials(result.awsAccessKeyId, result.awsSecretAccessKey, ""),
-			},
-		})
+		awsConfig = aws.Config{
+			Credentials: credentials.NewStaticCredentials(result.awsAccessKeyId, result.awsSecretAccessKey, ""),
+		}
 		// we don't have a key id and session so we'll fall back to the SDK's defaults
 	} else {
 		logger.Debugf("no credentials specified in the config, so defaulting to the defaults of the AWS SDK")
-		result.awsSess, err = session.NewSessionWithOptions(session.Options{
-			Config: aws.Config{
-				Region: aws.String(result.region),
-			},
-		})
+		awsConfig = aws.Config{}
 	}
+
+	awsConfig.Region = aws.String(result.region)
+
+	crd, err := awsConfig.Credentials.Get()
+	if err == nil {
+		logger.Debugf("Using AWS session key: '%s' with token: '%s' from provider: '%s' with expired "+
+			"credentials='%t'", crd.AccessKeyID, crd.SessionToken, crd.ProviderName, awsConfig.Credentials.IsExpired())
+	} else {
+		logger.Warnf("Could not get details regarding the AWS credentials for S3 target %s belonging to "+
+			"backup %s", backupConfig.Name, target.Name)
+	}
+	// once created, DO NOT MODIFY the session object
+	result.awsSess, err = session.NewSessionWithOptions(session.Options{Config: awsConfig})
 	if err != nil {
 		return result, fmt.Errorf("could not setup AWS session for target '%s' belonging to backup '%s' due "+
 			"to error: %s", target.Name, backupConfig.Name, err)
@@ -202,7 +210,7 @@ func (object *StoreAwsS3) GetStoreDetails() (StoreName string, StoreType string)
 
 // place a delete marker on the newest version of a file. This is achieved by deleting the file without specifying a
 // version. AWS does not allow a place marker operation so this is the only way to get a marker
-func (object *StoreAwsS3) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, metadata bool) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreAwsS3) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
 	remotePath := calculateAwsS3RemotePath(object.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, object.storeName, object.storeBucketName, remotePath)
@@ -267,7 +275,7 @@ func (object *StoreAwsS3) Validate() (string, error) {
 	versioningEnabled, mfaDeleteEnabled, err := object.checkBucketVersioningAndMFA()
 	if err != nil {
 		failedValidation = true
-		failureMsg += fmt.Sprintf("While checking if S3 bucket '%s' has versioning enabled  MFA delete disabled, "+
+		failureMsg += fmt.Sprintf("While checking if S3 bucket '%s' has versioning enabled and MFA delete disabled, "+
 			"encountered error: %s. ", object.storeBucketName, err) // must leave one whitespace at end of sentence
 	} else {
 		if !versioningEnabled {
@@ -447,12 +455,13 @@ func (object *StoreAwsS3) getRegionFromBucket() error {
 
 // for a given $prefix , $path and $metadata (true if file is metadata, false if not) return the remote path
 func calculateAwsS3RemotePath(prefix string, path string, metadata bool) string {
-	var prepend string
 	if metadata {
-		prepend = MetaDataPrepend
+		// when dealing with metadata, we want to store on the remote only the filename, excluding the rest of the local path
+		filename := filepath.Base(path)
+		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
+		return filepath.ToSlash(prefix + "/" + MetaDataPrepend + "/" + filename)
 	} else {
-		prepend = DataPrepend
+		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
+		return filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
 	}
-	// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
-	return filepath.ToSlash(prefix + "/" + prepend + "/" + path)
 }

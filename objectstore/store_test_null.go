@@ -113,7 +113,7 @@ func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType stri
 }
 
 // pretend to place a delete marker
-func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, metadata bool) (remoteVersion string, cancelled bool, err error) {
+func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
 	var prepend string
 	if metadata {
 		prepend = MetaDataPrepend
@@ -122,7 +122,7 @@ func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFilePro
 	}
 	logger.Debugf("Pretending to mark as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+existingDbRecord.Path)
-	return strconv.FormatInt(1, 10), false, nil
+	return strconv.FormatInt(markerVersion, 10), false, nil
 }
 
 // pretend to delete a particular version for a given path; $objType is one of "dir"/"file"/"symlink"
