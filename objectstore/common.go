@@ -36,8 +36,11 @@ type ObjectStore interface {
 	GetStoreDetails() (StoreName string, StoreType string)
 	// marks a given object, described by a $existingDbRecord.Path, as deleted. Depending on object store type this may have very different
 	// implementations. This must NOT actually delete one or more versions belonging to a given object as depicted by a
-	// path. For input parameter $version, $metadata and returned $remoteVersion see the description for the Upload() method. This method MUST be called only on the newest version of given path
-	MarkDeleted(existingDbRecord shared.BackedUpFileProperties, metadata bool) (remoteVersion string, cancelled bool, err error)
+	// path. For input parameter $markerVersion(this is an equivalent of $version parameter as for the Upload() method),
+	// $metadata and returned $remoteVersion see the description for the Upload() method. This method MUST be called
+	// only on the newest version of given path. The purpose of $markerVersion is to give the backend the option of
+	// using this as the base of the returned value of $remoteVersion in case the backend can't produce versions on its own
+	MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error)
 	// for a given $path, deletes a particular $version && $remote_version pair (it's up to the implementation to
 	// decide which of the two makes sense to be used in order to remove the appropriate file)
 	//  $objType is one of "dir"/"file"/"symlink"; for $metadata see description same parameter in of Upload() method
@@ -82,7 +85,7 @@ type FileReader struct {
 func GetObjectStores(ctx context.Context, backupConfig shared.ConfigBackup, backupJobsState shared.BackupJobsStateInterface) ([]ObjectStore, error) {
 	results := make([]ObjectStore, 0)
 	for _, backupTarget := range backupConfig.Target {
-
+		logger.Debugf("Setting up target '%s' of type '%s' for backup job '%s'", backupTarget.Name, backupTarget.Type, backupConfig.Name)
 		switch backupTarget.Type {
 		case "test_null":
 			{
