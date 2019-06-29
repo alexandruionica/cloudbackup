@@ -91,14 +91,6 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 
 	awsConfig.Region = aws.String(result.region)
 
-	crd, err := awsConfig.Credentials.Get()
-	if err == nil {
-		logger.Debugf("Using AWS session key: '%s' with token: '%s' from provider: '%s' with expired "+
-			"credentials='%t'", crd.AccessKeyID, crd.SessionToken, crd.ProviderName, awsConfig.Credentials.IsExpired())
-	} else {
-		logger.Warnf("Could not get details regarding the AWS credentials for S3 target %s belonging to "+
-			"backup %s", backupConfig.Name, target.Name)
-	}
 	// once created, DO NOT MODIFY the session object
 	result.awsSess, err = session.NewSessionWithOptions(session.Options{Config: awsConfig})
 	if err != nil {
