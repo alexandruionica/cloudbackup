@@ -31,7 +31,9 @@ def clean_s3_bucket(prefix=None):
         final_prefix = prefix
     else:
         final_prefix = "tests/" + platform.system().lower() + "/"
-    bucket.objects.filter(Prefix=final_prefix).delete()
+    # bucket.objects.filter(Prefix=final_prefix).delete()
+    # delete all objects and all versions under the prefix
+    bucket.object_versions.filter(Prefix=final_prefix).delete()
 
 
 def get_args():
