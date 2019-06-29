@@ -47,6 +47,12 @@ try {
 	if ( $LastExitCode -ne 0 ) {
 	  exit $LastExitCode
 	}
+
+	echo "Cleaning up object stores as the test is complete ..."
+	& "$TESTSFOLDER\.venv\Scripts\python.exe" "$TESTSFOLDER\clean_object_stores_after_tests.py"
+	if ( $LastExitCode -ne 0 ) {
+		exit $LastExitCode
+	}
 }
 catch {
 	echo "Encountered an exception"

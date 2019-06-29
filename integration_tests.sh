@@ -32,3 +32,6 @@ fi
 
 echo "Running Python integration tests ..."
 ${TESTSFOLDER}/.venv/bin/python -m unittest discover -s ${TESTSFOLDER}/ -p '*.py*' -v
+
+echo "Cleaning up object stores as the test is complete ..."
+${TESTSFOLDER}/.venv/bin/python ${TESTSFOLDER}/clean_object_stores_after_tests.py
