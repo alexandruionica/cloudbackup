@@ -40,3 +40,18 @@ Run on Linux/Unixes only:
 ```
 make docs
 ```
+
+# Required for running tests
+
+Various credentials are needed for the tests which use object stores, like AWS S3.
+
+```$xslt
+export CLD_AWS_ACCESS_KEY_ID="REPLACE_WITH_KEY_ID"
+export CLD_AWS_SECRET_ACCESS_KEY="REPLACE_WITH_SECRET"
+export CLD_S3_BUCKET="aionica-tests"
+export CLD_S3_REGION="us-east-1"
+```
+It's generally recommended to add them to a `.creds` file at the root of the repo as this filename is blackliested 
+(via `.gitignore`) and then just execute once `source .creds` after starting a new terminal session (in which the tests
+ will eventually be ran). You will most likely also have to copy said values into your IDE so it can run tests and give
+  you the coverage report (integrated with your IDE, assuming it has such functionality).
