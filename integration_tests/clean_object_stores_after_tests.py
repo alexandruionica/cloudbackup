@@ -3,15 +3,14 @@ import boto3
 import logging
 import os
 import platform
+from common import *
 
 
 def clean_s3_bucket(prefix=None):
-    bucket = os.environ.get('CLD_S3_BUCKET')
+    bucket, _, aws_key, aws_secret = get_s3_config_from_env()
     if not bucket:
         logging.error("Environment variable CLD_S3_BUCKET is not set")
         exit(1)
-    aws_key = os.environ.get('CLD_AWS_ACCESS_KEY_ID')
-    aws_secret = os.environ.get('CLD_AWS_SECRET_ACCESS_KEY')
 
     if aws_key and aws_secret:
         session = boto3.Session(
@@ -25,8 +24,6 @@ def clean_s3_bucket(prefix=None):
 
     bucket = s3.Bucket(bucket)
 
-    # "tests/" + runtime.GOOS + "/"
-    platform.system().lower()
     if prefix:
         final_prefix = prefix
     else:
