@@ -437,3 +437,16 @@ class MockSMTPServer(smtpd.SMTPServer, threading.Thread):
 
     def received_messages_count(self):
         return len(self.received_messages)
+
+
+def get_s3_config_from_env():
+    """
+    Fetch from environment variables various settings needed by the AWS S3 object store
+    :return: tuple with S3 bucket name (full virtualised mode name), S3 bucket region, AWS KEY ID, AWS SECRET .
+    Any missing variables will have a value of None returned
+    """
+    bucket = os.environ.get('CLD_S3_BUCKET')
+    aws_key = os.environ.get('CLD_AWS_ACCESS_KEY_ID')
+    aws_secret = os.environ.get('CLD_AWS_SECRET_ACCESS_KEY')
+    s3_region = os.environ.get('CLD_S3_REGION')
+    return bucket, s3_region, aws_key, aws_secret
