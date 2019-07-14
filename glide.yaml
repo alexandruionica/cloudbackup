@@ -34,3 +34,7 @@ import:
   version: ^1.19.41
   subpackages:
   - service/s3
+- package: cloud.google.com/go
+  version: ^0.41.0
+  subpackages:
+  - storage
