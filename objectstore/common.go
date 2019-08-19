@@ -4,6 +4,7 @@ import (
 	"cloudbackup/shared"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/dustin/go-humanize"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -106,10 +107,19 @@ func GetObjectStores(ctx context.Context, backupConfig shared.ConfigBackup, back
 			}
 		// TODO: when implementing aws_s3 backend go back to the config file used for unit tests and add it back there too as it was removed due to tests failing because it was yet to be implemented
 		// also update the config file used be the Python integration tests
+		case "gcp_storage":
+			{
+				store, err := InitialiseStoreGcpStorage(ctx, backupConfig, backupTarget, backupTarget.RateLimit, backupJobsState)
+				if err != nil {
+					return results, err
+				}
+				results = append(results, store)
+			}
 		default:
 			{
-				logger.Errorf("unknown backend of type: '%s'", backupTarget.Type)
-				return results, errors.New("unknown backend type")
+				msg := fmt.Sprintf("unknown target of type '%s' for backup job '%s'", backupTarget.Type, backupConfig.Name)
+				logger.Error(msg)
+				return results, errors.New(msg)
 			}
 		}
 	}

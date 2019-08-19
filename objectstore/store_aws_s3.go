@@ -98,7 +98,7 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 			"to error: %s", target.Name, backupConfig.Name, err)
 	}
 
-	// try to determine programatically the region; if not found then it will fallback to the user specified one; for
+	// try to determine programmatically the region; if not found then it will fallback to the user specified one; for
 	// this specific call, we don't need an authenticated session
 	err = result.getRegionFromBucket()
 	if err != nil {
@@ -135,7 +135,7 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 	return result, nil
 }
 
-// pretend to upload file (actually discarding all read content)
+// upload file and return remote version
 func (object *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
 
 	remotePath := calculateAwsS3RemotePath(object.storePrefix, newDbRecord.Path, metadata)
