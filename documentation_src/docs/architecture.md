@@ -83,9 +83,11 @@ For a given backup, according to the "prefix" setting of "applications/finance/s
  - the credentials provided to the backup software must grant access for:
      - checking if versioning is enabled
      - uploading items under the configured prefix
-     - deleting item under the configured prefix
-     - retrieving items under the configured prefix
+     - deleting items under the configured prefix (both the current version and specific versions must be allowed for deletion)
+     - retrieving items under the configured prefix (both the current version and specific versions must be allowed for retrieval)
      
 It is recommended that the S3 bucket is configured with a lifecycle rule which deletes dangling parts from multipart 
 uploads which are older that several days (assuming that a backup job run takes significantly less than the configured 
 period of the lifecycle rule)
+
+### gcp_storage ###

@@ -377,6 +377,8 @@ func ValidateBackupTargetParameters(parameters []shared.ConfigBackupTargetParams
 		return ValidateBackupTargetParametersForTestNull(parameters, BackupName, TargetName, TargetType)
 	case "aws_s3":
 		return ValidateBackupTargetParametersForS3(parameters, BackupName, TargetName, TargetType)
+	case "gcp_storage":
+		return ValidateBackupTargetParametersForGCPStorage(parameters, BackupName, TargetName, TargetType)
 	default:
 		return fmt.Errorf("can not validate parameters for unknown target type of %s for backup %s", TargetType, BackupName)
 	}
@@ -401,6 +403,11 @@ func ValidateBackupTargetParametersForTestNull(parameters []shared.ConfigBackupT
 
 // validate "Backup/Target/Parameters" section of the config for the aws_s3 object store type
 func ValidateBackupTargetParametersForS3(parameters []shared.ConfigBackupTargetParams, BackupName string, TargetName string, TargetType string) error {
+	allowedParameters := [...]string{"aws_access_key_id", "aws_secret_access_key", "storage_class", "region"}
+	err := validateTargetParametersAreKnown(parameters, allowedParameters[:], BackupName, TargetName, TargetType)
+	if err != nil {
+		return err
+	}
 	foundKeyId, foundPrivateKey := false, false
 	for _, entry := range parameters {
 		switch strings.ToLower(entry.Name) {
@@ -443,6 +450,89 @@ func ValidateBackupTargetParametersForS3(parameters []shared.ConfigBackupTargetP
 			return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter "+
 				"'AWS_SECRET_ACCESS_KEY' but is missing parameter 'AWS_ACCESS_KEY_ID'. You must specify a value for both"+
 				" of them or otherwise not specify both of them", TargetName, TargetType, BackupName)
+		}
+	}
+	return nil
+}
+
+// validate "Backup/Target/Parameters" section of the config for the gcp_storage object store type
+func ValidateBackupTargetParametersForGCPStorage(parameters []shared.ConfigBackupTargetParams, BackupName string, TargetName string, TargetType string) error {
+	allowedParameters := [...]string{"type", "project_id", "private_key_id", "private_key", "client_email", "client_id",
+		"auth_uri", "token_uri", "auth_provider_x509_cert_url", "client_x509_cert_url", "storage_class"}
+	// list of parameters which are used to compose the service account credentials file. If any of those is specified
+	// then all of them must be specified
+	credentialParameters := [...]string{"type", "project_id", "private_key_id", "private_key", "client_email", "client_id",
+		"auth_uri", "token_uri", "auth_provider_x509_cert_url", "client_x509_cert_url"}
+	err := validateTargetParametersAreKnown(parameters, allowedParameters[:], BackupName, TargetName, TargetType)
+	if err != nil {
+		return err
+	}
+
+	foundCredentials := false
+	foundCredential := ""
+Loop:
+	for _, entry := range parameters {
+		for _, param := range credentialParameters {
+			if strings.ToLower(entry.Name) == param {
+				foundCredentials = true
+				foundCredential = entry.Name
+				break Loop
+			}
+		}
+	}
+	// check that all required credential parameters are present in the user supplied parameters
+	if foundCredentials {
+		for _, param := range credentialParameters {
+			found := false
+			for _, entry := range parameters {
+				if strings.ToLower(entry.Name) == param {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter '%s' "+
+					"which implies all parameters for credentials need to be specified but at least parameter '%s' is "+
+					"missing. Parameters for credentials are: '%s'", TargetName, TargetType, BackupName,
+					foundCredential, param, credentialParameters)
+			}
+		}
+	}
+	// check individual parameters for validity
+	for _, entry := range parameters {
+		switch strings.ToLower(entry.Name) {
+		case "storage_class":
+			allowedClass := [...]string{"multi_regional", "regional", "nearline", "coldline"}
+			found := false
+			for _, val := range allowedClass {
+				if entry.Value == val {
+					found = true
+				}
+			}
+			if !found {
+				return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter "+
+					"'%s' with value '%s'. This is not an accepted value; accepted values for this parameter are case "+
+					"sensitive and one of: %+v", TargetName, TargetType, BackupName, entry.Name, entry.Value, allowedClass)
+			}
+		}
+	}
+
+	return nil
+}
+
+// checks that supplied parameters for a given target are all known(allowed) parameters for said target
+func validateTargetParametersAreKnown(parameters []shared.ConfigBackupTargetParams, allowedParameters []string, BackupName string, TargetName string, TargetType string) error {
+	for _, entry := range parameters {
+		foundMatch := false
+		for _, param := range allowedParameters {
+			if strings.ToLower(entry.Name) == param {
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter '%s' "+
+				"which is not a known configuration option", TargetName, TargetType, BackupName, entry.Name)
 		}
 	}
 	return nil

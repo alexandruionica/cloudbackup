@@ -190,15 +190,33 @@ Once a target is configured, it is recommended to start the server and then run:
 
 ### aws_s3
  
-- `AWS_ACCESS_KEY_ID` - optional parameter. AWS access key id. If not specified then the AWS library will use the standard resolution method. If specified then also the `AWS_SECRET_ACCESS_KEY` needs to be specified.
-- `AWS_SECRET_ACCESS_KEY` - optional parameter. AWS secret key. If not specified then the AWS library will use the standard resolution method. If specified then also the `AWS_ACCESS_KEY_ID` needs to be specified.
+- `AWS_ACCESS_KEY_ID` - optional parameter. AWS access key id. If not specified then the AWS library will use the [standard resolution method](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials). If specified then also the `AWS_SECRET_ACCESS_KEY` needs to be specified.
+- `AWS_SECRET_ACCESS_KEY` - optional parameter. AWS secret key. If not specified then the AWS library will use the [standard resolution method](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials). If specified then also the `AWS_ACCESS_KEY_ID` needs to be specified.
 - `storage_class` - optional parameter. If specified, it must be one of "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING". Values correspond to AWS storage tiers for S3.
 - `region` - optional parameter. Must be a valid AWS region, lower cased. For example: "us-east-1" or "ap-southeast-2". If specified, it will be used only in case the region of the S3 bucket can not be programatically determined using the S3 API.
 
 It is highly advisable to:
 - dedicate S3 buckets only for backup only purposes. Mixing use of S3 buckets may lead to backups being corrupted if any other software or persons manage the contents of the S3 buckets
-- make use of the `prefix` backup configuration setting so a given system is the only one making use of any S4 bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. 
+- make use of the `prefix` backup configuration setting so a given system is the only one making use of any S3 bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. 
 - put a lifecycle rule on the S3 bucket so multipart uploads parts older than several days are automatically purged 
+
+### gcp_storage
+
+Entries below marked as "credential" parameter are to be extracted from the [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys) json file provided by Google Compute. These parameters are optional as long no other credential parameter is mentioned. 
+If one of them is mentioned then all of them are required. If the GCP credential parameters are not used then "Application Default Credentials" method will be used to [find automatically the credentials](https://cloud.google.com/docs/authentication/production#finding_credentials_automatically).
+
+- `type` - optional credential parameter extracted from the service account key json file.
+- `project_id` - optional credential parameter extracted from the service account key json file.
+- `private_key_id` - optional credential parameter extracted from the service account key json file.
+- `private_key` **must be surrounded by double quotes** (not single quotes) - optional credential parameter extracted from the service account key json file.
+- `client_email` - optional credential parameter extracted from the service account key json file.
+- `client_id` - optional credential parameter extracted from the service account key json file.
+- `auth_uri` - optional credential parameter extracted from the service account key json file.
+- `token_uri` - optional credential parameter extracted from the service account key json file.
+- `auth_provider_x509_cert_url` - optional credential parameter extracted from the service account key json file.
+- `client_x509_cert_url` - optional credential parameter extracted from the service account key json file.
+- `storage_class` - optional parameter. If specified, it must be one of "multi_regional", "regional", "nearline" or "coldline". Values correspond to GCP storage tiers.
+
 
 # Notification
 

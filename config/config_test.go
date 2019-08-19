@@ -1575,3 +1575,28 @@ func TestSave(t *testing.T) {
 	}
 
 }
+
+// check validateTargetParametersAreKnown() works when supplied with parameters slice which matches allowed values
+func TestValidateTargetParametersAreKnown1(t *testing.T) {
+	parameters := make([]shared.ConfigBackupTargetParams, 0)
+	parameters = append(parameters, shared.ConfigBackupTargetParams{Name: "a_name1", Value: "a_value1"},
+		shared.ConfigBackupTargetParams{Name: "a_name2", Value: "a_value2"})
+	allowedParameters := [...]string{"a_name1", "a_name2", "a_name3"}
+	err := validateTargetParametersAreKnown(parameters, allowedParameters[:], "backup1", "target1", "some_type")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// check validateTargetParametersAreKnown() works when supplied with parameters slice which DON'T match allowed values
+func TestValidateTargetParametersAreKnown2(t *testing.T) {
+	parameters := make([]shared.ConfigBackupTargetParams, 0)
+	parameters = append(parameters, shared.ConfigBackupTargetParams{Name: "a_name1", Value: "a_value1"},
+		shared.ConfigBackupTargetParams{Name: "a_name2", Value: "a_value2"})
+	allowedParameters := [...]string{"a_name2", "a_name3", "a_name4"}
+	err := validateTargetParametersAreKnown(parameters, allowedParameters[:], "backup1", "target1", "some_type")
+	if err == nil {
+		t.Fatalf("Was expecting validateTargetParametersAreKnown() to return an error as we passed it one " +
+			"unknown parameter; but it didn't error out")
+	}
+}
