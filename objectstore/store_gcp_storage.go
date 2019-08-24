@@ -11,6 +11,8 @@ import (
 	"google.golang.org/api/option"
 	"io"
 	"io/ioutil"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -88,7 +90,58 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 
 func (objStore *StoreGcpStorage) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface,
 	metadata bool) (remoteVersion string, cancelled bool, err error) {
-	return "", false, fmt.Errorf("function Upload() note yet implemented for backend of type: '%s'", objStore.storeType)
+	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, newDbRecord.Path, metadata)
+	logger.Debugf("Uploading: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", newDbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
+
+	if newDbRecord.Type == "file" {
+		// setup io.Reader (this handles reporting and optional rate limiting)
+		reader, err := NewFileReader(newDbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
+			objStore.storeType, objStore.rateLimit, objStore.burst, newDbRecord.Size, objStore.ctx, true)
+		if err != nil {
+			return strconv.FormatInt(version, 10), false, err
+		}
+		defer reader.Close()
+
+		// upload
+		wc := objStore.gcpBucketObj.Object(remotePath).NewWriter(objStore.ctx)
+		// this operation is async (according to GCP library's docs) so a nil error may still mean a failure will happen.
+		// Use the wc.Close() below in order to be sure the upload is complete
+		if _, err := io.Copy(wc, &reader); err != nil {
+			if objStore.ctx.Err() == context.Canceled {
+				msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
+				logger.Info(msg)
+				return strconv.FormatInt(version, 10), true, errors.New(msg)
+			}
+			return strconv.FormatInt(version, 10), false, err
+		}
+		if err := wc.Close(); err != nil {
+			if objStore.ctx.Err() == context.Canceled {
+				msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
+				logger.Info(msg)
+				return strconv.FormatInt(version, 10), true, errors.New(msg)
+			}
+			msg := fmt.Sprintf("while finishing up the upload to '%s' in GCP bucket '%s' received error "+
+				"message: '%s'", remotePath, objStore.storeBucketName, err)
+			logger.Error(msg)
+			return strconv.FormatInt(version, 10), false, errors.New(msg)
+		}
+
+		attrs := wc.Attrs()
+
+		if attrs != nil {
+			return strconv.FormatInt(attrs.Generation, 10), false, nil
+		} else {
+			msg := fmt.Sprintf("upload of '%s' was reported "+
+				"successful but the upload response does not contain a file version. This means the backed up copy is "+
+				"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", newDbRecord.Path)
+			logger.Errorf(msg)
+			return strconv.FormatInt(version, 10), false, errors.New(msg)
+		}
+	} else {
+		// directories and symlinks DO NOT GET UPLOADED
+		return strconv.FormatInt(version, 10), false, nil
+	}
 }
 
 // GetStoreDetails()(StoreName string, StoreType string)
@@ -266,4 +319,17 @@ func foundGcpCredentialsInTargetConfig(params []shared.ConfigBackupTargetParams)
 		}
 	}
 	return false
+}
+
+// for a given $prefix , $path and $metadata (true if file is metadata, false if not) return the remote path
+func calculateGcpStorageRemotePath(prefix string, path string, metadata bool) string {
+	if metadata {
+		// when dealing with metadata, we want to store on the remote only the filename, excluding the rest of the local path
+		filename := filepath.Base(path)
+		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
+		return filepath.ToSlash(prefix + "/" + MetaDataPrepend + "/" + filename)
+	} else {
+		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
+		return filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
+	}
 }
