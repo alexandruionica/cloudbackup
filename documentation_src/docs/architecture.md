@@ -91,3 +91,20 @@ uploads which are older that several days (assuming that a backup job run takes 
 period of the lifecycle rule)
 
 ### gcp_storage ###
+
+Only files gets sent to the object store. 
+
+Directories and symlinks have their properties stored in the database only as there is no need to upload them to the 
+object store. 
+
+For a given backup, according to the "prefix" setting of "applications/finance/srv01-east.foo.bar" in the configuration
+ file for that backup section, you will end up with the following paths in the GCP storage bucket:
+ - backed up files being stored under "applications/finance/srv01-east.foo.bar/`data/`"
+ - the database used by the backup software and also a version of the configuration file (which has secrets stripped 
+ out) stored in "applications/finance/srv01-east.foo.bar/`metadata/`"
+ 
+ Any alteration or change to the above structure or to the files stored may lead corruption of the backup. Otherwise, 
+ it is safe to read the data and to manually download any file which has been backed up. Given that versioning is used, 
+ in order to manually retrieve a previous version of a given file, you will have to use 
+ [`gsutil`](https://cloud.google.com/storage/docs/gsutil) or a third party GCP storage browser as the Google Cloud Console 
+ does not show previous versions of an object.

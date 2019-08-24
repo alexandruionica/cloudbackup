@@ -37,7 +37,7 @@ https:
   ssl_cert_path: /etc/ssl/cert.crt
   ssl_key_path: /etc/ssl/cert.key
 backup:
-  - name: generic
+  - name: daily
     paths:
       - /something
       - /var/lib
@@ -64,7 +64,7 @@ backup:
       - /something/else
       - /var/lib/*.db
     target:
-      - name: aws_1
+      - name: aws
         type: aws_s3
         # rate limit uploads to the object store. Specified rate in bytes per second or using a unit like KB/MB/GB etc (Example: 231 KB).
         # Leave unset or set to 0 to have unlimited rate
@@ -106,7 +106,7 @@ backup:
     # use the file's checksum in order to establish if a backup is needed (defaults to false)
     checksum: true
     target:
-      - name: google_1
+      - name: google
         type: gcp_storage
         user: JANEDOE
         pass: 34324fd
@@ -198,7 +198,38 @@ Once a target is configured, it is recommended to start the server and then run:
 It is highly advisable to:
 - dedicate S3 buckets only for backup only purposes. Mixing use of S3 buckets may lead to backups being corrupted if any other software or persons manage the contents of the S3 buckets
 - make use of the `prefix` backup configuration setting so a given system is the only one making use of any S3 bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. 
-- put a lifecycle rule on the S3 bucket so multipart uploads parts older than several days are automatically purged 
+- put a lifecycle rule on the S3 bucket so multipart uploads parts older than several days are automatically purged
+
+If rate limiting is enabled then:
+- [multipart uploads](https://docs.aws.amazon.com/AmazonS3/latest/dev/mpuoverview.html) 
+will be disabled and instead a single threaded, streaming upload will be used. For the greatest upload speeds it is recommended to not enable rate limiting.
+- MD5 file checksum calculation will be disabled (this MD5 checksum is unrelated to the `checksum` configuration parameter which is used in the "backup" section of the configuration file). The reason for disabling this is that it's a performance intensive function as the checksum must be computed before the file upload starts and for large files this leads disk I/O doubling (once to compute the checksum and one more time then in order to upload the file). If MD5 is disabled then it won't be possible for AWS S3 to detect if files were corrupted during the upload phase.
+
+Example configuration:
+```yaml
+data_dir: /var/lib/cloudbackup
+user:
+  - name: testuser1
+    pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
+    access: write
+backup:
+  - name: daily
+    paths:
+      - /something
+      - /var/lib
+    target:
+      - name: aws
+        type: aws_s3
+        bucket: 'example-com-us-servers'
+        prefix: 'backup/backups-for-server-51'
+        parameters:
+          - name: AWS_ACCESS_KEY_ID
+            value: AKIAIOSFODNN7EXAMPLE
+          - name: AWS_SECRET_ACCESS_KEY
+            value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+          - name: storage_class
+            value: standard
+``` 
 
 ### gcp_storage
 
@@ -217,6 +248,48 @@ If one of them is mentioned then all of them are required. If the GCP credential
 - `client_x509_cert_url` - optional credential parameter extracted from the service account key json file.
 - `storage_class` - optional parameter. If specified, it must be one of "multi_regional", "regional", "nearline" or "coldline". Values correspond to GCP storage tiers.
 
+Example configuration:
+```yaml
+data_dir: /var/lib/cloudbackup
+user:
+  - name: testuser1
+    pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
+    access: write
+backup:
+  - name: daily
+    paths:
+      - /something
+      - /var/lib
+    target:
+      - name: gcp
+        type: gcp_storage
+        bucket: 'example-com-us-servers'
+        prefix: 'backup/backups-for-server-51'
+        parameters:
+          - name: type
+            value: service_account
+          - name: project_id
+            value: emerald-city-321300
+          - name: private_key_id
+            value: oa9ohhuo4quiefo8iiw9yah5Ohkeigi5Zeilei1j
+          - name: private_key
+            # MUST BE SURROUNDED BY DOUBLE QUOTES (NOT SINGLE QUOTES)
+            value: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCo2+YMGAghHx1Y\nxtSU48nJtZbEstByqsXvseBM491U3cZfd17kTMPfHAHhBHtS52z0wQVBVIRlTz7v\nEc5GZMP8Lq8aclVcTYlot/bZ/yES6eiP70jWW4zYDtnZBzby4gnta6DkwgCCMWWJ\nd8xz8kNynz+2lnxAJoeDhJgQlIQdpP/lbmJeUU8naMbbPQClA3H5LsJHb5ct0GcY\n5NFOSQWwtTZLah8uN4dF3fR5Ae3zpETzWN1ykOIHDmHTxXfZQSPmNHom6iTUd6jA\n8z5ldXbhmEUlmQPRhDvSGNRGMxo9iBUuqLYfPqsglOVVFBEq+v2IIN8y2U5xT0K5\np8blgKuPAgMBAAECggEAAsCYKVVqDkkKb9w6QJk/rlDjoVbreRodRLY/9s8ZygOr\nZTNnyo27/V1u1faMhAzBL3JVFu319gxVSn7zlKt8sBYMffIVzho9cD5qDveV1/qi\nSHSKryri2Qq07W1XkQ5ds4DFYXxHJWZWf1mQwuW4OmOdq8xxeLBvMesmsgrvApLi\nb62HMn5rxPyeLoXc7QSCiF7wOp/0S4rT1ScnCDyGWqKJ0TFtzgZG/Rm4Mp4G7cXw\nWmaWZ87bq4MI0BFkAIt9t9Ph5BYsdgC6SIGzn0MIsLQ5EQyElkMbk9XHPcPIioG8\nwZ2JS1QezpEXi7GLFrEI749uOqYI/QoBvswJn6dDoQKBgQDpsbTchzCSliAtekoX\nMvyrZtB9y47ah4A1+3Mf1JUpzANvPkOfrh/cp7WJIeeB8N0OT21gZZU9f17L5yWN\n5mSLJMf7Db9NL9H5A37PJsTJpPzUtfkffV+mtwQtYfwgguXYIogeOIFYWjcfSQSE\nAy+idvL/WcUryk2KWly2UTlQyQKBgQC4+fNqP6dbaU1g3gklJaIfq6G0iDB0BeeI\n1PCp5lgC3WXHpfY46GaPxCwn1n16z3+AQ8fu+e8lbTVyI3uGANRitF2LujJu5nPg\ni8VaMOZDbWIw6rEFX489HU/hbCTZOg+kdxng0GfsCi9caaLh1DTkKhF8gdX3auip\nbYLh5RFdlwKBgQCBT7vsa0INWtTjVU+6FpSJo5KqiQC7G09uj3zcmB0Ry7n6zFFP\nAmLPDl39S6120XkAeiLjvFIgfWJPIdA9/MaV1/xwhuLcKyHc0HpS1fj+OzVL3oXD\nTvSmo47ELfv9YXEdb74yOsIXyZPG0/iTs8+f7oH3mgzodkEB1Y6Hs9orQQKBgAfK\n9/dM8TcHq6veDtKS0E63Q1vAtRHeQc/g8LanrqOIQkZz9niVSeTapeWTwruOzFdS\nA7VMsEeKX0sMtaKCnHAAG0TMtl03tkAKg2j2UG0cyZs39/c6/GTdvETJ8o94Q7px\nDhULkqU+FJq3FJahAw1tvEjbi3Ed/ulMZMwxg1bHAoGAKK2VwKIFYN64oTnxUCd1\nti8+/CN+U73sEETxcXs2xN2eu1cK5WoxbLjBwstUirr7Z88TZZ3zaprVNqJATuhd\nDXCTNc9ciV7bX4zra48MaPKjB6a2kVa0vik2+I4cKnqLScSbr+bGpNLMRqK/jr+Q\nqsAPucgXdv3IKfgXNQ1pF1E=\n-----END PRIVATE KEY-----\n"
+          - name: client_email
+            value: backup-client@emerald-city-321300.iam.gserviceaccount.com
+          - name: client_id
+            value: 121343554521236787787
+          - name: auth_uri
+            value: 'https://accounts.google.com/o/oauth2/auth'
+          - name: token_uri
+            value: 'https://oauth2.googleapis.com/token'
+          - name: auth_provider_x509_cert_url
+            value: 'https://www.googleapis.com/oauth2/v1/certs'
+          - name: client_x509_cert_url
+            value: 'https://www.googleapis.com/robot/v1/metadata/x509/backup-client%40emerald-city-321300.iam.gserviceaccount.com'
+          - name: storage_class
+            value: regional
+``` 
 
 # Notification
 
