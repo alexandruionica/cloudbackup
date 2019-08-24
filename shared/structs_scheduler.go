@@ -798,6 +798,35 @@ func (jobs *BackupJobsState) UnMarkOngoingDbBackup(BackupJobName string) {
 	logger.Debugf("Removed lock used to copy database belonging to backup job '%s'", BackupJobName)
 }
 
+// checks if a given job running/stopping (but not stopped) job is cancelled . Returns true if cancelled, false otherwise
+func (jobs *BackupJobsState) IsCancelled(name string, JobId string, logContext string) bool {
+	jobs.Lock.RLock()
+	defer func() {
+		jobs.Lock.RUnlock()
+	}()
+	for _, job := range jobs.Running {
+		if name == job.Name {
+			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if JobId == "" {
+				if job.Ctx.Err() == context.Canceled {
+					return true
+				} else {
+					return false
+				}
+			} else {
+				if JobId != "" && job.BackupJobId == JobId {
+					if job.Ctx.Err() == context.Canceled {
+						return true
+					} else {
+						return false
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
 // initialise struct which holds jobs state
 func NewJobsState() *BackupJobsState {
 	msgChan := make(chan WatchMessage, watcherChanSize)
@@ -807,4 +836,9 @@ func NewJobsState() *BackupJobsState {
 		WatchMsgReceiver: msgChan,
 		Watcher:          NewWatcherState(msgChan),
 	}
+}
+
+// reports true if the Backup job has been cancelled which means its context is cancelled
+func (job *BackupJobStatus) IsCancelled() bool {
+	return job.Ctx.Err() == context.Canceled
 }

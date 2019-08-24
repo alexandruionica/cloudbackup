@@ -323,10 +323,16 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.ConfigBackup, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, dbData shared.DbData, cancelled bool, backupError error, objectStores []objectstore.ObjectStore) {
 	if backupError != nil {
-		logger.Errorf("Backup '%s' having id '%s' did not finish as it encountered a non recoverable error", jobName, jobUuid)
+		logger.Errorf("Backup '%s' having id '%s' did not finish as it encountered a non recoverable error. The error was: %s", jobName, jobUuid, backupError)
 	}
 	if cancelled {
 		logger.Errorf("Backup '%s' having id '%s' was cancelled while running", jobName, jobUuid)
+	} else {
+		// there are some edge cases where a cancelled job would not make it to a call to cleanupAfterBackup() receive cancelled=true so this is an extra check for that
+		if backupJobsState.IsCancelled(jobName, jobUuid, loggingContext) {
+			cancelled = true
+			logger.Debugf("Job %s having id %s was cancelled but cleanupAfterBackup() didn't receive the call with cancelled=true", jobName, jobUuid)
+		}
 	}
 	if !cancelled && backupError == nil {
 		logger.Infof("Backup '%s' having id '%s' finished running", jobName, jobUuid)
@@ -423,7 +429,11 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 			logger.Errorf("Could not upload to the remote object store, a copy of the configuration file, due to error: %s", err)
 		}
 	} else {
-		logger.Debugf("Not attempting to upload a copy of the DB and of the config as the backup could not start")
+		if cancelled {
+			logger.Debugf("Not attempting to upload a copy of the DB and of the config as the backup was cancelled")
+		} else {
+			logger.Debugf("Not attempting to upload a copy of the DB and of the config as the backup could not start")
+		}
 	}
 
 	// tell any connected Watch clients to exit

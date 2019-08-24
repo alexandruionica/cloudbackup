@@ -121,15 +121,23 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 		result.awsS3Svc = s3.New(result.awsSess,
 			aws.NewConfig().WithRegion(result.region))
 	} else {
-		// disable MD5 signing as it requires reading each file twice
-		result.awsS3Svc = s3.New(result.awsSess, aws.NewConfig().WithS3DisableContentMD5Validation(true),
-			aws.NewConfig().WithRegion(result.region))
-		// the S3 sdk is braindead and will by default read the whole file , compute a SHA256 checksum and then include it
-		// in the call to the API (HTTP header X-Amz-Content-Sha256). It proved to be extremely difficult to figure out
-		// how to disable this. The downside to disabling this is that if the file gets corrupted in flight, you won't be notified
-		result.awsS3Svc.Handlers.Sign.PushFrontNamed(v4.BuildNamedHandler(v4.SignRequestHandler.Name, func(s *v4.Signer) {
-			s.UnsignedPayload = true
-		}))
+		// if the user specified checksum=true in the backup config section then allow another checksum to be done by the AWS S3 sdk.
+		// Performance wise this will be quite bad as each file will be read two times for different checksums(one by us, one by the S3 sdk)
+		// and a 3rd time in order to get the content uploaded
+		if backupConfig.Checksum {
+			result.awsS3Svc = s3.New(result.awsSess, aws.NewConfig().WithRegion(result.region))
+			// disable MD5 signing/SHA256 signing by the S3 sdk as it requires reading each file one more time
+		} else {
+			// TODO - figure out if we could pass the MD5 checksum ourselves as we have it calculated
+			result.awsS3Svc = s3.New(result.awsSess, aws.NewConfig().WithS3DisableContentMD5Validation(true),
+				aws.NewConfig().WithRegion(result.region))
+			// the S3 sdk is braindead and will by default read the whole file , compute a SHA256 checksum and then include it
+			// in the call to the API (HTTP header X-Amz-Content-Sha256). It proved to be extremely difficult to figure out
+			// how to disable this. The downside to disabling this is that if the file gets corrupted in flight, you won't be notified
+			result.awsS3Svc.Handlers.Sign.PushFrontNamed(v4.BuildNamedHandler(v4.SignRequestHandler.Name, func(s *v4.Signer) {
+				s.UnsignedPayload = true
+			}))
+		}
 	}
 
 	return result, nil
@@ -159,6 +167,11 @@ func (object *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, vers
 				Body:   &reader,
 			})
 			if err != nil {
+				if object.ctx.Err() == context.Canceled {
+					msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
+					logger.Info(msg)
+					return strconv.FormatInt(version, 10), true, errors.New(msg)
+				}
 				return strconv.FormatInt(version, 10), false, err
 			}
 			if result != nil && result.VersionID != nil {
@@ -167,7 +180,7 @@ func (object *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, vers
 				msg := fmt.Sprintf("upload of '%s' was reported "+
 					"successful but the upload response does not contain a file version. This means the backed up copy is "+
 					"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", newDbRecord.Path)
-				logger.Errorf(msg)
+				logger.Error(msg)
 				return strconv.FormatInt(version, 10), false, errors.New(msg)
 			}
 			// upload using streaming upload (without multipart upload)
@@ -178,6 +191,11 @@ func (object *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, vers
 				Key:    aws.String(remotePath),
 			})
 			if err != nil {
+				if object.ctx.Err() == context.Canceled {
+					msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
+					logger.Info(msg)
+					return strconv.FormatInt(version, 10), true, errors.New(msg)
+				}
 				return strconv.FormatInt(version, 10), false, err
 			}
 			if result != nil && result.VersionId != nil {

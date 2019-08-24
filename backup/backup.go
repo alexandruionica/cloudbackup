@@ -240,13 +240,13 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		var remoteVersion string
 		if operationType == "upload" {
 			remoteVersion, cancelled, err = UploadObject(DbRecord, backupConfig, objectStore, backupJobsState, version, false)
+			if cancelled {
+				JobCancelled = true
+				break
+			}
 			if err != nil {
 				encounteredError++
 				encounteredErrorObject = err
-				break
-			}
-			if cancelled {
-				JobCancelled = true
 				break
 			}
 			// append upload details here in case we need to roll back (as we will have to delete the uploaded content)
