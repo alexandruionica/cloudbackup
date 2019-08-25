@@ -48,6 +48,13 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		return &StoreGcpStorage{}, err
 	}
 
+	// these will be used for rate limiting via the http.Client and we want them separated from the above, just in
+	// case we end up using both (in maybe slightly different ways)
+	rateLimitBucket2, ratelimit2, burst2, err := setupRateLimiterBucket(rateLimitStr, target.Name, backupConfig.Name)
+	if err != nil {
+		return &StoreGcpStorage{}, err
+	}
+
 	result := &StoreGcpStorage{
 		ctx:             ctx,
 		backupName:      backupConfig.Name,
@@ -71,13 +78,15 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		if err != nil {
 			return &StoreGcpStorage{}, err
 		}
-		result.gcpStorageClient, err = gcpStorage.NewClient(ctx, option.WithCredentialsJSON(credentialsJsonBlob))
+		rateLimitedHttpClient := newRateLimitedHttpClientForGcp(ctx, rateLimitBucket2, ratelimit2, burst2, credentialsJsonBlob)
+		result.gcpStorageClient, err = gcpStorage.NewClient(ctx, option.WithCredentialsJSON(credentialsJsonBlob), option.WithHTTPClient(rateLimitedHttpClient))
 		if err != nil {
 			return &StoreGcpStorage{}, fmt.Errorf("failed to create GCP client using provided credentials due to error: %s", err)
 		}
 		// trying to loging using the sdk for GCP's own default rules for locating credentials
 	} else {
-		result.gcpStorageClient, err = gcpStorage.NewClient(ctx)
+		rateLimitedHttpClient := newRateLimitedHttpClientForGcp(ctx, rateLimitBucket2, ratelimit2, burst2, []byte{})
+		result.gcpStorageClient, err = gcpStorage.NewClient(ctx, option.WithHTTPClient(rateLimitedHttpClient))
 		if err != nil {
 			return &StoreGcpStorage{}, fmt.Errorf("failed to create GCP client due to error: %s", err)
 		}
@@ -97,7 +106,7 @@ func (objStore *StoreGcpStorage) Upload(newDbRecord shared.BackedUpFilePropertie
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
 		reader, err := NewFileReader(newDbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
-			objStore.storeType, objStore.rateLimit, objStore.burst, newDbRecord.Size, objStore.ctx, true)
+			objStore.storeType, 0, objStore.burst, newDbRecord.Size, objStore.ctx, true) // we pass ratelimit as 0 because the rate limiting will be done (if needed) by the http.Client
 		if err != nil {
 			return strconv.FormatInt(version, 10), false, err
 		}

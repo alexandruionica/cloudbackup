@@ -326,12 +326,13 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 		logger.Errorf("Backup '%s' having id '%s' did not finish as it encountered a non recoverable error. The error was: %s", jobName, jobUuid, backupError)
 	}
 	if cancelled {
-		logger.Errorf("Backup '%s' having id '%s' was cancelled while running", jobName, jobUuid)
+		logger.Infof("Backup '%s' having id '%s' was cancelled while running", jobName, jobUuid)
 	} else {
 		// there are some edge cases where a cancelled job would not make it to a call to cleanupAfterBackup() receive cancelled=true so this is an extra check for that
 		if backupJobsState.IsCancelled(jobName, jobUuid, loggingContext) {
 			cancelled = true
 			logger.Debugf("Job %s having id %s was cancelled but cleanupAfterBackup() didn't receive the call with cancelled=true", jobName, jobUuid)
+			logger.Infof("Backup '%s' having id '%s' was cancelled while running", jobName, jobUuid)
 		}
 	}
 	if !cancelled && backupError == nil {
