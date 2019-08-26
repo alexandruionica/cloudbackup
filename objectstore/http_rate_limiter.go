@@ -6,10 +6,6 @@ import (
 	"golang.org/x/time/rate"
 	"io"
 	"net/http"
-
-	gcpStorage "cloud.google.com/go/storage"
-	"google.golang.org/api/option"
-	gcpTransport "google.golang.org/api/transport/http"
 )
 
 type wrapAroundTransportRequestBody struct {
@@ -84,7 +80,8 @@ func (handle *wrapAroundTransportRequestBody) Close() error {
 	return handle.origBody.Close()
 }
 
-// structure used to provide an altered http.Client which uses our custom http.Transport
+// structure used to provide an altered http.Client which uses our custom http.Transport . For usage examples see
+//   newRateLimitedHttpClientForGcp() in the same package as this type
 type wrapAroundTransport struct {
 	// original http.Transport to which we will defer the actual work
 	origTransport http.RoundTripper
@@ -113,33 +110,4 @@ func (handle *wrapAroundTransport) RoundTrip(req *http.Request) (*http.Response,
 	}
 	response, error := handle.origTransport.RoundTrip(req)
 	return response, error
-}
-
-// returns a HTTP client which can then be passed to the GCP sdk, when initialising the SDK. For this to work,
-// the implementation of the the http.Transport interface must be the one used by the GCP SDK as it takes care of
-// authentication and probably other things. Unfortunately this means that upgrades of the GCP SDK can lead to issues
-// if they start doing things differently.
-func newRateLimitedHttpClientForGcp(ctx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64, credentialBlob []byte) *http.Client {
-	logger.Debug("Setting up new HTTP client capable of rate limiting")
-	var httpTransport http.RoundTripper
-	var err error
-	// how we call gcpTransport.NewTransport is tied deeply to the implementation of the GCP APIs in GO. If that library changes, it may affect us
-	if len(credentialBlob) > 0 {
-		httpTransport, err = gcpTransport.NewTransport(ctx, http.DefaultTransport, option.WithScopes(gcpStorage.ScopeFullControl), option.WithCredentialsJSON(credentialBlob))
-	} else {
-		httpTransport, err = gcpTransport.NewTransport(ctx, http.DefaultTransport, option.WithScopes(gcpStorage.ScopeFullControl))
-	}
-	if err != nil {
-		logger.Errorf("While trying to setup the GCP rate limited http client, got error: %s", err)
-	}
-
-	wrappedTransport := &wrapAroundTransport{
-		origTransport: httpTransport,
-		ctx:           ctx,
-		bucket:        bucket,
-		rateLimit:     rateLimit,
-		burst:         burst,
-	}
-
-	return &http.Client{Transport: wrappedTransport}
 }

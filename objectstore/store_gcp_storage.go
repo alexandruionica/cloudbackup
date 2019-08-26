@@ -1,20 +1,23 @@
 package objectstore
 
 import (
-	gcpStorage "cloud.google.com/go/storage"
-	"cloudbackup/shared"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/time/rate"
-	"google.golang.org/api/option"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	gcpStorage "cloud.google.com/go/storage"
+	"cloudbackup/shared"
+	"golang.org/x/time/rate"
+	"google.golang.org/api/option"
+	gcpTransport "google.golang.org/api/transport/http"
 )
 
 type StoreGcpStorage struct {
@@ -48,13 +51,6 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		return &StoreGcpStorage{}, err
 	}
 
-	// these will be used for rate limiting via the http.Client and we want them separated from the above, just in
-	// case we end up using both (in maybe slightly different ways)
-	rateLimitBucket2, ratelimit2, burst2, err := setupRateLimiterBucket(rateLimitStr, target.Name, backupConfig.Name)
-	if err != nil {
-		return &StoreGcpStorage{}, err
-	}
-
 	result := &StoreGcpStorage{
 		ctx:             ctx,
 		backupName:      backupConfig.Name,
@@ -78,14 +74,16 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		if err != nil {
 			return &StoreGcpStorage{}, err
 		}
-		rateLimitedHttpClient := newRateLimitedHttpClientForGcp(ctx, rateLimitBucket2, ratelimit2, burst2, credentialsJsonBlob)
+		// This rate limiter limits the HTTP POST method which means in practice it limits uploads only
+		rateLimitedHttpClient := newRateLimitedHttpClientForGcp(ctx, rateLimitBucket, ratelimit, burst, credentialsJsonBlob)
 		result.gcpStorageClient, err = gcpStorage.NewClient(ctx, option.WithCredentialsJSON(credentialsJsonBlob), option.WithHTTPClient(rateLimitedHttpClient))
 		if err != nil {
 			return &StoreGcpStorage{}, fmt.Errorf("failed to create GCP client using provided credentials due to error: %s", err)
 		}
-		// trying to loging using the sdk for GCP's own default rules for locating credentials
+		// trying to login using the SDK for GCP's own default rules for locating credentials
 	} else {
-		rateLimitedHttpClient := newRateLimitedHttpClientForGcp(ctx, rateLimitBucket2, ratelimit2, burst2, []byte{})
+		// This rate limiter limits the HTTP POST method which means in practice it limits uploads only
+		rateLimitedHttpClient := newRateLimitedHttpClientForGcp(ctx, rateLimitBucket, ratelimit, burst, []byte{})
 		result.gcpStorageClient, err = gcpStorage.NewClient(ctx, option.WithHTTPClient(rateLimitedHttpClient))
 		if err != nil {
 			return &StoreGcpStorage{}, fmt.Errorf("failed to create GCP client due to error: %s", err)
@@ -341,4 +339,34 @@ func calculateGcpStorageRemotePath(prefix string, path string, metadata bool) st
 		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
 		return filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
 	}
+}
+
+// returns a HTTP client which can then be passed to the GCP sdk, when initialising the SDK. For this to work,
+// the implementation of the the http.Transport interface must be the one used by the GCP SDK as it takes care of
+// authentication and probably other things. Unfortunately this means that upgrades of the GCP SDK can lead to issues
+// if they start doing things differently.
+// This rate limiter limits the HTTP POST method which means in practice it limits uploads only
+func newRateLimitedHttpClientForGcp(ctx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64, credentialBlob []byte) *http.Client {
+	logger.Debug("Setting up new HTTP client capable of rate limiting")
+	var httpTransport http.RoundTripper
+	var err error
+	// how we call gcpTransport.NewTransport is tied deeply to the implementation of the GCP APIs in GO. If that library changes, it may affect us
+	if len(credentialBlob) > 0 {
+		httpTransport, err = gcpTransport.NewTransport(ctx, http.DefaultTransport, option.WithScopes(gcpStorage.ScopeFullControl), option.WithCredentialsJSON(credentialBlob))
+	} else {
+		httpTransport, err = gcpTransport.NewTransport(ctx, http.DefaultTransport, option.WithScopes(gcpStorage.ScopeFullControl))
+	}
+	if err != nil {
+		logger.Errorf("While trying to setup the GCP rate limited http client, got error: %s", err)
+	}
+
+	wrappedTransport := &wrapAroundTransport{
+		origTransport: httpTransport,
+		ctx:           ctx,
+		bucket:        bucket,
+		rateLimit:     rateLimit,
+		burst:         burst,
+	}
+
+	return &http.Client{Transport: wrappedTransport}
 }
