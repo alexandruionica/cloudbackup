@@ -9,7 +9,7 @@ Backup/Restore jobs:
 - the above stands true for restore jobs too .. no more than one at a time for a given backup name
 - The 1 write "thing" DB limitation implies that a restore job CAN'T run at the same time a backup job runs for a given backup name (each backup name has a dedicated db file; a restore writes in the same db file). The reverse stands true too, a backup should never run if a restore for the same DB name is running
 
-## Command Stucture
+## Command Structure
 
 The command and its main options are depicted below. Command line parameters are supported and can be discovered using the `--help` option. For example:
 ```

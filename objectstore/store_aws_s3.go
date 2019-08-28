@@ -9,10 +9,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	v4 "github.com/aws/aws-sdk-go/aws/signer/v4"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"golang.org/x/time/rate"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -39,9 +39,7 @@ type StoreAwsS3 struct {
 	awsSecretAccessKey string
 	// S3 storage class
 	storageClass string
-	// multipart uploads are enabled
-	multipartAllowed bool
-	region           string
+	region       string
 	// AWS client session
 	awsSess *session.Session
 	// AWS managed uploader which does a lot of work (retries/multipart upload/etc)
@@ -90,6 +88,7 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 	}
 
 	awsConfig.Region = aws.String(result.region)
+	awsConfig.HTTPClient = newRateLimitedHttpClientForAWS(ctx, rateLimitBucket, ratelimit, burst)
 
 	// once created, DO NOT MODIFY the session object
 	result.awsSess, err = session.NewSessionWithOptions(session.Options{Config: awsConfig})
@@ -105,40 +104,9 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 		return result, err
 	}
 
-	// unfortunately the way the AWS SDK implements multipart uploads is incompatible with the rate limiter. What the
-	// S3 SDK does is buffer 5MB worth of file (or less if size of item is smaller) in 5 GO routines and only then proceed
-	// to upload. This makes the rate limiter mostly useless as the rate limiter operates on the io.Reader interface
-	// provided to the AWS SDK
-	if ratelimit == 0 {
-		result.multipartAllowed = true
-	} else {
-		logger.Info("Not using multipart uploads as rate limiting is enabled")
-	}
-
 	result.awsUploader = s3manager.NewUploader(result.awsSess)
 	// Create a S3 client with additional configuration
-	if result.multipartAllowed {
-		result.awsS3Svc = s3.New(result.awsSess,
-			aws.NewConfig().WithRegion(result.region))
-	} else {
-		// if the user specified checksum=true in the backup config section then allow another checksum to be done by the AWS S3 sdk.
-		// Performance wise this will be quite bad as each file will be read two times for different checksums(one by us, one by the S3 sdk)
-		// and a 3rd time in order to get the content uploaded
-		if backupConfig.Checksum {
-			result.awsS3Svc = s3.New(result.awsSess, aws.NewConfig().WithRegion(result.region))
-			// disable MD5 signing/SHA256 signing by the S3 sdk as it requires reading each file one more time
-		} else {
-			// TODO - figure out if we could pass the MD5 checksum ourselves as we have it calculated
-			result.awsS3Svc = s3.New(result.awsSess, aws.NewConfig().WithS3DisableContentMD5Validation(true),
-				aws.NewConfig().WithRegion(result.region))
-			// the S3 sdk is braindead and will by default read the whole file , compute a SHA256 checksum and then include it
-			// in the call to the API (HTTP header X-Amz-Content-Sha256). It proved to be extremely difficult to figure out
-			// how to disable this. The downside to disabling this is that if the file gets corrupted in flight, you won't be notified
-			result.awsS3Svc.Handlers.Sign.PushFrontNamed(v4.BuildNamedHandler(v4.SignRequestHandler.Name, func(s *v4.Signer) {
-				s.UnsignedPayload = true
-			}))
-		}
-	}
+	result.awsS3Svc = s3.New(result.awsSess, aws.NewConfig().WithRegion(result.region))
 
 	return result, nil
 }
@@ -153,61 +121,36 @@ func (object *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, vers
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
 		reader, err := NewFileReader(newDbRecord.Path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
-			object.storeType, object.rateLimit, object.burst, newDbRecord.Size, object.ctx, true)
+			object.storeType, 0, object.burst, newDbRecord.Size, object.ctx, true) // we pass ratelimit as 0 because the rate limiting will be done (if needed) by the http.Client
 		if err != nil {
 			return strconv.FormatInt(version, 10), false, err
 		}
 		defer reader.Close()
 
 		// upload using Multipart uploads and the S3 upload manager
-		if object.multipartAllowed {
-			result, err := object.awsUploader.UploadWithContext(object.ctx, &s3manager.UploadInput{
-				Bucket: aws.String(object.storeBucketName),
-				Key:    aws.String(remotePath),
-				Body:   &reader,
-			})
-			if err != nil {
-				if object.ctx.Err() == context.Canceled {
-					msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
-					logger.Info(msg)
-					return strconv.FormatInt(version, 10), true, errors.New(msg)
-				}
-				return strconv.FormatInt(version, 10), false, err
+		result, err := object.awsUploader.UploadWithContext(object.ctx, &s3manager.UploadInput{
+			Bucket: aws.String(object.storeBucketName),
+			Key:    aws.String(remotePath),
+			Body:   &reader,
+		})
+		if err != nil {
+			if object.ctx.Err() == context.Canceled {
+				msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
+				logger.Info(msg)
+				return strconv.FormatInt(version, 10), true, errors.New(msg)
 			}
-			if result != nil && result.VersionID != nil {
-				return *(result.VersionID), false, nil
-			} else {
-				msg := fmt.Sprintf("upload of '%s' was reported "+
-					"successful but the upload response does not contain a file version. This means the backed up copy is "+
-					"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", newDbRecord.Path)
-				logger.Error(msg)
-				return strconv.FormatInt(version, 10), false, errors.New(msg)
-			}
-			// upload using streaming upload (without multipart upload)
-		} else {
-			result, err := object.awsS3Svc.PutObject(&s3.PutObjectInput{
-				Body:   aws.ReadSeekCloser(&reader),
-				Bucket: aws.String(object.storeBucketName),
-				Key:    aws.String(remotePath),
-			})
-			if err != nil {
-				if object.ctx.Err() == context.Canceled {
-					msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
-					logger.Info(msg)
-					return strconv.FormatInt(version, 10), true, errors.New(msg)
-				}
-				return strconv.FormatInt(version, 10), false, err
-			}
-			if result != nil && result.VersionId != nil {
-				return *(result.VersionId), false, nil
-			} else {
-				msg := fmt.Sprintf("upload of '%s' was reported "+
-					"successful but the upload response does not contain a file version. This means the backed up copy is "+
-					"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", newDbRecord.Path)
-				logger.Errorf(msg)
-				return strconv.FormatInt(version, 10), false, errors.New(msg)
-			}
+			return strconv.FormatInt(version, 10), false, err
 		}
+		if result != nil && result.VersionID != nil {
+			return *(result.VersionID), false, nil
+		} else {
+			msg := fmt.Sprintf("upload of '%s' was reported "+
+				"successful but the upload response does not contain a file version. This means the backed up copy is "+
+				"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", newDbRecord.Path)
+			logger.Error(msg)
+			return strconv.FormatInt(version, 10), false, errors.New(msg)
+		}
+		// upload using streaming upload (without multipart upload)
 	} else {
 		// directories and symlinks DO NOT GET UPLOADED
 		return strconv.FormatInt(version, 10), false, nil
@@ -474,4 +417,20 @@ func calculateAwsS3RemotePath(prefix string, path string, metadata bool) string 
 		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
 		return filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
 	}
+}
+
+// returns a HTTP client which can then be passed to the AWS S3 sdk, when initialising the SDK.
+// This rate limiter limits the HTTP POST method which means in practice it limits uploads only
+func newRateLimitedHttpClientForAWS(ctx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64) *http.Client {
+	logger.Debug("Setting up new HTTP client capable of rate limiting")
+
+	wrappedTransport := &wrapAroundTransport{
+		origTransport: http.DefaultTransport,
+		ctx:           ctx,
+		bucket:        bucket,
+		rateLimit:     rateLimit,
+		burst:         burst,
+	}
+
+	return &http.Client{Transport: wrappedTransport}
 }
