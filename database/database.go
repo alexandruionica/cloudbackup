@@ -51,10 +51,16 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	CREATE INDEX remote_files_local_path ON remote_files(local_path);
 	CREATE INDEX remote_files_upload_date ON remote_files(upload_date);
 
+	CREATE TABLE failed_files (uuid NOT NULL PRIMARY KEY, job_id TEXT, path TEXT, type TEXT,
+	FOREIGN KEY(job_id) REFERENCES jobs(id));
+
+	CREATE INDEX failed_files_job_id ON failed_files(job_id);
+
 	CREATE TABLE backup_collections (file_uuid TEXT, job_id TEXT, target TEST, FOREIGN KEY(file_uuid) REFERENCES remote_files(uuid), 
 	FOREIGN KEY(job_id) REFERENCES jobs(id), FOREIGN KEY(target) REFERENCES targets(name));
 	
 	CREATE INDEX backup_collections_jobid ON backup_collections(job_id);
+    CREATE INDEX backup_collections_target ON backup_collections(target);
 
 	`
 	logger.Debugf("Creating tables in '%s' database", dbfilepath)

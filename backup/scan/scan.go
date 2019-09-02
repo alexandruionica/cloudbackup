@@ -59,21 +59,25 @@ func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, ba
 						"encountered: %s", path, err)
 				}
 			} else {
+				var fileType string
 				switch utils.FileType(stat) {
 				case "file":
 					{
 						backupJobsState.IncrementCounter(backupConfig.Name, "examined_files", path,
 							"file", "examine", "")
+						fileType = "file"
 					}
 				case "symlink":
 					{
 						backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks", path,
 							"symlink", "examine", "")
+						fileType = "symlink"
 					}
 				default:
 					{
 						backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown", path,
 							"unknown", "examine", "")
+						fileType = "unknown"
 					}
 				}
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
@@ -85,6 +89,7 @@ func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, ba
 					}
 					if err != nil {
 						logger.Warnf("While trying to backup '%s' the following error was encountered: %s", path, err)
+						backup.MarkItemAsFailed(path, fileType, jobUuid, dbData)
 					}
 				}
 
@@ -131,6 +136,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig share
 		}
 		if err != nil {
 			logger.Warnf("While trying to backup '%s' the following error was encountered: %s", path, err)
+			backup.MarkItemAsFailed(path, "dir", jobUuid, dbData)
 		}
 		// if no error was reported and no cancellation was reported either then we continue to process all files and
 		// folders part of the just "backed up" directory
@@ -209,21 +215,25 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig share
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_directory", path,
 						"", "")
 				} else {
+					var fileType string
 					switch utils.FileType(fileInfo) {
 					case "file":
 						{
 							backupJobsState.IncrementCounter(backupConfig.Name, "examined_files", childPath,
 								"file", "examine", "")
+							fileType = "file"
 						}
 					case "symlink":
 						{
 							backupJobsState.IncrementCounter(backupConfig.Name, "examined_symlinks", childPath,
 								"symlink", "examine", "")
+							fileType = "symlink"
 						}
 					default:
 						{
 							backupJobsState.IncrementCounter(backupConfig.Name, "examined_unknown", childPath,
 								"unknown", "examine", "")
+							fileType = "unknown"
 						}
 					}
 					backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", childPath,
@@ -236,6 +246,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig share
 						}
 						if err != nil {
 							logger.Warnf("While trying to backup '%s' the following error was encountered: %s", childPath, err)
+							backup.MarkItemAsFailed(childPath, fileType, jobUuid, dbData)
 						}
 					}
 					// mark current examined file as none as we don't know if the next iteration of the main for loop

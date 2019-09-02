@@ -849,7 +849,7 @@ func RunPrePostScript(path string, scriptType string, backupName string, jobId s
 }
 
 // this must be ran after a backup job has completed and it will mark deleted all files/dir/symlinks which are not
-// listed in the current backup and also don't exist any more on this but are mentioned in the "files" table
+// listed in the current backup and also don't exist any more on disk but are mentioned in the "files" table
 // $maxResults represents how many records should be fetched from the DB for processing. If the limit is hit then
 // after processing the results, the function will recurse, calling itself again with said limit until all DB records
 // are processed
@@ -860,7 +860,7 @@ func FindAndMarkDeleted(ctx context.Context, backupConfig shared.ConfigBackup, d
 
 	var foundEntries []string
 	// the first target name should be sufficient as both targets
-	rows, err := dbData.PreparedStatements.FindDeletedItemsStmt.Query(jobUuid, backupConfig.Target[0].Name, maxResults)
+	rows, err := dbData.PreparedStatements.FindDeletedItemsStmt.Query(jobUuid, backupConfig.Target[0].Name, jobUuid, maxResults)
 	if err != nil {
 		logger.Errorf("While querying the database in order to find files which are deleted, encountered error: %s", err)
 		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", "", "", "mark_deleted", err.Error())
@@ -1203,5 +1203,20 @@ func UploadBackupConfigCopy(sanitisedCfgCopyFile string, jobUuid string, backupC
 		return foundErrorMsg
 	} else {
 		return nil
+	}
+}
+
+// Mark a file/dir/symlink as failed to have back up. $path represents the items fully qualified path, $fileType is one
+// of: "file"/"dir"/"symlink"/"unknown" (where unknown generally means that the step which failed happened before the
+// items's properties were established
+func MarkItemAsFailed(path string, fileType string, jobUuid string, dbData shared.DbData) {
+	u, err := uuid.NewV4()
+	if err != nil {
+		logger.Errorf("Could not generate a UUID so the so item '%s' can't be marked as failed to have backed up. Encountered error is: %s", path, err)
+		return
+	}
+	_, err = dbData.PreparedStatements.FailedFilesInsertStmt.Exec(u, jobUuid, path, fileType)
+	if err != nil {
+		logger.Errorf("Could not mark '%s' as failed to backup due to the following error being encountered when trying to add the entry to the database: %s", path, err)
 	}
 }

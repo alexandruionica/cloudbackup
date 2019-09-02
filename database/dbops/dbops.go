@@ -133,10 +133,8 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 		return PreparedStatements, err
 	}
 
-	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
-
 	// find which items are not listed in the last backup but still mentioned in the "files" table
-	PreparedStatements.FindDeletedItemsStmt, err = db.Prepare("SELECT path FROM files EXCEPT SELECT local_path FROM remote_files rf INNER JOIN backup_collections bc ON bc.file_uuid == rf.uuid  WHERE bc.job_id=? AND bc.target=? LIMIT ?")
+	PreparedStatements.FindDeletedItemsStmt, err = db.Prepare("SELECT path FROM files WHERE path NOT IN (SELECT local_path FROM remote_files rf INNER JOIN backup_collections bc ON bc.file_uuid == rf.uuid  WHERE bc.job_id=? AND bc.target=? UNION ALL SELECT path FROM failed_files WHERE job_id=?) LIMIT ?")
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
 		// close other opened statements before returning
@@ -162,6 +160,42 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 		}
 		return PreparedStatements, err
 	}
+
+	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
+
+	// add files/dirs/symlinks which failed to be backed up due to various reasons
+	PreparedStatements.FailedFilesInsertStmt, err = db.Prepare("INSERT INTO failed_files (uuid, job_id, path, type) VALUES (?, ?, ?, ?)")
+	if err != nil {
+		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
+		// close other opened statements before returning
+		err2 := PreparedStatements.FilesQueryStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesQueryStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.FilesInsertStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesInsertStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.FilesUpdateStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FilesUpdateStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.RemoteFilesQueryNewestVersionUuidStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'RemoteFilesQueryNewestVersionUuidStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.BackupCollectionsInsertStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'BackupCollectionsInsertStmt' received error: '%s'", err2)
+		}
+		err2 = PreparedStatements.FindDeletedItemsStmt.Close()
+		if err2 != nil {
+			logger.Warnf("While trying to early close 'FindDeletedItemsStmt' received error: '%s'", err2)
+		}
+		return PreparedStatements, err
+	}
+
+	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
 
 	return PreparedStatements, nil
 }
@@ -206,6 +240,12 @@ func ClosePreparedStatements(dbPreparedStatements shared.DbPreparedStatements) {
 		err := dbPreparedStatements.FindDeletedItemsStmt.Close()
 		if err != nil {
 			logger.Warnf("Could not close the db query statement for finding deleted items")
+		}
+	}
+	if dbPreparedStatements.FailedFilesInsertStmt != nil {
+		err := dbPreparedStatements.FailedFilesInsertStmt.Close()
+		if err != nil {
+			logger.Warnf("Could not close the db query statement for inserting failed to backup items")
 		}
 	}
 }
