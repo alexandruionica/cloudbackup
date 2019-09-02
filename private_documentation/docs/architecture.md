@@ -87,8 +87,23 @@ Entries in this table are added only when a backup job starts (basically it is c
 
 Before removing a target during configuration file update a manual "purge" job should be run (or worst case scenario afterwards). Ideall we block config file changes via the API if the purge was not ran.
 
+### jobs
+
+Each backup job is recorded in this table, including its final report. The unique job id is referenced from other tables
+(using FOREIGN KEYs) in order to ensure a job can not be deleted as long as backed up files belong to said backup job.
+
 ### remote_files
 
 The `remote_files` table contains a listing of all remote stored copies of the files (basically the backups). A file from the `files` table can have multiple entries in the `remote_files` table due to multiple versions of said file being backed up.
 There is one case where entries in the `remote_files` tables won't have any more a corresponding entry in the `files` table and that is when the local file got deleted but we still have backed up copies of said file and a restore might request the file to be restored. 
 The `version` field represents the newest backup state for a given item. The `remote_version` is the version as seen by the object store implementation. The latter is a string (for example when a PUT operation gets as a response the version from the backed object store). Some implementations may accept a version to be passed in when an upload is requested and if so then it will most likely match the `version` field. An interesting case is a meta-data update operation where program logic will only update the database entry but not the remote object store too. In this case a new `version` will have the same `remove_version` field value as the previous `version` and this is because nothing actually got changed on the object store.
+
+### failed_files
+
+During a particular backup run, if an item fails to be backed up, then a entry will be added to this table, mentioning the job_id of the backup job.
+
+### backup_collections
+
+When a file is successfully backed up then an entry is added to `remote_files` table and a reference to that entry added to this table.
+If a file does not need to be backed up as it hasn't changed since the last backup then an entry is added to `backup_collections` which points to the newest entry of said item in the `remote_files` table. 
+By selecting all of the items with the same `jobid` and `target` the list of a files needed to restore a particular backup is obtained. 
