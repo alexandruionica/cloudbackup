@@ -329,7 +329,7 @@ notification:
 <h2 id="target">Target</h2>
 <p>A target belongs to a "backup" section and it defines one or more object stores where to save the backed up data.</p>
 <p>Parameters specific to a given target type (object store type) are listed in the below sub section.</p>
-<p>The value of the <code>name</code> key is case insensitive while the value of the <code>value</code> key is case sensitive</p>
+<p>The value of the <code>name</code> key is case insensitive while the value of the <code>value</code> key is case sensitive (unless otherwise specified).</p>
 <p>Once a target is configured, it is recommended to start the server and then run: <code>cloudbackup client backup target test</code> in order to validate that the configuration of the target is valid and that the credentials supplied (or available when using something like the EC2 metadata service) grant sufficient access. </p>
 <h3 id="aws_s3">aws_s3</h3>
 <ul>
@@ -338,10 +338,12 @@ notification:
 <li><code>storage_class</code> - optional parameter. If specified, it must be one of "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING". Values correspond to AWS storage tiers for S3.</li>
 <li><code>region</code> - optional parameter. Must be a valid AWS region, lower cased. For example: "us-east-1" or "ap-southeast-2". If specified, it will be used only in case the region of the S3 bucket can not be programatically determined using the S3 API.</li>
 </ul>
-<p>It is highly advisable to:
-- dedicate S3 buckets only for backup only purposes. Mixing use of S3 buckets may lead to backups being corrupted if any other software or persons manage the contents of the S3 buckets
-- make use of the <code>prefix</code> backup configuration setting so a given system is the only one making use of any S3 bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. 
-- put a lifecycle rule on the S3 bucket so multipart uploads parts older than several days are automatically purged</p>
+<p>It is highly advisable to: </p>
+<ul>
+<li>dedicate S3 buckets only for backup only purposes. Mixing use of S3 buckets may lead to backups being corrupted if any other software or persons manage the contents of the S3 buckets</li>
+<li>make use of the <code>prefix</code> backup configuration setting so a given system is the only one making use of any S3 bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. </li>
+<li>put a lifecycle rule on the S3 bucket so multipart uploads parts older than several days are automatically purged</li>
+</ul>
 <p>Example configuration:</p>
 <pre><code class="yaml">data_dir: /var/lib/cloudbackup
 user:
@@ -384,10 +386,12 @@ If one of them is mentioned then all of them are required. If the GCP credential
 <li><code>storage_class</code> - optional parameter. If specified, it must be one of "multi_regional", "regional", "nearline" or "coldline". Values correspond to GCP storage tiers.</li>
 <li><code>disable_crc32c_hash</code> - optional parameter. If not specified then it defaults to "false" and then a CRC32c hash will be calculated for each uploaded file and then sent to GCP storage together with the file. The hash will then be used by GCP storage to validate that the file did not get corrupted during the upload. The only downside to this is that in order to compute the hash, the file will be read one extra time from the local disk. Setting this parameter to a value of "yes" or "true" means the CRC32c hash will not be calculated and sent.</li>
 </ul>
-<p>It is highly advisable to:
-- dedicate GCP storage buckets only for backup only purposes. Mixing use of GCP storage buckets may lead to backups being corrupted if any other software or persons manage the contents of the buckets.
-- make use of the <code>prefix</code> backup configuration setting so a given system is the only one making use of any GCP storage bucket key beginning with said prefix. Failing to do so may lead to corrupted backups.
-- not disable the computation of CRC32c hashes. </p>
+<p>It is highly advisable to:</p>
+<ul>
+<li>dedicate GCP storage buckets only for backup only purposes. Mixing use of GCP storage buckets may lead to backups being corrupted if any other software or persons manage the contents of the buckets.</li>
+<li>make use of the <code>prefix</code> backup configuration setting so a given system is the only one making use of any GCP storage bucket key beginning with said prefix. Failing to do so may lead to corrupted backups.</li>
+<li>not disable the computation of CRC32c hashes. </li>
+</ul>
 <p>Example configuration:</p>
 <pre><code class="yaml">data_dir: /var/lib/cloudbackup
 user:
