@@ -134,6 +134,8 @@ backup:
             value: 'https://www.googleapis.com/robot/v1/metadata/x509/backup-client%40emerald-city-321300.iam.gserviceaccount.com'
           - name: storage_class
             value: regional
+          - name: disable_crc32c_hash
+            value: no
     encrypt: true
     encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
     schedule:
@@ -264,10 +266,12 @@ If one of them is mentioned then all of them are required. If the GCP credential
 - `auth_provider_x509_cert_url` - optional credential parameter extracted from the service account key json file.
 - `client_x509_cert_url` - optional credential parameter extracted from the service account key json file.
 - `storage_class` - optional parameter. If specified, it must be one of "multi_regional", "regional", "nearline" or "coldline". Values correspond to GCP storage tiers.
+- `disable_crc32c_hash` - optional parameter. If not specified then it defaults to "false" and then a CRC32c hash will be calculated for each uploaded file and then sent to GCP storage together with the file. The hash will then be used by GCP storage to validate that the file did not get corrupted during the upload. The only downside to this is that in order to compute the hash, the file will be read one extra time from the local disk. Setting this parameter to a value of "yes" or "true" means the CRC32c hash will not be calculated and sent.
 
 It is highly advisable to:
-- dedicate GCP storage buckets only for backup only purposes. Mixing use of GCP storage buckets may lead to backups being corrupted if any other software or persons manage the contents of the buckets
-- make use of the `prefix` backup configuration setting so a given system is the only one making use of any GCP storage bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. 
+- dedicate GCP storage buckets only for backup only purposes. Mixing use of GCP storage buckets may lead to backups being corrupted if any other software or persons manage the contents of the buckets.
+- make use of the `prefix` backup configuration setting so a given system is the only one making use of any GCP storage bucket key beginning with said prefix. Failing to do so may lead to corrupted backups.
+- not disable the computation of CRC32c hashes. 
 
 Example configuration:
 ```yaml
@@ -310,6 +314,8 @@ backup:
             value: 'https://www.googleapis.com/robot/v1/metadata/x509/backup-client%40emerald-city-321300.iam.gserviceaccount.com'
           - name: storage_class
             value: regional
+          - name: disable_crc32c_hash
+            value: no
 ``` 
 
 # Notification

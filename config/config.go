@@ -13,6 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -458,7 +459,7 @@ func ValidateBackupTargetParametersForS3(parameters []shared.ConfigBackupTargetP
 // validate "Backup/Target/Parameters" section of the config for the gcp_storage object store type
 func ValidateBackupTargetParametersForGCPStorage(parameters []shared.ConfigBackupTargetParams, BackupName string, TargetName string, TargetType string) error {
 	allowedParameters := [...]string{"type", "project_id", "private_key_id", "private_key", "client_email", "client_id",
-		"auth_uri", "token_uri", "auth_provider_x509_cert_url", "client_x509_cert_url", "storage_class"}
+		"auth_uri", "token_uri", "auth_provider_x509_cert_url", "client_x509_cert_url", "storage_class", "disable_crc32c_hash"}
 	// list of parameters which are used to compose the service account credentials file. If any of those is specified
 	// then all of them must be specified
 	credentialParameters := [...]string{"type", "project_id", "private_key_id", "private_key", "client_email", "client_id",
@@ -513,6 +514,15 @@ Loop:
 				return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter "+
 					"'%s' with value '%s'. This is not an accepted value; accepted values for this parameter are case "+
 					"sensitive and one of: %+v", TargetName, TargetType, BackupName, entry.Name, entry.Value, allowedClass)
+			}
+		case "disable_crc32c_hash":
+			{
+				_, err := StringParameterToBoolean(entry.Value)
+				if err != nil {
+					return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter "+
+						"'%s' with value '%s'. This is not an accepted value; accepted values for this parameter are "+
+						"one of: %+v", TargetName, TargetType, BackupName, entry.Name, entry.Value, `"yes"(any case), "no"(any case), "1", "t", "T", "true", "TRUE", "True", "0", "f", "F", "false", "FALSE", "False"`)
+				}
 			}
 		}
 	}
@@ -1034,4 +1044,19 @@ func SaveSanitizedCfgToTmpFile(serverConfigCopy shared.CfgTemplate) (string, err
 			"file, encountered error: %s", err), err
 	}
 	return filePath, nil
+}
+
+// given a string parameter which has a value of "yes"(any case), "no"(any case), "1", "t", "T", "true", "TRUE",
+// "True", "0", "f", "F", "false", "FALSE", "False":  it converts it to a bool. Returns error if conversion is not possible
+func StringParameterToBoolean(parameter string) (bool, error) {
+	switch strings.ToLower(parameter) {
+	case "yes":
+		return true, nil
+	case "no":
+		return false, nil
+	default:
+		{
+			return strconv.ParseBool(parameter)
+		}
+	}
 }
