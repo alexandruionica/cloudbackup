@@ -41,6 +41,8 @@ type StoreGcpStorage struct {
 	gcpStorageClient *gcpStorage.Client
 	// GCP bucket object used for various API calls
 	gcpBucketObj *gcpStorage.BucketHandle
+	// if to disable the use of CRC32c hashing of files before uploading them (in order for GCP to validate no corruption happened in flight)
+	disableCrc32cHash bool
 }
 
 func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBackup, target shared.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreGcpStorage, error) {
@@ -64,9 +66,8 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		backupJobsState: backupJobsState,
 	}
 
-	// TODO - what to do about enabling MD5 checksum hash + send in order to validate that the uploaded file matches the signature given the performance implications
-
 	GetStringParameter("storage_class", &result.storageClass, target.Parameters, "")
+	GetBoolParameter("disable_crc32c_hash", &result.disableCrc32cHash, target.Parameters, false)
 
 	// if we got the credentials in the config then attempt to use them
 	if foundGcpCredentialsInTargetConfig(target.Parameters) {
@@ -95,16 +96,16 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 	return result, nil
 }
 
-func (objStore *StoreGcpStorage) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface,
+func (objStore *StoreGcpStorage) Upload(DbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface,
 	metadata bool) (remoteVersion string, cancelled bool, err error) {
-	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, newDbRecord.Path, metadata)
+	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, DbRecord.Path, metadata)
 	logger.Debugf("Uploading: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", newDbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
+		" full remote path: '%s'", DbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
 
-	if newDbRecord.Type == "file" {
+	if DbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
-		reader, err := NewFileReader(newDbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
-			objStore.storeType, 0, objStore.burst, newDbRecord.Size, objStore.ctx, true) // we pass ratelimit as 0 because the rate limiting will be done (if needed) by the http.Client
+		reader, err := NewFileReader(DbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
+			objStore.storeType, 0, objStore.burst, DbRecord.Size, objStore.ctx, true) // we pass ratelimit as 0 because the rate limiting will be done (if needed) by the http.Client
 		if err != nil {
 			return strconv.FormatInt(version, 10), false, err
 		}
@@ -112,6 +113,16 @@ func (objStore *StoreGcpStorage) Upload(newDbRecord shared.BackedUpFilePropertie
 
 		// upload
 		wc := objStore.gcpBucketObj.Object(remotePath).NewWriter(objStore.ctx)
+
+		// this leads to an extra read of a file, before it is uploaded, in order to compute the hash
+		if !objStore.disableCrc32cHash {
+			wc.CRC32C, err = crc32Hash(DbRecord.Path)
+			if err != nil {
+				return "", false, fmt.Errorf("could not calculate CRC32c checksum for '%s'", DbRecord.Path)
+			}
+			wc.SendCRC32C = true
+		}
+
 		// this operation is async (according to GCP library's docs) so a nil error may still mean a failure will happen.
 		// Use the wc.Close() below in order to be sure the upload is complete
 		if _, err := io.Copy(wc, &reader); err != nil {
@@ -141,7 +152,7 @@ func (objStore *StoreGcpStorage) Upload(newDbRecord shared.BackedUpFilePropertie
 		} else {
 			msg := fmt.Sprintf("upload of '%s' was reported "+
 				"successful but the upload response does not contain a file version. This means the backed up copy is "+
-				"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", newDbRecord.Path)
+				"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", DbRecord.Path)
 			logger.Errorf(msg)
 			return strconv.FormatInt(version, 10), false, errors.New(msg)
 		}

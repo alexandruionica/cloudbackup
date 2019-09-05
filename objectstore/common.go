@@ -1,6 +1,7 @@
 package objectstore
 
 import (
+	"cloudbackup/config"
 	"cloudbackup/shared"
 	"context"
 	"errors"
@@ -8,6 +9,8 @@ import (
 	"github.com/dustin/go-humanize"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
+	"hash/crc32"
+	"io"
 	"os"
 	"strings"
 )
@@ -356,4 +359,50 @@ func GetStringParameter(searchedParam string, destinationParam *string, paramete
 	if !found && defaultValue != "" {
 		*destinationParam = defaultValue
 	}
+}
+
+// iterates through $parameters and if it finds .Name matching $searchedParam then it sets its value to
+// $destinationParam . If no match is found then the value of $defaultValue is used to set $destinationParam.If a match is found but it can't be converted to a boolean then $defaultValue is used
+func GetBoolParameter(searchedParam string, destinationParam *bool, parameters []shared.ConfigBackupTargetParams, defaultValue bool) {
+	found := false
+	for _, entry := range parameters {
+		if strings.ToLower(searchedParam) == strings.ToLower(entry.Name) {
+			found = true
+			var err error
+			*destinationParam, err = config.StringParameterToBoolean(entry.Value)
+			if err != nil {
+				logger.Warnf("When trying to convert parameter '%s' to a boolean, encountered error: %s . "+
+					"Using default value of '%t' for parameter", searchedParam, err, defaultValue)
+				*destinationParam = defaultValue
+			}
+			return
+		}
+	}
+	if !found {
+		*destinationParam = defaultValue
+	}
+}
+
+// calculates the CRC32c of a file.It has to read all of the file in order to do this.
+func crc32Hash(filePath string) (uint32, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, err
+	}
+
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			logger.Warnf("Could not close '%s' after calculating its CRC32c checksum. Encountered error was: %s", filePath, err)
+		}
+	}()
+
+	hasher := crc32.New(crc32.MakeTable(crc32.Castagnoli))
+
+	// read file content and copy it to the hasher
+	if _, err := io.Copy(hasher, file); err != nil {
+		logger.Errorf("Could not read contents of '%s' in order to calculate its CRC32c checksum. Encountered error was: %s", filePath, err)
+		return 0, err
+	}
+	return hasher.Sum32(), nil
 }
