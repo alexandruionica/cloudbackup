@@ -71,6 +71,8 @@
         
             <li><a class="toctree-l3" href="#file-metadata">File Metadata</a></li>
         
+            <li><a class="toctree-l3" href="#backup-targetobject-store-types">Backup Target(Object Store) Types</a></li>
+        
         </ul>
     
 
@@ -168,6 +170,46 @@ Help Options:
 <li>link_target (valid only for symlinks)</li>
 <li>checksum (valid only if checksum is enabled)</li>
 </ul>
+<h2 id="backup-targetobject-store-types">Backup Target(Object Store) Types</h2>
+<h3 id="aws_s3">aws_s3</h3>
+<p>Only files gets sent to the object store. </p>
+<p>Directories and symlinks have their properties stored in the database only as there is no need to upload them to the 
+object store. Despite the fact that AWS S3 does not have the concept of a directory, when using the AWS S3 Console 
+(web interface) you will be presented with a folder structure which is deduced from the path of stored items.</p>
+<p>For a given backup, according to the "prefix" setting of "applications/finance/srv01-east.foo.bar" in the configuration
+ file for that backup section, you will end up with the following paths in the S3 bucket:
+ - backed up files being stored under "applications/finance/srv01-east.foo.bar/<code>data/</code>"
+ - the database used by the backup software and also a version of the configuration file (which has secrets stripped 
+ out) stored in "applications/finance/srv01-east.foo.bar/<code>metadata/</code>"</p>
+<p>Any alteration or change to the above structure or to the files stored may lead corruption of the backup. Otherwise, 
+ it is safe to read the data and to manually download any file which has been backed up. Given that versioning is used, 
+ in order to manually retrieve a previous version of a given file, you will have to enable "show previous versions" in 
+ the AWS S3 console. </p>
+<p>Requirements for the S3 bucket configurations:
+ - versioning must be enabled
+ - MFA Delete must be disabled
+ - the credentials provided to the backup software must grant access for:
+     - checking if versioning is enabled
+     - uploading items under the configured prefix
+     - deleting items under the configured prefix (both the current version and specific versions must be allowed for deletion)
+     - retrieving items under the configured prefix (both the current version and specific versions must be allowed for retrieval)</p>
+<p>It is recommended that the S3 bucket is configured with a lifecycle rule which deletes dangling parts from multipart 
+uploads which are older that several days (assuming that a backup job run takes significantly less than the configured 
+period of the lifecycle rule)</p>
+<h3 id="gcp_storage">gcp_storage</h3>
+<p>Only files gets sent to the object store. </p>
+<p>Directories and symlinks have their properties stored in the database only as there is no need to upload them to the 
+object store. </p>
+<p>For a given backup, according to the "prefix" setting of "applications/finance/srv01-east.foo.bar" in the configuration
+ file for that backup section, you will end up with the following paths in the GCP storage bucket:
+ - backed up files being stored under "applications/finance/srv01-east.foo.bar/<code>data/</code>"
+ - the database used by the backup software and also a version of the configuration file (which has secrets stripped 
+ out) stored in "applications/finance/srv01-east.foo.bar/<code>metadata/</code>"</p>
+<p>Any alteration or change to the above structure or to the files stored may lead corruption of the backup. Otherwise, 
+ it is safe to read the data and to manually download any file which has been backed up. Given that versioning is used, 
+ in order to manually retrieve a previous version of a given file, you will have to use 
+ <a href="https://cloud.google.com/storage/docs/gsutil"><code>gsutil</code></a> or a third party GCP storage browser as the Google Cloud Console 
+ does not show previous versions of an object.</p>
               
             </div>
           </div>
