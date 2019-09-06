@@ -112,29 +112,29 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 }
 
 // upload file and return remote version
-func (object *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
+func (objStore *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
 
-	remotePath := calculateAwsS3RemotePath(object.storePrefix, newDbRecord.Path, metadata)
+	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, newDbRecord.Path, metadata)
 	logger.Debugf("Uploading: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", newDbRecord.Path, version, object.storeName, object.storeBucketName, remotePath)
+		" full remote path: '%s'", newDbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
 
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
-		reader, err := NewFileReader(newDbRecord.Path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
-			object.storeType, 0, object.burst, newDbRecord.Size, object.ctx, true) // we pass ratelimit as 0 because the rate limiting will be done (if needed) by the http.Client
+		reader, err := NewFileReader(newDbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
+			objStore.storeType, 0, objStore.burst, newDbRecord.Size, objStore.ctx, true) // we pass ratelimit as 0 because the rate limiting will be done (if needed) by the http.Client
 		if err != nil {
 			return strconv.FormatInt(version, 10), false, err
 		}
 		defer reader.Close()
 
 		// upload using Multipart uploads and the S3 upload manager
-		result, err := object.awsUploader.UploadWithContext(object.ctx, &s3manager.UploadInput{
-			Bucket: aws.String(object.storeBucketName),
+		result, err := objStore.awsUploader.UploadWithContext(objStore.ctx, &s3manager.UploadInput{
+			Bucket: aws.String(objStore.storeBucketName),
 			Key:    aws.String(remotePath),
 			Body:   &reader,
 		})
 		if err != nil {
-			if object.ctx.Err() == context.Canceled {
+			if objStore.ctx.Err() == context.Canceled {
 				msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
 				logger.Info(msg)
 				return strconv.FormatInt(version, 10), true, errors.New(msg)
@@ -157,62 +157,62 @@ func (object *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, vers
 	}
 }
 
-func (object *StoreAwsS3) GetStoreDetails() (StoreName string, StoreType string) {
-	return object.storeName, object.storeType
+func (objStore *StoreAwsS3) GetStoreDetails() (StoreName string, StoreType string) {
+	return objStore.storeName, objStore.storeType
 }
 
 // place a delete marker on the newest version of a file. This is achieved by deleting the file without specifying a
 // version. AWS does not allow a place marker operation so this is the only way to get a marker
-func (object *StoreAwsS3) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
-	remotePath := calculateAwsS3RemotePath(object.storePrefix, existingDbRecord.Path, metadata)
+func (objStore *StoreAwsS3) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
+	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", existingDbRecord.Path, object.storeName, object.storeBucketName, remotePath)
+		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
 
 	inputDelete := &s3.DeleteObjectInput{
-		Bucket: aws.String(object.storeBucketName),
+		Bucket: aws.String(objStore.storeBucketName),
 		Key:    aws.String(remotePath),
 	}
-	result, err := object.awsS3Svc.DeleteObject(inputDelete)
+	result, err := objStore.awsS3Svc.DeleteObject(inputDelete)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return "0", false, fmt.Errorf("while trying to place a delete marker on '%s' "+
 				"from S3 bucket '%s' received error "+
-				"code '%s' and error message: '%s'", remotePath, object.storeBucketName, aerr.Code(), aerr.Message())
+				"code '%s' and error message: '%s'", remotePath, objStore.storeBucketName, aerr.Code(), aerr.Message())
 		} else {
 			return "0", false, fmt.Errorf("while trying to place a delete marker on '%s'"+
 				" from S3 bucket '%s' received error "+
-				"message: '%s'", remotePath, object.storeBucketName, err)
+				"message: '%s'", remotePath, objStore.storeBucketName, err)
 		}
 	}
 
 	if result == nil || result.VersionId == nil {
 		return "0", false, fmt.Errorf("the AWS S3 operation to place a delete marker on '%s' "+
 			"in S3 bucket '%s' did not return a version so "+
-			"the delete operation can not proceed", remotePath, object.storeBucketName)
+			"the delete operation can not proceed", remotePath, objStore.storeBucketName)
 	}
 
 	return *result.VersionId, false, nil
 }
 
 // delete a particular version for a given path; $objType is one of "dir"/"file"/"symlink"
-func (object *StoreAwsS3) Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error {
-	remotePath := calculateAwsS3RemotePath(object.storePrefix, path, metadata)
-	logger.Debugf("Marking as deleted: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", path, version, remoteVersion, object.storeName, object.storeBucketName, remotePath)
+func (objStore *StoreAwsS3) Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error {
+	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, path, metadata)
+	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
 
 	inputDelete := &s3.DeleteObjectInput{
-		Bucket:    aws.String(object.storeBucketName),
+		Bucket:    aws.String(objStore.storeBucketName),
 		Key:       aws.String(remotePath),
 		VersionId: aws.String(remoteVersion),
 	}
-	_, err := object.awsS3Svc.DeleteObject(inputDelete)
+	_, err := objStore.awsS3Svc.DeleteObject(inputDelete)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return fmt.Errorf("while trying to delete '%s' with version '%s' from S3 bucket '%s' received error "+
-				"code '%s' and error message: '%s'", remotePath, remoteVersion, object.storeBucketName, aerr.Code(), aerr.Message())
+				"code '%s' and error message: '%s'", remotePath, remoteVersion, objStore.storeBucketName, aerr.Code(), aerr.Message())
 		} else {
 			return fmt.Errorf("while trying to delete '%s' with version '%s' from S3 bucket '%s' received error "+
-				"message: '%s'", remotePath, remoteVersion, object.storeBucketName, err)
+				"message: '%s'", remotePath, remoteVersion, objStore.storeBucketName, err)
 		}
 	}
 	return nil
@@ -220,60 +220,60 @@ func (object *StoreAwsS3) Delete(path string, objType string, version int64, rem
 
 // validate that the config of this object store is correct and that the credentials we have have sufficient access
 // for a backup to be performed
-func (object *StoreAwsS3) Validate() (string, error) {
+func (objStore *StoreAwsS3) Validate() (string, error) {
 	failedValidation := false
 	failureMsg := ""
 
 	// check Versioning is enabled and MFA Delete is not enabled
-	versioningEnabled, mfaDeleteEnabled, err := object.checkBucketVersioningAndMFA()
+	versioningEnabled, mfaDeleteEnabled, err := objStore.checkBucketVersioningAndMFA()
 	if err != nil {
 		failedValidation = true
 		failureMsg += fmt.Sprintf("While checking if S3 bucket '%s' has versioning enabled and MFA delete disabled, "+
-			"encountered error: %s. ", object.storeBucketName, err) // must leave one whitespace at end of sentence
+			"encountered error: %s. ", objStore.storeBucketName, err) // must leave one whitespace at end of sentence
 	} else {
 		if !versioningEnabled {
 			failureMsg += fmt.Sprintf("S3 bucket '%s' does not have versioning enabled and this is a required "+
-				"setting. ", object.storeBucketName) // must leave one whitespace at end of sentence
+				"setting. ", objStore.storeBucketName) // must leave one whitespace at end of sentence
 			failedValidation = true
 		}
 		if mfaDeleteEnabled {
 			failureMsg += fmt.Sprintf("S3 bucket '%s' has MFA delete enabled and this setting needs to be "+
 				"disabled as otherwise it will prevent proper operation of the backup "+
-				"software. ", object.storeBucketName) // must leave one whitespace at end of sentence
+				"software. ", objStore.storeBucketName) // must leave one whitespace at end of sentence
 			failedValidation = true
 		}
 	}
 
 	// check we can PUT and DELETE in the S3 bucket, directly under $prefix
-	err = object.testUploadAndDelete()
+	err = objStore.testUploadAndDelete()
 	if err != nil {
 		failedValidation = true
 		failureMsg += fmt.Sprintf("While trying to upload and then delete a test file in S3 bucket '%s', "+
-			"encountered error: %s. ", object.storeBucketName, err) // must leave one whitespace at end of sentence
+			"encountered error: %s. ", objStore.storeBucketName, err) // must leave one whitespace at end of sentence
 	}
 
 	if failedValidation {
 		return failureMsg, errors.New(failureMsg)
 	} else {
-		return fmt.Sprintf("%s passed validation", object.storeName), nil
+		return fmt.Sprintf("%s passed validation", objStore.storeName), nil
 	}
 }
 
 // checks if the S3 bucket has versioning enabled and MFA Delete disabled.
-func (object *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled bool, mfaDeleteEnabled bool, err error) {
+func (objStore *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled bool, mfaDeleteEnabled bool, err error) {
 	var errMsg string
-	logger.Debugf("Checking if S3 bucket '%s' has versioning enabled and MFA delete disabled", object.storeBucketName)
+	logger.Debugf("Checking if S3 bucket '%s' has versioning enabled and MFA delete disabled", objStore.storeBucketName)
 
 	input := &s3.GetBucketVersioningInput{
-		Bucket: aws.String(object.storeBucketName),
+		Bucket: aws.String(objStore.storeBucketName),
 	}
 
-	result, err := object.awsS3Svc.GetBucketVersioning(input)
+	result, err := objStore.awsS3Svc.GetBucketVersioning(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			default:
-				errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", object.storeBucketName, aerr.Error())
+				errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, aerr.Error())
 				logger.Errorf(errMsg)
 				return versioningEnabled, mfaDeleteEnabled, errors.New(errMsg)
 			}
@@ -281,7 +281,7 @@ func (object *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled bool,
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
 			fmt.Println(err.Error())
-			errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", object.storeBucketName, err.Error())
+			errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, err.Error())
 			logger.Errorf(errMsg)
 			return versioningEnabled, mfaDeleteEnabled, errors.New(errMsg)
 		}
@@ -291,71 +291,71 @@ func (object *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled bool,
 		if result.Status != nil {
 			if strings.ToLower(*(result.Status)) == "enabled" {
 				versioningEnabled = true
-				logger.Debugf("S3 bucket '%s' has versioning enabled", object.storeBucketName)
+				logger.Debugf("S3 bucket '%s' has versioning enabled", objStore.storeBucketName)
 			}
 		}
 		if result.MFADelete != nil {
 			if strings.ToLower(*(result.MFADelete)) == "enabled" {
 				mfaDeleteEnabled = true
-				logger.Debugf("S3 bucket '%s' has MFA delete enabled", object.storeBucketName)
+				logger.Debugf("S3 bucket '%s' has MFA delete enabled", objStore.storeBucketName)
 			}
 		}
 	}
 	if !versioningEnabled {
-		logger.Debugf("S3 bucket '%s' has versioning disabled", object.storeBucketName)
+		logger.Debugf("S3 bucket '%s' has versioning disabled", objStore.storeBucketName)
 	}
 
 	if !mfaDeleteEnabled {
-		logger.Debugf("S3 bucket '%s' has MFA delete disabled", object.storeBucketName)
+		logger.Debugf("S3 bucket '%s' has MFA delete disabled", objStore.storeBucketName)
 	}
 
 	return versioningEnabled, mfaDeleteEnabled, nil
 }
 
 // upload a test file and then delete it in order to validate permissions
-func (object *StoreAwsS3) testUploadAndDelete() error {
-	uploadPath := object.storePrefix + "/" + "test.txt"
+func (objStore *StoreAwsS3) testUploadAndDelete() error {
+	uploadPath := objStore.storePrefix + "/" + "test.txt"
 	fakeReader := strings.NewReader(fmt.Sprintf("target privilege and settings validation - %s", time.Now().String()))
 	input := &s3.PutObjectInput{
 		Body:   aws.ReadSeekCloser(fakeReader),
-		Bucket: aws.String(object.storeBucketName),
+		Bucket: aws.String(objStore.storeBucketName),
 		Key:    aws.String(uploadPath),
 	}
-	logger.Debugf("Uploading test file to '%s' in order to validate PUT permission for S3 bucket '%s'", uploadPath, object.storeBucketName)
-	result, err := object.awsS3Svc.PutObject(input)
+	logger.Debugf("Uploading test file to '%s' in order to validate PUT permission for S3 bucket '%s'", uploadPath, objStore.storeBucketName)
+	result, err := objStore.awsS3Svc.PutObject(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return fmt.Errorf("while trying to upload a test file to '%s' is S3 bucket '%s' received error "+
-				"code '%s' and error message: '%s'", uploadPath, object.storeBucketName, aerr.Code(), aerr.Message())
+				"code '%s' and error message: '%s'", uploadPath, objStore.storeBucketName, aerr.Code(), aerr.Message())
 		} else {
 			return fmt.Errorf("while trying to upload a test file to '%s' in S3 bucket '%s' received error "+
-				"message: '%s'", uploadPath, object.storeBucketName, err)
+				"message: '%s'", uploadPath, objStore.storeBucketName, err)
 		}
 	} else {
-		logger.Debugf("Successfully uploaded test file to '%s' in S3 bucket '%s'", uploadPath, object.storeBucketName)
+		logger.Debugf("Successfully uploaded test file to '%s' in S3 bucket '%s'", uploadPath, objStore.storeBucketName)
 	}
 
 	if result == nil || result.VersionId == nil {
 		return fmt.Errorf("AWS S3 upload for test file to '%s' in S3 bucket '%s' did not return a version so "+
-			"the delete operation can not proceed", uploadPath, object.storeBucketName)
+			"the delete operation can not proceed", uploadPath, objStore.storeBucketName)
 	} else {
 		inputDelete := &s3.DeleteObjectInput{
-			Bucket:    aws.String(object.storeBucketName),
+			Bucket:    aws.String(objStore.storeBucketName),
 			Key:       aws.String(uploadPath),
 			VersionId: aws.String(*(result.VersionId)),
 		}
-		logger.Debugf("Deleting test file '%s' from S3 bucket '%s' in order to validate DELETE permissions", uploadPath, object.storeBucketName)
-		_, err := object.awsS3Svc.DeleteObject(inputDelete)
+		logger.Debugf("Deleting test file '%s' from S3 bucket '%s' in order to validate DELETE permissions", uploadPath, objStore.storeBucketName)
+		_, err := objStore.awsS3Svc.DeleteObject(inputDelete)
 		if err != nil {
 			if aerr, ok := err.(awserr.Error); ok {
 				return fmt.Errorf("while trying to delte test file '%s' from S3 bucket '%s' received error "+
-					"code '%s' and error message: '%s'", uploadPath, object.storeBucketName, aerr.Code(), aerr.Message())
+					"code '%s' and error message: '%s'", uploadPath, objStore.storeBucketName, aerr.Code(), aerr.Message())
 			} else {
 				return fmt.Errorf("while trying to delete test file '%s' from S3 bucket '%s' received error "+
-					"message: '%s'", uploadPath, object.storeBucketName, err)
+					"message: '%s'", uploadPath, objStore.storeBucketName, err)
 			}
 		} else {
-			logger.Debugf("Successfully deleted test file '%s' from S3 bucket '%s'.", uploadPath, object.storeBucketName)
+			logger.Debugf("Successfully deleted test file '%s' from S3 bucket '%s'.", uploadPath, objStore.storeBucketName)
 		}
 	}
 
@@ -363,46 +363,46 @@ func (object *StoreAwsS3) testUploadAndDelete() error {
 }
 
 // queries the S3 bucket and tries to find its region; if it fails it will default to the one specified in the configuration file (if any)
-func (object *StoreAwsS3) getRegionFromBucket() error {
+func (objStore *StoreAwsS3) getRegionFromBucket() error {
 	var errMsg, region string
 	var err error
-	logger.Debugf("Attempting to figure out region for S3 bucket '%s'", object.storeBucketName)
+	logger.Debugf("Attempting to figure out region for S3 bucket '%s'", objStore.storeBucketName)
 	// if the user did not specify a region, default to us-east-1 as we need to specify a region hint
-	if object.region == "" {
-		region, err = s3manager.GetBucketRegion(object.ctx, object.awsSess, object.storeBucketName, "us-east-1")
+	if objStore.region == "" {
+		region, err = s3manager.GetBucketRegion(objStore.ctx, objStore.awsSess, objStore.storeBucketName, "us-east-1")
 	} else {
-		region, err = s3manager.GetBucketRegion(object.ctx, object.awsSess, object.storeBucketName, object.region)
+		region, err = s3manager.GetBucketRegion(objStore.ctx, objStore.awsSess, objStore.storeBucketName, objStore.region)
 	}
 	if err != nil {
-		errMsg = fmt.Sprintf("unable to find bucket %s's region due to error: %s", object.storeBucketName, err)
+		errMsg = fmt.Sprintf("unable to find bucket %s's region due to error: %s", objStore.storeBucketName, err)
 		logger.Debug(errMsg)
 		// if the user specified a region then we will use that and hope its the right one
-		if object.region != "" {
+		if objStore.region != "" {
 			return nil
 		} else {
 			logger.Warn(errMsg)
 			msg := fmt.Sprintf("unable to find bucket %s's region and there is no 'region' parameter defined in the "+
 				"configuration file for this particular backup target. Please specify a 'region' parameter and a value"+
-				" for it.", object.storeBucketName)
+				" for it.", objStore.storeBucketName)
 			logger.Errorf(msg)
 			return errors.New(msg)
 		}
 	}
-	logger.Debugf("Found S3 bucket '%s' to have AWS region '%s'", object.storeBucketName, region)
-	if region != object.region {
-		if object.region == "" {
+	logger.Debugf("Found S3 bucket '%s' to have AWS region '%s'", objStore.storeBucketName, region)
+	if region != objStore.region {
+		if objStore.region == "" {
 			logger.Warnf("After querying the details of bucket '%s', it was reported that the bucket is hosted in "+
 				"'%s' but you have not configured an AWS region. Please consider adjusting the configuration. "+
 				"The region obtained from the bucket details will be used from now on",
-				object.storeBucketName, region)
+				objStore.storeBucketName, region)
 		} else {
 			logger.Warnf("After querying the details of bucket '%s', it was reported that the bucket is hosted in "+
 				"'%s' but you have configured AWS region '%s' . Please consider adjusting the configuration. "+
 				"The region obtained from the bucket details will be used from now on",
-				object.storeBucketName, region, object.region)
+				objStore.storeBucketName, region, objStore.region)
 		}
 	}
-	object.region = region
+	objStore.region = region
 	return nil
 }
 
