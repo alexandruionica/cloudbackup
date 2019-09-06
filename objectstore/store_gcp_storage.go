@@ -167,12 +167,53 @@ func (objStore *StoreGcpStorage) GetStoreDetails() (StoreName string, StoreType 
 	return objStore.storeName, objStore.storeType
 }
 
+// place a delete marker on the newest version of a file. This is achieved by deleting the file without specifying a
+// version. GCP does not actually have a concept of a delete marker.
 func (objStore *StoreGcpStorage) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
-	return "", false, fmt.Errorf("function MarkDeleted() note yet implemented for backend of type: '%s'", objStore.storeType)
+	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
+	err = objStore.gcpBucketObj.Object(remotePath).Delete(objStore.ctx)
+	if err != nil {
+		if err == gcpStorage.ErrObjectNotExist {
+			logger.Errorf("while trying to place a delete marker on '%s'"+
+				" from GCP storage bucket '%s' received error "+
+				"message: '%s' . None the less this item will be marked as deleted but you must investigate what "+
+				"happened on the object store side as your backup may be compromised and be invalid if files no longer "+
+				"exist on the object store side, despite being expected to exist", remotePath, objStore.storeBucketName, err)
+			return string(markerVersion) + "_delete_marker", false, nil
+		}
+		return "0", false, fmt.Errorf("while trying to place a delete marker on '%s'"+
+			" from GCP storage bucket '%s' received error "+
+			"message: '%s'", remotePath, objStore.storeBucketName, err)
+	}
+	// append "_delete_marker" to the version so later when it is requested to delete the delete marker itself we know
+	// to not do anything (as GCP storage doesn't have a concept of delete markers)
+	return string(markerVersion) + "_delete_marker", false, nil
 }
 
 func (objStore *StoreGcpStorage) Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error {
-	return fmt.Errorf("function Delete() note yet implemented for backend of type: '%s'", objStore.storeType)
+	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, path, metadata)
+	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
+	// if this a request to delete a "delete marker" then return success as this object store does not have the concept
+	//   of delete markers so there is nothing to delete
+	if strings.HasSuffix(remoteVersion, "_delete_marker") {
+		return nil
+	}
+
+	generation, err := strconv.ParseInt(remoteVersion, 10, 64)
+	if err != nil {
+		return fmt.Errorf("could not convert '%s' to an int64 due to error: %s . Because of this, deletion of "+
+			"'%s' with version '%s' from object store: '%s' using bucket: '%s' and full remote path: '%s' is not possible",
+			remoteVersion, err, path, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
+	}
+	err = objStore.gcpBucketObj.Object(remotePath).Generation(generation).Delete(objStore.ctx)
+	if err != nil {
+		return fmt.Errorf("while trying to delete '%s' with version '%s' from GCP storage bucket '%s' received error "+
+			"message: '%s'", remotePath, remoteVersion, objStore.storeBucketName, err)
+	}
+	return nil
 }
 
 func (objStore *StoreGcpStorage) Validate() (string, error) {
