@@ -196,12 +196,15 @@ func TestGCPValidateUploadDelete1(t *testing.T) {
 		t.Fatalf("MarkDeleted() returned error: %s", err)
 	}
 	if cancelled {
-		t.Fatalf("MarkDeleted() returned that it was cancelled but this was not expected")
+		t.Fatalf("1. MarkDeleted() returned that it was cancelled but this was not expected")
 	}
 
 	_, cancelled, err = objStore.MarkDeleted(fileDbRecord, 3, false)
 	if err == nil {
 		t.Fatalf("MarkDeleted() did not return an error when asked to mark as deleted a file which previously was so")
+	}
+	if cancelled {
+		t.Fatalf("2. MarkDeleted() returned that it was cancelled but this was not expected")
 	}
 
 	// delete version two of file
@@ -351,12 +354,15 @@ func TestGCPValidateUploadDelete2(t *testing.T) {
 		t.Fatalf("MarkDeleted() returned error: %s", err)
 	}
 	if cancelled {
-		t.Fatalf("MarkDeleted() returned that it was cancelled but this was not expected")
+		t.Fatalf("1. MarkDeleted() returned that it was cancelled but this was not expected")
 	}
 
 	_, cancelled, err = objStore.MarkDeleted(fileDbRecord, 3, false)
 	if err == nil {
 		t.Fatalf("MarkDeleted() did not return an error when asked to mark as deleted a file which previously was so")
+	}
+	if cancelled {
+		t.Fatalf("2. MarkDeleted() returned that it was cancelled but this was not expected")
 	}
 
 	// delete version two of file
