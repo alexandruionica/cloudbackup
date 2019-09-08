@@ -68,7 +68,7 @@ func getAndSetAwsS3ConfigFromEnv(srvCfg *shared.RuntimeConfig, t *testing.T, new
 }
 
 // tests Validate() WITHOUT rate limiting enabled
-func TestValidateUploadDelete1(t *testing.T) {
+func TestAwsS3ValidateUploadDelete1(t *testing.T) {
 	const targetName string = "aws_1"
 	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -211,7 +211,7 @@ func TestValidateUploadDelete1(t *testing.T) {
 }
 
 // tests Validate() WITH rate limiting enabled
-func TestValidateUploadDelete2(t *testing.T) {
+func TestAwsS3ValidateUploadDelete2(t *testing.T) {
 	const targetName string = "aws_1"
 	cfgpath, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
