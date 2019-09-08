@@ -450,3 +450,31 @@ def get_s3_config_from_env():
     aws_secret = os.environ.get('CLD_AWS_SECRET_ACCESS_KEY')
     s3_region = os.environ.get('CLD_S3_REGION')
     return bucket, s3_region, aws_key, aws_secret
+
+
+def get_gcp_storage_config_from_env():
+    """
+    Fetch from environment variables various settings needed by the GCP storage object store
+    :return: tuple with S3 bucket name (full virtualised mode name), dict containing various credential related
+                key+values(Any missing variables will have a value of None returned).
+    """
+    result = {}
+    result["CLD_GCP_TYPE"] = os.environ.get("CLD_GCP_TYPE")
+    result["CLD_GCP_PROJECT_ID"] = os.environ.get("CLD_GCP_PROJECT_ID")
+    result["CLD_GCP_PRIVATE_KEY_ID"] = os.environ.get("CLD_GCP_PRIVATE_KEY_ID")
+    tmp_key = os.environ.get("CLD_GCP_PRIVATE_KEY")
+    if tmp_key:
+        # remove literal "\n" and replace with newline character
+        result["CLD_GCP_PRIVATE_KEY"] = tmp_key.replace("\\n", "\n")
+    else:
+        result["CLD_GCP_PRIVATE_KEY"] = tmp_key
+    result["CLD_GCP_CLIENT_EMAIL"] = os.environ.get("CLD_GCP_CLIENT_EMAIL")
+    result["CLD_GCP_CLIENT_ID"] = os.environ.get("CLD_GCP_CLIENT_ID")
+    result["CLD_GCP_AUTH_URI"] = os.environ.get("CLD_GCP_AUTH_URI")
+    result["CLD_GCP_TOKEN_URI"] = os.environ.get("CLD_GCP_TOKEN_URI")
+    result["CLD_GCP_AUTH_PROVIDER_X509_CERT_URL"] = os.environ.get("CLD_GCP_AUTH_PROVIDER_X509_CERT_URL")
+    result["CLD_GCP_CLIENT_X509_CERT_URL"] = os.environ.get("CLD_GCP_CLIENT_X509_CERT_URL")
+
+    bucket = os.environ.get('CLD_GCP_STORAGE_BUCKET')
+
+    return bucket, result
