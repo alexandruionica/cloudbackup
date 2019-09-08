@@ -176,12 +176,11 @@ func (objStore *StoreGcpStorage) MarkDeleted(existingDbRecord shared.BackedUpFil
 	err = objStore.gcpBucketObj.Object(remotePath).Delete(objStore.ctx)
 	if err != nil {
 		if err == gcpStorage.ErrObjectNotExist {
-			logger.Errorf("while trying to place a delete marker on '%s'"+
+			return string(markerVersion) + "_delete_marker", false, fmt.Errorf("while trying to place a delete marker on '%s'"+
 				" from GCP storage bucket '%s' received error "+
-				"message: '%s' . None the less this item will be marked as deleted but you must investigate what "+
+				"message: '%s' . You must investigate what "+
 				"happened on the object store side as your backup may be compromised and be invalid if files no longer "+
 				"exist on the object store side, despite being expected to exist", remotePath, objStore.storeBucketName, err)
-			return string(markerVersion) + "_delete_marker", false, nil
 		}
 		return "0", false, fmt.Errorf("while trying to place a delete marker on '%s'"+
 			" from GCP storage bucket '%s' received error "+
@@ -269,6 +268,14 @@ func (objStore *StoreGcpStorage) testUploadGetDelete() error {
 	}
 	logger.Debugf("Successfully uploaded test file to '%s' in GCP bucket '%s'", uploadPath, objStore.storeBucketName)
 
+	var uploadedVersion int64
+	attrs := wc.Attrs()
+	if attrs == nil {
+		return errors.New("could not fetch the version of the uploaded test file as the returned object is nil")
+	} else {
+		uploadedVersion = attrs.Generation
+	}
+
 	// download
 	rc, err := objStore.gcpBucketObj.Object(uploadPath).NewReader(objStore.ctx)
 	if err != nil {
@@ -305,17 +312,25 @@ func (objStore *StoreGcpStorage) testUploadGetDelete() error {
 	if uploadMsg != string(data) {
 		return fmt.Errorf("downloaded test file content from '%s' in GCP bucket '%s' did not match the uploaded "+
 			"content", uploadPath, objStore.storeBucketName)
-
 	}
 
-	// delete
-	logger.Debugf("Deleting test file '%s' from GCP bucket '%s'", uploadPath, objStore.storeBucketName)
+	// delete current version
+	logger.Debugf("Deleting current version of test file '%s' from GCP bucket '%s'", uploadPath, objStore.storeBucketName)
 	err = objStore.gcpBucketObj.Object(uploadPath).Delete(objStore.ctx)
 	if err != nil {
 		return fmt.Errorf("could not delete GCP uploaded test file '%s' located in GCP bucket '%s', due to "+
 			"received error message: '%s'", uploadPath, objStore.storeBucketName, err)
 	}
-	logger.Debugf("Successfully deleted test file '%s' from GCP bucket '%s'", uploadPath, objStore.storeBucketName)
+	logger.Debugf("Successfully deleted current version of test file '%s' from GCP bucket '%s'", uploadPath, objStore.storeBucketName)
+
+	// delete specific version
+	logger.Debugf("Deleting specific version of test file '%s' from GCP bucket '%s'", uploadPath, objStore.storeBucketName)
+	err = objStore.gcpBucketObj.Object(uploadPath).Generation(uploadedVersion).Delete(objStore.ctx)
+	if err != nil {
+		return fmt.Errorf("could not delete specific version of GCP uploaded test file '%s' located in GCP bucket '%s', due to "+
+			"received error message: '%s'", uploadPath, objStore.storeBucketName, err)
+	}
+	logger.Debugf("Successfully deleted specific version of test file '%s' from GCP bucket '%s'", uploadPath, objStore.storeBucketName)
 
 	return nil
 
