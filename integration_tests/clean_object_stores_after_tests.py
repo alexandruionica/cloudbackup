@@ -1,9 +1,11 @@
 import argparse
 import boto3
+import json
 import logging
 import os
 import platform
 from common import *
+from google.cloud import storage
 
 
 def clean_s3_bucket(prefix=None):
@@ -33,6 +35,44 @@ def clean_s3_bucket(prefix=None):
     bucket.object_versions.filter(Prefix=final_prefix).delete()
 
 
+def clean_gcp_storage_bucket(prefix=None):
+    bucket, settings = get_gcp_storage_config_from_env()
+    if settings["CLD_GCP_PRIVATE_KEY"]:
+        credentials = {
+            "type": settings["CLD_GCP_TYPE"],
+            "project_id": settings["CLD_GCP_PROJECT_ID"],
+            "private_key_id": settings["CLD_GCP_PRIVATE_KEY_ID"],
+            "private_key": settings["CLD_GCP_PRIVATE_KEY"],
+            "client_email": settings["CLD_GCP_CLIENT_EMAIL"],
+            "client_id": settings["CLD_GCP_CLIENT_ID"],
+            "auth_uri": settings["CLD_GCP_AUTH_URI"],
+            "token_uri": settings["CLD_GCP_TOKEN_URI"],
+            "auth_provider_x509_cert_url": settings["CLD_GCP_AUTH_PROVIDER_X509_CERT_URL"],
+            "client_x509_cert_url": settings["CLD_GCP_CLIENT_X509_CERT_URL"],
+        }
+        tmphandle, credentials_file_path = tempfile.mkstemp(suffix='_gcp_credentials.json')
+        tmpfile = os.fdopen(tmphandle, "w")
+        tmpfile.write(json.dumps(credentials, indent=2))
+        tmpfile.close()
+        # set env var GOOGLE_APPLICATION_CREDENTIALS as the SDK will search for this
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_file_path
+        logging.debug("Credentials file is {}".format(credentials_file_path))
+
+    if prefix:
+        final_prefix = prefix
+    else:
+        final_prefix = "tests/" + platform.system().lower() + "/"
+    storage_client = storage.Client()
+    blobs = storage_client.list_blobs(bucket, prefix=final_prefix, versions=True)
+    for blob in blobs:
+        logging.debug("Deleting blob '{}'".format(blob.name))
+        blob.delete()
+
+    if settings["CLD_GCP_PRIVATE_KEY"]:
+        if os.path.exists(credentials_file_path):
+            os.remove(credentials_file_path)
+
+
 def get_args():
     """ Get arguments from CLI """
 
@@ -54,6 +94,8 @@ def main():
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
     clean_s3_bucket(arguments.prefix)
+
+    clean_gcp_storage_bucket(arguments.prefix)
 
 
 if __name__ == '__main__':
