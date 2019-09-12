@@ -170,6 +170,11 @@ func (objStore *StoreGcpStorage) GetStoreDetails() (StoreName string, StoreType 
 // place a delete marker on the newest version of a file. This is achieved by deleting the file without specifying a
 // version. GCP does not actually have a concept of a delete marker.
 func (objStore *StoreGcpStorage) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
+	if existingDbRecord.Type != "file" {
+		// directories and symlinks DO NOT GET UPLOADED so there is nothing to mark deleted
+		return strconv.FormatInt(markerVersion, 10), false, nil
+	}
+
 	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
@@ -191,10 +196,15 @@ func (objStore *StoreGcpStorage) MarkDeleted(existingDbRecord shared.BackedUpFil
 	return string(markerVersion) + "_delete_marker", false, nil
 }
 
-func (objStore *StoreGcpStorage) Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error {
-	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, path, metadata)
+// delete a particular version for a given path
+func (objStore *StoreGcpStorage) Delete(existingDbRecord shared.BackedUpFileProperties, version int64, remoteVersion string, metadata bool) error {
+	if existingDbRecord.Type != "file" {
+		// directories and symlinks DO NOT GET UPLOADED so there is nothing to delete
+		return nil
+	}
+	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
+		" full remote path: '%s'", existingDbRecord.Path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
 	// if this a request to delete a "delete marker" then return success as this object store does not have the concept
 	//   of delete markers so there is nothing to delete
 	if strings.HasSuffix(remoteVersion, "_delete_marker") {
@@ -205,7 +215,7 @@ func (objStore *StoreGcpStorage) Delete(path string, objType string, version int
 	if err != nil {
 		return fmt.Errorf("could not convert '%s' to an int64 due to error: %s . Because of this, deletion of "+
 			"'%s' with version '%s' from object store: '%s' using bucket: '%s' and full remote path: '%s' is not possible",
-			remoteVersion, err, path, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
+			remoteVersion, err, existingDbRecord.Path, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
 	}
 	err = objStore.gcpBucketObj.Object(remotePath).Generation(generation).Delete(objStore.ctx)
 	if err != nil {
@@ -213,6 +223,13 @@ func (objStore *StoreGcpStorage) Delete(path string, objType string, version int
 			"message: '%s'", remotePath, remoteVersion, objStore.storeBucketName, err)
 	}
 	return nil
+}
+
+// Download a particular version of $existingDbRecord and save it at $restorePath; $version is ignored in this
+// implementation but is specified due to being required by the interface specification
+func (objStore *StoreGcpStorage) Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error) {
+	// TODO - IMPLEMENT FUNCTIONALITY
+	return false, nil
 }
 
 func (objStore *StoreGcpStorage) Validate() (string, error) {

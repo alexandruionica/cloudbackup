@@ -22,24 +22,28 @@ func InitialiseStoreError(ctx context.Context, backupConfig shared.ConfigBackup,
 	return result
 }
 
-func (object *StoreError) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface,
+func (objStore *StoreError) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface,
 	metadata bool) (remoteVersion string, cancelled bool, err error) {
-	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
+	return "", false, fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
 }
 
 // GetStoreDetails()(StoreName string, StoreType string)
-func (object *StoreError) GetStoreDetails() (StoreName string, StoreType string) {
-	return object.storeName, object.storeType
+func (objStore *StoreError) GetStoreDetails() (StoreName string, StoreType string) {
+	return objStore.storeName, objStore.storeType
 }
 
-func (object *StoreError) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
-	return "", false, fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
+func (objStore *StoreError) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
+	return "", false, fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
 }
 
-func (object *StoreError) Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error {
-	return fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
+func (objStore *StoreError) Delete(existingDbRecord shared.BackedUpFileProperties, version int64, remoteVersion string, metadata bool) error {
+	return fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
 }
 
-func (object *StoreError) Validate() (string, error) {
-	return "", fmt.Errorf("unsupported backend of type: '%s'", object.storeType)
+func (objStore *StoreError) Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error) {
+	return false, fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
+}
+
+func (objStore *StoreError) Validate() (string, error) {
+	return "", fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
 }

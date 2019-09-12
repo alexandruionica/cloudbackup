@@ -45,10 +45,16 @@ type ObjectStore interface {
 	// only on the newest version of given path. The purpose of $markerVersion is to give the backend the option of
 	// using this as the base of the returned value of $remoteVersion in case the backend can't produce versions on its own
 	MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error)
-	// for a given $path, deletes a particular $version && $remote_version pair (it's up to the implementation to
-	// decide which of the two makes sense to be used in order to remove the appropriate file)
-	//  $objType is one of "dir"/"file"/"symlink"; for $metadata see description same parameter in of Upload() method
-	Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error
+	// for a given $existingDbRecord.Path, deletes a particular $version && $remote_version pair (it's up to the
+	// implementation to decide which of the two makes sense to be used in order to remove the appropriate item);
+	// for $metadata see description same parameter in of Upload() method
+	Delete(existingDbRecord shared.BackedUpFileProperties, version int64, remoteVersion string, metadata bool) error
+	// downloads an item from the object store and saves it at $restorePath (does not set back properties on file and ownership).
+	// Version wise, the $version && $remote_version pair (it's up to the implementation to decide which of the two
+	// makes sense to be used in order to fetch the appropriate item). If $metadata if set to true means that the object
+	// to be downloaded is not a regular item up but instead some internal metadata (like the config file or the internal database)
+	Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error)
+
 	// Validate that the config and credentials for a given object store are usable/work as expected
 	// the Validate() function MUST NOT make any use of the $backupJobsState struct which is passed when an object
 	// store is initialised. This is because when validate() is called, the object store is initialised with a "mock" $backupJobsState
