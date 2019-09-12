@@ -163,13 +163,13 @@ func TestGCPValidateUploadDelete1(t *testing.T) {
 		t.Fatalf("1. Upload() returned that it was cancelled but this was not expected")
 	}
 
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 1, remoteVersion1, false)
+	err = objStore.Delete(fileDbRecord, 1, remoteVersion1, false)
 	if err != nil {
 		t.Fatalf("Delete() for version 1 returned error: %s", err)
 	}
 
 	// delete again (what is now a missing object) - should return an error as this version of the file no longer exists
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 1, remoteVersion1, false)
+	err = objStore.Delete(fileDbRecord, 1, remoteVersion1, false)
 	if err == nil {
 		t.Fatal("Delete() for version 1 should have returned an error but didn't")
 	}
@@ -177,7 +177,7 @@ func TestGCPValidateUploadDelete1(t *testing.T) {
 		t.Fatalf("Was expecting error ends with: '%s' but instead got error: %s", gcpStorage.ErrObjectNotExist, err)
 	}
 
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 1, "1231313123", false)
+	err = objStore.Delete(fileDbRecord, 1, "1231313123", false)
 	if err == nil {
 		t.Fatal("Calling Delete() for an incorrect version did not return an error")
 	}
@@ -208,13 +208,13 @@ func TestGCPValidateUploadDelete1(t *testing.T) {
 	}
 
 	// delete version two of file
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 2, remoteVersion2, false)
+	err = objStore.Delete(fileDbRecord, 2, remoteVersion2, false)
 	if err != nil {
 		t.Fatalf("Delete() for version 2 returned error: %s", err)
 	}
 
 	// delete delete marker
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 3, remoteVersion2DeleteMarker, false)
+	err = objStore.Delete(fileDbRecord, 3, remoteVersion2DeleteMarker, false)
 	if err != nil {
 		t.Fatalf("Delete() of the delete marker returned error: %s", err)
 	}
@@ -321,13 +321,13 @@ func TestGCPValidateUploadDelete2(t *testing.T) {
 		t.Fatalf("1. Upload() returned that it was cancelled but this was not expected")
 	}
 
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 1, remoteVersion1, false)
+	err = objStore.Delete(fileDbRecord, 1, remoteVersion1, false)
 	if err != nil {
 		t.Fatalf("Delete() for version 1 returned error: %s", err)
 	}
 
 	// delete again (what is now a missing object) - should return an error as this version of the file no longer exists
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 1, remoteVersion1, false)
+	err = objStore.Delete(fileDbRecord, 1, remoteVersion1, false)
 	if err == nil {
 		t.Fatal("Delete() for version 1 should have returned an error but didn't")
 	}
@@ -335,7 +335,7 @@ func TestGCPValidateUploadDelete2(t *testing.T) {
 		t.Fatalf("Was expecting error ends with: '%s' but instead got error: %s", gcpStorage.ErrObjectNotExist, err)
 	}
 
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 1, "1231313123", false)
+	err = objStore.Delete(fileDbRecord, 1, "1231313123", false)
 	if err == nil {
 		t.Fatal("Calling Delete() for an incorrect version did not return an error")
 	}
@@ -366,13 +366,13 @@ func TestGCPValidateUploadDelete2(t *testing.T) {
 	}
 
 	// delete version two of file
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 2, remoteVersion2, false)
+	err = objStore.Delete(fileDbRecord, 2, remoteVersion2, false)
 	if err != nil {
 		t.Fatalf("Delete() for version 2 returned error: %s", err)
 	}
 
 	// delete delete marker
-	err = objStore.Delete(fileDbRecord.Path, fileDbRecord.Type, 3, remoteVersion2DeleteMarker, false)
+	err = objStore.Delete(fileDbRecord, 3, remoteVersion2DeleteMarker, false)
 	if err != nil {
 		t.Fatalf("Delete() of the delete marker returned error: %s", err)
 	}

@@ -51,7 +51,7 @@ func InitialiseStoreTestNull(ctx context.Context, backupConfig shared.ConfigBack
 }
 
 // pretend to upload file (actually discarding all read content)
-func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
+func (objStore *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
 	var prepend string
 	if metadata {
 		prepend = MetaDataPrepend
@@ -59,12 +59,12 @@ func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, v
 		prepend = DataPrepend
 	}
 	logger.Debugf("Pretending to upload: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", newDbRecord.Path, version, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+newDbRecord.Path)
+		" full remote path: '%s'", newDbRecord.Path, version, objStore.storeName, objStore.storeBucketName, objStore.storePrefix+"/"+prepend+"/"+newDbRecord.Path)
 
 	if newDbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
-		reader, err := NewFileReader(newDbRecord.Path, object.bucket, object.backupJobsState, object.backupName, object.storeName,
-			object.storeType, object.rateLimit, object.burst, newDbRecord.Size, object.ctx, true)
+		reader, err := NewFileReader(newDbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
+			objStore.storeType, objStore.rateLimit, objStore.burst, newDbRecord.Size, objStore.ctx, true)
 		if err != nil {
 			return strconv.FormatInt(version, 10), false, err
 		}
@@ -108,12 +108,12 @@ func (object *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties, v
 	}
 }
 
-func (object *StoreTestNull) GetStoreDetails() (StoreName string, StoreType string) {
-	return object.storeName, object.storeType
+func (objStore *StoreTestNull) GetStoreDetails() (StoreName string, StoreType string) {
+	return objStore.storeName, objStore.storeType
 }
 
 // pretend to place a delete marker
-func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
+func (objStore *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
 	var prepend string
 	if metadata {
 		prepend = MetaDataPrepend
@@ -121,12 +121,13 @@ func (object *StoreTestNull) MarkDeleted(existingDbRecord shared.BackedUpFilePro
 		prepend = DataPrepend
 	}
 	logger.Debugf("Pretending to mark as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", existingDbRecord.Path, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+existingDbRecord.Path)
+		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName,
+		objStore.storePrefix+"/"+prepend+"/"+existingDbRecord.Path)
 	return strconv.FormatInt(markerVersion, 10), false, nil
 }
 
 // pretend to delete a particular version for a given path; $objType is one of "dir"/"file"/"symlink"
-func (object *StoreTestNull) Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error {
+func (objStore *StoreTestNull) Delete(existingDbRecord shared.BackedUpFileProperties, version int64, remoteVersion string, metadata bool) error {
 	var prepend string
 	if metadata {
 		prepend = MetaDataPrepend
@@ -134,12 +135,19 @@ func (object *StoreTestNull) Delete(path string, objType string, version int64, 
 		prepend = DataPrepend
 	}
 	logger.Debugf("Pretending to delete: '%s' having version: '%d' and remote version: '%s' from object store:"+
-		" '%s' using bucket: '%s' and full remote path: '%s'", path, version, remoteVersion, object.storeName, object.storeBucketName, object.storePrefix+"/"+prepend+"/"+path)
+		" '%s' using bucket: '%s' and full remote path: '%s'", existingDbRecord.Path, version, remoteVersion,
+		objStore.storeName, objStore.storeBucketName, objStore.storePrefix+"/"+prepend+"/"+existingDbRecord.Path)
 	return nil
 }
 
+// pretend to download a particular version
+func (objStore *StoreTestNull) Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error) {
+	// TODO - figure out if we want to actually create on disk an file/dir/symlink at given path
+	return false, nil
+}
+
 // validated that the config of this object store is correct
-func (object *StoreTestNull) Validate() (string, error) {
+func (objStore *StoreTestNull) Validate() (string, error) {
 	// given this is for tests and it discards data, always return nil (meaning OK)
-	return fmt.Sprintf("%s passed validation", object.storeName), nil
+	return fmt.Sprintf("%s passed validation", objStore.storeName), nil
 }

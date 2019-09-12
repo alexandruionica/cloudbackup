@@ -28,9 +28,7 @@ var logger = log.WithFields(log.Fields{
 
 // struct use for temporarily accounting what upload or mark_deleted operations where successful
 type successfullyProcessed struct {
-	Path string
-	// one of "file"/"dir"/"symlink"
-	ObjType       string
+	dbRecord      shared.BackedUpFileProperties
 	Version       int64
 	RemoteVersion string
 	Objectstore   objectstore.ObjectStore
@@ -251,8 +249,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 			}
 			// append upload details here in case we need to roll back (as we will have to delete the uploaded content)
 			processed = append(processed, successfullyProcessed{
-				Path:          DbRecord.Path,
-				ObjType:       DbRecord.Type,
+				dbRecord:      DbRecord,
 				Version:       version,
 				RemoteVersion: remoteVersion,
 				Objectstore:   objectStore,
@@ -305,7 +302,7 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		}
 		// ensure that any successfully uploaded file/dir/symlink is removed
 		for _, entry := range processed {
-			err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion, false)
+			err = entry.Objectstore.Delete(entry.dbRecord, entry.Version, entry.RemoteVersion, false)
 			if err != nil {
 				logger.Warnf("After failed upload for '%s', while trying to cleanup, encountered error: %s", path, err)
 			}
@@ -1045,8 +1042,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig shar
 		// append upload(mark deleted generally uploads a "marker") details here in case we need to roll back
 		// (as we will have to delete the uploaded content)
 		processed = append(processed, successfullyProcessed{
-			Path:          ObjectDbRecord.Path,
-			ObjType:       ObjectDbRecord.Type,
+			dbRecord:      ObjectDbRecord,
 			Version:       version,
 			RemoteVersion: remoteVersion,
 			Objectstore:   objectStore,
@@ -1073,7 +1069,7 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig shar
 		}
 		// ensure that any successfully already added delete markers are removed
 		for _, entry := range processed {
-			err = entry.Objectstore.Delete(entry.Path, entry.ObjType, entry.Version, entry.RemoteVersion, false)
+			err = entry.Objectstore.Delete(entry.dbRecord, entry.Version, entry.RemoteVersion, false)
 			if err != nil {
 				logger.Warnf("While trying to cleanup delete markers, encountered error: %s", err)
 			}

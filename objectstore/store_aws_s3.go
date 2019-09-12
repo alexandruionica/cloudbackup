@@ -164,6 +164,11 @@ func (objStore *StoreAwsS3) GetStoreDetails() (StoreName string, StoreType strin
 // place a delete marker on the newest version of a file. This is achieved by deleting the file without specifying a
 // version. AWS does not allow a place marker operation so this is the only way to get a marker
 func (objStore *StoreAwsS3) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
+	if existingDbRecord.Type != "file" {
+		// directories and symlinks DO NOT GET UPLOADED so there is nothing to mark deleted
+		return strconv.FormatInt(markerVersion, 10), false, nil
+	}
+
 	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
@@ -194,11 +199,15 @@ func (objStore *StoreAwsS3) MarkDeleted(existingDbRecord shared.BackedUpFileProp
 	return *result.VersionId, false, nil
 }
 
-// delete a particular version for a given path; $objType is one of "dir"/"file"/"symlink"
-func (objStore *StoreAwsS3) Delete(path string, objType string, version int64, remoteVersion string, metadata bool) error {
-	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, path, metadata)
+// delete a particular version for a given path
+func (objStore *StoreAwsS3) Delete(existingDbRecord shared.BackedUpFileProperties, version int64, remoteVersion string, metadata bool) error {
+	if existingDbRecord.Type != "file" {
+		// directories and symlinks DO NOT GET UPLOADED so there is nothing to delete
+		return nil
+	}
+	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
-		" full remote path: '%s'", path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
+		" full remote path: '%s'", existingDbRecord.Path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
 
 	inputDelete := &s3.DeleteObjectInput{
 		Bucket:    aws.String(objStore.storeBucketName),
@@ -216,6 +225,13 @@ func (objStore *StoreAwsS3) Delete(path string, objType string, version int64, r
 		}
 	}
 	return nil
+}
+
+// Download a particular version of $existingDbRecord and save it at $restorePath; $version is ignored in this
+// implementation but is specified due to being required by the interface specification
+func (objStore *StoreAwsS3) Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error) {
+	// TODO - IMPLEMENT FUNCTIONALITY
+	return false, nil
 }
 
 // validate that the config of this object store is correct and that the credentials we have have sufficient access
