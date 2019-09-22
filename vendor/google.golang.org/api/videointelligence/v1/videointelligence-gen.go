@@ -51,8 +51,8 @@ import (
 	"strconv"
 	"strings"
 
-	gensupport "google.golang.org/api/gensupport"
 	googleapi "google.golang.org/api/googleapi"
+	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
 	htransport "google.golang.org/api/transport/http"
 )
@@ -1590,10 +1590,18 @@ type GoogleCloudVideointelligenceV1VideoAnnotationResults struct {
 	// tracked in video.
 	ObjectAnnotations []*GoogleCloudVideointelligenceV1ObjectTrackingAnnotation `json:"objectAnnotations,omitempty"`
 
+	// Segment: Video segment on which the annotation is run.
+	Segment *GoogleCloudVideointelligenceV1VideoSegment `json:"segment,omitempty"`
+
 	// SegmentLabelAnnotations: Topical label annotations on video level or
 	// user specified segment level.
 	// There is exactly one element for each unique label.
 	SegmentLabelAnnotations []*GoogleCloudVideointelligenceV1LabelAnnotation `json:"segmentLabelAnnotations,omitempty"`
+
+	// SegmentPresenceLabelAnnotations: Presence label annotations on video
+	// level or user specified segment level.
+	// There is exactly one element for each unique label.
+	SegmentPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1LabelAnnotation `json:"segmentPresenceLabelAnnotations,omitempty"`
 
 	// ShotAnnotations: Shot annotations. Each shot is represented as a
 	// video segment.
@@ -1602,6 +1610,11 @@ type GoogleCloudVideointelligenceV1VideoAnnotationResults struct {
 	// ShotLabelAnnotations: Topical label annotations on shot level.
 	// There is exactly one element for each unique label.
 	ShotLabelAnnotations []*GoogleCloudVideointelligenceV1LabelAnnotation `json:"shotLabelAnnotations,omitempty"`
+
+	// ShotPresenceLabelAnnotations: Presence label annotations on shot
+	// level. There is exactly one element for
+	// each unique label.
+	ShotPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1LabelAnnotation `json:"shotPresenceLabelAnnotations,omitempty"`
 
 	// SpeechTranscriptions: Speech transcription.
 	SpeechTranscriptions []*GoogleCloudVideointelligenceV1SpeechTranscription `json:"speechTranscriptions,omitempty"`
@@ -2714,10 +2727,18 @@ type GoogleCloudVideointelligenceV1beta2VideoAnnotationResults struct {
 	// tracked in video.
 	ObjectAnnotations []*GoogleCloudVideointelligenceV1beta2ObjectTrackingAnnotation `json:"objectAnnotations,omitempty"`
 
+	// Segment: Video segment on which the annotation is run.
+	Segment *GoogleCloudVideointelligenceV1beta2VideoSegment `json:"segment,omitempty"`
+
 	// SegmentLabelAnnotations: Topical label annotations on video level or
 	// user specified segment level.
 	// There is exactly one element for each unique label.
 	SegmentLabelAnnotations []*GoogleCloudVideointelligenceV1beta2LabelAnnotation `json:"segmentLabelAnnotations,omitempty"`
+
+	// SegmentPresenceLabelAnnotations: Presence label annotations on video
+	// level or user specified segment level.
+	// There is exactly one element for each unique label.
+	SegmentPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1beta2LabelAnnotation `json:"segmentPresenceLabelAnnotations,omitempty"`
 
 	// ShotAnnotations: Shot annotations. Each shot is represented as a
 	// video segment.
@@ -2726,6 +2747,11 @@ type GoogleCloudVideointelligenceV1beta2VideoAnnotationResults struct {
 	// ShotLabelAnnotations: Topical label annotations on shot level.
 	// There is exactly one element for each unique label.
 	ShotLabelAnnotations []*GoogleCloudVideointelligenceV1beta2LabelAnnotation `json:"shotLabelAnnotations,omitempty"`
+
+	// ShotPresenceLabelAnnotations: Presence label annotations on shot
+	// level. There is exactly one element for
+	// each unique label.
+	ShotPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1beta2LabelAnnotation `json:"shotPresenceLabelAnnotations,omitempty"`
 
 	// SpeechTranscriptions: Speech transcription.
 	SpeechTranscriptions []*GoogleCloudVideointelligenceV1beta2SpeechTranscription `json:"speechTranscriptions,omitempty"`
@@ -3785,10 +3811,18 @@ type GoogleCloudVideointelligenceV1p1beta1VideoAnnotationResults struct {
 	// tracked in video.
 	ObjectAnnotations []*GoogleCloudVideointelligenceV1p1beta1ObjectTrackingAnnotation `json:"objectAnnotations,omitempty"`
 
+	// Segment: Video segment on which the annotation is run.
+	Segment *GoogleCloudVideointelligenceV1p1beta1VideoSegment `json:"segment,omitempty"`
+
 	// SegmentLabelAnnotations: Topical label annotations on video level or
 	// user specified segment level.
 	// There is exactly one element for each unique label.
 	SegmentLabelAnnotations []*GoogleCloudVideointelligenceV1p1beta1LabelAnnotation `json:"segmentLabelAnnotations,omitempty"`
+
+	// SegmentPresenceLabelAnnotations: Presence label annotations on video
+	// level or user specified segment level.
+	// There is exactly one element for each unique label.
+	SegmentPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1p1beta1LabelAnnotation `json:"segmentPresenceLabelAnnotations,omitempty"`
 
 	// ShotAnnotations: Shot annotations. Each shot is represented as a
 	// video segment.
@@ -3797,6 +3831,11 @@ type GoogleCloudVideointelligenceV1p1beta1VideoAnnotationResults struct {
 	// ShotLabelAnnotations: Topical label annotations on shot level.
 	// There is exactly one element for each unique label.
 	ShotLabelAnnotations []*GoogleCloudVideointelligenceV1p1beta1LabelAnnotation `json:"shotLabelAnnotations,omitempty"`
+
+	// ShotPresenceLabelAnnotations: Presence label annotations on shot
+	// level. There is exactly one element for
+	// each unique label.
+	ShotPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1p1beta1LabelAnnotation `json:"shotPresenceLabelAnnotations,omitempty"`
 
 	// SpeechTranscriptions: Speech transcription.
 	SpeechTranscriptions []*GoogleCloudVideointelligenceV1p1beta1SpeechTranscription `json:"speechTranscriptions,omitempty"`
@@ -4856,10 +4895,18 @@ type GoogleCloudVideointelligenceV1p2beta1VideoAnnotationResults struct {
 	// tracked in video.
 	ObjectAnnotations []*GoogleCloudVideointelligenceV1p2beta1ObjectTrackingAnnotation `json:"objectAnnotations,omitempty"`
 
+	// Segment: Video segment on which the annotation is run.
+	Segment *GoogleCloudVideointelligenceV1p2beta1VideoSegment `json:"segment,omitempty"`
+
 	// SegmentLabelAnnotations: Topical label annotations on video level or
 	// user specified segment level.
 	// There is exactly one element for each unique label.
 	SegmentLabelAnnotations []*GoogleCloudVideointelligenceV1p2beta1LabelAnnotation `json:"segmentLabelAnnotations,omitempty"`
+
+	// SegmentPresenceLabelAnnotations: Presence label annotations on video
+	// level or user specified segment level.
+	// There is exactly one element for each unique label.
+	SegmentPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1p2beta1LabelAnnotation `json:"segmentPresenceLabelAnnotations,omitempty"`
 
 	// ShotAnnotations: Shot annotations. Each shot is represented as a
 	// video segment.
@@ -4868,6 +4915,11 @@ type GoogleCloudVideointelligenceV1p2beta1VideoAnnotationResults struct {
 	// ShotLabelAnnotations: Topical label annotations on shot level.
 	// There is exactly one element for each unique label.
 	ShotLabelAnnotations []*GoogleCloudVideointelligenceV1p2beta1LabelAnnotation `json:"shotLabelAnnotations,omitempty"`
+
+	// ShotPresenceLabelAnnotations: Presence label annotations on shot
+	// level. There is exactly one element for
+	// each unique label.
+	ShotPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1p2beta1LabelAnnotation `json:"shotPresenceLabelAnnotations,omitempty"`
 
 	// SpeechTranscriptions: Speech transcription.
 	SpeechTranscriptions []*GoogleCloudVideointelligenceV1p2beta1SpeechTranscription `json:"speechTranscriptions,omitempty"`
@@ -6215,10 +6267,18 @@ type GoogleCloudVideointelligenceV1p3beta1VideoAnnotationResults struct {
 	// tracked in video.
 	ObjectAnnotations []*GoogleCloudVideointelligenceV1p3beta1ObjectTrackingAnnotation `json:"objectAnnotations,omitempty"`
 
+	// Segment: Video segment on which the annotation is run.
+	Segment *GoogleCloudVideointelligenceV1p3beta1VideoSegment `json:"segment,omitempty"`
+
 	// SegmentLabelAnnotations: Topical label annotations on video level or
 	// user specified segment level.
 	// There is exactly one element for each unique label.
 	SegmentLabelAnnotations []*GoogleCloudVideointelligenceV1p3beta1LabelAnnotation `json:"segmentLabelAnnotations,omitempty"`
+
+	// SegmentPresenceLabelAnnotations: Presence label annotations on video
+	// level or user specified segment level.
+	// There is exactly one element for each unique label.
+	SegmentPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1p3beta1LabelAnnotation `json:"segmentPresenceLabelAnnotations,omitempty"`
 
 	// ShotAnnotations: Shot annotations. Each shot is represented as a
 	// video segment.
@@ -6227,6 +6287,11 @@ type GoogleCloudVideointelligenceV1p3beta1VideoAnnotationResults struct {
 	// ShotLabelAnnotations: Topical label annotations on shot level.
 	// There is exactly one element for each unique label.
 	ShotLabelAnnotations []*GoogleCloudVideointelligenceV1p3beta1LabelAnnotation `json:"shotLabelAnnotations,omitempty"`
+
+	// ShotPresenceLabelAnnotations: Presence label annotations on shot
+	// level. There is exactly one element for
+	// each unique label.
+	ShotPresenceLabelAnnotations []*GoogleCloudVideointelligenceV1p3beta1LabelAnnotation `json:"shotPresenceLabelAnnotations,omitempty"`
 
 	// SpeechTranscriptions: Speech transcription.
 	SpeechTranscriptions []*GoogleCloudVideointelligenceV1p3beta1SpeechTranscription `json:"speechTranscriptions,omitempty"`
@@ -6629,6 +6694,7 @@ func (c *OperationsProjectsLocationsOperationsCancelCall) Header() http.Header {
 
 func (c *OperationsProjectsLocationsOperationsCancelCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6764,6 +6830,7 @@ func (c *OperationsProjectsLocationsOperationsDeleteCall) Header() http.Header {
 
 func (c *OperationsProjectsLocationsOperationsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6908,6 +6975,7 @@ func (c *OperationsProjectsLocationsOperationsGetCall) Header() http.Header {
 
 func (c *OperationsProjectsLocationsOperationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7059,6 +7127,7 @@ func (c *ProjectsLocationsOperationsCancelCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsCancelCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7202,6 +7271,7 @@ func (c *ProjectsLocationsOperationsDeleteCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7346,6 +7416,7 @@ func (c *ProjectsLocationsOperationsGetCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7526,6 +7597,7 @@ func (c *ProjectsLocationsOperationsListCall) Header() http.Header {
 
 func (c *ProjectsLocationsOperationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7702,6 +7774,7 @@ func (c *VideosAnnotateCall) Header() http.Header {
 
 func (c *VideosAnnotateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

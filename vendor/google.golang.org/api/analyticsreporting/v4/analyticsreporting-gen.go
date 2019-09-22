@@ -53,8 +53,8 @@ import (
 	"strconv"
 	"strings"
 
-	gensupport "google.golang.org/api/gensupport"
 	googleapi "google.golang.org/api/googleapi"
+	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
 	htransport "google.golang.org/api/transport/http"
 )
@@ -174,7 +174,15 @@ type UserActivityService struct {
 // hits.
 // These hits will be merged into one ECOMMERCE Activity.
 type Activity struct {
-	// ActivityTime: Timestamp of the activity.
+	// ActivityTime: Timestamp of the activity. If activities for a visit
+	// cross midnight and
+	// occur in two separate dates, then two sessions (one per date)
+	// share the session identifier.
+	// For example, say session ID 113472 has activity within 2019-08-20,
+	// and
+	// session ID 243742 has activity within 2019-08-25 and 2019-08-26.
+	// Session ID
+	// 113472 is one session, and session ID 243742 is two sessions.
 	ActivityTime string `json:"activityTime,omitempty"`
 
 	// ActivityType: Type of this activity.
@@ -432,6 +440,7 @@ type CohortGroup struct {
 	//   week and month boundaries.
 	// - The `viewId` must be an
 	//   [app view
+	//
 	// ID](https://support.google.com/analytics/answer/2649553#WebVersusAppVi
 	// ews)
 	LifetimeValue bool `json:"lifetimeValue,omitempty"`
@@ -956,17 +965,20 @@ type GetReportsRequest struct {
 	ReportRequests []*ReportRequest `json:"reportRequests,omitempty"`
 
 	// UseResourceQuotas: Enables
-	// [resource based
-	// quotas](/analytics/devguides/reporting/core/v4/limits-quotas#analytics
-	// _reporting_api_v4),
+	// [resource
+	// based
+	// quotas](/analytics/devguides/reporting/core/v4/limits-quotas#ana
+	// lytics_reporting_api_v4),
 	// (defaults to `False`). If this field is set to `True` the
 	// per view (profile) quotas are governed by the computational
 	// cost of the request. Note that using cost based quotas will
 	// higher enable sampling rates. (10 Million for `SMALL`,
 	// 100M for `LARGE`. See the
-	// [limits and quotas
-	// documentation](/analytics/devguides/reporting/core/v4/limits-quotas#an
-	// alytics_reporting_api_v4) for details.
+	// [limits and
+	// quotas
+	// documentation](/analytics/devguides/reporting/core/v4/limits-qu
+	// otas#analytics_reporting_api_v4)
+	// for details.
 	UseResourceQuotas bool `json:"useResourceQuotas,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "ReportRequests") to
@@ -1929,7 +1941,7 @@ type ReportRequest struct {
 	DimensionFilterClauses []*DimensionFilterClause `json:"dimensionFilterClauses,omitempty"`
 
 	// Dimensions: The dimensions requested.
-	// Requests can have a total of 7 dimensions.
+	// Requests can have a total of 9 dimensions.
 	Dimensions []*Dimension `json:"dimensions,omitempty"`
 
 	// FiltersExpression: Dimension or metric filters that restrict the data
@@ -1942,10 +1954,11 @@ type ReportRequest struct {
 	// with
 	// Firefox; `ga:browser=~^Firefox`. For more information on
 	// dimensions
-	// and metric filters, see
+	// and metric filters,
+	// see
 	// [Filters
-	// reference](https://developers.google.com/analytics/devguides/reporting
-	// /core/v3/reference#filters).
+	// reference](https://developers.google.com/analytics/devgui
+	// des/reporting/core/v3/reference#filters).
 	FiltersExpression string `json:"filtersExpression,omitempty"`
 
 	// HideTotals: If set to true, hides the total of all metrics for all
@@ -2999,6 +3012,7 @@ func (c *ReportsBatchGetCall) Header() http.Header {
 
 func (c *ReportsBatchGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3124,6 +3138,7 @@ func (c *UserActivitySearchCall) Header() http.Header {
 
 func (c *UserActivitySearchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190921")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

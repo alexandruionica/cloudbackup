@@ -2385,6 +2385,7 @@
         "ScalingConfiguration":{"shape":"ScalingConfiguration"},
         "DeletionProtection":{"shape":"BooleanOptional"},
         "GlobalClusterIdentifier":{"shape":"String"},
+        "EnableHttpEndpoint":{"shape":"BooleanOptional"},
         "CopyTagsToSnapshot":{"shape":"BooleanOptional"}
       }
     },
@@ -2504,6 +2505,7 @@
         "AutoMinorVersionUpgrade":{"shape":"BooleanOptional"},
         "Iops":{"shape":"IntegerOptional"},
         "OptionGroupName":{"shape":"String"},
+        "DBParameterGroupName":{"shape":"String"},
         "PubliclyAccessible":{"shape":"BooleanOptional"},
         "Tags":{"shape":"TagList"},
         "DBSubnetGroupName":{"shape":"String"},
@@ -4232,6 +4234,7 @@
         "ProductDescription":{"shape":"String"},
         "OfferingType":{"shape":"String"},
         "MultiAZ":{"shape":"BooleanOptional"},
+        "LeaseId":{"shape":"String"},
         "Filters":{"shape":"FilterList"},
         "MaxRecords":{"shape":"IntegerOptional"},
         "Marker":{"shape":"String"}
@@ -5735,7 +5738,8 @@
         "MultiAZ":{"shape":"Boolean"},
         "State":{"shape":"String"},
         "RecurringCharges":{"shape":"RecurringChargeList"},
-        "ReservedDBInstanceArn":{"shape":"String"}
+        "ReservedDBInstanceArn":{"shape":"String"},
+        "LeaseId":{"shape":"String"}
       },
       "wrapper":true
     },

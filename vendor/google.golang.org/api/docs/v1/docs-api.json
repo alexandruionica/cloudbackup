@@ -209,7 +209,7 @@
       }
     }
   },
-  "revision": "20190627",
+  "revision": "20190827",
   "rootUrl": "https://docs.googleapis.com/",
   "schemas": {
     "AutoText": {
@@ -762,47 +762,47 @@
       "properties": {
         "background": {
           "$ref": "Background",
-          "description": "The background of the document."
+          "description": "The background of the document. Documents cannot have a transparent\nbackground color."
         },
         "defaultFooterId": {
-          "description": "The ID of the default footer. If not set, there is no default footer.",
+          "description": "The ID of the default footer. If not set, there is no default footer.\n\nThis property is read-only.",
           "type": "string"
         },
         "defaultHeaderId": {
-          "description": "The ID of the default header. If not set, there is no default header.",
+          "description": "The ID of the default header. If not set, there is no default header.\n\nThis property is read-only.",
           "type": "string"
         },
         "evenPageFooterId": {
-          "description": "The ID of the footer used only for even pages. The value of\nuse_even_page_header_footer determines\nwhether to use the default_footer_id or this value for the\nfooter on even pages. If not set, there is no even page footer.",
+          "description": "The ID of the footer used only for even pages. The value of\nuse_even_page_header_footer determines\nwhether to use the default_footer_id or this value for the\nfooter on even pages. If not set, there is no even page footer.\n\nThis property is read-only.",
           "type": "string"
         },
         "evenPageHeaderId": {
-          "description": "The ID of the header used only for even pages. The value of\nuse_even_page_header_footer determines\nwhether to use the default_header_id or this value for the\nheader on even pages. If not set, there is no even page header.",
+          "description": "The ID of the header used only for even pages. The value of\nuse_even_page_header_footer determines\nwhether to use the default_header_id or this value for the\nheader on even pages. If not set, there is no even page header.\n\nThis property is read-only.",
           "type": "string"
         },
         "firstPageFooterId": {
-          "description": "The ID of the footer used only for the first page. If not set then\na unique footer for the first page does not exist. The value of\nuse_first_page_header_footer determines\nwhether to use the default_footer_id or this value for the\nfooter on the first page. If not set, there is no first page footer.",
+          "description": "The ID of the footer used only for the first page. If not set then\na unique footer for the first page does not exist. The value of\nuse_first_page_header_footer determines\nwhether to use the default_footer_id or this value for the\nfooter on the first page. If not set, there is no first page footer.\n\nThis property is read-only.",
           "type": "string"
         },
         "firstPageHeaderId": {
-          "description": "The ID of the header used only for the first page. If not set then\na unique header for the first page does not exist.\nThe value of use_first_page_header_footer determines\nwhether to use the default_header_id or this value for the\nheader on the first page. If not set, there is no first page header.",
+          "description": "The ID of the header used only for the first page. If not set then\na unique header for the first page does not exist.\nThe value of use_first_page_header_footer determines\nwhether to use the default_header_id or this value for the\nheader on the first page. If not set, there is no first page header.\n\nThis property is read-only.",
           "type": "string"
         },
         "marginBottom": {
           "$ref": "Dimension",
-          "description": "The bottom page margin."
+          "description": "The bottom page margin.\n\nUpdating the bottom page margin on the document style clears the bottom\npage margin on all section styles."
         },
         "marginLeft": {
           "$ref": "Dimension",
-          "description": "The left page margin."
+          "description": "The left page margin.\n\nUpdating the left page margin on the document style clears the left page\nmargin on all section styles. It may also cause columns to resize in all\nsections."
         },
         "marginRight": {
           "$ref": "Dimension",
-          "description": "The right page margin."
+          "description": "The right page margin.\n\nUpdating the right page margin on the document style clears the right page\nmargin on all section styles. It may also cause columns to resize in all\nsections."
         },
         "marginTop": {
           "$ref": "Dimension",
-          "description": "The top page margin."
+          "description": "The top page margin.\n\nUpdating the top page margin on the document style clears the top page\nmargin on all section styles."
         },
         "pageNumberStart": {
           "description": "The page number from which to start counting the number of pages.",
@@ -814,11 +814,11 @@
           "description": "The size of a page in the document."
         },
         "useEvenPageHeaderFooter": {
-          "description": "Indicates whether to use the even page header / footer IDs for the even\npages.",
+          "description": "Indicates whether to use the even page header / footer IDs for the even\npages.\n\nThis property is read-only.",
           "type": "boolean"
         },
         "useFirstPageHeaderFooter": {
-          "description": "Indicates whether to use the first page header / footer IDs for the first\npage.",
+          "description": "Indicates whether to use the first page header / footer IDs for the first\npage.\n\nThis property is read-only.",
           "type": "boolean"
         }
       },
@@ -1642,6 +1642,17 @@
       },
       "type": "object"
     },
+    "MergeTableCellsRequest": {
+      "description": "Merges cells in a Table.",
+      "id": "MergeTableCellsRequest",
+      "properties": {
+        "tableRange": {
+          "$ref": "TableRange",
+          "description": "The table range specifying which cells of the table to merge.\n\nAny text in the cells being merged will be concatenated and stored in the\n\"head\" cell of the range. This is the upper-left cell of the range when\nthe content direction is left to right, and the upper-right cell of the\nrange otherwise.\n\nIf the range is non-rectangular (which can occur in some cases where the\nrange covers cells that are already merged or where the table is\nnon-rectangular), a 400 bad request error is returned."
+        }
+      },
+      "type": "object"
+    },
     "NamedRange": {
       "description": "A collection of Ranges with the same named range\nID.\n\nNamed ranges allow developers to associate parts of a document with an\narbitrary user-defined label so their contents can be programmatically read\nor edited at a later time. A document can contain multiple named ranges with\nthe same name, but every named range has a unique ID.\n\nA named range is created with a single Range,\nand content inserted inside a named range generally expands that range.\nHowever, certain document changes can cause the range to be split into\nmultiple ranges.\n\nNamed ranges are not private. All applications and collaborators that have\naccess to the document can see its named ranges.",
       "id": "NamedRange",
@@ -2159,7 +2170,7 @@
           "type": "string"
         },
         "headingId": {
-          "description": "The heading ID of the paragraph. If empty, then this paragraph is not a\nheading. This property is read-only.",
+          "description": "The heading ID of the paragraph. If empty, then this paragraph is not a\nheading.\n\nThis property is read-only.",
           "type": "string"
         },
         "indentEnd": {
@@ -2242,7 +2253,7 @@
           "type": "string"
         },
         "tabStops": {
-          "description": "A list of the tab stops for this paragraph. The list of tab stops is not\ninherited. This property is read-only.",
+          "description": "A list of the tab stops for this paragraph. The list of tab stops is not\ninherited.\n\nThis property is read-only.",
           "items": {
             "$ref": "TabStop"
           },
@@ -2503,6 +2514,33 @@
       },
       "type": "object"
     },
+    "ReplaceImageRequest": {
+      "description": "Replaces an existing image with a new image.\n\nReplacing an image removes some image effects from the existing image in order to\nmirror the behavior of the Docs editor.",
+      "id": "ReplaceImageRequest",
+      "properties": {
+        "imageObjectId": {
+          "description": "The ID of the existing image that will be replaced.",
+          "type": "string"
+        },
+        "imageReplaceMethod": {
+          "description": "The replacement method.",
+          "enum": [
+            "IMAGE_REPLACE_METHOD_UNSPECIFIED",
+            "CENTER_CROP"
+          ],
+          "enumDescriptions": [
+            "Unspecified image replace method. This value must not be used.",
+            "Scales and centers the image to fill the bounds of the original image.\nThe image may be cropped in order to fill the original image's bounds. The\nrendered size of the image will be the same as that of the original image."
+          ],
+          "type": "string"
+        },
+        "uri": {
+          "description": "The URI of the new image.\n\nThe image is fetched once at insertion time and a copy is stored for\ndisplay inside the document. Images must be less than 50MB in size, cannot\nexceed 25 megapixels, and must be in one of PNG, JPEG, or GIF format.\n\nThe provided URI can be at most 2 kB in length. The URI itself is saved\nwith the image, and exposed via the ImageProperties.source_uri field.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "Request": {
       "description": "A single update to apply to a document.",
       "id": "Request",
@@ -2563,13 +2601,33 @@
           "$ref": "InsertTextRequest",
           "description": "Inserts text at the specified location."
         },
+        "mergeTableCells": {
+          "$ref": "MergeTableCellsRequest",
+          "description": "Merges cells in a table."
+        },
         "replaceAllText": {
           "$ref": "ReplaceAllTextRequest",
           "description": "Replaces all instances of the specified text."
         },
+        "replaceImage": {
+          "$ref": "ReplaceImageRequest",
+          "description": "Replaces an image in the document."
+        },
+        "unmergeTableCells": {
+          "$ref": "UnmergeTableCellsRequest",
+          "description": "Unmerges cells in a table."
+        },
+        "updateDocumentStyle": {
+          "$ref": "UpdateDocumentStyleRequest",
+          "description": "Updates the style of the document."
+        },
         "updateParagraphStyle": {
           "$ref": "UpdateParagraphStyleRequest",
           "description": "Updates the paragraph style at the specified range."
+        },
+        "updateTableCellStyle": {
+          "$ref": "UpdateTableCellStyleRequest",
+          "description": "Updates the style of table cells."
         },
         "updateTableColumnProperties": {
           "$ref": "UpdateTableColumnPropertiesRequest",
@@ -3113,12 +3171,12 @@
       "type": "object"
     },
     "TableCellBorder": {
-      "description": "A border around a table cell.",
+      "description": "A border around a table cell.\n\nTable cell borders cannot be transparent. To hide a table cell border, make\nits width 0.",
       "id": "TableCellBorder",
       "properties": {
         "color": {
           "$ref": "OptionalColor",
-          "description": "The color of the border."
+          "description": "The color of the border.\n\nThis color cannot be transparent."
         },
         "dashStyle": {
           "description": "The dash style of the border.",
@@ -3189,7 +3247,7 @@
           "description": "The top border of the cell."
         },
         "columnSpan": {
-          "description": "The column span of the cell. This property is read-only.",
+          "description": "The column span of the cell.\n\nThis property is read-only.",
           "format": "int32",
           "type": "integer"
         },
@@ -3228,7 +3286,7 @@
           "description": "The top padding of the cell."
         },
         "rowSpan": {
-          "description": "The row span of the cell. This property is read-only.",
+          "description": "The row span of the cell.\n\nThis property is read-only.",
           "format": "int32",
           "type": "integer"
         }
@@ -3339,6 +3397,27 @@
             "type": "string"
           },
           "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "TableRange": {
+      "description": "A table range represents a reference to a subset of a table.\n\nIt's important to note that the cells specified by a table range do not\nnecessarily form a rectangle. For example, let's say we have a 3 x 3 table\nwhere all the cells of the last row are merged together. The table looks\nlike this:\n\n              \n     [             ]\n\nA table range with table cell location = (table_start_location, row = 0,\ncolumn = 0), row span = 3 and column span = 2 specifies the following cells:\n\n      x     x \n     [ x    x    x ]",
+      "id": "TableRange",
+      "properties": {
+        "columnSpan": {
+          "description": "The column span of the table range.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "rowSpan": {
+          "description": "The row span of the table range.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "tableCellLocation": {
+          "$ref": "TableCellLocation",
+          "description": "The cell location where the table range starts."
         }
       },
       "type": "object"
@@ -3578,6 +3657,33 @@
       },
       "type": "object"
     },
+    "UnmergeTableCellsRequest": {
+      "description": "Unmerges cells in a Table.",
+      "id": "UnmergeTableCellsRequest",
+      "properties": {
+        "tableRange": {
+          "$ref": "TableRange",
+          "description": "The table range specifying which cells of the table to unmerge.\n\nAll merged cells in this range will be unmerged, and cells that are already\nunmerged will not be affected. If the range has no merged cells, the\nrequest will do nothing.\n\nIf there is text in any of the merged cells, the text will remain in the\n\"head\" cell of the resulting block of unmerged cells. The \"head\" cell is\nthe upper-left cell when the content direction is from left to right, and\nthe upper-right otherwise."
+        }
+      },
+      "type": "object"
+    },
+    "UpdateDocumentStyleRequest": {
+      "description": "Updates the DocumentStyle.",
+      "id": "UpdateDocumentStyleRequest",
+      "properties": {
+        "documentStyle": {
+          "$ref": "DocumentStyle",
+          "description": "The styles to set on the document.\n\nCertain document style changes may cause other changes in order to mirror\nthe behavior of the Docs editor. See the documentation of DocumentStyle for more information."
+        },
+        "fields": {
+          "description": "The fields that should be updated.\n\nAt least one field must be specified. The root `document_style` is\nimplied and should not be specified. A single `\"*\"` can be used as\nshort-hand for listing every field.\n\nFor example to update the background, set `fields` to `\"background\"`.",
+          "format": "google-fieldmask",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "UpdateParagraphStyleRequest": {
       "description": "Update the styling of all paragraphs that overlap with the given range.",
       "id": "UpdateParagraphStyleRequest",
@@ -3594,6 +3700,30 @@
         "range": {
           "$ref": "Range",
           "description": "The range overlapping the paragraphs to style."
+        }
+      },
+      "type": "object"
+    },
+    "UpdateTableCellStyleRequest": {
+      "description": "Updates the style of a range of table cells.",
+      "id": "UpdateTableCellStyleRequest",
+      "properties": {
+        "fields": {
+          "description": "The fields that should be updated.\n\nAt least one field must be specified. The root `tableCellStyle` is implied\nand should not be specified. A single `\"*\"` can be used as short-hand for\nlisting every field.\n\nFor example to update the table cell background color, set `fields` to\n`\"backgroundColor\"`.\n\nTo reset a property to its default value, include its field name in the\nfield mask but leave the field itself unset.",
+          "format": "google-fieldmask",
+          "type": "string"
+        },
+        "tableCellStyle": {
+          "$ref": "TableCellStyle",
+          "description": "The style to set on the table cells.\n\nWhen updating borders, if a cell shares a border with an adjacent cell, the\ncorresponding border property of the adjacent cell is updated as well.\nBorders that are merged and invisible are not updated.\n\nSince updating a border shared by adjacent cells in the same request can\ncause conflicting border updates, border updates are applied in the\nfollowing order:\n\n- `border_right`\n- `border_left`\n- `border_bottom`\n- `border_top`"
+        },
+        "tableRange": {
+          "$ref": "TableRange",
+          "description": "The table range representing the subset of the table to which the updates\nare applied."
+        },
+        "tableStartLocation": {
+          "$ref": "Location",
+          "description": "The location where the table starts in the document. When specified, the\nupdates are applied to all the cells in the table."
         }
       },
       "type": "object"
@@ -3665,7 +3795,7 @@
         },
         "range": {
           "$ref": "Range",
-          "description": "The range of text to style.\n\nThe range may be extended to include adjacent newlines.\n\nIf the range fully contains a paragraph belonging to a list, the\nparagraph's bullet is also updated with the matching text style."
+          "description": "The range of text to style.\n\nThe range may be extended to include adjacent newlines.\n\nIf the range fully contains a paragraph belonging to a list, the\nparagraph's bullet is also updated with the matching text style.\n\nRanges cannot be inserted inside a relative UpdateTextStyleRequest."
         },
         "textStyle": {
           "$ref": "TextStyle",

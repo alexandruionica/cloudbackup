@@ -17,12 +17,6 @@
 package talent
 
 import (
-	emptypb "github.com/golang/protobuf/ptypes/empty"
-	talentpb "google.golang.org/genproto/googleapis/cloud/talent/v4beta1"
-	longrunningpb "google.golang.org/genproto/googleapis/longrunning"
-)
-
-import (
 	"context"
 	"flag"
 	"fmt"
@@ -35,11 +29,16 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/api/option"
+	talentpb "google.golang.org/genproto/googleapis/cloud/talent/v4beta1"
+	longrunningpb "google.golang.org/genproto/googleapis/longrunning"
+
 	status "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+
 	gstatus "google.golang.org/grpc/status"
 )
 
@@ -2531,11 +2530,13 @@ func TestProfileServiceDeleteProfileError(t *testing.T) {
 func TestProfileServiceSearchProfiles(t *testing.T) {
 	var estimatedTotalSize int64 = 1882144769
 	var nextPageToken string = ""
+	var resultSetId string = "resultSetId-770306950"
 	var summarizedProfilesElement *talentpb.SummarizedProfile = &talentpb.SummarizedProfile{}
 	var summarizedProfiles = []*talentpb.SummarizedProfile{summarizedProfilesElement}
 	var expectedResponse = &talentpb.SearchProfilesResponse{
 		EstimatedTotalSize: estimatedTotalSize,
 		NextPageToken:      nextPageToken,
+		ResultSetId:        resultSetId,
 		SummarizedProfiles: summarizedProfiles,
 	}
 

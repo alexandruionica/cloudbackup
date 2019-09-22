@@ -81,7 +81,6 @@ func unmarshal(req *request.Request) {
 	if req.Data != nil {
 		json.NewDecoder(req.HTTPResponse.Body).Decode(req.Data)
 	}
-	return
 }
 
 func unmarshalError(req *request.Request) {
@@ -139,7 +138,7 @@ func TestRequestRecoverRetry5xx(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expect no error, but got %v", err)
 	}
-	if e, a := 2, int(r.RetryCount); e != a {
+	if e, a := 2, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 	if e, a := "valid", out.Data; e != a {
@@ -172,7 +171,7 @@ func TestRequestRecoverRetry4xxRetryable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expect no error, but got %v", err)
 	}
-	if e, a := 3, int(r.RetryCount); e != a {
+	if e, a := 3, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 	if e, a := "valid", out.Data; e != a {
@@ -182,13 +181,18 @@ func TestRequestRecoverRetry4xxRetryable(t *testing.T) {
 
 // test that retries don't occur for 4xx status codes with a response type that can't be retried
 func TestRequest4xxUnretryable(t *testing.T) {
-	s := awstesting.NewClient(aws.NewConfig().WithMaxRetries(10))
+	s := awstesting.NewClient(&aws.Config{
+		MaxRetries: aws.Int(1),
+	})
 	s.Handlers.Validate.Clear()
 	s.Handlers.Unmarshal.PushBack(unmarshal)
 	s.Handlers.UnmarshalError.PushBack(unmarshalError)
 	s.Handlers.Send.Clear() // mock sending
 	s.Handlers.Send.PushBack(func(r *request.Request) {
-		r.HTTPResponse = &http.Response{StatusCode: 401, Body: body(`{"__type":"SignatureDoesNotMatch","message":"Signature does not match."}`)}
+		r.HTTPResponse = &http.Response{
+			StatusCode: 401,
+			Body:       body(`{"__type":"SignatureDoesNotMatch","message":"Signature does not match."}`),
+		}
 	})
 	out := &testData{}
 	r := s.NewRequest(&request.Operation{Name: "Operation"}, nil, out)
@@ -206,7 +210,7 @@ func TestRequest4xxUnretryable(t *testing.T) {
 	if e, a := "Signature does not match.", aerr.Message(); e != a {
 		t.Errorf("expect %q error message, got %q", e, a)
 	}
-	if e, a := 0, int(r.RetryCount); e != a {
+	if e, a := 0, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 }
@@ -249,11 +253,11 @@ func TestRequestExhaustRetries(t *testing.T) {
 	if e, a := "An error occurred.", aerr.Message(); e != a {
 		t.Errorf("expect %q error message, got %q", e, a)
 	}
-	if e, a := 3, int(r.RetryCount); e != a {
+	if e, a := 3, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 
-	expectDelays := []struct{ min, max time.Duration }{{30, 59}, {60, 118}, {120, 236}}
+	expectDelays := []struct{ min, max time.Duration }{{30, 60}, {60, 120}, {120, 240}}
 	for i, v := range delays {
 		min := expectDelays[i].min * time.Millisecond
 		max := expectDelays[i].max * time.Millisecond
@@ -310,7 +314,7 @@ func TestRequestRecoverExpiredCreds(t *testing.T) {
 		t.Errorf("Expect valid creds after cred expired recovery")
 	}
 
-	if e, a := 1, int(r.RetryCount); e != a {
+	if e, a := 1, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 	if e, a := "valid", out.Data; e != a {
@@ -357,7 +361,7 @@ func TestRequestUserAgent(t *testing.T) {
 }
 
 func TestRequestThrottleRetries(t *testing.T) {
-	delays := []time.Duration{}
+	var delays []time.Duration
 	sleepDelay := func(delay time.Duration) {
 		delays = append(delays, delay)
 	}
@@ -394,11 +398,11 @@ func TestRequestThrottleRetries(t *testing.T) {
 	if e, a := "An error occurred.", aerr.Message(); e != a {
 		t.Errorf("expect %q error message, got %q", e, a)
 	}
-	if e, a := 3, int(r.RetryCount); e != a {
+	if e, a := 3, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 
-	expectDelays := []struct{ min, max time.Duration }{{500, 999}, {1000, 1998}, {2000, 3996}}
+	expectDelays := []struct{ min, max time.Duration }{{500, 1000}, {1000, 2000}, {2000, 4000}}
 	for i, v := range delays {
 		min := expectDelays[i].min * time.Millisecond
 		max := expectDelays[i].max * time.Millisecond
@@ -444,7 +448,7 @@ func TestRequestRecoverTimeoutWithNilBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expect no error, but got %v", err)
 	}
-	if e, a := 1, int(r.RetryCount); e != a {
+	if e, a := 1, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 	if e, a := "valid", out.Data; e != a {
@@ -487,7 +491,7 @@ func TestRequestRecoverTimeoutWithNilResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expect no error, but got %v", err)
 	}
-	if e, a := 1, int(r.RetryCount); e != a {
+	if e, a := 1, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 	if e, a := "valid", out.Data; e != a {
@@ -581,7 +585,7 @@ func TestIsSerializationErrorRetryable(t *testing.T) {
 			Error: c.err,
 		}
 		if r.IsErrorRetryable() != c.expected {
-			t.Errorf("Case %d: Expected %v, but received %v", i+1, c.expected, !c.expected)
+			t.Errorf("Case %d: Expected %v, but received %v", i, c.expected, !c.expected)
 		}
 	}
 }
@@ -707,7 +711,7 @@ func TestEnforceShouldRetryCheck(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expect error, but got nil")
 	}
-	if e, a := 3, int(r.RetryCount); e != a {
+	if e, a := 3, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 	if !retryer.shouldRetry {
@@ -1075,7 +1079,7 @@ func Test501NotRetrying(t *testing.T) {
 	if e, a := "NotImplemented", aerr.Code(); e != a {
 		t.Errorf("expected error code %q, but received %q", e, a)
 	}
-	if e, a := 1, int(r.RetryCount); e != a {
+	if e, a := 1, r.RetryCount; e != a {
 		t.Errorf("expect %d retry count, got %d", e, a)
 	}
 }
@@ -1109,6 +1113,42 @@ func TestRequestNoConnection(t *testing.T) {
 	if e, a := 10, r.RetryCount; e != a {
 		t.Errorf("expect %v retry count, got %v", e, a)
 	}
+}
+
+func TestRequestBodySeekFails(t *testing.T) {
+	s := awstesting.NewClient()
+	s.Handlers.Validate.Clear()
+	s.Handlers.Build.Clear()
+
+	out := &testData{}
+	r := s.NewRequest(&request.Operation{Name: "Operation"}, nil, out)
+	r.SetReaderBody(&stubSeekFail{
+		Err: fmt.Errorf("failed to seek reader"),
+	})
+	err := r.Send()
+	if err == nil {
+		t.Fatal("expect error, but got none")
+	}
+
+	aerr := err.(awserr.Error)
+	if e, a := request.ErrCodeSerialization, aerr.Code(); e != a {
+		t.Errorf("expect %v error code, got %v", e, a)
+	}
+
+}
+
+type stubSeekFail struct {
+	Err error
+}
+
+func (f *stubSeekFail) Read(b []byte) (int, error) {
+	return len(b), nil
+}
+func (f *stubSeekFail) ReadAt(b []byte, offset int64) (int, error) {
+	return len(b), nil
+}
+func (f *stubSeekFail) Seek(offset int64, mode int) (int64, error) {
+	return 0, f.Err
 }
 
 func getFreePort() (int, error) {

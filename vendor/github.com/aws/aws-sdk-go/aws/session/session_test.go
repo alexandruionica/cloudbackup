@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -80,12 +80,15 @@ func TestNew_WithSessionLoadError(t *testing.T) {
 		t.Errorf("expect not nil")
 	}
 	if e, a := "ERROR: failed to create session with AWS_SDK_LOAD_CONFIG enabled", logger.String(); !strings.Contains(a, e) {
-		t.Errorf("expect %v, to contain %v", e, a)
+		t.Errorf("expect %v, to be in %v", e, a)
 	}
-	if e, a := (SharedConfigAssumeRoleError{
-		RoleARN: "assume_role_invalid_source_profile_role_arn",
-	}).Error(), err.Error(); !strings.Contains(a, e) {
-		t.Errorf("expect %v, to contain %v", e, a)
+
+	expectErr := SharedConfigAssumeRoleError{
+		RoleARN:       "assume_role_invalid_source_profile_role_arn",
+		SourceProfile: "profile_not_exists",
+	}
+	if e, a := expectErr.Error(), err.Error(); !strings.Contains(a, e) {
+		t.Errorf("expect %v, to be in %v", e, a)
 	}
 }
 
@@ -196,7 +199,7 @@ func TestNewSessionWithOptions_OverrideProfile(t *testing.T) {
 		t.Errorf("expect empty, got %v", v)
 	}
 	if e, a := "SharedConfigCredentials", creds.ProviderName; !strings.Contains(a, e) {
-		t.Errorf("expect %v, to contain %v", e, a)
+		t.Errorf("expect %v, to be in %v", e, a)
 	}
 }
 
@@ -233,7 +236,7 @@ func TestNewSessionWithOptions_OverrideSharedConfigEnable(t *testing.T) {
 		t.Errorf("expect empty, got %v", v)
 	}
 	if e, a := "SharedConfigCredentials", creds.ProviderName; !strings.Contains(a, e) {
-		t.Errorf("expect %v, to contain %v", e, a)
+		t.Errorf("expect %v, to be in %v", e, a)
 	}
 }
 
@@ -270,7 +273,7 @@ func TestNewSessionWithOptions_OverrideSharedConfigDisable(t *testing.T) {
 		t.Errorf("expect empty, got %v", v)
 	}
 	if e, a := "SharedConfigCredentials", creds.ProviderName; !strings.Contains(a, e) {
-		t.Errorf("expect %v, to contain %v", e, a)
+		t.Errorf("expect %v, to be in %v", e, a)
 	}
 }
 
@@ -307,18 +310,18 @@ func TestNewSessionWithOptions_OverrideSharedConfigFiles(t *testing.T) {
 		t.Errorf("expect empty, got %v", v)
 	}
 	if e, a := "SharedConfigCredentials", creds.ProviderName; !strings.Contains(a, e) {
-		t.Errorf("expect %v, to contain %v", e, a)
+		t.Errorf("expect %v, to be in %v", e, a)
 	}
 }
 
 func TestNewSessionWithOptions_Overrides(t *testing.T) {
-	cases := []struct {
+	cases := map[string]struct {
 		InEnvs    map[string]string
 		InProfile string
 		OutRegion string
 		OutCreds  credentials.Value
 	}{
-		{
+		"env profile with opt profile": {
 			InEnvs: map[string]string{
 				"AWS_SDK_LOAD_CONFIG":         "0",
 				"AWS_SHARED_CREDENTIALS_FILE": testConfigFilename,
@@ -332,7 +335,23 @@ func TestNewSessionWithOptions_Overrides(t *testing.T) {
 				ProviderName:    "SharedConfigCredentials",
 			},
 		},
-		{
+		"env creds with env profile": {
+			InEnvs: map[string]string{
+				"AWS_SDK_LOAD_CONFIG":         "0",
+				"AWS_SHARED_CREDENTIALS_FILE": testConfigFilename,
+				"AWS_REGION":                  "env_region",
+				"AWS_ACCESS_KEY":              "env_akid",
+				"AWS_SECRET_ACCESS_KEY":       "env_secret",
+				"AWS_PROFILE":                 "other_profile",
+			},
+			OutRegion: "env_region",
+			OutCreds: credentials.Value{
+				AccessKeyID:     "env_akid",
+				SecretAccessKey: "env_secret",
+				ProviderName:    "EnvConfigCredentials",
+			},
+		},
+		"env creds with opt profile": {
 			InEnvs: map[string]string{
 				"AWS_SDK_LOAD_CONFIG":         "0",
 				"AWS_SHARED_CREDENTIALS_FILE": testConfigFilename,
@@ -344,17 +363,17 @@ func TestNewSessionWithOptions_Overrides(t *testing.T) {
 			InProfile: "full_profile",
 			OutRegion: "env_region",
 			OutCreds: credentials.Value{
-				AccessKeyID:     "env_akid",
-				SecretAccessKey: "env_secret",
-				ProviderName:    "EnvConfigCredentials",
+				AccessKeyID:     "full_profile_akid",
+				SecretAccessKey: "full_profile_secret",
+				ProviderName:    "SharedConfigCredentials",
 			},
 		},
-		{
+		"cfg and cred file with opt profile": {
 			InEnvs: map[string]string{
 				"AWS_SDK_LOAD_CONFIG":         "0",
 				"AWS_SHARED_CREDENTIALS_FILE": testConfigFilename,
 				"AWS_CONFIG_FILE":             testConfigOtherFilename,
-				"AWS_PROFILE":                 "shared_profile",
+				"AWS_PROFILE":                 "other_profile",
 			},
 			InProfile: "config_file_load_order",
 			OutRegion: "shared_config_region",
@@ -366,8 +385,8 @@ func TestNewSessionWithOptions_Overrides(t *testing.T) {
 		},
 	}
 
-	for i, c := range cases {
-		t.Run(strconv.Itoa(i), func(t *testing.T) {
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
 			restoreEnvFn := initSessionTestEnv()
 			defer restoreEnvFn()
 
@@ -380,12 +399,12 @@ func TestNewSessionWithOptions_Overrides(t *testing.T) {
 				SharedConfigState: SharedConfigEnable,
 			})
 			if err != nil {
-				t.Errorf("expect nil, %v", err)
+				t.Fatalf("expect no error, got %v", err)
 			}
 
 			creds, err := s.Config.Credentials.Get()
 			if err != nil {
-				t.Errorf("expect nil, %v", err)
+				t.Fatalf("expect no error, got %v", err)
 			}
 			if e, a := c.OutRegion, *s.Config.Region; e != a {
 				t.Errorf("expect %v, got %v", e, a)
@@ -400,7 +419,115 @@ func TestNewSessionWithOptions_Overrides(t *testing.T) {
 				t.Errorf("expect %v, got %v", e, a)
 			}
 			if e, a := c.OutCreds.ProviderName, creds.ProviderName; !strings.Contains(a, e) {
-				t.Errorf("expect %v, to contain %v", e, a)
+				t.Errorf("expect %v, to be in %v", e, a)
+			}
+		})
+	}
+}
+
+func TestNewSession_EnvCredsWithInvalidConfigFile(t *testing.T) {
+	cases := map[string]struct {
+		AccessKey, SecretKey string
+		Profile              string
+		Options              Options
+		ExpectCreds          credentials.Value
+		Err                  string
+	}{
+		"no options": {
+			Err: "SharedConfigLoadError",
+		},
+		"env only": {
+			AccessKey: "env_akid",
+			SecretKey: "env_secret",
+			ExpectCreds: credentials.Value{
+				AccessKeyID:     "env_akid",
+				SecretAccessKey: "env_secret",
+				ProviderName:    "EnvConfigCredentials",
+			},
+		},
+		"static credentials only": {
+			Options: Options{
+				Config: aws.Config{
+					Credentials: credentials.NewStaticCredentials(
+						"AKID", "SECRET", ""),
+				},
+			},
+			ExpectCreds: credentials.Value{
+				AccessKeyID:     "AKID",
+				SecretAccessKey: "SECRET",
+				ProviderName:    "StaticProvider",
+			},
+		},
+		"env profile and env": {
+			AccessKey: "env_akid",
+			SecretKey: "env_secret",
+			Profile:   "env_profile",
+			Err:       "SharedConfigLoadError",
+		},
+		"opt profile and env": {
+			AccessKey: "env_akid",
+			SecretKey: "env_secret",
+			Options: Options{
+				Profile: "someProfile",
+			},
+			Err: "SharedConfigLoadError",
+		},
+		"cfg enabled": {
+			AccessKey: "env_akid",
+			SecretKey: "env_secret",
+			Options: Options{
+				SharedConfigState: SharedConfigEnable,
+			},
+			Err: "SharedConfigLoadError",
+		},
+	}
+
+	var cfgFile = filepath.Join("testdata", "shared_config_invalid_ini")
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			restoreEnvFn := initSessionTestEnv()
+			defer restoreEnvFn()
+
+			if v := c.AccessKey; len(v) != 0 {
+				os.Setenv("AWS_ACCESS_KEY", v)
+			}
+			if v := c.SecretKey; len(v) != 0 {
+				os.Setenv("AWS_SECRET_ACCESS_KEY", v)
+			}
+			if v := c.Profile; len(v) != 0 {
+				os.Setenv("AWS_PROFILE", v)
+			}
+
+			opts := c.Options
+			opts.SharedConfigFiles = []string{cfgFile}
+			s, err := NewSessionWithOptions(opts)
+			if len(c.Err) != 0 {
+				if err == nil {
+					t.Fatalf("expect session error, got none")
+				}
+				if e, a := c.Err, err.Error(); !strings.Contains(a, e) {
+					t.Fatalf("expect session error to contain %q, got %v", e, a)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("expect no error, got %v", err)
+			}
+
+			creds, err := s.Config.Credentials.Get()
+			if err != nil {
+				t.Fatalf("expect no error, got %v", err)
+			}
+			if e, a := c.ExpectCreds.AccessKeyID, creds.AccessKeyID; e != a {
+				t.Errorf("expect %v, got %v", e, a)
+			}
+			if e, a := c.ExpectCreds.SecretAccessKey, creds.SecretAccessKey; e != a {
+				t.Errorf("expect %v, got %v", e, a)
+			}
+			if e, a := c.ExpectCreds.ProviderName, creds.ProviderName; !strings.Contains(a, e) {
+				t.Errorf("expect %v, to be in %v", e, a)
 			}
 		})
 	}

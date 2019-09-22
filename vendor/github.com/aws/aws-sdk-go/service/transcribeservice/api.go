@@ -1804,10 +1804,19 @@ type StartTranscriptionJobInput struct {
 
 	// The format of the input media file.
 	//
-	// MediaFormat is a required field
-	MediaFormat *string `type:"string" required:"true" enum:"MediaFormat"`
+	// If you do not specify the format of the media file, Amazon Transcribe determines
+	// the format. If the format is not recognized, Amazon Transcribe returns an
+	// InternalFailureException exception. If you specify the format, it must match
+	// the format detected by Amazon Transcribe, otherwise you get an InternalFailureException
+	// exception.
+	MediaFormat *string `type:"string" enum:"MediaFormat"`
 
-	// The sample rate, in Hertz, of the audio track in the input media file.
+	// The sample rate of the audio track in the input media file in Hertz.
+	//
+	// If you do not specify the media sample rate, Amazon Transcribe determines
+	// the sample rate. If you specify the sample rate, it must match the sample
+	// rate detected by Amazon Transcribe. In most cases, you should leave the MediaSampleRateHertz
+	// field blank and let Amazon Transcribe determine the sample rate.
 	MediaSampleRateHertz *int64 `min:"8000" type:"integer"`
 
 	// The location where the transcription is stored.
@@ -1817,7 +1826,7 @@ type StartTranscriptionJobInput struct {
 	// the operation returns this location in the TranscriptFileUri field. The S3
 	// bucket must have permissions that allow Amazon Transcribe to put files in
 	// the bucket. For more information, see Permissions Required for IAM User Roles
-	// (https://docs.aws.amazon.com/transcribe/latest/dg/access-control-managing-permissions.html#auth-role-iam-user).
+	// (https://docs.aws.amazon.com/transcribe/latest/dg/security_iam_id-based-policy-examples.html#auth-role-iam-user).
 	//
 	// Amazon Transcribe uses the default Amazon S3 key for server-side encryption
 	// of transcripts that are placed in your S3 bucket. You can't specify your
@@ -1856,9 +1865,6 @@ func (s *StartTranscriptionJobInput) Validate() error {
 	}
 	if s.Media == nil {
 		invalidParams.Add(request.NewErrParamRequired("Media"))
-	}
-	if s.MediaFormat == nil {
-		invalidParams.Add(request.NewErrParamRequired("MediaFormat"))
 	}
 	if s.MediaSampleRateHertz != nil && *s.MediaSampleRateHertz < 8000 {
 		invalidParams.Add(request.NewErrParamMinValue("MediaSampleRateHertz", 8000))
@@ -2450,6 +2456,12 @@ const (
 
 	// LanguageCodeArSa is a LanguageCode enum value
 	LanguageCodeArSa = "ar-SA"
+
+	// LanguageCodeRuRu is a LanguageCode enum value
+	LanguageCodeRuRu = "ru-RU"
+
+	// LanguageCodeZhCn is a LanguageCode enum value
+	LanguageCodeZhCn = "zh-CN"
 )
 
 const (
