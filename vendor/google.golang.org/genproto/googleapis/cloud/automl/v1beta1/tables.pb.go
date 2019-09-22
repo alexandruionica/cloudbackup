@@ -32,9 +32,12 @@ type TablesDatasetMetadata struct {
 	// training & prediction target.
 	// This column must be non-nullable and have one of following data types
 	// (otherwise model creation will error):
+	//
 	// * CATEGORY
+	//
 	// * FLOAT64
-	// Furthermore, if the type is CATEGORY , then only up to
+	//
+	// If the type is CATEGORY , only up to
 	// 100 unique values may exist in that column across all rows.
 	//
 	// NOTE: Updates of this field will instantly affect any other users
@@ -75,11 +78,12 @@ type TablesDatasetMetadata struct {
 	// This field may be stale, see the stats_update_time field for
 	// for the timestamp at which these stats were last updated.
 	TargetColumnCorrelations map[string]*CorrelationStats `protobuf:"bytes,6,rep,name=target_column_correlations,json=targetColumnCorrelations,proto3" json:"target_column_correlations,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	// The most recent timestamp when target_column_correlations field and all
-	// descendant ColumnSpec.data_stats and ColumnSpec.top_correlated_columns
-	// fields were last (re-)generated. Any changes that happened to the dataset
-	// afterwards are not reflected in these fields values. The regeneration
-	// happens in the background on a best effort basis.
+	// Output only. The most recent timestamp when target_column_correlations
+	// field and all descendant ColumnSpec.data_stats and
+	// ColumnSpec.top_correlated_columns fields were last (re-)generated. Any
+	// changes that happened to the dataset afterwards are not reflected in these
+	// fields values. The regeneration happens in the background on a best effort
+	// basis.
 	StatsUpdateTime      *timestamp.Timestamp `protobuf:"bytes,7,opt,name=stats_update_time,json=statsUpdateTime,proto3" json:"stats_update_time,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
@@ -177,12 +181,16 @@ type TablesModelMetadata struct {
 	//
 	// [ml_use_column][google.cloud.automl.v1beta1.TablesDatasetMetadata.ml_use_column_spec_id]
 	// must never be included here.
+	//
 	// Only 3 fields are used:
-	// name - May be set on CreateModel, if set only the columns specified are
-	//        used, otherwise all primary table's columns (except the ones listed
-	//        above) are used for the training and prediction input.
-	// display_name - Output only.
-	// data_type - Output only.
+	//
+	// * name - May be set on CreateModel, if set only the columns specified are
+	//   used, otherwise all primary table's columns (except the ones listed
+	//   above) are used for the training and prediction input.
+	//
+	// * display_name - Output only.
+	//
+	// * data_type - Output only.
 	InputFeatureColumnSpecs []*ColumnSpec `protobuf:"bytes,3,rep,name=input_feature_column_specs,json=inputFeatureColumnSpecs,proto3" json:"input_feature_column_specs,omitempty"`
 	// Objective function the model is optimizing towards. The training process
 	// creates a model that maximizes/minimizes the value of the objective
@@ -196,6 +204,10 @@ type TablesModelMetadata struct {
 	//                                 operating characteristic (ROC) curve.
 	//   "MINIMIZE_LOG_LOSS" - Minimize log loss.
 	//   "MAXIMIZE_AU_PRC" - Maximize the area under the precision-recall curve.
+	//   "MAXIMIZE_PRECISION_AT_RECALL" - Maximize precision for a specified
+	//                                   recall value.
+	//   "MAXIMIZE_RECALL_AT_PRECISION" - Maximize recall for a specified
+	//                                    precision value.
 	//
 	// CLASSIFICATION_MULTI_CLASS :
 	//   "MINIMIZE_LOG_LOSS" (default) - Minimize log loss.
@@ -205,10 +217,6 @@ type TablesModelMetadata struct {
 	//   "MINIMIZE_RMSE" (default) - Minimize root-mean-squared error (RMSE).
 	//   "MINIMIZE_MAE" - Minimize mean-absolute error (MAE).
 	//   "MINIMIZE_RMSLE" - Minimize root-mean-squared log error (RMSLE).
-	//
-	// FORECASTING:
-	//   "MINIMIZE_RMSE" (default) - Minimize root-mean-squared error (RMSE).
-	//   "MINIMIZE_MAE" - Minimize mean-absolute error (MAE).
 	OptimizationObjective string `protobuf:"bytes,4,opt,name=optimization_objective,json=optimizationObjective,proto3" json:"optimization_objective,omitempty"`
 	// Output only. Auxiliary information for each of the
 	// input_feature_column_specs with respect to this particular model.
@@ -334,9 +342,11 @@ type TablesAnnotation struct {
 	//
 	// [target_column][google.cloud.automl.v1beta1.TablesModelMetadata.target_column_spec].
 	// The value depends on the column's DataType:
-	// CATEGORY - the predicted (with the above confidence `score`) CATEGORY
-	//            value.
-	// FLOAT64 - the predicted (with above `prediction_interval`) FLOAT64 value.
+	//
+	// * CATEGORY - the predicted (with the above confidence `score`) CATEGORY
+	//   value.
+	//
+	// * FLOAT64 - the predicted (with above `prediction_interval`) FLOAT64 value.
 	Value *_struct.Value `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	// Output only. Auxiliary information for each of the model's
 	//
@@ -417,9 +427,7 @@ type TablesModelColumnInfo struct {
 	// Output only. The display name of the column (same as the display_name of
 	// its ColumnSpec).
 	ColumnDisplayName string `protobuf:"bytes,2,opt,name=column_display_name,json=columnDisplayName,proto3" json:"column_display_name,omitempty"`
-	// Output only.
-	//
-	// When given as part of a Model (always populated):
+	// Output only. When given as part of a Model (always populated):
 	// Measurement of how much model predictions correctness on the TEST data
 	// depend on values in this column. A value between 0 and 1, higher means
 	// higher influence. These values are normalized - for all input feature

@@ -1,8 +1,8 @@
-hash: a9bc09641edeab254061f678c3bb405de3f7d44104c68c4d1486b0bfc57ae5b7
-updated: 2019-07-14T21:54:42.571183423+10:00
+hash: 4204a4bbe8c3102bd00babe24d4de33053639441813b51f012a635e117f71fb1
+updated: 2019-09-22T20:22:23.749397256+10:00
 imports:
 - name: cloud.google.com/go
-  version: cf81fad90a1a1de334c4fc27e23eb9a4224b627a
+  version: 264def2dd949cdb8a803bb9f50fa29a67b798a6a
   subpackages:
   - compute/metadata
   - iam
@@ -12,7 +12,7 @@ imports:
   - internal/version
   - storage
 - name: github.com/aws/aws-sdk-go
-  version: 420cda5d6383f94f7d9c231aa44bad3325181950
+  version: e40a2293b9fb27bd93c2b10a9fe06bd1293691a0
   subpackages:
   - aws
   - aws/awserr
@@ -35,6 +35,7 @@ imports:
   - internal/ini
   - internal/s3err
   - internal/sdkio
+  - internal/sdkmath
   - internal/sdkrand
   - internal/sdkuri
   - internal/shareddefaults
@@ -51,12 +52,17 @@ imports:
   - service/s3/s3iface
   - service/s3/s3manager
   - service/sts
+  - service/sts/stsiface
+- name: github.com/Azure/azure-storage-blob-go
+  version: fc700035fe4a7020f50d49f420b3c088aed57e03
+  subpackages:
+  - azblob
 - name: github.com/bearmini/go-acl
   version: a423b25ba3ef3afa637b85a6222ccf2abffd01c6
   subpackages:
   - api
 - name: github.com/bmatcuk/doublestar
-  version: eae5cbd0721cf1baf6a83474611de521d48034ea
+  version: 2437321e1473408f122a95f65df3d8841fec4fba
 - name: github.com/BurntSushi/toml
   version: 3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005
 - name: github.com/djherbis/times
@@ -65,8 +71,12 @@ imports:
   version: 9f541cc9db5d55bce703bd99987c9d5cb8eea45e
 - name: github.com/gofrs/uuid
   version: 6b08a5c5172ba18946672b49749cde22873dd7c2
+- name: github.com/golang/groupcache
+  version: 869f871628b6baa9cfbc11732cdf6546b17c1298
+  subpackages:
+  - lru
 - name: github.com/golang/protobuf
-  version: 6c65a5562fc06764971b7c5d05c76c75e84bdbf7
+  version: 1680a479a2cfb3fa22b972af7e36d0a0fde47bf8
   subpackages:
   - proto
   - protoc-gen-go/descriptor
@@ -75,15 +85,11 @@ imports:
   - ptypes/duration
   - ptypes/timestamp
 - name: github.com/googleapis/gax-go
-  version: bd5b16380fd03dc758d11cef74ba2e3bc8b0e8c2
+  version: 7cb21a99a18735dde62f5d3cc0244f3f35bd9515
   subpackages:
   - v2
-- name: github.com/hashicorp/golang-lru
-  version: 59383c442f7d7b190497e9bb8fc17a48d06cd03f
-  subpackages:
-  - simplelru
 - name: github.com/howeyc/gopass
-  version: bf9dde6d0d2c004a008c27aaee91170c786f6db8
+  version: 7cb4b85ec19c7c220ab71433a230f7eb200d639d
 - name: github.com/jessevdk/go-flags
   version: 96dc06278ce32a0e9d957d590bb987c81ee66407
 - name: github.com/jinzhu/configor
@@ -93,7 +99,7 @@ imports:
 - name: github.com/jordan-wright/email
   version: 94ae17dedda217a49e3b47d68f1b54b3c946e16b
 - name: github.com/julienschmidt/httprouter
-  version: 26a05976f9bf5c3aa992cc20e8588c359418ee58
+  version: 6d4f4fb4d2ae6d1cb069aecb0e330fd3ee9e0b43
 - name: github.com/mattn/go-sqlite3
   version: 25ecb14adfc7543176f7d85291ec7dba82c6f7e4
 - name: github.com/paulbellamy/ratecounter
@@ -103,7 +109,7 @@ imports:
   subpackages:
   - hooks/test
 - name: go.opencensus.io
-  version: b4a14686f0a98096416fe1b4cb848e384fb2b22b
+  version: df0549d970e2a64236cca48fa6a76f0d321c8254
   subpackages:
   - internal
   - internal/tagencoding
@@ -121,17 +127,17 @@ imports:
   - trace/propagation
   - trace/tracestate
 - name: golang.org/x/crypto
-  version: 4def268fd1a49955bfb3dda92fe3db4f924f2285
+  version: 227b76d455e791cb042b03e633e2f7fbcfdf74a5
   subpackages:
   - bcrypt
   - blowfish
   - ssh/terminal
 - name: golang.org/x/exp
-  version: fd42eb6b336fd763bcd0fb5be27323f5587d63d2
+  version: 81c71964d733d2e3e2375a315c0e2fd4d162adc4
   subpackages:
   - utf8string
 - name: golang.org/x/net
-  version: da137c7871d730100384dbcf36e6f8fa493aef5b
+  version: 1a5e07d1ff72da30f660d3c95b312a20be31173c
   subpackages:
   - context
   - context/ctxhttp
@@ -149,36 +155,36 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: fae7ac547cb717d141c433a2a173315e216b64c4
+  version: 0a153f010e6963173baba2306531d173aa843137
   subpackages:
   - unix
   - windows
 - name: golang.org/x/text
-  version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
+  version: 3d0f7978add91030e5e8976ff65ccdd828286cba
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/time
-  version: 9d24e82272b4f38b78bc8cff74fa936d31ccd8ef
+  version: c4c64cad1fd0a1a8dab2523e04e61d35308e131e
   subpackages:
   - rate
 - name: google.golang.org/api
-  version: aa15faf3c8a1cffc77fc3dabe95703bb12c5f6a9
+  version: 77662f30da8106a43a67d393e4b2e9b6eefaab11
   subpackages:
-  - gensupport
   - googleapi
   - googleapi/internal/uritemplates
   - googleapi/transport
   - internal
+  - internal/gensupport
   - iterator
   - option
   - storage/v1
   - transport/http
   - transport/http/internal/propagation
 - name: google.golang.org/appengine
-  version: b2f4a3cf3c67576a2ee09e1fe62656a5086ce880
+  version: c71d63e301d75423acb410203c747cad31e9a5e7
   subpackages:
   - internal
   - internal/app_identity
@@ -190,7 +196,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: 3bdd9d9f5532d75d09efb230bd767d265245cfe5
+  version: f660b865573183437d2d868f703fe88bb8af0b55
   subpackages:
   - googleapis/api/annotations
   - googleapis/iam/v1
@@ -198,7 +204,7 @@ imports:
   - googleapis/rpc/status
   - googleapis/type/expr
 - name: google.golang.org/grpc
-  version: 24b2fb8959201be9ce659bc87b0d590a34c67eae
+  version: 6b46f470d101e9ad1c8a02a4c8cb06fb53a0d300
   subpackages:
   - balancer
   - balancer/base

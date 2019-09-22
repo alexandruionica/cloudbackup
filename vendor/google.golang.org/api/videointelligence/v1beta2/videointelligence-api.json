@@ -127,7 +127,7 @@
       }
     }
   },
-  "revision": "20190618",
+  "revision": "20190905",
   "rootUrl": "https://videointelligence.googleapis.com/",
   "schemas": {
     "GoogleCloudVideointelligenceV1_AnnotateVideoProgress": {
@@ -574,8 +574,19 @@
           },
           "type": "array"
         },
+        "segment": {
+          "$ref": "GoogleCloudVideointelligenceV1_VideoSegment",
+          "description": "Video segment on which the annotation is run."
+        },
         "segmentLabelAnnotations": {
           "description": "Topical label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "segmentPresenceLabelAnnotations": {
+          "description": "Presence label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1_LabelAnnotation"
           },
@@ -590,6 +601,13 @@
         },
         "shotLabelAnnotations": {
           "description": "Topical label annotations on shot level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "shotPresenceLabelAnnotations": {
+          "description": "Presence label annotations on shot level. There is exactly one element for\neach unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1_LabelAnnotation"
           },
@@ -1315,8 +1333,19 @@
           },
           "type": "array"
         },
+        "segment": {
+          "$ref": "GoogleCloudVideointelligenceV1beta2_VideoSegment",
+          "description": "Video segment on which the annotation is run."
+        },
         "segmentLabelAnnotations": {
           "description": "Topical label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1beta2_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "segmentPresenceLabelAnnotations": {
+          "description": "Presence label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1beta2_LabelAnnotation"
           },
@@ -1331,6 +1360,13 @@
         },
         "shotLabelAnnotations": {
           "description": "Topical label annotations on shot level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1beta2_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "shotPresenceLabelAnnotations": {
+          "description": "Presence label annotations on shot level. There is exactly one element for\neach unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1beta2_LabelAnnotation"
           },
@@ -1883,8 +1919,19 @@
           },
           "type": "array"
         },
+        "segment": {
+          "$ref": "GoogleCloudVideointelligenceV1p1beta1_VideoSegment",
+          "description": "Video segment on which the annotation is run."
+        },
         "segmentLabelAnnotations": {
           "description": "Topical label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1p1beta1_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "segmentPresenceLabelAnnotations": {
+          "description": "Presence label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1p1beta1_LabelAnnotation"
           },
@@ -1899,6 +1946,13 @@
         },
         "shotLabelAnnotations": {
           "description": "Topical label annotations on shot level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1p1beta1_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "shotPresenceLabelAnnotations": {
+          "description": "Presence label annotations on shot level. There is exactly one element for\neach unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1p1beta1_LabelAnnotation"
           },
@@ -2413,8 +2467,19 @@
           },
           "type": "array"
         },
+        "segment": {
+          "$ref": "GoogleCloudVideointelligenceV1p2beta1_VideoSegment",
+          "description": "Video segment on which the annotation is run."
+        },
         "segmentLabelAnnotations": {
           "description": "Topical label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1p2beta1_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "segmentPresenceLabelAnnotations": {
+          "description": "Presence label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1p2beta1_LabelAnnotation"
           },
@@ -2429,6 +2494,13 @@
         },
         "shotLabelAnnotations": {
           "description": "Topical label annotations on shot level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1p2beta1_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "shotPresenceLabelAnnotations": {
+          "description": "Presence label annotations on shot level. There is exactly one element for\neach unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1p2beta1_LabelAnnotation"
           },
@@ -3101,8 +3173,19 @@
           },
           "type": "array"
         },
+        "segment": {
+          "$ref": "GoogleCloudVideointelligenceV1p3beta1_VideoSegment",
+          "description": "Video segment on which the annotation is run."
+        },
         "segmentLabelAnnotations": {
           "description": "Topical label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1p3beta1_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "segmentPresenceLabelAnnotations": {
+          "description": "Presence label annotations on video level or user specified segment level.\nThere is exactly one element for each unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1p3beta1_LabelAnnotation"
           },
@@ -3117,6 +3200,13 @@
         },
         "shotLabelAnnotations": {
           "description": "Topical label annotations on shot level.\nThere is exactly one element for each unique label.",
+          "items": {
+            "$ref": "GoogleCloudVideointelligenceV1p3beta1_LabelAnnotation"
+          },
+          "type": "array"
+        },
+        "shotPresenceLabelAnnotations": {
+          "description": "Presence label annotations on shot level. There is exactly one element for\neach unique label.",
           "items": {
             "$ref": "GoogleCloudVideointelligenceV1p3beta1_LabelAnnotation"
           },

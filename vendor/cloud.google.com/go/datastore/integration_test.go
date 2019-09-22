@@ -123,8 +123,17 @@ func initReplay() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	newTestClient = func(ctx context.Context, t *testing.T) *Client {
-		client, err := NewClient(ctx, ri.ProjectID, option.WithGRPCConn(conn))
+		grpcHeadersEnforcer := &testutil.HeadersEnforcer{
+			OnFailure: t.Fatalf,
+			Checkers: []*testutil.HeaderChecker{
+				testutil.XGoogClientHeaderChecker,
+			},
+		}
+
+		opts := append(grpcHeadersEnforcer.CallOptions(), option.WithGRPCConn(conn))
+		client, err := NewClient(ctx, ri.ProjectID, opts...)
 		if err != nil {
 			t.Fatalf("NewClient: %v", err)
 		}
@@ -141,7 +150,14 @@ func newClient(ctx context.Context, t *testing.T, dialOpts []grpc.DialOption) *C
 	if ts == nil {
 		t.Skip("Integration tests skipped. See CONTRIBUTING.md for details")
 	}
-	opts := []option.ClientOption{option.WithTokenSource(ts)}
+
+	grpcHeadersEnforcer := &testutil.HeadersEnforcer{
+		OnFailure: t.Fatalf,
+		Checkers: []*testutil.HeaderChecker{
+			testutil.XGoogClientHeaderChecker,
+		},
+	}
+	opts := append(grpcHeadersEnforcer.CallOptions(), option.WithTokenSource(ts))
 	for _, opt := range dialOpts {
 		opts = append(opts, option.WithGRPCDialOption(opt))
 	}
@@ -161,9 +177,10 @@ func TestIntegration_Basics(t *testing.T) {
 		I int
 		S string
 		T time.Time
+		U interface{}
 	}
 
-	x0 := X{66, "99", timeNow.Truncate(time.Millisecond)}
+	x0 := X{66, "99", timeNow.Truncate(time.Millisecond), "X"}
 	k, err := client.Put(ctx, IncompleteKey("BasicsX", nil), &x0)
 	if err != nil {
 		t.Fatalf("client.Put: %v", err)

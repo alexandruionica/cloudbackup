@@ -38,3 +38,7 @@ import:
   version: ^0.41.0
   subpackages:
   - storage
+- package: github.com/Azure/azure-storage-blob-go
+  version: ^0.8.0
+  subpackages:
+  - azblob

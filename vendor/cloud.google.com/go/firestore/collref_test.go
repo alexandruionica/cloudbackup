@@ -16,6 +16,7 @@ package firestore
 
 import (
 	"context"
+	"encoding/base64"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -41,10 +42,14 @@ func TestNewDoc(t *testing.T) {
 	coll := c.Collection("C")
 	got := coll.NewDoc()
 	if got.Parent != coll {
-		t.Errorf("got %v, want %v", got.Parent, coll)
+		t.Errorf("NewDoc got %v, want %v", got.Parent, coll)
 	}
-	if len(got.ID) != 20 {
-		t.Errorf("got %d-char ID, wanted 20", len(got.ID))
+	b, err := base64.RawURLEncoding.DecodeString(got.ID)
+	if err != nil {
+		t.Fatalf("NewDoc DecodeToString(%q) got err: %v", got.ID, err)
+	}
+	if len(b) != 32 {
+		t.Errorf("NewDoc got %d-byte ID, wanted 32", len(b))
 	}
 
 	got2 := coll.NewDoc()
@@ -55,7 +60,9 @@ func TestNewDoc(t *testing.T) {
 
 func TestAdd(t *testing.T) {
 	ctx := context.Background()
-	c, srv := newMock(t)
+	c, srv, cleanup := newMock(t)
+	defer cleanup()
+
 	wantReq := commitRequestForSet()
 	w := wantReq.Writes[0]
 	w.CurrentDocument = &pb.Precondition{
@@ -77,7 +84,9 @@ func TestAdd(t *testing.T) {
 
 func TestNilErrors(t *testing.T) {
 	ctx := context.Background()
-	c, _ := newMock(t)
+	c, _, cleanup := newMock(t)
+	defer cleanup()
+
 	// Test that a nil CollectionRef results in a nil DocumentRef and errors
 	// where possible.
 	coll := c.Collection("a/b") // nil because "a/b" denotes a doc.
