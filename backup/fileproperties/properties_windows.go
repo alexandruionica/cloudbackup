@@ -114,12 +114,7 @@ func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 		return "", "", ErrCouldNotGetOwner
 	}
 
-	filePerm.Owner.SID, err = owner.String()
-	if err != nil {
-		logger.Warnf("while trying to get the string representation of the account SID representing the owner of "+
-			"'%s' the following error was encountered: '%s'", path, err)
-		return "", "", ErrCouldNotGetSidString
-	}
+	filePerm.Owner.SID = owner.String()
 
 	filePerm.Owner.Name, filePerm.Owner.Domain, filePerm.Owner.Type, err = owner.LookupAccount("")
 	if err != nil {
@@ -135,12 +130,7 @@ func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 		logger.Warnf("could not establish owning group for '%s'", path)
 		return filePerm.Owner.Name, "", ErrCouldNotGetGroup
 	}
-	filePerm.Group.SID, err = group.String()
-	if err != nil {
-		logger.Warnf("while trying to get the string representation of the account SID representing the group of "+
-			"'%s' the following error was encountered: '%s'", path, err)
-		return filePerm.Owner.Name, "", ErrCouldNotGetSidString
-	}
+	filePerm.Group.SID = group.String()
 
 	filePerm.Group.Name, filePerm.Group.Domain, filePerm.Group.Type, err = group.LookupAccount("")
 	if err != nil {
@@ -167,12 +157,7 @@ func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error)
 	// start from 1 not 0 as output is shown in error messages
 	currentAceNumber := 1
 	for _, ace := range aces {
-		sidAccountSid, err := ace.GetSID().String()
-		if err != nil {
-			logger.Warnf("while trying to get the string representation of the account SID for ACL "+
-				"entry %d belonging to '%s' the following error was encountered: '%s'", currentAceNumber, path, err)
-			return filePerm.Owner.Name, "", ErrCouldNotGetSidString
-		}
+		sidAccountSid := ace.GetSID().String()
 		sidAccountName, sidDomain, sidAccountType, err := ace.GetSID().LookupAccount("")
 		if err != nil {
 			logger.Warnf("unable to get security details for ACL entry %d having details '%+v' of '%s' as the "+
