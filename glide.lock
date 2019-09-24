@@ -1,5 +1,5 @@
 hash: 4204a4bbe8c3102bd00babe24d4de33053639441813b51f012a635e117f71fb1
-updated: 2019-09-22T20:22:23.749397256+10:00
+updated: 2019-09-24T19:17:25.042963222+10:00
 imports:
 - name: cloud.google.com/go
   version: 264def2dd949cdb8a803bb9f50fa29a67b798a6a
@@ -12,7 +12,7 @@ imports:
   - internal/version
   - storage
 - name: github.com/aws/aws-sdk-go
-  version: e40a2293b9fb27bd93c2b10a9fe06bd1293691a0
+  version: d95533abfcd8b01d7084748aef7060fa6c9d0c3a
   subpackages:
   - aws
   - aws/awserr
@@ -79,7 +79,12 @@ imports:
   version: 1680a479a2cfb3fa22b972af7e36d0a0fde47bf8
   subpackages:
   - proto
+  - protoc-gen-go
   - protoc-gen-go/descriptor
+  - protoc-gen-go/generator
+  - protoc-gen-go/generator/internal/remap
+  - protoc-gen-go/grpc
+  - protoc-gen-go/plugin
   - ptypes
   - ptypes/any
   - ptypes/duration
@@ -98,8 +103,13 @@ imports:
   version: c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5
 - name: github.com/jordan-wright/email
   version: 94ae17dedda217a49e3b47d68f1b54b3c946e16b
+- name: github.com/jstemmer/go-junit-report
+  version: af01ea7f8024089b458d804d5cdf190f962a9a0c
+  subpackages:
+  - formatter
+  - parser
 - name: github.com/julienschmidt/httprouter
-  version: 6d4f4fb4d2ae6d1cb069aecb0e330fd3ee9e0b43
+  version: 667c1dbb44f3b5528b874c3c9071b23702e3dd0f
 - name: github.com/mattn/go-sqlite3
   version: 25ecb14adfc7543176f7d85291ec7dba82c6f7e4
 - name: github.com/paulbellamy/ratecounter
@@ -127,7 +137,7 @@ imports:
   - trace/propagation
   - trace/tracestate
 - name: golang.org/x/crypto
-  version: 227b76d455e791cb042b03e633e2f7fbcfdf74a5
+  version: 9ee001bba392397c76f100a2d5b13afc86f167f1
   subpackages:
   - bcrypt
   - blowfish
@@ -135,9 +145,15 @@ imports:
 - name: golang.org/x/exp
   version: 81c71964d733d2e3e2375a315c0e2fd4d162adc4
   subpackages:
+  - apidiff
+  - cmd/apidiff
   - utf8string
+- name: golang.org/x/lint
+  version: 414d861bb4acf565ff8cb05f9906a2283b7dc75a
+  subpackages:
+  - golint
 - name: golang.org/x/net
-  version: 1a5e07d1ff72da30f660d3c95b312a20be31173c
+  version: aa69164e4478b84860dc6769c710c699c67058a3
   subpackages:
   - context
   - context/ctxhttp
@@ -155,7 +171,7 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 0a153f010e6963173baba2306531d173aa843137
+  version: 2aa67d56cdd77167a5fb51358e8c3ce04bad68bb
   subpackages:
   - unix
   - windows
@@ -170,8 +186,28 @@ imports:
   version: c4c64cad1fd0a1a8dab2523e04e61d35308e131e
   subpackages:
   - rate
+- name: golang.org/x/tools
+  version: 3ac2a5bbd98a82f5bdd8071d9e7a8cadcb72e17a
+  subpackages:
+  - cmd/goimports
+  - go/analysis
+  - go/analysis/passes/inspect
+  - go/ast/astutil
+  - go/ast/inspector
+  - go/buildutil
+  - go/gcexportdata
+  - go/internal/gcimporter
+  - go/internal/packagesdriver
+  - go/packages
+  - go/types/objectpath
+  - go/types/typeutil
+  - internal/fastwalk
+  - internal/gopathwalk
+  - internal/imports
+  - internal/module
+  - internal/semver
 - name: google.golang.org/api
-  version: 77662f30da8106a43a67d393e4b2e9b6eefaab11
+  version: 99d61c9f5f95c5dcbb08242b071a810d541c1c1f
   subpackages:
   - googleapi
   - googleapi/internal/uritemplates
@@ -204,7 +240,7 @@ imports:
   - googleapis/rpc/status
   - googleapis/type/expr
 - name: google.golang.org/grpc
-  version: 6b46f470d101e9ad1c8a02a4c8cb06fb53a0d300
+  version: 788ffe62759ade61e0d6273e480c9e8f3d09d30d
   subpackages:
   - balancer
   - balancer/base
@@ -240,4 +276,34 @@ imports:
   - tap
 - name: gopkg.in/yaml.v2
   version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+- name: honnef.co/go/tools
+  version: 4c0a318d638eb5e21ccbc2844c31f4e766350b49
+  subpackages:
+  - arg
+  - cmd/staticcheck
+  - config
+  - deprecated
+  - facts
+  - functions
+  - go/types/typeutil
+  - internal/cache
+  - internal/passes/buildssa
+  - internal/renameio
+  - internal/robustio
+  - internal/sharedcheck
+  - lint
+  - lint/lintdsl
+  - lint/lintutil
+  - lint/lintutil/format
+  - loader
+  - pattern
+  - printf
+  - simple
+  - ssa
+  - ssautil
+  - staticcheck
+  - staticcheck/vrp
+  - stylecheck
+  - unused
+  - version
 testImports: []
