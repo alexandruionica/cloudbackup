@@ -42,3 +42,7 @@ import:
   version: ^0.8.0
   subpackages:
   - azblob
+- package: github.com/Azure/azure-pipeline-go
+  version: ^0.2.2
+  subpackages:
+  - pipeline
