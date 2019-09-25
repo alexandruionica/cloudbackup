@@ -26,13 +26,9 @@ type Diagnostic struct {
 	Message  string
 	Source   string
 	Severity DiagnosticSeverity
+	Tags     []protocol.DiagnosticTag
 
 	SuggestedFixes []SuggestedFix
-}
-
-type SuggestedFix struct {
-	Title string
-	Edits []protocol.TextEdit
 }
 
 type DiagnosticSeverity int
@@ -88,13 +84,8 @@ func Diagnostics(ctx context.Context, view View, f GoFile, disabledAnalyses map[
 		}
 	}
 	// Updates to the diagnostics for this package may need to be propagated.
-	revDeps := f.GetActiveReverseDeps(ctx)
-	for _, f := range revDeps {
-		cphs, err := f.CheckPackageHandles(ctx)
-		if err != nil {
-			return nil, "", err
-		}
-		cph := WidestCheckPackageHandle(cphs)
+	revDeps := view.GetActiveReverseDeps(ctx, f.URI())
+	for _, cph := range revDeps {
 		pkg, err := cph.Check(ctx)
 		if err != nil {
 			return nil, warningMsg, err
@@ -238,14 +229,20 @@ func toDiagnostic(ctx context.Context, view View, diag analysis.Diagnostic, cate
 	if err != nil {
 		return Diagnostic{}, err
 	}
-	ca, err := getCodeActions(ctx, view, pkg, diag)
-	if err != nil {
-		return Diagnostic{}, err
-	}
-
 	rng, err := spanToRange(ctx, view, pkg, spn, false)
 	if err != nil {
 		return Diagnostic{}, err
+	}
+	fixes, err := suggestedFixes(ctx, view, pkg, diag)
+	if err != nil {
+		return Diagnostic{}, err
+	}
+	// This is a bit of a hack, but clients > 3.15 will be able to grey out unnecessary code.
+	// If we are deleting code as part of all of our suggested fixes, assume that this is dead code.
+	// TODO(golang/go/#34508): Return these codes from the diagnostics themselves.
+	var tags []protocol.DiagnosticTag
+	if onlyDeletions(fixes) {
+		tags = append(tags, protocol.Unnecessary)
 	}
 	return Diagnostic{
 		URI:            spn.URI(),
@@ -253,7 +250,8 @@ func toDiagnostic(ctx context.Context, view View, diag analysis.Diagnostic, cate
 		Source:         category,
 		Message:        diag.Message,
 		Severity:       SeverityWarning,
-		SuggestedFixes: ca,
+		SuggestedFixes: fixes,
+		Tags:           tags,
 	}, nil
 }
 
