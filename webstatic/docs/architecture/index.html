@@ -188,11 +188,13 @@ object store. Despite the fact that AWS S3 does not have the concept of a direct
 <p>Requirements for the S3 bucket configurations:
  - versioning must be enabled
  - MFA Delete must be disabled
+ - static website hosting must be disabled
  - the credentials provided to the backup software must grant access for:
-     - checking if versioning is enabled
-     - uploading items under the configured prefix
-     - deleting items under the configured prefix (both the current version and specific versions must be allowed for deletion)
-     - retrieving items under the configured prefix (both the current version and specific versions must be allowed for retrieval)</p>
+     - checking if versioning is enabled (<code>s3:GetBucketVersioning</code> IAM permission)
+     - checking if static website hosting is enabled (<code>S3:GetBucketWebsite</code> IAM permission)
+     - uploading items under the configured prefix (<code>s3:PutObject</code> IAM permission)
+     - retrieving items under the configured prefix. Both the current version and specific versions must be allowed for retrieval (<code>s3:GetObject</code> and <code>s3:GetObjectVersion</code> IAM permissions)
+     - deleting items under the configured prefix. Both the current version and specific versions must be allowed for deletion (<code>s3:DeleteObject</code> and <code>s3:DeleteObjectVersion</code> IAM permissions)</p>
 <p>It is recommended that the S3 bucket is configured with a lifecycle rule which deletes dangling parts from multipart 
 uploads which are older that several days (assuming that a backup job run takes significantly less than the configured 
 period of the lifecycle rule)</p>

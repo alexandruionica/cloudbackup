@@ -80,11 +80,13 @@ For a given backup, according to the "prefix" setting of "applications/finance/s
  Requirements for the S3 bucket configurations:
  - versioning must be enabled
  - MFA Delete must be disabled
+ - static website hosting must be disabled
  - the credentials provided to the backup software must grant access for:
-     - checking if versioning is enabled
-     - uploading items under the configured prefix
-     - deleting items under the configured prefix (both the current version and specific versions must be allowed for deletion)
-     - retrieving items under the configured prefix (both the current version and specific versions must be allowed for retrieval)
+     - checking if versioning is enabled (`s3:GetBucketVersioning` IAM permission)
+     - checking if static website hosting is enabled (`S3:GetBucketWebsite` IAM permission)
+     - uploading items under the configured prefix (`s3:PutObject` IAM permission)
+     - retrieving items under the configured prefix. Both the current version and specific versions must be allowed for retrieval (`s3:GetObject` and `s3:GetObjectVersion` IAM permissions)
+     - deleting items under the configured prefix. Both the current version and specific versions must be allowed for deletion (`s3:DeleteObject` and `s3:DeleteObjectVersion` IAM permissions)
      
 It is recommended that the S3 bucket is configured with a lifecycle rule which deletes dangling parts from multipart 
 uploads which are older that several days (assuming that a backup job run takes significantly less than the configured 
