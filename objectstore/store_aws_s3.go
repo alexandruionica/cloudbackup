@@ -260,6 +260,20 @@ func (objStore *StoreAwsS3) Validate() (string, error) {
 		}
 	}
 
+	staticWebsiteEnabled, err := objStore.checkBucketHasStaticWebsiteEnabled()
+	if err != nil {
+		failedValidation = true
+		failureMsg += fmt.Sprintf("While checking if S3 bucket '%s' has static website enabled encountered "+
+			"error: %s. ", objStore.storeBucketName, err) // must leave one whitespace at end of sentence
+	} else {
+		if staticWebsiteEnabled {
+			failureMsg += fmt.Sprintf("S3 bucket '%s' has static website hosting enabled and this setting needs to be "+
+				"disabled as otherwise it can lead to backed up data being accessed by unauthorised parties. ",
+				objStore.storeBucketName) // must leave one whitespace at end of sentence
+			failedValidation = true
+		}
+	}
+
 	// check we can PUT and DELETE in the S3 bucket, directly under $prefix
 	err = objStore.testUploadAndDelete()
 	if err != nil {
@@ -271,7 +285,8 @@ func (objStore *StoreAwsS3) Validate() (string, error) {
 	if failedValidation {
 		return failureMsg, errors.New(failureMsg)
 	} else {
-		return fmt.Sprintf("%s passed validation", objStore.storeName), nil
+		return fmt.Sprintf("Target '%s' of type '%s' belonging to backup job '%s' passed validation",
+			objStore.storeName, objStore.storeType, objStore.backupName), nil
 	}
 }
 
@@ -291,15 +306,14 @@ func (objStore *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled boo
 			default:
 				errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, aerr.Error())
 				logger.Errorf(errMsg)
-				return versioningEnabled, mfaDeleteEnabled, errors.New(errMsg)
+				return versioningEnabled, mfaDeleteEnabled, errors.New(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
 			errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, err.Error())
 			logger.Errorf(errMsg)
-			return versioningEnabled, mfaDeleteEnabled, errors.New(errMsg)
+			return versioningEnabled, mfaDeleteEnabled, err
 		}
 	}
 
@@ -326,6 +340,36 @@ func (objStore *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled boo
 	}
 
 	return versioningEnabled, mfaDeleteEnabled, nil
+}
+
+func (objStore *StoreAwsS3) checkBucketHasStaticWebsiteEnabled() (staticWebsiteEnabled bool, err error) {
+	input := &s3.GetBucketWebsiteInput{
+		Bucket: aws.String(objStore.storeBucketName),
+	}
+
+	_, err = objStore.awsS3Svc.GetBucketWebsite(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case "NoSuchWebsiteConfiguration":
+				// all is good as we don't want the bucket to have Static website support enabled
+				return false, nil
+			default:
+				errMsg := fmt.Sprintf("While checking that the S3 bucket '%s' does not have static website "+
+					"hosting enabled, encountered error: %s", objStore.storeBucketName, aerr.Error())
+				logger.Errorf(errMsg)
+				return false, errors.New(aerr.Error())
+			}
+		} else {
+			errMsg := fmt.Sprintf("While checking that the S3 bucket '%s' does not have static website "+
+				"hosting enabled, encountered error: %s", objStore.storeBucketName, err.Error())
+			logger.Errorf(errMsg)
+			return false, err
+		}
+	} else {
+		// if we didn't get an error than static website hosting is enabled
+		return true, nil
+	}
 }
 
 // upload a test file and then delete it in order to validate permissions
