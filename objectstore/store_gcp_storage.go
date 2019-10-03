@@ -305,7 +305,8 @@ func (objStore *StoreGcpStorage) Validate() (string, error) {
 	if failedValidation {
 		return failureMsg, errors.New(failureMsg)
 	} else {
-		return fmt.Sprintf("%s passed validation", objStore.storeName), nil
+		return fmt.Sprintf("Target '%s' of type '%s' belonging to backup job '%s' passed validation",
+			objStore.storeName, objStore.storeType, objStore.backupName), nil
 	}
 }
 

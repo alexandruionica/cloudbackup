@@ -114,11 +114,17 @@ func GetObjectStores(ctx context.Context, backupConfig shared.ConfigBackup, back
 				}
 				results = append(results, store)
 			}
-		// TODO: when implementing aws_s3 backend go back to the config file used for unit tests and add it back there too as it was removed due to tests failing because it was yet to be implemented
-		// also update the config file used be the Python integration tests
 		case "gcp_storage":
 			{
 				store, err := InitialiseStoreGcpStorage(ctx, backupConfig, backupTarget, backupTarget.RateLimit, backupJobsState)
+				if err != nil {
+					return results, err
+				}
+				results = append(results, store)
+			}
+		case "azure_blob":
+			{
+				store, err := InitialiseStoreAzureBlob(ctx, backupConfig, backupTarget, backupTarget.RateLimit, backupJobsState)
 				if err != nil {
 					return results, err
 				}
