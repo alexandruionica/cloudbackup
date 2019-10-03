@@ -380,6 +380,8 @@ func ValidateBackupTargetParameters(parameters []shared.ConfigBackupTargetParams
 		return ValidateBackupTargetParametersForS3(parameters, BackupName, TargetName, TargetType)
 	case "gcp_storage":
 		return ValidateBackupTargetParametersForGCPStorage(parameters, BackupName, TargetName, TargetType)
+	case "azure_blob":
+		return ValidateBackupTargetParametersForAzureBlob(parameters, BackupName, TargetName, TargetType)
 	default:
 		return fmt.Errorf("can not validate parameters for unknown target type of %s for backup %s", TargetType, BackupName)
 	}
@@ -530,6 +532,26 @@ Loop:
 	return nil
 }
 
+// validate "Backup/Target/Parameters" section of the config for the azure_blob object store type
+func ValidateBackupTargetParametersForAzureBlob(parameters []shared.ConfigBackupTargetParams, BackupName string, TargetName string, TargetType string) error {
+	allowedParameters := [...]string{"storage_account", "storage_access_key", "primary_blob_service_endpoint"}
+	// list of required parameters
+	// TODO - add support for Azure metadata service based tokens and stop requiring the "storage_access_key" parameter
+	requiredParameters := [...]string{"storage_account", "storage_access_key"}
+
+	err := validateTargetParametersAreKnown(parameters, allowedParameters[:], BackupName, TargetName, TargetType)
+	if err != nil {
+		return err
+	}
+
+	err = validateTargetRequiredParameters(parameters, requiredParameters[:], BackupName, TargetName, TargetType)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // checks that supplied parameters for a given target are all known(allowed) parameters for said target
 func validateTargetParametersAreKnown(parameters []shared.ConfigBackupTargetParams, allowedParameters []string, BackupName string, TargetName string, TargetType string) error {
 	for _, entry := range parameters {
@@ -543,6 +565,24 @@ func validateTargetParametersAreKnown(parameters []shared.ConfigBackupTargetPara
 		if !foundMatch {
 			return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has specified parameter '%s' "+
 				"which is not a known configuration option", TargetName, TargetType, BackupName, entry.Name)
+		}
+	}
+	return nil
+}
+
+// checks that required parameters for a target, are specified
+func validateTargetRequiredParameters(parameters []shared.ConfigBackupTargetParams, requiredParameters []string, BackupName string, TargetName string, TargetType string) error {
+	for _, entry := range parameters {
+		foundMatch := false
+		for _, param := range requiredParameters {
+			if strings.ToLower(entry.Name) == param {
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' requires parameter '%s' "+
+				"but this parameter has not been specified", TargetName, TargetType, BackupName, entry.Name)
 		}
 	}
 	return nil
