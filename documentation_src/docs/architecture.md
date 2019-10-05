@@ -4,7 +4,7 @@ There is only one binary which can be started as a server or which can be used a
 
 When running in server mode it requires a configuration file and also a set of static web assets which it uses for serving documentation or for service the static parts of a web UI.
 
-## Command Stucture
+# Command Stucture
 
 The command and its main options are depicted below. Command line parameters are supported and can be discovered using the `--help` option. For example:
 ```
@@ -33,32 +33,9 @@ Help Options:
 
 ![command](img/command_expanded.png)
 
-## File Lifecycle
+# Backup Target(Object Store) Types
 
-![file lifecycle diagram](img/file_lifecycle.png)
-
-## Potential issues
-
-- if a file is created locally and its creation date is set to be in the past then once backed up the file would be restored when also selecting a restore point which is before the file was created locally
-
-## File Metadata
-
-For backed up files:
-
-- filepath
-- owner
-- size
-- mtime
-- ctime
-- encrypted (bool)
-- delete_marker (bool)
-- filename_encoded (bool) if filename contains unicode chars then convert them to unicode escaped code points
-- link_target (valid only for symlinks)
-- checksum (valid only if checksum is enabled)
-
-## Backup Target(Object Store) Types
-
-### aws_s3 ###
+## aws_s3
 
 Only files gets sent to the object store. 
 
@@ -92,7 +69,7 @@ It is recommended that the S3 bucket is configured with a lifecycle rule which d
 uploads which are older that several days (assuming that a backup job run takes significantly less than the configured 
 period of the lifecycle rule)
 
-### gcp_storage ###
+## gcp_storage
 
 Only files gets sent to the object store. 
 
@@ -110,3 +87,29 @@ For a given backup, according to the "prefix" setting of "applications/finance/s
  in order to manually retrieve a previous version of a given file, you will have to use 
  [`gsutil`](https://cloud.google.com/storage/docs/gsutil) or a third party GCP storage browser as the Google Cloud Console 
  does not show previous versions of an object.
+
+## azure_blob
+ 
+Only files gets sent to the object store. 
+
+Directories and symlinks have their properties stored in the database only as there is no need to upload them to the 
+object store. 
+
+For a given backup, according to the "prefix" setting of "applications/finance/srv01-east.foo.bar" in the configuration
+file for that backup section, you will end up with the following paths in the Azure Blob Storage container (bucket):
+ - backed up files being stored under "applications/finance/srv01-east.foo.bar/`data/`"
+ - the database used by the backup software and also a version of the configuration file (which has secrets stripped 
+out) stored in "applications/finance/srv01-east.foo.bar/`metadata/`"
+
+Any alteration or change to the above structure or to the files stored may lead corruption of the backup. Otherwise, 
+it is safe to read the data and to manually download any file which has been backed up. 
+
+### versioning
+
+Because the Azure Blob Storage container (referenced as "bucket" in the configuration and some of the log messages) 
+does not natively support versioning each stored file will have a version identifier appended to the file name. For 
+example for a given file called `description.pdf`, when backed up for the first time, in the Azure Blob Storage container
+the file will appear as `description.pdf.v1` where `v1` is the appended version. A new version of the file being backed 
+up will lead to a `.v2` append (resulting in `description.pdf.v2`) and so on.
+
+![file lifecycle diagram](img/file_lifecycle.png)
