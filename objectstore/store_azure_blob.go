@@ -216,5 +216,15 @@ func (objStore *StoreAzureBlob) testUploadGetDelete() error {
 		}
 	}
 
+	// delete
+	logger.Debugf("Deleting test file '%s' from Azure container(bucket) '%s'", uploadPath, objStore.storeBucketName)
+	_, err = blobURL.Delete(objStore.ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+	if err != nil {
+		return fmt.Errorf("while trying to delete the test file from '%s' in Azure container(bucket)"+
+			" '%s' received error message: '%s'", uploadPath, objStore.storeBucketName, err)
+	} else {
+		logger.Debugf("Successfully deleted test file '%s' from Azure container(bucket) '%s'", uploadPath, objStore.storeBucketName)
+	}
+
 	return nil
 }
