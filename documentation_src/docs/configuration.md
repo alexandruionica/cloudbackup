@@ -222,6 +222,7 @@ Once a target is configured, it is recommended to start the server and then run:
 
 It is highly advisable to: 
 
+- setup strict access controls on the S3 buckets in order to ensure only backup software has access to read or write contents.
 - dedicate S3 buckets only for backup only purposes. Mixing use of S3 buckets may lead to backups being corrupted if any other software or persons manage the contents of the S3 buckets
 - make use of the `prefix` backup configuration setting so a given system is the only one making use of any S3 bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. 
 - put a lifecycle rule on the S3 bucket so multipart uploads parts older than several days are automatically purged
@@ -273,6 +274,7 @@ If one of them is mentioned then all of them are required. If the GCP credential
 
 It is highly advisable to:
 
+- setup strict access controls on the GCP storage buckets in order to ensure only backup software has access to read or write contents.
 - dedicate GCP storage buckets only for backup only purposes. Mixing use of GCP storage buckets may lead to backups being corrupted if any other software or persons manage the contents of the buckets.
 - make use of the `prefix` backup configuration setting so a given system is the only one making use of any GCP storage bucket key beginning with said prefix. Failing to do so may lead to corrupted backups.
 - not disable the computation of CRC32c hashes. 
@@ -320,6 +322,48 @@ backup:
             value: regional
           - name: disable_crc32c_hash
             value: no
+``` 
+
+### azure_blob
+ 
+- `storage_account` - required parameter. Azure Blob Storage account to use (must be of type Blob Storage).
+- `storage_access_key` - required parameter. Azure Blob Storage account key.
+- `primary_blob_service_endpoint` - optional parameter. If specified, it must be URL show in the Microsoft Azure portal
+ when navigating to `Home > Storage accounts > ${STORAGE_ACCOUNT_NAME} > Properties` and looking at the 
+ `Primary Blob Service Endpoint` property (`${STORAGE_ACCOUNT_NAME}` represents the name of your storage account as you've 
+ mentioned it in the `storage_account` setting above. If not specified then `https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/` 
+ will be used and `${STORAGE_ACCOUNT_NAME}` will be automatically replaced with the value of `storage_account` as you 
+ have specified it.
+
+
+It is highly advisable to: 
+
+- setup strict access controls on the Azure Blob Storage containers (buckets) in order to ensure only backup software has access to read or write contents.
+- dedicate Azure Blob Storage containers (buckets) only for backup only purposes. Mixing use of containers (buckets) may lead to backups being corrupted if any other software or persons manage the contents of the Azure Blob Storage containers (buckets)
+- make use of the `prefix` backup configuration setting so a given system is the only one making use of any Azure Blob Storage containers (buckets) key beginning with said prefix. Failing to do so may lead to corrupted backups. 
+
+Example configuration:
+```yaml
+data_dir: /var/lib/cloudbackup
+user:
+  - name: testuser1
+    pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
+    access: write
+backup:
+  - name: daily
+    paths:
+      - /something
+      - /var/lib
+    target:
+      - name: azure
+        type: azure_blob
+        bucket: 'example-com-us-servers'
+        prefix: 'backup/backups-for-server-51'
+        parameters:
+          - name: storage_account
+            value: backups
+          - name: storage_access_key
+            value: 'YmHQE9dil9wI48sv41HhAek/jr2VWSfY4QiCMLs6qi0XVYWEb9MxInOSH1039IdvxiqJZDhzniZCotPIRXQzwA=='
 ``` 
 
 # Notification

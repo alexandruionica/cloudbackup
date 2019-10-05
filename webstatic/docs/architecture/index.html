@@ -61,17 +61,19 @@
             
     <li class="toctree-l2"><a href="#overview">Overview</a></li>
     
+
+    <li class="toctree-l2"><a href="#command-stucture">Command Stucture</a></li>
+    
+
+    <li class="toctree-l2"><a href="#backup-targetobject-store-types">Backup Target(Object Store) Types</a></li>
+    
         <ul>
         
-            <li><a class="toctree-l3" href="#command-stucture">Command Stucture</a></li>
+            <li><a class="toctree-l3" href="#aws_s3">aws_s3</a></li>
         
-            <li><a class="toctree-l3" href="#file-lifecycle">File Lifecycle</a></li>
+            <li><a class="toctree-l3" href="#gcp_storage">gcp_storage</a></li>
         
-            <li><a class="toctree-l3" href="#potential-issues">Potential issues</a></li>
-        
-            <li><a class="toctree-l3" href="#file-metadata">File Metadata</a></li>
-        
-            <li><a class="toctree-l3" href="#backup-targetobject-store-types">Backup Target(Object Store) Types</a></li>
+            <li><a class="toctree-l3" href="#azure_blob">azure_blob</a></li>
         
         </ul>
     
@@ -124,7 +126,7 @@
                 <h1 id="overview">Overview</h1>
 <p>There is only one binary which can be started as a server or which can be used as a CLI client. In server mode this is the actual backup engine while the CLI's purpose is only to interact with the backup engine and give it instructions.</p>
 <p>When running in server mode it requires a configuration file and also a set of static web assets which it uses for serving documentation or for service the static parts of a web UI.</p>
-<h2 id="command-stucture">Command Stucture</h2>
+<h1 id="command-stucture">Command Stucture</h1>
 <p>The command and its main options are depicted below. Command line parameters are supported and can be discovered using the <code>--help</code> option. For example:</p>
 <pre><code>$ cloudbackup client backup dryrun --help
 Usage:
@@ -150,28 +152,8 @@ Help Options:
 </code></pre>
 
 <p><img alt="command" src="../img/command_expanded.png" /></p>
-<h2 id="file-lifecycle">File Lifecycle</h2>
-<p><img alt="file lifecycle diagram" src="../img/file_lifecycle.png" /></p>
-<h2 id="potential-issues">Potential issues</h2>
-<ul>
-<li>if a file is created locally and its creation date is set to be in the past then once backed up the file would be restored when also selecting a restore point which is before the file was created locally</li>
-</ul>
-<h2 id="file-metadata">File Metadata</h2>
-<p>For backed up files:</p>
-<ul>
-<li>filepath</li>
-<li>owner</li>
-<li>size</li>
-<li>mtime</li>
-<li>ctime</li>
-<li>encrypted (bool)</li>
-<li>delete_marker (bool)</li>
-<li>filename_encoded (bool) if filename contains unicode chars then convert them to unicode escaped code points</li>
-<li>link_target (valid only for symlinks)</li>
-<li>checksum (valid only if checksum is enabled)</li>
-</ul>
-<h2 id="backup-targetobject-store-types">Backup Target(Object Store) Types</h2>
-<h3 id="aws_s3">aws_s3</h3>
+<h1 id="backup-targetobject-store-types">Backup Target(Object Store) Types</h1>
+<h2 id="aws_s3">aws_s3</h2>
 <p>Only files gets sent to the object store. </p>
 <p>Directories and symlinks have their properties stored in the database only as there is no need to upload them to the 
 object store. Despite the fact that AWS S3 does not have the concept of a directory, when using the AWS S3 Console 
@@ -198,7 +180,7 @@ object store. Despite the fact that AWS S3 does not have the concept of a direct
 <p>It is recommended that the S3 bucket is configured with a lifecycle rule which deletes dangling parts from multipart 
 uploads which are older that several days (assuming that a backup job run takes significantly less than the configured 
 period of the lifecycle rule)</p>
-<h3 id="gcp_storage">gcp_storage</h3>
+<h2 id="gcp_storage">gcp_storage</h2>
 <p>Only files gets sent to the object store. </p>
 <p>Directories and symlinks have their properties stored in the database only as there is no need to upload them to the 
 object store. </p>
@@ -212,6 +194,24 @@ object store. </p>
  in order to manually retrieve a previous version of a given file, you will have to use 
  <a href="https://cloud.google.com/storage/docs/gsutil"><code>gsutil</code></a> or a third party GCP storage browser as the Google Cloud Console 
  does not show previous versions of an object.</p>
+<h2 id="azure_blob">azure_blob</h2>
+<p>Only files gets sent to the object store. </p>
+<p>Directories and symlinks have their properties stored in the database only as there is no need to upload them to the 
+object store. </p>
+<p>For a given backup, according to the "prefix" setting of "applications/finance/srv01-east.foo.bar" in the configuration
+file for that backup section, you will end up with the following paths in the Azure Blob Storage container (bucket):
+ - backed up files being stored under "applications/finance/srv01-east.foo.bar/<code>data/</code>"
+ - the database used by the backup software and also a version of the configuration file (which has secrets stripped 
+out) stored in "applications/finance/srv01-east.foo.bar/<code>metadata/</code>"</p>
+<p>Any alteration or change to the above structure or to the files stored may lead corruption of the backup. Otherwise, 
+it is safe to read the data and to manually download any file which has been backed up. </p>
+<h3 id="versioning">versioning</h3>
+<p>Because the Azure Blob Storage container (referenced as "bucket" in the configuration and some of the log messages) 
+does not natively support versioning each stored file will have a version identifier appended to the file name. For 
+example for a given file called <code>description.pdf</code>, when backed up for the first time, in the Azure Blob Storage container
+the file will appear as <code>description.pdf.v1</code> where <code>v1</code> is the appended version. A new version of the file being backed 
+up will lead to a <code>.v2</code> append (resulting in <code>description.pdf.v2</code>) and so on.</p>
+<p><img alt="file lifecycle diagram" src="../img/file_lifecycle.png" /></p>
               
             </div>
           </div>

@@ -340,6 +340,7 @@ notification:
 </ul>
 <p>It is highly advisable to: </p>
 <ul>
+<li>setup strict access controls on the S3 buckets in order to ensure only backup software has access to read or write contents.</li>
 <li>dedicate S3 buckets only for backup only purposes. Mixing use of S3 buckets may lead to backups being corrupted if any other software or persons manage the contents of the S3 buckets</li>
 <li>make use of the <code>prefix</code> backup configuration setting so a given system is the only one making use of any S3 bucket key beginning with said prefix. Failing to do so may lead to corrupted backups. </li>
 <li>put a lifecycle rule on the S3 bucket so multipart uploads parts older than several days are automatically purged</li>
@@ -388,6 +389,7 @@ If one of them is mentioned then all of them are required. If the GCP credential
 </ul>
 <p>It is highly advisable to:</p>
 <ul>
+<li>setup strict access controls on the GCP storage buckets in order to ensure only backup software has access to read or write contents.</li>
 <li>dedicate GCP storage buckets only for backup only purposes. Mixing use of GCP storage buckets may lead to backups being corrupted if any other software or persons manage the contents of the buckets.</li>
 <li>make use of the <code>prefix</code> backup configuration setting so a given system is the only one making use of any GCP storage bucket key beginning with said prefix. Failing to do so may lead to corrupted backups.</li>
 <li>not disable the computation of CRC32c hashes. </li>
@@ -434,6 +436,46 @@ backup:
             value: regional
           - name: disable_crc32c_hash
             value: no
+</code></pre>
+
+<h3 id="azure_blob">azure_blob</h3>
+<ul>
+<li><code>storage_account</code> - required parameter. Azure Blob Storage account to use (must be of type Blob Storage).</li>
+<li><code>storage_access_key</code> - required parameter. Azure Blob Storage account key.</li>
+<li><code>primary_blob_service_endpoint</code> - optional parameter. If specified, it must be URL show in the Microsoft Azure portal
+ when navigating to <code>Home &gt; Storage accounts &gt; ${STORAGE_ACCOUNT_NAME} &gt; Properties</code> and looking at the 
+ <code>Primary Blob Service Endpoint</code> property (<code>${STORAGE_ACCOUNT_NAME}</code> represents the name of your storage account as you've 
+ mentioned it in the <code>storage_account</code> setting above. If not specified then <code>https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/</code> 
+ will be used and <code>${STORAGE_ACCOUNT_NAME}</code> will be automatically replaced with the value of <code>storage_account</code> as you 
+ have specified it.</li>
+</ul>
+<p>It is highly advisable to: </p>
+<ul>
+<li>setup strict access controls on the Azure Blob Storage containers (buckets) in order to ensure only backup software has access to read or write contents.</li>
+<li>dedicate Azure Blob Storage containers (buckets) only for backup only purposes. Mixing use of containers (buckets) may lead to backups being corrupted if any other software or persons manage the contents of the Azure Blob Storage containers (buckets)</li>
+<li>make use of the <code>prefix</code> backup configuration setting so a given system is the only one making use of any Azure Blob Storage containers (buckets) key beginning with said prefix. Failing to do so may lead to corrupted backups. </li>
+</ul>
+<p>Example configuration:</p>
+<pre><code class="yaml">data_dir: /var/lib/cloudbackup
+user:
+  - name: testuser1
+    pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
+    access: write
+backup:
+  - name: daily
+    paths:
+      - /something
+      - /var/lib
+    target:
+      - name: azure
+        type: azure_blob
+        bucket: 'example-com-us-servers'
+        prefix: 'backup/backups-for-server-51'
+        parameters:
+          - name: storage_account
+            value: backups
+          - name: storage_access_key
+            value: 'YmHQE9dil9wI48sv41HhAek/jr2VWSfY4QiCMLs6qi0XVYWEb9MxInOSH1039IdvxiqJZDhzniZCotPIRXQzwA=='
 </code></pre>
 
 <h1 id="notification">Notification</h1>
