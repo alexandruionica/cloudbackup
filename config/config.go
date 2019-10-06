@@ -549,6 +549,21 @@ func ValidateBackupTargetParametersForAzureBlob(parameters []shared.ConfigBackup
 		return err
 	}
 
+	// check individual parameters for validity
+	for _, entry := range parameters {
+		switch strings.ToLower(entry.Name) {
+		case "primary_blob_service_endpoint":
+			{
+				if !utils.IsValidUrl(entry.Value) {
+					return fmt.Errorf("parameter 'primary_blob_service_endpoint' has value '%s' which is not a valid URL", entry.Value)
+				}
+				if strings.HasPrefix(entry.Value, "http://") {
+					return fmt.Errorf("parameter 'primary_blob_service_endpoint' has value '%s' which is an HTTP url. Only HTTPS urls are allowed", entry.Value)
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -572,9 +587,9 @@ func validateTargetParametersAreKnown(parameters []shared.ConfigBackupTargetPara
 
 // checks that required parameters for a target, are specified
 func validateTargetRequiredParameters(parameters []shared.ConfigBackupTargetParams, requiredParameters []string, BackupName string, TargetName string, TargetType string) error {
-	for _, entry := range parameters {
+	for _, param := range requiredParameters {
 		foundMatch := false
-		for _, param := range requiredParameters {
+		for _, entry := range parameters {
 			if strings.ToLower(entry.Name) == param {
 				foundMatch = true
 				break
@@ -582,7 +597,7 @@ func validateTargetRequiredParameters(parameters []shared.ConfigBackupTargetPara
 		}
 		if !foundMatch {
 			return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' requires parameter '%s' "+
-				"but this parameter has not been specified", TargetName, TargetType, BackupName, entry.Name)
+				"but this parameter has not been specified", TargetName, TargetType, BackupName, param)
 		}
 	}
 	return nil

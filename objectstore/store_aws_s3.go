@@ -2,6 +2,7 @@ package objectstore
 
 import (
 	"cloudbackup/shared"
+	"cloudbackup/utils"
 	"context"
 	"errors"
 	"fmt"
@@ -472,10 +473,14 @@ func calculateAwsS3RemotePath(prefix string, path string, metadata bool) string 
 		// when dealing with metadata, we want to store on the remote only the filename, excluding the rest of the local path
 		filename := filepath.Base(path)
 		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
-		return filepath.ToSlash(prefix + "/" + MetaDataPrepend + "/" + filename)
+		remotePath := filepath.ToSlash(prefix + "/" + MetaDataPrepend + "/" + filename)
+		// ensure we don't have double forward slashes
+		return utils.SquashForwardSlashes(remotePath)
 	} else {
 		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
-		return filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
+		remotePath := filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
+		// ensure we don't have double forward slashes
+		return utils.SquashForwardSlashes(remotePath)
 	}
 }
 
