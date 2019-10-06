@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -278,4 +279,21 @@ func GzipFile(srcFilePath string, dstFilePath string) error {
 		logger.Warnf("Could not close opened file handle for '%s' due to error: %s", dstFilePath, err)
 	}
 	return nil
+}
+
+// squashes forward slashes in a given string. For example "aa/#bb//#cc///#dd////#eeee" gets returned as "aa/#bb/#cc/#dd/#eeee"
+func SquashForwardSlashes(in string) string {
+	for strings.Contains(in, "//") {
+		in = strings.Replace(in, "//", "/", -1)
+	}
+	return in
+}
+
+func IsValidUrl(toTest string) bool {
+	_, err := url.ParseRequestURI(toTest)
+	if err != nil {
+		return false
+	} else {
+		return true
+	}
 }

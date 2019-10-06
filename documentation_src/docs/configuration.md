@@ -331,8 +331,8 @@ backup:
 - `primary_blob_service_endpoint` - optional parameter. If specified, it must be URL show in the Microsoft Azure portal
  when navigating to `Home > Storage accounts > ${STORAGE_ACCOUNT_NAME} > Properties` and looking at the 
  `Primary Blob Service Endpoint` property (`${STORAGE_ACCOUNT_NAME}` represents the name of your storage account as you've 
- mentioned it in the `storage_account` setting above. If not specified then `https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/` 
- will be used and `${STORAGE_ACCOUNT_NAME}` will be automatically replaced with the value of `storage_account` as you 
+ mentioned it in the `storage_account` setting above. Only HTTPS urls will be accepted for this parameter. If not specified 
+ then `https://${STORAGE_ACCOUNT_NAME}.blob.core.windows.net/` will be used and `${STORAGE_ACCOUNT_NAME}` will be automatically replaced with the value of `storage_account` as you 
  have specified it.
 
 

@@ -3,6 +3,7 @@ package objectstore
 import (
 	"bytes"
 	"cloudbackup/shared"
+	"cloudbackup/utils"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"golang.org/x/time/rate"
 	"net/url"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -106,17 +109,52 @@ func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBac
 
 	// Create an ServiceURL object that wraps the service URL and a request pipeline. This is used to make request to
 	// the overall storage account
+	logger.Debugf("Setting up connection to Azure Blob Storage")
 	result.azureServiceURL = azblob.NewServiceURL(*ServiceURL, result.azurePipeline)
 
 	// Create a ContainerURL object that wraps the container URL and a request pipeline to make requests.
 	result.azureContainerURL = azblob.NewContainerURL(*ContainerURL, result.azurePipeline)
+	logger.Debugf("Done setting up connection to Azure Blob Storage")
 
 	return result, nil
 }
 
-func (objStore *StoreAzureBlob) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface,
+func (objStore *StoreAzureBlob) Upload(DbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface,
 	metadata bool) (remoteVersion string, cancelled bool, err error) {
-	return "", false, fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
+
+	// Azure Blob doesn't support versioning so we use our own scheme of  "v" + $version appended together with a "." to the file name
+	remotePath, remoteVersion := calculateAzureStorageRemotePath(objStore.storePrefix, DbRecord.Path, metadata, version, false)
+	logger.Debugf("Uploading: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", DbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
+	blobURL := objStore.azureContainerURL.NewBlockBlobURL(remotePath)
+
+	if DbRecord.Type == "file" {
+		// setup io.Reader (this handles reporting and optional rate limiting)
+		reader, err := NewFileReader(DbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
+			objStore.storeType, 0, objStore.burst, DbRecord.Size, objStore.ctx, true) // we pass ratelimit as 0 because the rate limiting will be done (if needed) by the http.Client
+		if err != nil {
+			return remoteVersion, false, err
+		}
+		defer reader.Close()
+
+		// upload
+		_, err = azblob.UploadStreamToBlockBlob(objStore.ctx, &reader, blobURL, azblob.UploadStreamToBlockBlobOptions{
+			BufferSize: 5 * 1024 * 1024,
+			MaxBuffers: 3})
+		if err != nil {
+			if objStore.ctx.Err() == context.Canceled {
+				msg := fmt.Sprintf("received cancellation request while uploading content of %s", DbRecord.Path)
+				logger.Info(msg)
+				return remoteVersion, true, errors.New(msg)
+			}
+			return remoteVersion, false, err
+		}
+		// if we got here then upload worked as expected
+		return remoteVersion, false, nil
+	} else {
+		// directories and symlinks DO NOT GET UPLOADED
+		return remoteVersion, false, nil
+	}
 }
 
 // GetStoreDetails()(StoreName string, StoreType string)
@@ -227,4 +265,32 @@ func (objStore *StoreAzureBlob) testUploadGetDelete() error {
 	}
 
 	return nil
+}
+
+// return the remote path and remote version for a given $prefix , $path and $metadata (true if file is metadata, false if not), $version is
+// needed as Azure Blobs doesn't natively support versioning so we need to use our scheme and $delete_marker influences the version scheme result
+func calculateAzureStorageRemotePath(prefix string, path string, metadata bool, version int64, deleteMarker bool) (string, string) {
+	// Azure Blob doesn't support versioning so we use our own scheme of:
+	//   "v" or "d" + $version appended together with a "." to the file name
+	//   "v" is for "version" and "d" for "delete marker"
+	var remoteVersion string
+	if deleteMarker {
+		remoteVersion = "d" + strconv.FormatInt(version, 10)
+	} else {
+		remoteVersion = "v" + strconv.FormatInt(version, 10)
+	}
+
+	if metadata {
+		// when dealing with metadata, we want to store on the remote only the filename, excluding the rest of the local path
+		filename := filepath.Base(path) + "." + remoteVersion
+		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
+		remotePath := filepath.ToSlash(prefix + "/" + MetaDataPrepend + "/" + filename)
+		// ensure we don't have double forward slashes
+		return utils.SquashForwardSlashes(remotePath), remoteVersion
+	} else {
+		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
+		remotePath := filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path + "." + remoteVersion)
+		// ensure we don't have double forward slashes
+		return utils.SquashForwardSlashes(remotePath), remoteVersion
+	}
 }
