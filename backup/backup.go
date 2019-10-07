@@ -1047,14 +1047,25 @@ func markDeleted(ObjectDbRecord shared.BackedUpFileProperties, backupConfig shar
 			RemoteVersion: remoteVersion,
 			Objectstore:   objectStore,
 		})
-		_, err = addDbEntryToRemoteFiles(targetName, jobUuid, 1, dbData, dbtx, ObjectDbRecord, version, remoteVersion)
+
+		remoteUuid, err := addDbEntryToRemoteFiles(targetName, jobUuid, 1, dbData, dbtx, ObjectDbRecord, version, remoteVersion)
 		if err != nil {
 			encounteredError++
 			encounteredErrorObject = err
 			break
 		}
-		// We will NOT add an entries to backup collections as during a restore there is nothing to do with a delete
-		// marker (and the purpose of the backup_collections table is to list what needs to be restored)
+
+		// add entry to remote_files for the delete marker too. Without this, we wouldn't have a reliable way of
+		//   knowing when we can delete a "delete marker". This being said, the "delete marker" will be linked in
+		//   BackupCollections only to the current backup. Subsequent backup runs will not have entries in their
+		//   BackupCollections table for this particular delete marker.
+		_, err = dbtx.Exec(dbData.PreparedStatements.BackupCollectionsInsert, remoteUuid, jobUuid, targetName)
+		if err != nil {
+			encounteredError++
+			encounteredErrorObject = fmt.Errorf("for delete marker of '%s' could not add entry to backup_collections"+
+				" table due to error %s", ObjectDbRecord.Path, err)
+			break
+		}
 	}
 	if encounteredError > 0 || JobCancelled {
 		logger.Warnf("Could not mark '%s' as deleted as an error was encountered: %s", ObjectDbRecord.Path, encounteredErrorObject)
