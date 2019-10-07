@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/mattn/go-ieproxy"
 	"golang.org/x/time/rate"
+	"net"
+	"net/http"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -76,7 +79,9 @@ func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBac
 	if err != nil {
 		logger.Errorf("invalid credentials. When initialising the Azure blob storage account, received error: %s", err)
 	}
-	result.azurePipeline = azblob.NewPipeline(credential, azblob.PipelineOptions{})
+
+	httpSenderFactory := newCloudBackupHTTPClientFactory(ctx, rateLimitBucket, ratelimit, burst)
+	result.azurePipeline = azblob.NewPipeline(credential, azblob.PipelineOptions{HTTPSender: httpSenderFactory})
 
 	var primaryBlobServiceEndpoint string
 	GetStringParameter("primary_blob_service_endpoint", &primaryBlobServiceEndpoint, target.Parameters, "")
@@ -346,4 +351,56 @@ func calculateAzureStorageRemotePath(prefix string, path string, metadata bool, 
 		// ensure we don't have double forward slashes
 		return utils.SquashForwardSlashes(remotePath), remoteVersion
 	}
+}
+
+//
+
+// returns a HTTP client which can then be passed to the Azure sdk via the Azure Pipeline factory, when initialising the SDK.
+// This rate limiter limits the HTTP POST method which means in practice it limits uploads only
+func newRateLimitedHttpClientForAzure(ctx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64) *http.Client {
+	logger.Debug("Setting up new HTTP client capable of rate limiting")
+
+	wrappedTransport := &wrapAroundTransport{
+		origTransport: &http.Transport{ // Transport definition copied from function newDefaultHTTPClient() which is part of vendor/github.com/Azure/azure-pipeline-go/pipeline/core.go
+			Proxy: ieproxy.GetProxyFunc(),
+			// We use Dial instead of DialContext as DialContext has been reported to cause slower performance.
+			Dial /*Context*/ : (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).Dial, /*Context*/
+			MaxIdleConns:           0, // No limit
+			MaxIdleConnsPerHost:    100,
+			IdleConnTimeout:        90 * time.Second,
+			TLSHandshakeTimeout:    10 * time.Second,
+			ExpectContinueTimeout:  1 * time.Second,
+			DisableKeepAlives:      false,
+			DisableCompression:     false,
+			MaxResponseHeaderBytes: 0,
+			//ResponseHeaderTimeout:  time.Duration{},
+			//ExpectContinueTimeout:  time.Duration{},
+		},
+		ctx:       ctx,
+		bucket:    bucket,
+		rateLimit: rateLimit,
+		burst:     burst,
+	}
+
+	return &http.Client{Transport: wrappedTransport}
+}
+
+// the below function is a copy of newDefaultHTTPClientFactory() from vendor/github.com/Azure/azure-pipeline-go/pipeline/core.go
+//   with only altered the call to init a new http.Client which is replaced with our own call which produces an almost
+//   identical client but with a http.Transport which does rate limiting. Because if this there is tight coupling to both
+//   vendor/github.com/Azure/azure-pipeline-go and github.com/Azure/azure-storage-blob-go/azblob so changes to any of them may lead to trouble
+func newCloudBackupHTTPClientFactory(CloudbackupCtx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64) pipeline.Factory {
+	return pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
+		return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
+			r, err := newRateLimitedHttpClientForAzure(CloudbackupCtx, bucket, rateLimit, burst).Do(request.WithContext(ctx))
+			if err != nil {
+				err = pipeline.NewError(err, "HTTP request failed")
+			}
+			return pipeline.NewHTTPResponse(r), err
+		}
+	})
 }
