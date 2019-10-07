@@ -110,6 +110,12 @@ Because the Azure Blob Storage container (referenced as "bucket" in the configur
 does not natively support versioning each stored file will have a version identifier appended to the file name. For 
 example for a given file called `description.pdf`, when backed up for the first time, in the Azure Blob Storage container
 the file will appear as `description.pdf.v1` where `v1` is the appended version. A new version of the file being backed 
-up will lead to a `.v2` append (resulting in `description.pdf.v2`) and so on.
+up will lead to a `.v2` append (resulting in `description.pdf.v2`) and so on. If then file is deleted, a 0 bytes (empty) 
+file will be uploaded and it will have the name `description.pdf.d3` and it's purpose is to be a "delete marker" representing 
+when the source file was deleted. If then a new file with the same name and location is created then it will be uploaded 
+as as `description.pdf.v4`. So the version is an integer which keeps being incremented and there is a 'v' or 'd' suffix 
+to the integer which points to the uploaded item being either a new version of the file or a marker that the file was deleted.
+Files which get stored in the `metadata` directory will not have their numeric part starting from `1` but instead it will 
+be the [Unix timestamp](https://en.wikipedia.org/wiki/Unix_time) (in seconds) when the metadata item was backed up.
 
 ![file lifecycle diagram](img/file_lifecycle.png)

@@ -210,7 +210,13 @@ it is safe to read the data and to manually download any file which has been bac
 does not natively support versioning each stored file will have a version identifier appended to the file name. For 
 example for a given file called <code>description.pdf</code>, when backed up for the first time, in the Azure Blob Storage container
 the file will appear as <code>description.pdf.v1</code> where <code>v1</code> is the appended version. A new version of the file being backed 
-up will lead to a <code>.v2</code> append (resulting in <code>description.pdf.v2</code>) and so on.</p>
+up will lead to a <code>.v2</code> append (resulting in <code>description.pdf.v2</code>) and so on. If then file is deleted, a 0 bytes (empty) 
+file will be uploaded and it will have the name <code>description.pdf.d3</code> and it's purpose is to be a "delete marker" representing 
+when the source file was deleted. If then a new file with the same name and location is created then it will be uploaded 
+as as <code>description.pdf.v4</code>. So the version is an integer which keeps being incremented and there is a 'v' or 'd' suffix 
+to the integer which points to the uploaded item being either a new version of the file or a marker that the file was deleted.
+Files which get stored in the <code>metadata</code> directory will not have their numeric part starting from <code>1</code> but instead it will 
+be the <a href="https://en.wikipedia.org/wiki/Unix_time">Unix timestamp</a> (in seconds) when the metadata item was backed up.</p>
 <p><img alt="file lifecycle diagram" src="../img/file_lifecycle.png" /></p>
               
             </div>
