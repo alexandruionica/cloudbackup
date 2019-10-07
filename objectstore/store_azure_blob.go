@@ -107,6 +107,9 @@ func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBac
 		}
 	}
 
+	// according to https://blogs.msdn.microsoft.com/windowsazurestorage/2011/02/17/windows-azure-blob-md5-overview/ MD5
+	// checksumming is not needed if HTTPS is used as transfport (and we enforce it's use)
+
 	// Create an ServiceURL object that wraps the service URL and a request pipeline. This is used to make request to
 	// the overall storage account
 	logger.Debugf("Setting up connection to Azure Blob Storage")
@@ -143,7 +146,7 @@ func (objStore *StoreAzureBlob) Upload(DbRecord shared.BackedUpFileProperties, v
 			MaxBuffers: 3})
 		if err != nil {
 			if objStore.ctx.Err() == context.Canceled {
-				msg := fmt.Sprintf("received cancellation request while uploading content of %s", DbRecord.Path)
+				msg := fmt.Sprintf("received cancellation request while uploading content of '%s'", DbRecord.Path)
 				logger.Info(msg)
 				return remoteVersion, true, errors.New(msg)
 			}
@@ -162,16 +165,66 @@ func (objStore *StoreAzureBlob) GetStoreDetails() (StoreName string, StoreType s
 	return objStore.storeName, objStore.storeType
 }
 
+// Mark a file as deleted by uploading a 0 bytes file which has the same name but has the suffix ".d${markerVersion}"
+//   ($markerVersion gets replaces with the value of the parameter). This is needed because Azure Blobs does not
+//   support versioning (it supports snapshots but that is not the same thing as versioning and it has limitations)
 func (objStore *StoreAzureBlob) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
-	return "", false, fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
+	// Azure Blob doesn't support versioning so we use our own scheme of  "d" + $version appended together with a "." to the file name
+	remotePath, remoteVersion := calculateAzureStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata, markerVersion, true)
+	if existingDbRecord.Type != "file" {
+		// directories and symlinks DO NOT GET UPLOADED so there is nothing to mark deleted
+		return remotePath, false, nil
+	}
+
+	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
+	blobURL := objStore.azureContainerURL.NewBlockBlobURL(remotePath)
+
+	fakeReader := strings.NewReader("") // zero bytes content
+	// upload aka place the marker which is a 0 bytes file
+	_, err = azblob.UploadStreamToBlockBlob(objStore.ctx, fakeReader, blobURL, azblob.UploadStreamToBlockBlobOptions{
+		BufferSize: 5 * 1024,
+		MaxBuffers: 3})
+	if err != nil {
+		if objStore.ctx.Err() == context.Canceled {
+			msg := fmt.Sprintf("received cancellation request while placing a delete marker for '%s'", existingDbRecord.Path)
+			logger.Info(msg)
+			return remoteVersion, true, errors.New(msg)
+		}
+		return remoteVersion, false, err
+	}
+	// if we got here then upload(marker placement) worked as expected
+	return remoteVersion, false, nil
+
 }
 
 func (objStore *StoreAzureBlob) Delete(existingDbRecord shared.BackedUpFileProperties, version int64, remoteVersion string, metadata bool) error {
-	return fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
+	deleteMarker := false
+	if strings.HasPrefix(remoteVersion, "d") { // the Upload() function prefixes the returned version with "v" while the MarkDeleted() prefixes with "d"
+		deleteMarker = true
+	}
+	// Azure Blob doesn't support versioning so we use our own scheme of  "d" + $version appended together with a "." to the file name
+	remotePath, remoteVersion := calculateAzureStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata, version, deleteMarker)
+
+	if existingDbRecord.Type != "file" {
+		// directories and symlinks DO NOT GET UPLOADED so there is nothing to delete
+		return nil
+	}
+	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s'", existingDbRecord.Path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
+	blobURL := objStore.azureContainerURL.NewBlockBlobURL(remotePath)
+
+	_, err := blobURL.Delete(objStore.ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+	if err != nil {
+		return fmt.Errorf("while trying to delete the file '%s' from Azure Blobs container(bucket)"+
+			" '%s' received error message: '%s'", existingDbRecord.Path, objStore.storeBucketName, err)
+	}
+
+	return nil
 }
 
 func (objStore *StoreAzureBlob) Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error) {
-	return false, fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
+	return false, fmt.Errorf("no implemented yet for backend of type: '%s'", objStore.storeType)
 }
 
 func (objStore *StoreAzureBlob) Validate() (string, error) {
