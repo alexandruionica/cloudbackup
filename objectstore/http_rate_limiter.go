@@ -22,7 +22,6 @@ type wrapAroundTransportRequestBody struct {
 }
 
 func (handle *wrapAroundTransportRequestBody) Read(p []byte) (n int, err error) {
-	// TODO - add rate limiting code; apply the rate limit after sending the data instead of before ???
 	if handle.rateLimit > 0 {
 		select {
 		case <-handle.ctx.Done():
@@ -100,12 +99,14 @@ type wrapAroundTransport struct {
 func (handle *wrapAroundTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// wrap around the Body property of the request, before passing it to the original transport
 	if req.Body != nil { // Body can be nil; for example for GET requests
-		req.Body = &wrapAroundTransportRequestBody{
-			origBody:  req.Body,
-			ctx:       handle.ctx,
-			bucket:    handle.bucket,
-			rateLimit: handle.rateLimit,
-			burst:     handle.burst,
+		if req.Body != http.NoBody { // http.NoBody is sometimes used instead of a nil req.Body
+			req.Body = &wrapAroundTransportRequestBody{
+				origBody:  req.Body,
+				ctx:       handle.ctx,
+				bucket:    handle.bucket,
+				rateLimit: handle.rateLimit,
+				burst:     handle.burst,
+			}
 		}
 	}
 	response, error := handle.origTransport.RoundTrip(req)
