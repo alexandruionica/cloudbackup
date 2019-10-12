@@ -41,7 +41,7 @@ class TestCliBackupValidate(unittest.TestCase):
             parsed = yaml.load(fd)
             parsed['backup'][0]['paths'] = [self.tmpdir]
             parsed['backup'][0]['exclusions'] = [self.tmpdir + os.sep + "dir1" + os.sep + "dir5", '**' + os.sep +
-                                                 ';<>file9.txt']
+                                                 ';=file9.txt']
         with open(self.server_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
         # start server
