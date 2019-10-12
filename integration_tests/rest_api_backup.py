@@ -38,7 +38,7 @@ class TestRestAPIBackup(unittest.TestCase):
             parsed = yaml.load(fd)
             parsed['backup'][0]['paths'] = [self.tmpdir]
             parsed['backup'][0]['exclusions'] = [self.tmpdir + os.sep + "dir1" + os.sep + "dir5", '**' + os.sep +
-                                                 'file9.txt']
+                                                 ';<>file9.txt']
         with open(self.server_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
         # start server
@@ -530,7 +530,7 @@ class TestRestAPIBackup(unittest.TestCase):
         filelist_copy[self.data_dir + os.sep + "first_backup.sqlite.gz"] = "file"
         # dir5 and file9,txt are set to be excluded so let's remove them from the comparison
         for entry in self.filelist:
-            if "dir5" in entry or "file9.txt" in entry:
+            if "dir5" in entry or ";<>file9.txt" in entry:
                 filelist_copy.pop(entry)
         # add the tmp copy of the config file to the dict too:
         filelist_copy[self.data_dir + os.sep + "config.yaml"] = "file"
