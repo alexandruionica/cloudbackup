@@ -365,7 +365,7 @@ def setup_dir_with_tmp_files():
         tmpdir + os.sep + "dir1" + os.sep + "dir5": "dir",
         tmpdir + os.sep + "dir1" + os.sep + "dir5" + os.sep + "file7.txt": "file",
         tmpdir + os.sep + "dir1" + os.sep + "dir5" + os.sep + "file8.htm": "file",
-        tmpdir + os.sep + "dir1" + os.sep + "file9.txt": "file",
+        tmpdir + os.sep + "dir1" + os.sep + ";<>file9.txt": "file",
     }
 
     for fname in filelist:
