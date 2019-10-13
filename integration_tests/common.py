@@ -478,3 +478,16 @@ def get_gcp_storage_config_from_env():
     bucket = os.environ.get('CLD_GCP_STORAGE_BUCKET')
 
     return bucket, result
+
+
+def get_azure_blob_storage_config_from_env():
+    """
+    Fetch from environment variables various settings needed by the Azure Blob Storage object store
+    :return: tuple with Azure blob container name (bucket), Azure storage account name, Azure storage account key .
+    Any missing variables will have a value of None returned
+    """
+    bucket = os.environ.get('CLD_AZURE_STORAGE_CONTAINER')
+    azure_storage_account = os.environ.get('CLD_AZURE_STORAGE_ACCOUNT')
+    azure_storage_account_key = os.environ.get('CLD_AZURE_STORAGE_ACCESS_KEY')
+
+    return bucket, azure_storage_account, azure_storage_account_key
