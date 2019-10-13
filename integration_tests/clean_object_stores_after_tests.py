@@ -6,6 +6,8 @@ import os
 import platform
 from common import *
 from google.cloud import storage
+from azure.storage.blob import BlockBlobService
+from pprint import pprint
 
 
 def clean_s3_bucket(prefix=None):
@@ -26,13 +28,9 @@ def clean_s3_bucket(prefix=None):
 
     bucket = s3.Bucket(bucket)
 
-    if prefix:
-        final_prefix = prefix
-    else:
-        final_prefix = "tests/" + platform.system().lower() + "/"
     # bucket.objects.filter(Prefix=final_prefix).delete()
     # delete all objects and all versions under the prefix
-    bucket.object_versions.filter(Prefix=final_prefix).delete()
+    bucket.object_versions.filter(Prefix=prefix).delete()
 
 
 def clean_gcp_storage_bucket(prefix=None):
@@ -56,21 +54,36 @@ def clean_gcp_storage_bucket(prefix=None):
         tmpfile.close()
         # set env var GOOGLE_APPLICATION_CREDENTIALS as the SDK will search for this
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_file_path
-        logging.debug("Credentials file is {}".format(credentials_file_path))
+        logging.info("Credentials file is {}".format(credentials_file_path))
 
-    if prefix:
-        final_prefix = prefix
-    else:
-        final_prefix = "tests/" + platform.system().lower() + "/"
     storage_client = storage.Client()
-    blobs = storage_client.list_blobs(bucket, prefix=final_prefix, versions=True)
+    blobs = storage_client.list_blobs(bucket, prefix=prefix, versions=True)
     for blob in blobs:
-        logging.debug("Deleting blob '{}'".format(blob.name))
+        logging.info("Deleting GCP blob '{}'".format(blob.name))
         blob.delete()
 
     if settings["CLD_GCP_PRIVATE_KEY"]:
         if os.path.exists(credentials_file_path):
             os.remove(credentials_file_path)
+
+
+def clean_azure_blob_container(prefix=None):
+    bucket, azure_storage_account, azure_storage_account_key = get_azure_blob_storage_config_from_env()
+    if not bucket:
+        logging.error("Environment variable CLD_AZURE_STORAGE_CONTAINER is not set")
+        exit(1)
+    if not azure_storage_account:
+        logging.error("Environment variable CLD_AZURE_STORAGE_ACCOUNT is not set")
+        exit(1)
+    if not azure_storage_account_key:
+        logging.error("Environment variable CLD_AZURE_STORAGE_ACCESS_KEY is not set")
+        exit(1)
+
+    block_blob_service = BlockBlobService(account_name=azure_storage_account, account_key=azure_storage_account_key)
+    generator = block_blob_service.list_blobs(container_name=bucket, prefix=prefix)
+    for blob in generator:
+        logging.info("Deleting Azure blob '{}'".format(blob.name))
+        block_blob_service.delete_blob(container_name=bucket, blob_name=blob.name)
 
 
 def get_args():
@@ -88,14 +101,24 @@ def get_args():
 
 def main():
     arguments = get_args()
+    azure_logger = logging.getLogger('azure.storage')
     if arguments.verbose:
-        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG)
-    else:
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+        azure_logger.setLevel(logging.INFO)
+    else:
+        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.WARNING)
+        azure_logger.setLevel(logging.WARNING)
 
-    clean_s3_bucket(arguments.prefix)
+    if arguments.prefix:
+        final_prefix = arguments.prefix
+    else:
+        final_prefix = "tests/" + platform.system().lower() + "/"
 
-    clean_gcp_storage_bucket(arguments.prefix)
+    clean_s3_bucket(final_prefix)
+
+    clean_gcp_storage_bucket(final_prefix)
+
+    clean_azure_blob_container(final_prefix)
 
 
 if __name__ == '__main__':
