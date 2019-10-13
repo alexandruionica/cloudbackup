@@ -338,6 +338,8 @@ notification:
 <li><code>storage_class</code> - optional parameter. If specified, it must be one of "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING". Values correspond to AWS storage tiers for S3.</li>
 <li><code>region</code> - optional parameter. Must be a valid AWS region, lower cased. For example: "us-east-1" or "ap-southeast-2". If specified, it will be used only in case the region of the S3 bucket can not be programatically determined using the S3 API.</li>
 </ul>
+<p>It is required to:
+- enable <a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html#how-to-enable-disable-versioning-intro">S3 bucket versioning</a></p>
 <p>It is highly advisable to: </p>
 <ul>
 <li>setup strict access controls on the S3 buckets in order to ensure only backup software has access to read or write contents.</li>
@@ -387,6 +389,8 @@ If one of them is mentioned then all of them are required. If the GCP credential
 <li><code>storage_class</code> - optional parameter. If specified, it must be one of "multi_regional", "regional", "nearline" or "coldline". Values correspond to GCP storage tiers.</li>
 <li><code>disable_crc32c_hash</code> - optional parameter. If not specified then it defaults to "false" and then a CRC32c hash will be calculated for each uploaded file and then sent to GCP storage together with the file. The hash will then be used by GCP storage to validate that the file did not get corrupted during the upload. The only downside to this is that in order to compute the hash, the file will be read one extra time from the local disk. Setting this parameter to a value of "yes" or "true" means the CRC32c hash will not be calculated and sent.</li>
 </ul>
+<p>It is required to:
+- enable <a href="https://cloud.google.com/storage/docs/using-object-versioning">GCP bucket versioning</a></p>
 <p>It is highly advisable to:</p>
 <ul>
 <li>setup strict access controls on the GCP storage buckets in order to ensure only backup software has access to read or write contents.</li>

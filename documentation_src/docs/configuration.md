@@ -219,6 +219,8 @@ Once a target is configured, it is recommended to start the server and then run:
 - `storage_class` - optional parameter. If specified, it must be one of "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING". Values correspond to AWS storage tiers for S3.
 - `region` - optional parameter. Must be a valid AWS region, lower cased. For example: "us-east-1" or "ap-southeast-2". If specified, it will be used only in case the region of the S3 bucket can not be programatically determined using the S3 API.
 
+It is required to:
+- enable [S3 bucket versioning](https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html#how-to-enable-disable-versioning-intro)
 
 It is highly advisable to: 
 
@@ -271,6 +273,8 @@ If one of them is mentioned then all of them are required. If the GCP credential
 - `storage_class` - optional parameter. If specified, it must be one of "multi_regional", "regional", "nearline" or "coldline". Values correspond to GCP storage tiers.
 - `disable_crc32c_hash` - optional parameter. If not specified then it defaults to "false" and then a CRC32c hash will be calculated for each uploaded file and then sent to GCP storage together with the file. The hash will then be used by GCP storage to validate that the file did not get corrupted during the upload. The only downside to this is that in order to compute the hash, the file will be read one extra time from the local disk. Setting this parameter to a value of "yes" or "true" means the CRC32c hash will not be calculated and sent.
 
+It is required to:
+- enable [GCP bucket versioning](https://cloud.google.com/storage/docs/using-object-versioning)
 
 It is highly advisable to:
 
