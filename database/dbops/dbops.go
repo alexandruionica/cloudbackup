@@ -486,6 +486,7 @@ func PrepareDb(BackupJobName string, jobUuid string, serverConfigCopy shared.Cfg
 // ensure the Database is in a closed state
 func MakeDbCopy(jobName string, jobUuid string, dataDir string, backupJobsState *shared.BackupJobsState) (string, error) {
 	backupJobsState.MarkOngoingDbBackup(jobName)
+	defer backupJobsState.UnMarkOngoingDbBackup(jobName)
 
 	srcFilePath, err := database.GetDbFilePath(dataDir, jobName)
 	if err != nil {
@@ -501,6 +502,5 @@ func MakeDbCopy(jobName string, jobUuid string, dataDir string, backupJobsState 
 		return "", err
 	}
 
-	backupJobsState.UnMarkOngoingDbBackup(jobName)
 	return dstFilePath, nil
 }
