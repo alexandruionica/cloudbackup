@@ -1634,8 +1634,19 @@ func TestPath12(t *testing.T) {
 // test number of examined files as reported by Path() when  dereference=true and when using an actual DB
 func TestPath13(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := shared.NewJobsState()
+	backupName := "backup1"
+	numDbClients := 0
+
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+	defer func() {
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
+		testutils.DeleteTestFilesAndDirs(pathsToDelete)
+	}()
 
 	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
@@ -1650,13 +1661,13 @@ func TestPath13(t *testing.T) {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
+	result.Config.Backup[0].Name = backupName
 	backupConfig := result.Config.Backup[0]
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
 	// set dereference to True
 	backupConfig.Dereference = true
-	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := shared.NewJobsState()
+
 	// populate state object with default values
 	u, err := uuid.NewV4()
 	if err != nil {
@@ -1680,9 +1691,10 @@ func TestPath13(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.Start() returned error: '%s'", err)
 	}
+	numDbClients += 1 // this is needed in case any step fails, before we call CloseStatementsAndDisconnectFromDb()
+
 	preparedStatements, err := dbops.Prepare(db)
 	if err != nil {
-		database.DisconnectFromDb(backupConfig.Name, backupJobsState)
 		t.Fatalf("dbops.Prepare() returned error: '%s'", err)
 	}
 
@@ -1765,6 +1777,7 @@ func TestPath13(t *testing.T) {
 	// a lot of testing goes in this function - compares messages on the Watch channel with the backupJobsState stats
 	compareWithWatchMessages(t, backupJobsState)
 
+	numDbClients -= 1 // decrement by one as the below will also remove one client and so decrement
 	dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 }
 
@@ -1774,13 +1787,25 @@ func TestPath14(t *testing.T) {
 	// skip this test on Windows as  os.Chmod 0000 is not possible on Windows
 	if runtime.GOOS != "windows" {
 		path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+		// backupJobState contains the state of all running backup jobs plus it has some handy methods
+		backupJobsState := shared.NewJobsState()
+		backupName := "backup1"
+		numDbClients := 0
+
 		// remove tmpfile which holds the yaml as the config has been parsed and loaded
-		defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+		defer func() {
+			for i := 0; i < numDbClients; i++ {
+				database.DisconnectFromDb(backupName, backupJobsState)
+			}
+			database.CloseDb(backupName, backupJobsState, true)
+			testutils.DeleteTestFilesAndDirs(pathsToDelete)
+		}()
 
 		result, err := config.Load(path, false, &sync.RWMutex{})
 		if err != nil {
 			t.Fatalf("Could not load fake config file. Error was: %s", err)
 		}
+		result.Config.Backup[0].Name = backupName
 
 		// folder with some mock files and symlinks
 		backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -1805,8 +1830,7 @@ func TestPath14(t *testing.T) {
 		backupConfig.Paths = []string{backupDirPath}
 		// set dereference to false
 		backupConfig.Dereference = false
-		// backupJobState contains the state of all running backup jobs plus it has some handy methods
-		backupJobsState := shared.NewJobsState()
+
 		// populate state object with default values
 		u, err := uuid.NewV4()
 		if err != nil {
@@ -1830,6 +1854,7 @@ func TestPath14(t *testing.T) {
 		if err != nil {
 			t.Fatalf("database.Start() returned error: '%s'", err)
 		}
+		numDbClients += 1
 
 		preparedStatements, err := dbops.Prepare(db)
 		if err != nil {
@@ -1916,6 +1941,7 @@ func TestPath14(t *testing.T) {
 		// a lot of testing goes in this function - compares messages on the Watch channel with the backupJobsState stats
 		compareWithWatchMessages(t, backupJobsState)
 
+		numDbClients -= 1
 		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}
 }
@@ -1923,13 +1949,25 @@ func TestPath14(t *testing.T) {
 // test the backup.FindAndMarkDeleted() function when there are no mark deleted items reported - due to a cyclical import .. we can't really properly test it in the backup/ folder
 func TestPath15(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
+	// backupJobState contains the state of all running backup jobs plus it has some handy methods
+	backupJobsState := shared.NewJobsState()
+	backupName := "backup1"
+	numDbClients := 0
+
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
-	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+	defer func() {
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
+		testutils.DeleteTestFilesAndDirs(pathsToDelete)
+	}()
 
 	result, err := config.Load(path, false, &sync.RWMutex{})
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
+	result.Config.Backup[0].Name = backupName
 
 	// folder with some mock files and symlinks
 	backupDirPath := testutils.SetupBackupDir("unittest_backup_scan_path", t)
@@ -1944,8 +1982,7 @@ func TestPath15(t *testing.T) {
 	backupConfig.Paths = []string{backupDirPath}
 	// set dereference to False
 	backupConfig.Dereference = false
-	// backupJobState contains the state of all running backup jobs plus it has some handy methods
-	backupJobsState := shared.NewJobsState()
+
 	// populate state object with default values
 	u, err := uuid.NewV4()
 	if err != nil {
@@ -1969,6 +2006,8 @@ func TestPath15(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.Start() returned error: '%s'", err)
 	}
+	numDbClients += 1
+
 	preparedStatements, err := dbops.Prepare(db)
 	if err != nil {
 		database.DisconnectFromDb(backupConfig.Name, backupJobsState)
@@ -2071,6 +2110,7 @@ func TestPath15(t *testing.T) {
 	if len(backupJobsState.Running) > 0 {
 		t.Fatal("No jobs should be running")
 	}
+	numDbClients -= 1
 	dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 
 	// ######## walk again path - first we need to re-init stuff #########
@@ -2096,6 +2136,8 @@ func TestPath15(t *testing.T) {
 	if err != nil {
 		t.Fatalf("database.Start() returned error: '%s'", err)
 	}
+	numDbClients += 1
+
 	preparedStatements, err = dbops.Prepare(db)
 	if err != nil {
 		database.DisconnectFromDb(backupConfig.Name, backupJobsState)
@@ -2186,5 +2228,6 @@ func TestPath15(t *testing.T) {
 	// a lot of testing goes in this function - compares messages on the Watch channel with the backupJobsState stats
 	compareWithWatchMessages(t, backupJobsState)
 
+	numDbClients -= 1
 	dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 }
