@@ -95,7 +95,8 @@ func TestOpenDb1(t *testing.T) {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	_, err := OpenDb(dbDataDirPath+string(filepath.Separator)+"folder_which_does_not_exist", backupName, true, backupJobsState)
+	_, err := OpenDb(dbDataDirPath+string(filepath.Separator)+"folder_which_does_not_exist", backupName,
+		true, backupJobsState, 0)
 	if err == nil {
 		t.Fatal("OpenDb() was supposed to return an error but didn't")
 	}
@@ -106,9 +107,9 @@ func TestCreateDb1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	backupJobsState := shared.NewJobsState()
-	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState, 0)
 	defer func() {
-		CloseDb(db, backupName, backupJobsState)
+		DisconnectFromDb(backupName, backupJobsState)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
@@ -135,8 +136,8 @@ func TestCreateDb2_1(t *testing.T) {
 	}()
 	backupJobsState := shared.NewJobsState()
 	db, err := OpenDb(dbDataDirPath+string(filepath.Separator)+"folder_which_does_not_exist", backupName,
-		false, backupJobsState)
-	defer CloseDb(db, backupName, backupJobsState)
+		false, backupJobsState, 0)
+	defer DisconnectFromDb(backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -162,20 +163,26 @@ func TestCreateDb3(t *testing.T) {
 		}
 	}()
 	backupJobsState := shared.NewJobsState()
-	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
-	defer CloseDb(db, backupName, backupJobsState)
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState, 0)
+	defer DisconnectFromDb(backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	if db == nil {
+		t.Fatal("1. OpenDb returned a nil pointer for the DB connection object")
 	}
 	err = CreateDb(db, backupName)
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
 
-	db2, err := OpenDb(dbDataDirPath, backupName, true, backupJobsState)
-	defer CloseDb(db2, backupName, backupJobsState)
+	db2, err := OpenDb(dbDataDirPath, backupName, true, backupJobsState, 0)
+	defer DisconnectFromDb(backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	if db2 == nil {
+		t.Fatal("2. OpenDb returned a nil pointer for the DB connection object")
 	}
 	err = CreateDb(db2, backupName)
 	expectedErr := "table files already exists"
@@ -183,8 +190,8 @@ func TestCreateDb3(t *testing.T) {
 		t.Fatal("Expected CreateDb() to return an error, but it didn't")
 	} else {
 		if err.Error() != expectedErr {
-			t.Fatalf("2nd call to CreateDb() was expected to return error: '%s' but it returned: '%s'",
-				expectedErr, err)
+			t.Fatalf("2nd call to CreateDb() was expected to return error: '%s' but it returned: '%s'; %+v",
+				expectedErr, err, backupJobsState.DbOpenAllowed[backupName])
 		}
 	}
 }
@@ -240,8 +247,8 @@ func TestValidateAndCreate3(t *testing.T) {
 	}()
 
 	backupJobsState := shared.NewJobsState()
-	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
-	defer CloseDb(db, backupName, backupJobsState)
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState, 0)
+	defer DisconnectFromDb(backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -269,8 +276,8 @@ func TestValidateAndCreate4(t *testing.T) {
 	}()
 
 	backupJobsState := shared.NewJobsState()
-	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
-	defer CloseDb(db, backupName, backupJobsState)
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState, 0)
+	defer DisconnectFromDb(backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
 	}
@@ -297,8 +304,8 @@ func TestStart1(t *testing.T) {
 	}()
 
 	backupJobsState := shared.NewJobsState()
-	db, err := Start(dbDataDirPath, backupName, backupJobsState)
-	defer CloseDb(db, backupName, backupJobsState)
+	_, err := Start(dbDataDirPath, backupName, backupJobsState)
+	defer DisconnectFromDb(backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
@@ -316,7 +323,7 @@ func TestStart2(t *testing.T) {
 	}()
 
 	backupJobsState := shared.NewJobsState()
-	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState)
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState, 0)
 
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
@@ -325,10 +332,10 @@ func TestStart2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
-	CloseDb(db, backupName, backupJobsState)
+	DisconnectFromDb(backupName, backupJobsState)
 
-	db2, err := Start(dbDataDirPath, backupName, backupJobsState)
-	defer CloseDb(db2, backupName, backupJobsState)
+	_, err = Start(dbDataDirPath, backupName, backupJobsState)
+	defer DisconnectFromDb(backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}

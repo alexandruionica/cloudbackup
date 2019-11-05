@@ -32,7 +32,7 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 	backupJobsState := shared.NewJobsState()
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	defer func() {
-		database.CloseDb(db, backupName, backupJobsState)
+		database.DisconnectFromDb(backupName, backupJobsState)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
@@ -117,7 +117,7 @@ func TestEnsureTargetsInDb2(t *testing.T) {
 	backupJobsState := shared.NewJobsState()
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	defer func() {
-		database.CloseDb(db, backupName, backupJobsState)
+		database.DisconnectFromDb(backupName, backupJobsState)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
@@ -161,7 +161,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 	backupJobsState := shared.NewJobsState()
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	defer func() {
-		database.CloseDb(db, backupName, backupJobsState)
+		database.DisconnectFromDb(backupName, backupJobsState)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
@@ -305,7 +305,7 @@ func TestPrepare1(t *testing.T) {
 	}
 
 	ClosePreparedStatements(preparedStatements)
-	database.CloseDb(db, backupName, backupJobsState)
+	database.DisconnectFromDb(backupName, backupJobsState)
 }
 
 func TestClosePreparedStatements1(t *testing.T) {
@@ -329,14 +329,14 @@ func TestClosePreparedStatements1(t *testing.T) {
 	}
 
 	ClosePreparedStatements(preparedStatements)
-	database.CloseDb(db, backupName, backupJobsState)
+	database.DisconnectFromDb(backupName, backupJobsState)
 }
 
 // test with empty shared.DbData struct
 func TestCloseStatementsAndDb1(t *testing.T) {
 	dbData := shared.DbData{}
 	backupJobsState := shared.NewJobsState()
-	CloseStatementsAndDb(dbData, backupJobsState)
+	CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 }
 
 // test with populated shared.DbData struct but without populated shared.DbData.PreparedStatements
@@ -360,7 +360,7 @@ func TestCloseStatementsAndDb2(t *testing.T) {
 		Db:        db,
 		Name:      backupName,
 	}
-	CloseStatementsAndDb(dbData, backupJobsState)
+	CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 }
 
 // test with populated shared.DbData struct and with populated shared.DbData.PreparedStatements
@@ -390,7 +390,7 @@ func TestCloseStatementsAndDb3(t *testing.T) {
 		Name:               backupName,
 		PreparedStatements: preparedStatements,
 	}
-	CloseStatementsAndDb(dbData, backupJobsState)
+	CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 }
 
 // should succeed
@@ -473,7 +473,7 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 		t.Fatalf("CheckJobUuidExists() found a record in the DB but it should have not")
 	}
 
-	database.CloseDb(db, backupName, backupJobsState)
+	database.DisconnectFromDb(backupName, backupJobsState)
 }
 
 // should return false as we're using an empty db
@@ -506,5 +506,5 @@ func TestCheckJobUuidExists1(t *testing.T) {
 		t.Fatalf("CheckJobUuidExists() found a record in the DB but it should have not as we're using an empty DB")
 	}
 
-	database.CloseDb(db, backupName, backupJobsState)
+	database.DisconnectFromDb(backupName, backupJobsState)
 }
