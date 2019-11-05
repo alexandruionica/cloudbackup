@@ -406,7 +406,7 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 	if !cancelled && backupError == nil {
 		logger.Debugf("Attempting to upload a copy of the DB and of the config belonging to backup job '%s'", jobName)
 		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
-		database.CloseDb(dbData.Db, jobName, backupJobsState, false) // this closes down the DB but keeps a lock so no other client can open the DB
+		database.CloseDb(jobName, backupJobsState, false) // this closes down the DB but keeps a lock so no other client can open the DB
 
 		err := backup.UploadBackupDatabase(jobName, jobUuid, backupConfig, serverConfigCopy.DataDir, backupJobsState, objectStores)
 		if err != nil {

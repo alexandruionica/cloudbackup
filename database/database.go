@@ -210,7 +210,7 @@ func DisconnectFromDb(dbName string, backupJobsState *shared.BackupJobsState) {
 
 // waits for all clients to disconnect from the database and then closes down the DB connection. If $releaseLock is
 // set to false the the DB lock won't be released which mean no one can re-open the database until the lock is released.
-func CloseDb(db *sql.DB, dbName string, backupJobsState *shared.BackupJobsState, releaseLock bool) {
+func CloseDb(dbName string, backupJobsState *shared.BackupJobsState, releaseLock bool) {
 	logger.Debugf("Closing database '%s'", dbName)
 	backupJobsState.Lock.RLock()
 	entry, ok := backupJobsState.DbOpenAllowed[dbName]
@@ -225,6 +225,7 @@ func CloseDb(db *sql.DB, dbName string, backupJobsState *shared.BackupJobsState,
 				break
 			}
 		}
+		db := entry.DB
 		entry.DB = nil // this makes is clear that any new attempts to use this DB will have to setup a new connection
 		err := db.Close()
 		if err != nil {
