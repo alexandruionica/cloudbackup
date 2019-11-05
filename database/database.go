@@ -339,12 +339,12 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool, backu
 // $backupJobsState is used to signal that a given database is opened (so it should not be attempted to copy the DB)
 func Start(datadir string, backupName string, backupJobsState *shared.BackupJobsState) (*sql.DB, error) {
 	// check if DB exists, if not then create it
-	err := ValidateAndCreate(datadir, backupName, false, backupJobsState)
+	err := ValidateAndCreate(datadir, backupName, false, backupJobsState) // this does not increment the number of connected DB clients
 	if err != nil {
 		return &sql.DB{}, err
 	}
 
-	db, err := OpenDb(datadir, backupName, true, backupJobsState, 0)
+	db, err := OpenDb(datadir, backupName, true, backupJobsState, 0) // if successful, increments number of DB clients
 	if err != nil {
 		return &sql.DB{}, err
 	}

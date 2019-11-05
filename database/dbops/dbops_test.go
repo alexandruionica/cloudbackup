@@ -30,17 +30,22 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	backupJobsState := shared.NewJobsState()
-	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
+	numDbClients := 0
 	defer func() {
-		database.DisconnectFromDb(backupName, backupJobsState)
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
+	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
+	numDbClients += 1
 
 	// get second back job config
 	backupConfig := srvConfig.GetCopyWithLock("dbops_test.go").Backup[1]
@@ -115,17 +120,22 @@ func TestEnsureTargetsInDb2(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	backupJobsState := shared.NewJobsState()
-	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
+	numDbClients := 0
 	defer func() {
-		database.DisconnectFromDb(backupName, backupJobsState)
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
+	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
+	numDbClients += 1
 
 	// get second back job config
 	backupConfig := srvConfig.GetCopyWithLock("dbops_test.go").Backup[1]
@@ -159,17 +169,22 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
 	backupJobsState := shared.NewJobsState()
-	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
+	numDbClients := 0
 	defer func() {
-		database.DisconnectFromDb(backupName, backupJobsState)
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
+	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
+	numDbClients += 1
 
 	// get second back job config
 	backupConfig := srvConfig.GetCopyWithLock("dbops_test.go").Backup[1]
@@ -252,17 +267,24 @@ func TestPrepare1(t *testing.T) {
 	}
 	jobId := u.String()
 	path := "an_imaginary_file_name"
+	backupJobsState := shared.NewJobsState()
+	numDbClients := 0
 	defer func() {
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	backupJobsState := shared.NewJobsState()
+
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
 	}
+	numDbClients += 1
 
 	preparedStatements, err := Prepare(db)
 	if err != nil {
@@ -305,7 +327,6 @@ func TestPrepare1(t *testing.T) {
 	}
 
 	ClosePreparedStatements(preparedStatements)
-	database.DisconnectFromDb(backupName, backupJobsState)
 }
 
 func TestClosePreparedStatements1(t *testing.T) {
@@ -318,10 +339,23 @@ func TestClosePreparedStatements1(t *testing.T) {
 		}
 	}()
 	backupJobsState := shared.NewJobsState()
+	numDbClients := 0
+	defer func() {
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
+		err := os.RemoveAll(dbDataDirPath) // #nosec
+		if err != nil {
+			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+		}
+	}()
+
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
 	}
+	numDbClients += 1
 
 	preparedStatements, err := Prepare(db)
 	if err != nil {
@@ -329,7 +363,6 @@ func TestClosePreparedStatements1(t *testing.T) {
 	}
 
 	ClosePreparedStatements(preparedStatements)
-	database.DisconnectFromDb(backupName, backupJobsState)
 }
 
 // test with empty shared.DbData struct
@@ -343,17 +376,24 @@ func TestCloseStatementsAndDb1(t *testing.T) {
 func TestCloseStatementsAndDb2(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
+	backupJobsState := shared.NewJobsState()
+	numDbClients := 0
 	defer func() {
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	backupJobsState := shared.NewJobsState()
+
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
 	}
+	// numDbClients += 1  <--- not needed as we use the below CloseStatementsAndDisconnectFromDb()
 
 	dbData := shared.DbData{
 		Connected: true,
@@ -367,13 +407,18 @@ func TestCloseStatementsAndDb2(t *testing.T) {
 func TestCloseStatementsAndDb3(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
+	backupJobsState := shared.NewJobsState()
+	numDbClients := 0
 	defer func() {
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	backupJobsState := shared.NewJobsState()
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
@@ -381,6 +426,7 @@ func TestCloseStatementsAndDb3(t *testing.T) {
 
 	preparedStatements, err := Prepare(db)
 	if err != nil {
+		numDbClients += 1 // needed as below CloseStatementsAndDisconnectFromDb() doesn't get called any more
 		t.Fatalf("Prepare() wasn't supposed to return an error but did return: '%s'", err)
 	}
 
@@ -402,17 +448,23 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 		t.Fatalf("Could not generate UUID due to error: %s", err)
 	}
 	jobid := u.String()
+	backupJobsState := shared.NewJobsState()
+	numDbClients := 0
 	defer func() {
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	backupJobsState := shared.NewJobsState()
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
 	}
+	numDbClients += 1
 
 	err = AddJobDetails(db, jobid, "first_backup", "backup", time.Now())
 	if err != nil {
@@ -472,25 +524,29 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 	if foundRecordUsingFunction {
 		t.Fatalf("CheckJobUuidExists() found a record in the DB but it should have not")
 	}
-
-	database.DisconnectFromDb(backupName, backupJobsState)
 }
 
 // should return false as we're using an empty db
 func TestCheckJobUuidExists1(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"
+	backupJobsState := shared.NewJobsState()
+	numDbClients := 0
 	defer func() {
+		for i := 0; i < numDbClients; i++ {
+			database.DisconnectFromDb(backupName, backupJobsState)
+		}
+		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
 	}()
-	backupJobsState := shared.NewJobsState()
 	db, err := database.Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("database.Start() wasn't supposed to return an error but did return: '%s'", err)
 	}
+	numDbClients += 1
 
 	u, err := uuid.NewV4()
 	if err != nil {
@@ -506,5 +562,4 @@ func TestCheckJobUuidExists1(t *testing.T) {
 		t.Fatalf("CheckJobUuidExists() found a record in the DB but it should have not as we're using an empty DB")
 	}
 
-	database.DisconnectFromDb(backupName, backupJobsState)
 }
