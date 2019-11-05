@@ -587,7 +587,7 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// change Size so we have something to update in the DB and then validate the update worked
@@ -676,7 +676,7 @@ func TestGetRemoteFileVersion1(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	path := "a_file_which_does_not_exist"
@@ -744,7 +744,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -970,7 +970,7 @@ func TestNeedsUpload1(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1070,7 +1070,7 @@ func TestNeedsUpload2(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1170,7 +1170,7 @@ func TestNeedsUpload3(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1275,7 +1275,7 @@ func TestNeedsUpload4(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1377,7 +1377,7 @@ func TestNeedsUpload5(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1481,7 +1481,7 @@ func TestNeedsUpload6(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1585,7 +1585,7 @@ func TestNeedsUpload7(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1688,7 +1688,7 @@ func TestNeedsUpload8(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1791,7 +1791,7 @@ func TestNeedsUpload9(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1894,7 +1894,7 @@ func TestNeedsUpload10(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -1987,7 +1987,7 @@ func TestNeedsUpload11(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2080,7 +2080,7 @@ func TestNeedsUpload12(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2175,7 +2175,7 @@ func TestNeedsUpload13(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2270,7 +2270,7 @@ func TestNeedsUpload14(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2367,7 +2367,7 @@ func TestNeedsUpload15(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2464,7 +2464,7 @@ func TestNeedsUpload16(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2560,7 +2560,7 @@ func TestNeedsUpload17(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2663,7 +2663,7 @@ func TestNeedsUpload18(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a tmpdir which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2759,7 +2759,7 @@ func TestNeedsUpload19(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2868,7 +2868,7 @@ func TestNeedsUpload20(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -2977,7 +2977,7 @@ func TestNeedsUpload21(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3091,7 +3091,7 @@ func TestNeedsUpload22(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3202,7 +3202,7 @@ func TestNeedsUpload23(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3306,7 +3306,7 @@ func TestNeedsUpload24(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3419,7 +3419,7 @@ func TestNeedsUpload25(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3531,7 +3531,7 @@ func TestNeedsUpload26(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3634,7 +3634,7 @@ func TestNeedsUpload27(t *testing.T) {
 	// cleanup
 	defer func() {
 		_ = dbtx.Rollback() //nolint:errcheck
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3840,7 +3840,7 @@ func TestUploadAndUpdateDB1(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -3930,7 +3930,7 @@ func TestUploadAndUpdateDB2(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4028,7 +4028,7 @@ func TestUploadAndUpdateDB3(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4151,7 +4151,7 @@ func TestUploadAndUpdateDB4(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4247,7 +4247,7 @@ func TestUploadAndUpdateDB5(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4339,7 +4339,7 @@ func TestUploadAndUpdateDB6(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4461,7 +4461,7 @@ func TestMarkDeleted1(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4584,7 +4584,7 @@ func TestMarkDeleted2(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4723,7 +4723,7 @@ func TestMarkDeleted3(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	stat, err := os.Stat(path)
@@ -4836,7 +4836,7 @@ func TestMarkDeleted4(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -4959,7 +4959,7 @@ func TestMarkDeleted5(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5088,7 +5088,7 @@ func TestFindAndMarkDeleted1(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5156,7 +5156,7 @@ func TestFindAndMarkDeleted1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dbops.CloseStatementsAndDb(dbData, backupJobsState)
+	dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 
 	u, err = uuid.NewV4()
 	if err != nil {
@@ -5260,7 +5260,7 @@ func TestBackupNewItem1(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5406,7 +5406,7 @@ func TestBackupNewItem2(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table
@@ -5509,7 +5509,7 @@ func TestDo(t *testing.T) {
 
 	// cleanup
 	defer func() {
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	}()
 
 	// setup a file which then will be fed to PrepareFileRecord() so we have a DB record to insert in the file table

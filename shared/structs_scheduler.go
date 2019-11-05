@@ -123,10 +123,11 @@ type BackupJobsState struct {
 	// be created) in order to check also that a restore isn't running for the same backup name (to implement when
 	// restores are implemented)
 
-	// Clients should obtain a read lock whenever they want to to any operations(read and/or write) on a DB belonging
-	// to a given backup section . A write lock obtained means that nothing has the db in Open state. The map keys are
-	// matching the name of the $BackupJobName
-	DbOpenAllowed map[string]*sync.RWMutex
+	// Clients should obtain a lock whenever they want to setup a connection to a DB. This is mainly because of
+	// issues with SQLite3 implementation and it's interaction with GOLang's DB module
+	// The map keys are matching the name of the $BackupJobName for backup jobs, restore jobs will have a db which
+	// is prefixed by ___restore_$name_of_job
+	DbOpenAllowed map[string]*DbAccess
 
 	// The watch multiplexer listens on this chan and for each received message it sends it to any connected clients
 	// which have requested to watch backup/restore progress for that given job name and job id
@@ -724,80 +725,6 @@ func (jobs *BackupJobsState) GetRunningBackupJobId(name string, logContext strin
 	return "", errors.New("no running job was found matching supplied job name")
 }
 
-// Get permission to open a DB only if there isn't a copy in progress for the DB itself.
-// See in struct definition comment for $BackupJobsState field. Basically any database Open call should first request
-// a read lock from the BackupJobsState map, matching the name of the $BackupJobName . The read lock signals that a given client has
-// opened a new connection to the SQL database. This read lock permits reads and writes from the DB so its not an actual "read" lock.
-// Once the DB connection is closed, the client MUST also call UnMarkOpenDb()
-func (jobs *BackupJobsState) MarkOpenDb(BackupJobName string) {
-	logger.Debugf("Waiting to get lock access in order to get permission for opening the database belonging to"+
-		" backup job '%s'", BackupJobName)
-	jobs.Lock.RLock()
-	val, ok := jobs.DbOpenAllowed[BackupJobName]
-	jobs.Lock.RUnlock()
-	if ok {
-		val.RLock()
-	} else {
-		// $BackupJobName was not yet added to the map
-		jobs.Lock.Lock() // lock BackupJobsState while adding a new map member in DbOpenAllowed
-		jobs.DbOpenAllowed[BackupJobName] = &sync.RWMutex{}
-		val := jobs.DbOpenAllowed[BackupJobName]
-		jobs.Lock.Unlock() // close as soon as possible as if the struct is Locked, actual backups may stop
-		val.RLock()
-	}
-	logger.Debugf("Got permission for opening database belonging to backup job '%s'", BackupJobName)
-}
-
-// this is the companion function for MarkOpenDb() . By removing the read lock it signals that a given client has
-// closed its connection to the SQL database.
-func (jobs *BackupJobsState) UnMarkOpenDb(BackupJobName string) {
-	logger.Debugf("Removing lock for permission to opening the database belonging to"+
-		" backup job '%s'", BackupJobName)
-	jobs.Lock.RLock()
-	val := jobs.DbOpenAllowed[BackupJobName]
-	jobs.Lock.RUnlock() // remove readlock ASAP as this struct is used and locked in lots of places
-	val.RUnlock()
-	logger.Debugf("Lock removed for opening database belonging to backup job '%s'", BackupJobName)
-}
-
-// marks that a copy of the DB serving $BackupJobName is in progress and no other client should open a connection to
-// the SQL database until this is completed. A ReadWrite lock is used to signal this, where a RWLock() means copy is in progress.
-// Once the copy is completed, the client MUST also call UnMarkOngoingDbBackup()
-func (jobs *BackupJobsState) MarkOngoingDbBackup(BackupJobName string) {
-	logger.Debugf("Waiting to get lock access in order to get permission for copying the database belonging to"+
-		" backup job '%s'", BackupJobName)
-	jobs.Lock.RLock()
-	logger.Debug("Got read lock in order to examine the JobState structure")
-	val, ok := jobs.DbOpenAllowed[BackupJobName]
-	jobs.Lock.RUnlock()
-	if ok {
-		logger.Debug("1. Waiting to get write lock access on the DbOpenAllowed struct")
-		val.Lock()
-		logger.Debug("1. Got lock on the DbOpenAllowed struct")
-	} else {
-		logger.Debug("2. Waiting to get write lock access on the DbOpenAllowed struct")
-		// $BackupJobName was not yet added to the map
-		jobs.Lock.Lock() // lock BackupJobsState while adding a new map member in DbOpenAllowed
-		logger.Debug("2. Got lock on the DbOpenAllowed struct")
-		jobs.DbOpenAllowed[BackupJobName] = &sync.RWMutex{}
-		val := jobs.DbOpenAllowed[BackupJobName]
-		jobs.Lock.Unlock() // close as soon as possible as if the struct is Locked, actual backups may stop
-		val.Lock()
-	}
-	logger.Debugf("Got permission for copying the database belonging to backup job '%s'", BackupJobName)
-}
-
-// this is the companion function for MarkOngoingDbBackup() . By removing the write lock it signals that the SQL database copy has completed and the DB can again be opened
-func (jobs *BackupJobsState) UnMarkOngoingDbBackup(BackupJobName string) {
-	logger.Debugf("Removing lock used to copy the database belonging to"+
-		" backup job '%s'", BackupJobName)
-	jobs.Lock.RLock()
-	val := jobs.DbOpenAllowed[BackupJobName]
-	jobs.Lock.RUnlock() // remove readlock ASAP as this struct is used and locked in lots of places
-	val.Unlock()
-	logger.Debugf("Removed lock used to copy database belonging to backup job '%s'", BackupJobName)
-}
-
 // checks if a given job running/stopping (but not stopped) job is cancelled . Returns true if cancelled, false otherwise
 func (jobs *BackupJobsState) IsCancelled(name string, JobId string, logContext string) bool {
 	jobs.Lock.RLock()
@@ -832,7 +759,7 @@ func NewJobsState() *BackupJobsState {
 	msgChan := make(chan WatchMessage, watcherChanSize)
 	return &BackupJobsState{
 		Lock:             &sync.RWMutex{},
-		DbOpenAllowed:    make(map[string]*sync.RWMutex),
+		DbOpenAllowed:    make(map[string]*DbAccess),
 		WatchMsgReceiver: msgChan,
 		Watcher:          NewWatcherState(msgChan),
 	}

@@ -405,19 +405,21 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 	// $backupError == true means that the backup could not start
 	if !cancelled && backupError == nil {
 		logger.Debugf("Attempting to upload a copy of the DB and of the config belonging to backup job '%s'", jobName)
-		dbops.CloseStatementsAndDb(dbData, backupJobsState)
+		dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
+		database.CloseDb(dbData.Db, jobName, backupJobsState, false) // this closes down the DB but keeps a lock so no other client can open the DB
 
 		err := backup.UploadBackupDatabase(jobName, jobUuid, backupConfig, serverConfigCopy.DataDir, backupJobsState, objectStores)
 		if err != nil {
 			logger.Warnf("While uploading a copy of the internal database, encountered error: %s", err)
 		}
 
+		database.UnlockDb(jobName, backupJobsState) // allow DB to be opened once again
 		// reopen DB
 		dbData, err = dbops.PrepareDb(jobName, jobUuid, serverConfigCopy, backupJobsState, backupConfig, false)
 		if err != nil {
 			// there are cases where the DB was opened but another subsequent task produced the error so we should
 			// attempt to close the DB. This operation is safe even if it did not succeed opening.
-			dbops.CloseStatementsAndDb(dbData, backupJobsState)
+			dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 			logger.Errorf("After making a copy of the database, could not reopen the original due to error: %s", err)
 		}
 
@@ -477,8 +479,7 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 	if dbData.Connected {
 		_ = dbops.UpdateJobDetails(dbData.Db, jobUuid, jobName, "backup", jobEndTime, jobStateCopy.State, jobReport) // #nosec
 	}
-	// close SQL connection and opened statements
-	dbops.CloseStatementsAndDb(dbData, backupJobsState)
+	dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 
 }
 
@@ -591,14 +592,14 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 		// check db
 		foundUuidInDB, err := dbops.CheckJobUuidExists(db, jobUuid)
 		if err != nil {
-			database.CloseDb(db, Name, backupJobsState)
+			database.DisconnectFromDb(Name, backupJobsState)
 			return "", err
 		}
 		if foundUuidInDB {
-			database.CloseDb(db, Name, backupJobsState)
+			database.DisconnectFromDb(Name, backupJobsState)
 			continue
 		} else {
-			database.CloseDb(db, Name, backupJobsState)
+			database.DisconnectFromDb(Name, backupJobsState)
 			return jobUuid, nil
 		}
 	}

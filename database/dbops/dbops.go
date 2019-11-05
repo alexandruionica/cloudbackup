@@ -16,12 +16,12 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-func CloseStatementsAndDb(dbData shared.DbData, backupJobsState *shared.BackupJobsState) {
+func CloseStatementsAndDisconnectFromDb(dbData shared.DbData, backupJobsState *shared.BackupJobsState) {
 	if dbData.Connected {
 		// close common used prepare statements
 		ClosePreparedStatements(dbData.PreparedStatements)
 		// close db connection
-		database.CloseDb(dbData.Db, dbData.Name, backupJobsState)
+		database.DisconnectFromDb(dbData.Name, backupJobsState)
 	}
 }
 
@@ -485,9 +485,6 @@ func PrepareDb(BackupJobName string, jobUuid string, serverConfigCopy shared.Cfg
 // for a given $jobName, make a copy of the Database file and return back the path to it. It's up to the caller to
 // ensure the Database is in a closed state
 func MakeDbCopy(jobName string, jobUuid string, dataDir string, backupJobsState *shared.BackupJobsState) (string, error) {
-	backupJobsState.MarkOngoingDbBackup(jobName)
-	defer backupJobsState.UnMarkOngoingDbBackup(jobName)
-
 	srcFilePath, err := database.GetDbFilePath(dataDir, jobName)
 	if err != nil {
 		return "", err
