@@ -212,16 +212,14 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 	logger.Infof("Starting backup job having name '%s' with allocated job id '%s'", jobName, jobUuid)
 
 	// extract config for this backup job only
-	var backupConfig shared.ConfigBackup
-	serverConfigCopy.Mutex.RLock()
-	for _, backupObject := range serverConfigCopy.Backup {
-		if backupObject.Name == jobName {
-			// deep copy
-			backupConfig = shared.CopyConfigBackupStruct(backupObject)
-			break
-		}
+	backupConfig, err := shared.MakeCopyOfBackupJobDefinition(jobName, serverConfigCopy)
+	if err != nil {
+		logger.Error(err)
+		// needed as we haven't yet obtained the true list of object stores
+		emptyStores := make([]objectstore.ObjectStore, 0)
+		cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, shared.DbData{}, false, err, emptyStores)
+		return
 	}
-	serverConfigCopy.Mutex.RUnlock()
 
 	ctx, err := backupJobsState.GetContextForJob(jobName, jobUuid)
 	// if we got an error than something else has already marked the backup job as != "running"
@@ -233,7 +231,7 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 		return
 	}
 
-	dbData, err := dbops.PrepareDb(jobName, jobUuid, serverConfigCopy, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(jobName, jobUuid, serverConfigCopy, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		// needed as we haven't yet obtained the true list of object stores
 		emptyStores := make([]objectstore.ObjectStore, 0)
@@ -415,7 +413,7 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 
 		database.UnlockDb(jobName, backupJobsState) // allow DB to be opened once again
 		// reopen DB
-		dbData, err = dbops.PrepareDb(jobName, jobUuid, serverConfigCopy, backupJobsState, backupConfig, false)
+		dbData, err = dbops.PrepareDb(jobName, jobUuid, serverConfigCopy, backupJobsState, backupConfig, false, nil)
 		if err != nil {
 			// there are cases where the DB was opened but another subsequent task produced the error so we should
 			// attempt to close the DB. This operation is safe even if it did not succeed opening.
