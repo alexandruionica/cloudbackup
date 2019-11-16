@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -191,4 +192,26 @@ func CopyConfigBackupStruct(source ConfigBackup) ConfigBackup {
 	}
 
 	return result
+}
+
+// makes a copy of a backup Job definition
+func MakeCopyOfBackupJobDefinition(jobName string, srvConfig CfgTemplate) (ConfigBackup, error) {
+	// extract config for this backup job only
+	var backupConfig ConfigBackup
+	found := false
+	srvConfig.Mutex.RLock()
+	for _, backupObject := range srvConfig.Backup {
+		if backupObject.Name == jobName {
+			// deep copy
+			backupConfig = CopyConfigBackupStruct(backupObject)
+			found = true
+			break
+		}
+	}
+	srvConfig.Mutex.RUnlock()
+	if found {
+		return backupConfig, nil
+	} else {
+		return ConfigBackup{}, fmt.Errorf("could not find a backup job definition having name '%s'", jobName)
+	}
 }

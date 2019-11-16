@@ -437,17 +437,23 @@ func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, 
 // struct containing the DB handlers and prepared statements
 // $BackupJobName must be already marked as "running" in $backupJobsState or otherwise this function will error
 // $newJobRun is true if this back job is starting now, or otherwise it should be false (most of the time you want this to be "true")
+// if $Db is not "nil" then it will be used; otherwise an attempt to open the database will be made
 func PrepareDb(BackupJobName string, jobUuid string, serverConfigCopy shared.CfgTemplate,
-	backupJobsState *shared.BackupJobsState, backupConfig shared.ConfigBackup, newJobRun bool) (shared.DbData, error) {
+	backupJobsState *shared.BackupJobsState, backupConfig shared.ConfigBackup, newJobRun bool, Db *sql.DB) (shared.DbData, error) {
 	var err error
 	dbData := shared.DbData{Connected: false, Name: BackupJobName}
-	// get DB connection pointer
-	dbData.Db, err = database.Start(serverConfigCopy.DataDir, BackupJobName, backupJobsState)
-	// the backup can not run as we can't initialise/connect to the database
-	if err != nil {
-		return dbData, err
-	} else {
+	if Db != nil {
+		dbData.Db = Db
 		dbData.Connected = true
+	} else {
+		// get DB connection pointer
+		dbData.Db, err = database.Start(serverConfigCopy.DataDir, BackupJobName, backupJobsState)
+		// the backup can not run as we can't initialise/connect to the database
+		if err != nil {
+			return dbData, err
+		} else {
+			dbData.Connected = true
+		}
 	}
 
 	// get DB prepared statements for the most common operations

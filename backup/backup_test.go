@@ -469,7 +469,7 @@ func TestAddEntryToRemoteFilesAndGetBackedupObjectPropertiesFromDb(t *testing.T)
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -662,7 +662,7 @@ func TestGetRemoteFileVersion1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -730,7 +730,7 @@ func TestGetRemoteFileVersionAndGetNewestRemoteFileUuid(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -957,7 +957,7 @@ func TestNeedsUpload1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1057,7 +1057,7 @@ func TestNeedsUpload2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1157,7 +1157,7 @@ func TestNeedsUpload3(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1262,7 +1262,7 @@ func TestNeedsUpload4(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1364,7 +1364,7 @@ func TestNeedsUpload5(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1468,7 +1468,7 @@ func TestNeedsUpload6(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1572,7 +1572,7 @@ func TestNeedsUpload7(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1675,7 +1675,7 @@ func TestNeedsUpload8(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1778,7 +1778,7 @@ func TestNeedsUpload9(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1881,7 +1881,7 @@ func TestNeedsUpload10(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -1974,7 +1974,7 @@ func TestNeedsUpload11(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2067,7 +2067,7 @@ func TestNeedsUpload12(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2162,7 +2162,7 @@ func TestNeedsUpload13(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2257,7 +2257,7 @@ func TestNeedsUpload14(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2354,7 +2354,7 @@ func TestNeedsUpload15(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2451,7 +2451,7 @@ func TestNeedsUpload16(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2547,7 +2547,7 @@ func TestNeedsUpload17(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2650,7 +2650,7 @@ func TestNeedsUpload18(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2746,7 +2746,7 @@ func TestNeedsUpload19(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2855,7 +2855,7 @@ func TestNeedsUpload20(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -2964,7 +2964,7 @@ func TestNeedsUpload21(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -3078,7 +3078,7 @@ func TestNeedsUpload22(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -3189,7 +3189,7 @@ func TestNeedsUpload23(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -3293,7 +3293,7 @@ func TestNeedsUpload24(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -3406,7 +3406,7 @@ func TestNeedsUpload25(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -3518,7 +3518,7 @@ func TestNeedsUpload26(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -3621,7 +3621,7 @@ func TestNeedsUpload27(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -3833,7 +3833,7 @@ func TestUploadAndUpdateDB1(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -3923,7 +3923,7 @@ func TestUploadAndUpdateDB2(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4021,7 +4021,7 @@ func TestUploadAndUpdateDB3(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4144,7 +4144,7 @@ func TestUploadAndUpdateDB4(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4240,7 +4240,7 @@ func TestUploadAndUpdateDB5(t *testing.T) {
 	errObjectStore := objectstore.InitialiseStoreError(ctx, backupConfig, "error_store", "store_error", 0)
 	objectStores = append(objectStores, errObjectStore)
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4332,7 +4332,7 @@ func TestUploadAndUpdateDB6(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4454,7 +4454,7 @@ func TestMarkDeleted1(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4577,7 +4577,7 @@ func TestMarkDeleted2(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4716,7 +4716,7 @@ func TestMarkDeleted3(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4829,7 +4829,7 @@ func TestMarkDeleted4(t *testing.T) {
 		t.Fatalf("Was expecting 2 object stores but found: %d", len(objectStores))
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -4952,7 +4952,7 @@ func TestMarkDeleted5(t *testing.T) {
 		t.Fatalf("Was expecting 2 object stores but found: %d", len(objectStores))
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -5076,7 +5076,7 @@ func TestFindAndMarkDeleted1(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -5168,7 +5168,7 @@ func TestFindAndMarkDeleted1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dbData, err = dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err = dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -5248,7 +5248,7 @@ func TestBackupNewItem1(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -5394,7 +5394,7 @@ func TestBackupNewItem2(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
@@ -5497,7 +5497,7 @@ func TestDo(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true)
+	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
 	if err != nil {
 		t.Fatalf("1. Could not setup DB prerequisite due to error: %s", err)
 	}
