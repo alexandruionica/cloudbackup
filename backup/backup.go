@@ -415,8 +415,8 @@ func calcRemoteFileVersion(dbData shared.DbData, dbtx *sql.Tx, localPath string,
 		}
 	}
 	if err = rows.Err(); err != nil {
-		logger.Warnf("While trying to Close() a the database query used "+
-			"to calculate a version number for '%s' the following error was encountered: %s", localPath, err)
+		logger.Warnf("While enumerating the results of querying the database in order to calculate a version "+
+			"number for '%s' the following error was encountered: %s", localPath, err)
 		return 0, err
 	}
 	if entryFound {
