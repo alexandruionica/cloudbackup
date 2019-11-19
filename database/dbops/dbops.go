@@ -197,6 +197,9 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
 
+	// shows previously ran jobs (excludes any running jobs)
+	PreparedStatements.ReportBackupJobsListQuery = "SELECT id, start_time, end_time, state FROM jobs WHERE name = ? AND state != 'started' AND end_time < ? ORDER BY start_time LIMIT ? OFFSET ?"
+
 	return PreparedStatements, nil
 }
 
