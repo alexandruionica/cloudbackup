@@ -43,4 +43,5 @@ type DbPreparedStatements struct {
 	BackupCollectionsInsertStmt           *sql.Stmt
 	FindDeletedItemsStmt                  *sql.Stmt
 	FailedFilesInsertStmt                 *sql.Stmt
+	ReportBackupJobsListQuery             string
 }

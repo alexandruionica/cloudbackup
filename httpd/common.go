@@ -190,6 +190,20 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 	}
 }
 
+// returns a pointer to the $BackupJobsState. This is created so the HTTP handlers don;t have to deal themselves with locking in regards to clients disconnecting
+func (srv *SrvData) GetJobState(logContext string) *shared.BackupJobsState {
+	//log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read lock before copying HTTPD config " +
+	//	"struct")
+	srv.Mutex.RLock()
+	defer func() {
+		srv.Mutex.RUnlock()
+		//log.WithFields(log.Fields{"context": logContext}).Debug("Read lock released after copying HTTPD " +
+		//	"config struct")
+	}()
+	//log.WithFields(log.Fields{"context": logContext}).Debug("Read lock for copying HTTPD config acquired")
+	return srv.backupJobsState
+}
+
 // send HTTP error back to user in JSON format; "httpcode" is HTTP status code to reply with, "code" is a short message to show,
 // "message" is a detailed explanation of what when wrong
 func JSONError(w http.ResponseWriter, httpcode int, code string, message string) {
@@ -245,6 +259,35 @@ func JSONSuccessWithResult(w http.ResponseWriter, code string, message string, r
 		HttpStatusReply
 		Result interface{} `json:"result"`
 	}{status, result}
+
+	b, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Internal Server Error when trying to reply that requested operation was successful",
+			500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(response.HTTPCode)
+	_, err = fmt.Fprint(w, string(b))
+	if err != nil {
+		logger.Debugf("Encountered an error while writing reply to client: %s", err)
+	}
+}
+
+// send HTTP success back to user in JSON format; "code" is a short message to show, "message" is a detailed explanation
+// $next represents the pagination token to send back to the user so it can be specified in a subsequent request
+// result is any Struct which can be json.Marshall-ed and it contains operation specific data
+func JSONSuccessWithResultPaginated(w http.ResponseWriter, code string, message string, next string, result interface{}) {
+	status := HttpStatusReply{
+		HTTPCode: 200,
+		Code:     code,
+		Message:  message,
+	}
+	response := struct {
+		HttpStatusReply
+		Next   string      `json:"next"`
+		Result interface{} `json:"result"`
+	}{status, next, result}
 
 	b, err := json.Marshal(response)
 	if err != nil {
