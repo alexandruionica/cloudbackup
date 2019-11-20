@@ -143,8 +143,8 @@ func OpenDb(datadir string, dbName string, fileExists bool, backupJobsState *sha
 	backupJobsState.Lock.RUnlock()
 	if ok { // the map has an entry for our database
 		if timeout != 0 {
-			timedOut := entry.DbOpenAllowed.GetLockWithTimeout(timeout)
-			if timedOut {
+			gotLock := entry.DbOpenAllowed.GetLockWithTimeout(timeout)
+			if !gotLock {
 				return &sql.DB{}, errors.New(ErrTimedOut)
 			}
 		} else {
