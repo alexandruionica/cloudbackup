@@ -27,6 +27,7 @@ type ReportBackupList struct {
 }
 
 type ReportBackupListDbResults struct {
+	Name      string `json:"name"`
 	JobId     string `json:"job_id"`
 	StartTime int64  `json:"start_time"`
 	EndTime   int64  `json:"end_time"`
@@ -93,7 +94,7 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 	var limit uint64 = LimitReportResults
 	if decodedJson.MaxResults > LimitReportResults {
 		logger.Debugf("Requested max results of '%d' is larger then hardcoded limit of '%d'. Will return up"+
-			" to '%d' results", decodedJson.MaxResults, LimitReportResults, decodedJson.MaxResults)
+			" to '%d' results", decodedJson.MaxResults, LimitReportResults, LimitReportResults)
 	} else {
 		if decodedJson.MaxResults > 0 {
 			limit = decodedJson.MaxResults
@@ -135,6 +136,7 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 	db, err := database.OpenDb(configCopy.DataDir, jobName, true, backupJobsState, 15*time.Second)
 	if err != nil {
 		if err.Error() == database.ErrTimedOut {
+			logger.Debugf("Timed out while trying to get database access from handlerPostReportBackupList() being ran for job definition '%s'", jobName)
 			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable, fmt.Sprint("Timed out while trying to get database access. Please try again later."))
 			return
 		} else {
@@ -195,16 +197,7 @@ func getRowsForHandlerPostReportBackupList(dbData shared.DbData, jobName string,
 
 	for rows.Next() {
 		rowResult := ReportBackupListDbResults{}
-		// "SELECT id, start_time, end_time, state FROM jobs WHERE name = ? AND state != 'started' AND end_time < ? ORDER BY start_time LIMIT ? OFFSET ?"
-		/*
-			type ReportBackupListDbResults struct {
-				JobId     string
-				StartTime int64
-				EndTime   int64
-				State     string
-			}
-		*/
-		err := rows.Scan(&rowResult.JobId, &rowResult.StartTime, &rowResult.EndTime, &rowResult.State)
+		err := rows.Scan(&rowResult.Name, &rowResult.JobId, &rowResult.StartTime, &rowResult.EndTime, &rowResult.State)
 		if err != nil {
 			logger.Errorf("While retrieving the database records in order to build report list for backup "+
 				"definition '%s', the following error was encountered: '%s'", jobName, err)

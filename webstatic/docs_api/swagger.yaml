@@ -1158,6 +1158,10 @@ definitions:
   ResultReportBackupList:
     type: object
     properties:
+      name:
+        type: string
+        example: generic-server
+        description: Job definition name as it is in the configuration file
       job_id:
         type: string
         example: 163A61FE-2205-4EB2-A0CB-B19A033C1CE3
@@ -1167,7 +1171,7 @@ definitions:
         type: string
         example: '2018-06-02T16:38:55.676712775+10:00'
         description: >-
-          Aw which time the job started.
+          At which time the job started.
       end_time:
         type: string
         example: '2018-06-02T17:21:32.476812215+10:00'
