@@ -38,7 +38,7 @@ class TestCliBackupValidate(unittest.TestCase):
         self.tmpdir, self.filelist = setup_dir_with_tmp_files()
         # adjust server config for job to include above tmpdir
         with open(self.server_config_file_path) as fd:
-            parsed = yaml.load(fd)
+            parsed = yaml.load(fd, Loader=yaml.SafeLoader)
             parsed['backup'][0]['paths'] = [self.tmpdir]
             parsed['backup'][0]['exclusions'] = [""]
         # make 1 folder unreadable - os.chmod doesn't work on Windows

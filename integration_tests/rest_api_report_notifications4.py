@@ -33,7 +33,7 @@ class TestRestAPIReportNotification4(unittest.TestCase):
             suffix='_integration_tests_rest_api_report_notification4_', config_file_content=self.complete_server_cfg)
         # adjust server config for job to include above tmpdir
         with open(self.server_config_file_path) as fd:
-            parsed = yaml.load(fd)
+            parsed = yaml.load(fd, Loader=yaml.SafeLoader)
             parsed['backup'][0]['paths'] = [os.sep + 'aPath' + os.sep + 'which' + os.sep + 'doesNot' + os.sep + 'exist']
         with open(self.server_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
