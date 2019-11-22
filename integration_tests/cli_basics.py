@@ -80,7 +80,7 @@ class TestCliBasics(unittest.TestCase):
     def test_cmd_validate_server_config2(self):
         # load valid yaml data from tmp config, alter it a bit to cause validation to fail and then write it back
         with open(self.server_config_file_path) as fd:
-            parsed = yaml.load(fd)
+            parsed = yaml.load(fd, Loader=yaml.SafeLoader)
             parsed['backup'][0]['encrypt'] = True
             parsed['backup'][0]['encrypt_pass'] = ''
             parsed['backup'][1]['encrypt'] = True
@@ -103,7 +103,7 @@ class TestCliBasics(unittest.TestCase):
         self.assertGreater(line_num, 60, "Expected output from {} to be at least 60 lines long. Command output object: "
                                          "{}".format(cmd_default, result))
         # if this raises and exception then we got a problem
-        yaml.load(result['result'].stdout.decode("utf-8"))
+        yaml.load(result['result'].stdout.decode("utf-8"), Loader=yaml.SafeLoader)
 
     # ./cloudbackup server config example produces valid config file
     def test_cmd_server_example_config2(self):
@@ -111,7 +111,7 @@ class TestCliBasics(unittest.TestCase):
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
         # adjust server config file
-        loaded_config = yaml.load(result['result'].stdout.decode("utf-8"))
+        loaded_config = yaml.load(result['result'].stdout.decode("utf-8"), Loader=yaml.SafeLoader)
         # we need to adjust data_dir as the path may not exist on the CI/CD systems
         loaded_config['data_dir'] = './tmp/'
         # skip https certificate path validation
@@ -205,7 +205,7 @@ class TestCliBasics(unittest.TestCase):
     def test_cmd_validate_client_config2(self):
         # load valid yaml data from tmp config, alter it a bit to cause validation to fail and then write it back
         with open(self.client_config_file_path) as fd:
-            parsed = yaml.load(fd)
+            parsed = yaml.load(fd, Loader=yaml.SafeLoader)
             parsed['address'] = 'ftp://google.com:21'
         with open(self.client_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
@@ -235,7 +235,7 @@ class TestCliBasics(unittest.TestCase):
     def test_cmd_validate_client_config5(self):
         # load valid yaml data from tmp config, alter it a bit to cause validation to fail and then write it back
         with open(self.client_config_file_path) as fd:
-            parsed = yaml.load(fd)
+            parsed = yaml.load(fd, Loader=yaml.SafeLoader)
             parsed['address'] = 'ftp://google.com:21'
         with open(self.client_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
@@ -322,7 +322,7 @@ class TestCliBasics(unittest.TestCase):
         self.assertGreater(line_num, 3, "Expected output from {} to be at least 3 lines long. Command output object: "
                                         "{}".format(cmd_default, result))
         # if this raises and exception then we got a problem
-        yaml.load(result['result'].stdout.decode("utf-8"))
+        yaml.load(result['result'].stdout.decode("utf-8"), Loader=yaml.SafeLoader)
 
     # ./cloudbackup client config example produces valid config example,
     def test_cmd_client_example_config2(self):
