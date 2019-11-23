@@ -165,9 +165,8 @@ func OpenDb(datadir string, dbName string, fileExists bool, backupJobsState *sha
 				return db, err
 			} else {
 				entry.DB = db
-				atomic.AddUint32(&entry.NumClients, ^uint32(0)) // decrements NumClients
 				entry.DbOpenAllowed.ReleaseLock()
-				return db, err
+				return db, nil
 			}
 		}
 	} else { // $BackupJobName was not yet added to the map
@@ -202,6 +201,7 @@ func DisconnectFromDb(dbName string, backupJobsState *shared.BackupJobsState) {
 	backupJobsState.Lock.RUnlock()
 	if ok { // the map has an entry for our database
 		atomic.AddUint32(&entry.NumClients, ^uint32(0)) // decrements NumClients
+		logger.Debugf("remaining '%d' connected clients to database '%s'", atomic.LoadUint32(&entry.NumClients), dbName)
 	} else { // no entry exists for this DB which is unexpected (an error)
 		logger.Warnf("Tried to disconnect from database '%s' but no connections to the database are recorded to exist", dbName)
 		return
@@ -220,7 +220,10 @@ func CloseDb(dbName string, backupJobsState *shared.BackupJobsState, releaseLock
 		for {                         // sleep 50 ms until all DB clients have disconnected
 			numClients := atomic.LoadUint32(&entry.NumClients)
 			if numClients > 0 {
-				time.Sleep(50 * time.Millisecond)
+				sleepMs := 50
+				logger.Debugf("%d clients still connected to database '%s'. Sleeping %d milliseconds before "+
+					"checking again", numClients, dbName, sleepMs)
+				time.Sleep(time.Duration(sleepMs) * time.Millisecond)
 			} else {
 				break
 			}
@@ -236,6 +239,7 @@ func CloseDb(dbName string, backupJobsState *shared.BackupJobsState, releaseLock
 		if releaseLock {
 			entry.DbOpenAllowed.ReleaseLock()
 		}
+		logger.Debugf("Database '%s' has been successfully closed.", dbName)
 		return
 	} else { // no entry exists for this DB which is unexpected (an error)
 		logger.Errorf("Tried to close database '%s' but no record of the database being open exists. This may lead to any "+
