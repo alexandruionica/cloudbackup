@@ -394,7 +394,7 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 		backupJobErrorMsg = backupError.Error()
 	}
 
-	// Record in the DB the job statatus - if it errors out then UpdateJobDetails() will log. There is nothing we can do with the error here
+	// Record in the DB the job status - if it errors out then UpdateJobDetails() will log. There is nothing we can do with the error here
 	if dbData.Connected {
 		_ = dbops.UpdateJobDetails(dbData.Db, jobUuid, jobName, "backup", jobEndTime, jobStateCopy.State, jobReport) // #nosec
 	}

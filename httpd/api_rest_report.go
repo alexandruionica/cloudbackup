@@ -161,9 +161,11 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 		return
 	}
 	// end - all the plumbing needed in order to get DB access
+	defer dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
+	// TODO - there is a potentially big problem here if a client disconnects before we setup the above defer() as the structure which records how many DB connected clients we have would end up with
+	// extra marked clients (but the actual clients have long disconnected). This leads to any attempt to close the database to hang as the closing function waits for all clients to disconnect
 
 	dbResults, err := getRowsForHandlerPostReportBackupList(dbData, jobName, limit, offset)
-	dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
 	if err != nil {
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
 		return
