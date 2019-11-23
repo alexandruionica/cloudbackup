@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import os
 import requests
 import yaml
 from common import *
@@ -41,7 +42,8 @@ class TestRestAPIReportBackupList1(unittest.TestCase):
         self.base_url = "http://127.0.0.1:8080"
         # for some reason output to stdout which is beyond some arbitrary length make
         # the test fail (Windows is more sensitive than Linux); workaround is to send output to the logfile
-        _, self.inttestlog = tempfile.mkstemp(prefix="integration_test_log_")
+        file_descriptor , self.inttestlog = tempfile.mkstemp(prefix="integration_test_log_")
+        os.close(file_descriptor)
         if verbose:
             self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url,
                                        extra_options="-d --logfile=" + self.inttestlog)
