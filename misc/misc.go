@@ -3,6 +3,7 @@ package misc
 import (
 	log "github.com/sirupsen/logrus"
 	"os"
+	"time"
 )
 
 const loggingContext = "misc"
@@ -187,9 +188,9 @@ func SetupLogging(args LoggingArgs) {
 	log.SetOutput(os.Stdout)
 
 	if args.TextLog {
-		log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+		log.SetFormatter(&log.TextFormatter{FullTimestamp: true, TimestampFormat: time.RFC3339Nano})
 	} else {
-		log.SetFormatter(&log.JSONFormatter{})
+		log.SetFormatter(&log.JSONFormatter{TimestampFormat: time.RFC3339Nano})
 	}
 
 	if args.LogFile != "" {
