@@ -16,7 +16,7 @@ import tempfile
 import quopri
 
 
-logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)-15s %(levelname)s: %(message)s', level=logging.INFO)
 
 if platform.system().lower() == 'windows':
     cmd_default = ".\cloudbackup.exe"
@@ -108,6 +108,8 @@ username: testuser1
 password: 'HV}H/y?<9$]Z5N4N'
 address: http://127.0.0.1:8080
 '''
+
+verbose = False
 
 
 def run_shell_cmd(cmd):
