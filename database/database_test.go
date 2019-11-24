@@ -105,7 +105,6 @@ func TestOpenDb1(t *testing.T) {
 	if err == nil {
 		t.Fatal("OpenDb() was supposed to return an error but didn't")
 	}
-	numDbClients += 1
 }
 
 // test CreateDb() with valid, absolute path to the .sqlite database file
@@ -123,6 +122,16 @@ func TestCreateDb1(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
 		}
+		// test that the state structure is as expected after closing the database
+		for name, entry := range backupJobsState.DbOpenAllowed {
+			if name == backupName && entry.NumClients != 0 {
+				t.Fatalf("3. State for database '%s' shows that there are '%d' connected DB clients but we expected 0", name, entry.NumClients)
+			} else {
+				if name != backupName {
+					t.Fatalf("3. found state for unknown DB called '%s'", name)
+				}
+			}
+		}
 	}()
 
 	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState, 0)
@@ -131,10 +140,124 @@ func TestCreateDb1(t *testing.T) {
 	}
 	numDbClients += 1
 
+	// test that the state structure is as expected
+	for name, entry := range backupJobsState.DbOpenAllowed {
+		if name == backupName && entry.NumClients != 1 {
+			t.Fatalf("1. State for database '%s' shows that there are '%d' connected DB clients but we expected 1", name, entry.NumClients)
+		} else {
+			if name != backupName {
+				t.Fatalf("1. found state for unknown DB called '%s'", name)
+			}
+		}
+	}
+
 	err = CreateDb(db, backupName)
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
+
+	// test again after CreateDb() to ensure state remains as expected
+	for name, entry := range backupJobsState.DbOpenAllowed {
+		if name == backupName && entry.NumClients != 1 {
+			t.Fatalf("2. State for database '%s' shows that there are '%d' connected DB clients but we expected 1", name, entry.NumClients)
+		} else {
+			if name != backupName {
+				t.Fatalf("2. found state for unknown DB called '%s'", name)
+			}
+		}
+	}
+}
+
+// test CreateDb() with valid, absolute path to the .sqlite database file and then test that OpenDB produces the expected state files in multiple scenarios
+func TestCreateDbOpenDb2(t *testing.T) {
+	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
+	backupName := "backup1"
+	backupJobsState := shared.NewJobsState()
+	numDbClients := 0
+
+	db, err := OpenDb(dbDataDirPath, backupName, false, backupJobsState, 0)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	numDbClients += 1
+
+	// test that the state structure is as expected
+	for name, entry := range backupJobsState.DbOpenAllowed {
+		if name == backupName && entry.NumClients != 1 {
+			t.Fatalf("1. State for database '%s' shows that there are '%d' connected DB clients but we expected 1", name, entry.NumClients)
+		} else {
+			if name != backupName {
+				t.Fatalf("1. found state for unknown DB called '%s'", name)
+			}
+		}
+	}
+
+	err = CreateDb(db, backupName)
+	if err != nil {
+		t.Fatalf("CreateDb() returned error: '%s'", err)
+	}
+
+	// test again after CreateDb() to ensure state remains as expected
+	for name, entry := range backupJobsState.DbOpenAllowed {
+		if name == backupName && entry.NumClients != 1 {
+			t.Fatalf("2. State for database '%s' shows that there are '%d' connected DB clients but we expected 1", name, entry.NumClients)
+		} else {
+			if name != backupName {
+				t.Fatalf("2. found state for unknown DB called '%s'", name)
+			}
+		}
+	}
+
+	for i := 0; i < numDbClients; i++ {
+		DisconnectFromDb(backupName, backupJobsState)
+	}
+	CloseDb(backupName, backupJobsState, true)
+	// test that the state structure is as expected after closing the database
+	for name, entry := range backupJobsState.DbOpenAllowed {
+		if name == backupName && entry.NumClients != 0 {
+			t.Fatalf("3. State for database '%s' shows that there are '%d' connected DB clients but we expected 0", name, entry.NumClients)
+		} else {
+			if name != backupName {
+				t.Fatalf("3. found state for unknown DB called '%s'", name)
+			}
+		}
+	}
+
+	_, err = OpenDb(dbDataDirPath, backupName, false, backupJobsState, 0)
+	if err != nil {
+		t.Fatalf("OpenDb() returned error: '%s'", err)
+	}
+	numDbClients = 1
+	// test that the state structure is as expected
+	for name, entry := range backupJobsState.DbOpenAllowed {
+		if name == backupName && entry.NumClients != 1 {
+			t.Fatalf("4. State for database '%s' shows that there are '%d' connected DB clients but we expected 1", name, entry.NumClients)
+		} else {
+			if name != backupName {
+				t.Fatalf("4. found state for unknown DB called '%s'", name)
+			}
+		}
+	}
+
+	for i := 0; i < numDbClients; i++ {
+		DisconnectFromDb(backupName, backupJobsState)
+	}
+	CloseDb(backupName, backupJobsState, true)
+	err = os.RemoveAll(dbDataDirPath) // #nosec
+	if err != nil {
+		t.Fatalf("Could not remove mock folder used to test backup. Error was: %s", err)
+	}
+	// test that the state structure is as expected after closing the database
+	for name, entry := range backupJobsState.DbOpenAllowed {
+		if name == backupName && entry.NumClients != 0 {
+			t.Fatalf("5. State for database '%s' shows that there are '%d' connected DB clients but we expected 0", name, entry.NumClients)
+		} else {
+			if name != backupName {
+				t.Fatalf("5. found state for unknown DB called '%s'", name)
+			}
+		}
+	}
+
 }
 
 // test CreateDb() with invalid, absolute path to the .sqlite database file
