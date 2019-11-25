@@ -24,14 +24,18 @@ type ReportBackupList struct {
 	Next string `json:"next"`
 	// max number of results to return. Ignored when $Next is supplied
 	MaxResults uint64 `json:"max_results"`
+	// select only reports which have a start_time >= $FromStartTime
+	FromStartTime string `json:"from_start_time"`
+	// select only reports which have a start_time <= $ToStartTime
+	UntilStartTime string `json:"until_start_time"`
 }
 
 type ReportBackupListDbResults struct {
-	Name      string `json:"name"`
-	JobId     string `json:"job_id"`
-	StartTime int64  `json:"start_time"`
-	EndTime   int64  `json:"end_time"`
-	State     string `json:"state"`
+	Name      string    `json:"name"`
+	JobId     string    `json:"job_id"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+	State     string    `json:"state"`
 }
 
 const LimitReportResults = 1000
@@ -101,9 +105,47 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 		}
 	}
 
+	var FromStartTime, UntilStartTime int64
+	if decodedJson.FromStartTime == "" {
+		FromStartTime = time.Now().AddDate(0, 0, -30).UnixNano() // 7 days ago
+	} else {
+		tmpTime, err := time.Parse(time.RFC3339Nano, decodedJson.FromStartTime)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'from_start_time' could not be parsed into a time object which "+
+					"is RFC3339 with nanoseconds compliant due to error: %s", decodedJson.FromStartTime, err.Error()))
+			return
+		} else {
+			FromStartTime = tmpTime.UnixNano()
+		}
+	}
+
+	if decodedJson.UntilStartTime == "" {
+		UntilStartTime = time.Now().UnixNano()
+	} else {
+		tmpTime, err := time.Parse(time.RFC3339Nano, decodedJson.UntilStartTime)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'until_start_time' could not be parsed into a time object which "+
+					"is RFC3339 with nanoseconds compliant due to error: %s", decodedJson.UntilStartTime, err.Error()))
+			return
+		} else {
+			UntilStartTime = tmpTime.UnixNano()
+		}
+		if UntilStartTime < FromStartTime {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'until_start_time' represents a value which is earlier "+
+					"than 'from_start_time' 's own value of %s", decodedJson.UntilStartTime,
+					time.Unix(0, FromStartTime).Format(time.RFC3339Nano)))
+			return
+		}
+	}
+
 	var offset uint64 = 0
 	if decodedJson.Next != "" {
-		limit, offset, err = decodeNextToken(decodedJson.Next)
+		logger.Debugf("Ignoring any values passed in for 'max_results', 'from_start_time' and 'until_start_time'" +
+			" as we had a valid 'next' supplied too")
+		limit, offset, FromStartTime, UntilStartTime, err = decodeNextToken(decodedJson.Next)
 		if err != nil {
 			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
 			return
@@ -165,7 +207,9 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 	// TODO - there is a potentially big problem here if a client disconnects before we setup the above defer() as the structure which records how many DB connected clients we have would end up with
 	// extra marked clients (but the actual clients have long disconnected). This leads to any attempt to close the database to hang as the closing function waits for all clients to disconnect
 
-	dbResults, err := getRowsForHandlerPostReportBackupList(dbData, jobName, limit, offset)
+	// time.Now().UnixNano()
+
+	dbResults, err := getRowsForHandlerPostReportBackupList(dbData, jobName, limit, offset, FromStartTime, UntilStartTime)
 	if err != nil {
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
 		return
@@ -174,16 +218,22 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 	next := ""
 	// if returned results == $limit  then sent back a "next" value to client so it knows it doesn't have the full result set
 	if uint64(len(dbResults)) == limit {
-		next = buildNextToken(limit, offset+limit)
+		next = buildNextToken(limit, offset+limit, FromStartTime, UntilStartTime)
 	}
 
 	JSONSuccessWithResultPaginated(w, "success", "success", next, dbResults)
 }
 
-// retrieves results from the database and reports any errors. If an error is returned then the []ReportBackupListDbResults should be discarded/disregarded
-func getRowsForHandlerPostReportBackupList(dbData shared.DbData, jobName string, limit uint64, offset uint64) ([]ReportBackupListDbResults, error) {
+// retrieves results from the database and reports any errors. If an error is returned then the
+// []ReportBackupListDbResults should be discarded/disregarded
+// $limit represents how many records to retrieve in one go; $offset is the offset to start request records from
+// (this is related to $limit); $earliestStart is the start date+time(Unix time in nanoseconds) of the oldest backup
+// to consider for reporting back; $latestStart is the start date+time(Unix time in nanoseconds) of the most recent
+// backup to consider. $earliestStart togeher with $latestStart defines the interval to report for
+func getRowsForHandlerPostReportBackupList(dbData shared.DbData, jobName string, limit uint64, offset uint64, earliestStart int64, latestStart int64) ([]ReportBackupListDbResults, error) {
 	results := make([]ReportBackupListDbResults, 0)
-	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsListQuery, jobName, time.Now().UnixNano(), limit, offset)
+	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsListQuery, jobName, earliestStart,
+		latestStart, limit, offset)
 	if err != nil {
 		logger.Errorf("While querying the database in order to get the list of reports, the "+
 			"following error was encountered: %s", err)
@@ -197,14 +247,18 @@ func getRowsForHandlerPostReportBackupList(dbData shared.DbData, jobName string,
 		}
 	}()
 
+	var tmpStartTime, tmpEndTime int64
+	// time.Unix(0, tmpMtime)
 	for rows.Next() {
 		rowResult := ReportBackupListDbResults{}
-		err := rows.Scan(&rowResult.Name, &rowResult.JobId, &rowResult.StartTime, &rowResult.EndTime, &rowResult.State)
+		err := rows.Scan(&rowResult.Name, &rowResult.JobId, &tmpStartTime, &tmpEndTime, &rowResult.State)
 		if err != nil {
 			logger.Errorf("While retrieving the database records in order to build report list for backup "+
 				"definition '%s', the following error was encountered: '%s'", jobName, err)
 			return results, err
 		}
+		rowResult.StartTime = time.Unix(0, tmpStartTime)
+		rowResult.EndTime = time.Unix(0, tmpEndTime)
 		results = append(results, rowResult)
 	}
 	if err = rows.Err(); err != nil {
@@ -216,34 +270,48 @@ func getRowsForHandlerPostReportBackupList(dbData shared.DbData, jobName string,
 	return results, nil
 }
 
-// builds a next token by concatenating $limit + ":" + $offset and then base64 encoding the result
-func buildNextToken(limit uint64, offset uint64) string {
-	// format is offset:max_results
-	plain := strconv.FormatUint(limit, 10) + ":" + strconv.FormatUint(offset, 10)
+// builds a next token by concatenating $limit + ":" + $offset + ":" + $earliestStart + ":" $latestStart and then base64 encoding the result
+func buildNextToken(limit uint64, offset uint64, earliestStart int64, latestStart int64) string {
+	// format is offset:max_results:earliestStart:latestStart
+	plain := strconv.FormatUint(limit, 10) + ":" + strconv.FormatUint(offset, 10) + ":" +
+		strconv.FormatInt(earliestStart, 10) + ":" + strconv.FormatInt(latestStart, 10)
 	return base64.StdEncoding.EncodeToString([]byte(plain))
 }
 
-// decodes a $nextToken produced by buildNextToken()
-func decodeNextToken(nextToken string) (limit uint64, offset uint64, err error) {
+// decodes a $nextToken produced by buildNextToken(); if returned $err is not nil then all other returned values should be ignored
+func decodeNextToken(nextToken string) (limit uint64, offset uint64, earliestStart int64, latestStart int64, err error) {
 	decoded, err := base64.StdEncoding.DecodeString(nextToken)
 	if err != nil {
-		return limit, offset, fmt.Errorf("could not base64 decode 'Next' token '%s' due to error: %s", nextToken, err)
+		return limit, offset, earliestStart, latestStart, fmt.Errorf("could not base64 decode 'Next' token '%s' due to error: %s", nextToken, err)
 	}
 	parts := strings.Split(string(decoded), ":")
-	if len(parts) != 2 {
-		return limit, offset, fmt.Errorf("base64 decoded token '%s' to '%+v' is not made up of two parts "+
-			"separated by ':'", nextToken, parts)
+	if len(parts) != 4 {
+		return limit, offset, earliestStart, latestStart, fmt.Errorf("base64 decoded token '%s' to '%+v' is "+
+			"not made up of four parts separated by ':'", nextToken, parts)
 	}
 	limit, err = strconv.ParseUint(parts[0], 10, 64)
 	if err != nil {
-		return limit, offset, fmt.Errorf("base64 decoded token '%s' to '%+v'. First part which is '%s' could "+
-			"not be converted to an integer due to error: %s", nextToken, parts, parts[0], err)
+		return limit, offset, earliestStart, latestStart, fmt.Errorf("base64 decoded token '%s' to '%+v'. First "+
+			"part which is '%s' could not be converted to an integer due to error: %s", nextToken, parts, parts[0], err)
 	}
 
 	offset, err = strconv.ParseUint(parts[1], 10, 64)
 	if err != nil {
-		return limit, offset, fmt.Errorf("base64 decoded token '%s' to '%+v'. Second part which is '%s' could "+
-			"not be converted to an integer due to error: %s", nextToken, parts, parts[1], err)
+		return limit, offset, earliestStart, latestStart, fmt.Errorf("base64 decoded token '%s' to '%+v'. Second"+
+			" part which is '%s' could not be converted to an integer due to error: %s", nextToken, parts, parts[1], err)
 	}
-	return limit, offset, nil
+
+	earliestStart, err = strconv.ParseInt(parts[2], 10, 64)
+	if err != nil {
+		return limit, offset, earliestStart, latestStart, fmt.Errorf("base64 decoded token '%s' to '%+v'. Third "+
+			"part which is '%s' could not be converted to an integer due to error: %s", nextToken, parts, parts[2], err)
+	}
+
+	latestStart, err = strconv.ParseInt(parts[3], 10, 64)
+	if err != nil {
+		return limit, offset, earliestStart, latestStart, fmt.Errorf("base64 decoded token '%s' to '%+v'. Fourth "+
+			"part which is '%s' could not be converted to an integer due to error: %s", nextToken, parts, parts[3], err)
+	}
+
+	return limit, offset, earliestStart, latestStart, nil
 }

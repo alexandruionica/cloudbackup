@@ -929,12 +929,12 @@
         "start_time": {
           "type": "string",
           "example": "2018-06-02T16:38:55.676712775+10:00",
-          "description": "A start time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored for jobs having \"state\"==\"stopped\""
+          "description": "A start time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored for jobs having \"state\"==\"stopped\". Date+time format is RFC3339 witn nanosecond support."
         },
         "end_time": {
           "type": "string",
           "example": "0001-01-01T00:00:00Z",
-          "description": "An end time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored for jobs having \"state\"==\"stopped\" or \"state\"==\"running\""
+          "description": "An end time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored for jobs having \"state\"==\"stopped\" or \"state\"==\"running\". Date+time format is RFC3339 witn nanosecond support."
         },
         "file_content_bytes_read": {
           "type": "integer",
@@ -965,7 +965,7 @@
         "next_run": {
           "type": "string",
           "example": "2018-06-03T16:38:55.676712775+10:00",
-          "description": "An end time time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored."
+          "description": "An end time time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored. Date+time format is RFC3339 witn nanosecond support."
         },
         "job_id": {
           "type": "string",
@@ -1275,12 +1275,12 @@
         "start_time": {
           "type": "string",
           "example": "2018-06-02T16:38:55.676712775+10:00",
-          "description": "At which time the job started."
+          "description": "At which time the job started. Date+time format is RFC3339 witn nanosecond support."
         },
         "end_time": {
           "type": "string",
           "example": "2018-06-02T17:21:32.476812215+10:00",
-          "description": "At which time the job ended."
+          "description": "At which time the job ended. Date+time format is RFC3339 witn nanosecond support."
         },
         "state": {
           "type": "string",
@@ -1335,6 +1335,16 @@
           "type": "integer",
           "example": 100,
           "description": "maximum results to return in one response. If more results are available then a $next token will be returned in the response and it is expected said $next token will be supplied for a subsequent request. If a $next token is specified then the value of $max_results will be ignored."
+        },
+        "from_start_time": {
+          "type": "string",
+          "example": "2018-06-02T16:38:55.676712775+10:00",
+          "description": "Select only reports which have a job start_time which equals or is newer than the supplied value. If unspecified then a value equal to \"30 days ago\" will be used. If the $next parameter is supplied then this field will be ignored. Date+time format is RFC3339 witn nanosecond support."
+        },
+        "until_start_time": {
+          "type": "string",
+          "example": "2018-06-22T13:21:37.136712172+10:00",
+          "description": "Select only reports which have a job start_time which equals or is up to (earlier than) the supplied value. If unspecified then a value equal to \"now\" will be used. If the $next parameter is supplied then this field will be ignored. Date+time format is RFC3339 witn nanosecond support."
         }
       },
       "required": [
