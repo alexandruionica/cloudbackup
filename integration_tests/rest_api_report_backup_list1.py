@@ -87,7 +87,7 @@ class TestRestAPIReportBackupList1(unittest.TestCase):
         return response
 
     # get list of reports for this job - should be 0
-    def AAtest_report_backup_list_test1(self):
+    def test_report_backup_list_test1(self):
         # fetch list of jobs and start the first one
         url = self.base_url + self.api_root + '/backup/list'
         r = requests.get(url=url, auth=(self.username, self.password))
