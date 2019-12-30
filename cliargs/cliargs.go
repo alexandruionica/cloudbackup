@@ -2,6 +2,7 @@ package cliargs
 
 import (
 	clientBackup "cloudbackup/client/backup"
+	clientBackupReport "cloudbackup/client/backup/report"
 	clientBackupTarget "cloudbackup/client/backup/target"
 	clientConfig "cloudbackup/client/config"
 	clientNotification "cloudbackup/client/notification"
@@ -14,6 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"os"
 	"sync"
+	"time"
 )
 
 const loggingContext = "cliargs"
@@ -90,14 +92,30 @@ type ArgsCommandClientBackup struct {
 	Start  ArgsCommandClientBackupStart  `command:"start" description:"Start a backup job"`
 	Stop   ArgsCommandClientBackupStop   `command:"stop" description:"Stop a running backup job"`
 	List   ArgsCommandClientBackupList   `command:"list" description:"List all backup jobs and a brief status for each of them"`
-	Status ArgsCommandClientBackupStatus `command:"status" description:"Show details about a specific backup job."`
-	Watch  ArgsCommandClientBackupWatch  `command:"watch" description:"Continuously watches a specific backup job in order to show file, directory and symlinks backup progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces more events per second than it can handle or if the client can't receive quickly enough events produced by the server.'"`
+	Status ArgsCommandClientBackupStatus `command:"status" description:"Show details about a specific backup job"`
+	Watch  ArgsCommandClientBackupWatch  `command:"watch" description:"Continuously watches a specific backup job in order to show file, directory and symlinks backup progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces more events per second than it can handle or if the client can't receive quickly enough events produced by the server"`
 	DryRun ArgsCommandClientBackupDryRun `command:"dryrun" description:"Dry run a backup job in order to see what files and directories get evaluated"`
 	Target ArgsCommandClientBackupTarget `command:"target" description:"Backup target (object store) related commands"`
+	Report ArgsCommandClientBackupReport `command:"report" description:"Access reports of previously ran backup jobs"`
 }
 
 type ArgsCommandClientBackupTarget struct {
 	Test ArgsCommandClientBackupTargetTest `command:"test" description:"For a given backup section name, it will test all defined targets in order to check that the object stores are usable for storing backed up files"`
+}
+
+type ArgsCommandClientBackupReport struct {
+	List ArgsCommandClientBackupReportList `command:"list" description:"List available reports of previously ran backup jobs"`
+	// Status ArgsCommandClientBackupReportStatus `command:"status" description:"Show details about a specific backup definition"`
+}
+
+type ArgsCommandClientBackupReportList struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job for which to show the list of available reports. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
+	StartTime string `long:"from-start-time" description:"Select only reports which have a job start_time which equals or is newer than the supplied value. If unspecified then a value equal to '30 days ago' will be used. Date+time format is RFC3339 with nanosecond support"`
+	EndTime   string `long:"until-start-time" description:"Select only reports which have a job start_time which equals or is up to (earlier than) the supplied value. If unspecified then a value equal to 'now' will be used. Date+time format is RFC3339 with nanosecond support"`
 }
 
 type ArgsCommandClientBackupStart struct {
@@ -433,5 +451,54 @@ func (command *ArgsCommandClientNotificationTest) Execute(args []string) error {
 		os.Exit(1)
 	}
 	clientNotification.Test(clConfig, command.Json)
+	return nil
+}
+
+func (command *ArgsCommandClientBackupReportList) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+
+	var FromStartTime, UntilStartTime time.Time
+	if command.StartTime == "" {
+		FromStartTime = time.Now().AddDate(0, 0, -30) // 30 days ago
+	} else {
+		FromStartTime, err = time.Parse(time.RFC3339Nano, command.StartTime)
+		if err != nil {
+			fmt.Printf("Provided value '%s' for '--from-start-time' could not be parsed into a time object which "+
+				"is RFC3339 with nanoseconds compliant due to error: %s", command.StartTime, err.Error())
+			os.Exit(1)
+		}
+	}
+
+	if command.EndTime == "" {
+		UntilStartTime = time.Now()
+	} else {
+		UntilStartTime, err = time.Parse(time.RFC3339Nano, command.EndTime)
+		if err != nil {
+			fmt.Printf("Provided value '%s' for '--until-start-time' could not be parsed into a time object which "+
+				"is RFC3339 with nanoseconds compliant due to error: %s", command.EndTime, err.Error())
+			os.Exit(1)
+		}
+	}
+
+	if UntilStartTime.Before(FromStartTime) {
+		fmt.Printf("Provided value '%s' for '--until-start-time' represents a value which is earlier "+
+			"than '--from-start-time' 's own value of %s . Please specify a value which is equal or older for "+
+			"'--until-start-time'", UntilStartTime, FromStartTime)
+		os.Exit(1)
+	}
+
+	clientBackupReport.List(clConfig, command.Json, command.Job.Name, FromStartTime, UntilStartTime)
 	return nil
 }
