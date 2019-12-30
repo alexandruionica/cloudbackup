@@ -79,7 +79,7 @@
                 <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
         <li class="main active"><a href="#overview">Overview</a></li>
-            <li><a href="#command-stucture">Command Stucture</a></li>
+            <li><a href="#command-structure">Command Structure</a></li>
             <li><a href="#server-components">Server Components</a></li>
         <li class="main "><a href="#database">Database</a></li>
             <li><a href="#tables">Tables</a></li>
@@ -94,7 +94,7 @@
 - for a given backup name only one backup job can run at a time. This MUST not be changed as things in the code are done assuming this is true. For example the SQL db should not be opened in write mode by more than 1 "thing" (SQLITE limitation)
 - the above stands true for restore jobs too .. no more than one at a time for a given backup name
 - The 1 write "thing" DB limitation implies that a restore job CAN'T run at the same time a backup job runs for a given backup name (each backup name has a dedicated db file; a restore writes in the same db file). The reverse stands true too, a backup should never run if a restore for the same DB name is running</p>
-<h2 id="command-stucture">Command Stucture</h2>
+<h2 id="command-structure">Command Structure</h2>
 <p>The command and its main options are depicted below. Command line parameters are supported and can be discovered using the <code>--help</code> option. For example:</p>
 <pre><code>$ cloudbackup client backup dryrun --help
 Usage:
@@ -167,9 +167,19 @@ Help Options:
 <p>Records 1 to 1 mapping of the targets mentioned in the configuration file for a given backup job definition.</p>
 <p>Entries in this table are added only when a backup job starts (basically it is checked that for each config target entry we have an entry in the table).</p>
 <p>Before removing a target during configuration file update a manual "purge" job should be run (or worst case scenario afterwards). Ideall we block config file changes via the API if the purge was not ran.</p>
+<h3 id="jobs">jobs</h3>
+<p>Each backup job is recorded in this table, including its final report. The unique job id is referenced from other tables
+(using FOREIGN KEYs) in order to ensure a job can not be deleted as long as backed up files belong to said backup job.</p>
 <h3 id="remote_files">remote_files</h3>
 <p>The <code>remote_files</code> table contains a listing of all remote stored copies of the files (basically the backups). A file from the <code>files</code> table can have multiple entries in the <code>remote_files</code> table due to multiple versions of said file being backed up.
-There is one case where entries in the <code>remote_files</code> tables won't have any more a corresponding entry in the <code>files</code> table and that is when the local file got deleted. </p></div>
+There is one case where entries in the <code>remote_files</code> tables won't have any more a corresponding entry in the <code>files</code> table and that is when the local file got deleted but we still have backed up copies of said file and a restore might request the file to be restored. 
+The <code>version</code> field represents the newest backup state for a given item. The <code>remote_version</code> is the version as seen by the object store implementation. The latter is a string (for example when a PUT operation gets as a response the version from the backed object store). Some implementations may accept a version to be passed in when an upload is requested and if so then it will most likely match the <code>version</code> field. An interesting case is a meta-data update operation where program logic will only update the database entry but not the remote object store too. In this case a new <code>version</code> will have the same <code>remove_version</code> field value as the previous <code>version</code> and this is because nothing actually got changed on the object store.</p>
+<h3 id="failed_files">failed_files</h3>
+<p>During a particular backup run, if an item fails to be backed up, then a entry will be added to this table, mentioning the job_id of the backup job.</p>
+<h3 id="backup_collections">backup_collections</h3>
+<p>When a file is successfully backed up then an entry is added to <code>remote_files</code> table and a reference to that entry added to this table.
+If a file does not need to be backed up as it hasn't changed since the last backup then an entry is added to <code>backup_collections</code> which points to the newest entry of said item in the <code>remote_files</code> table. 
+By selecting all of the items with the same <code>jobid</code> and <code>target</code> the list of a files needed to restore a particular backup is obtained. </p></div>
         </div>
 
         <footer class="col-md-12">
