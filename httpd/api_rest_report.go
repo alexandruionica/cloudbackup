@@ -31,11 +31,11 @@ type ReportBackupList struct {
 }
 
 type ReportBackupListDbResults struct {
-	Name      string    `json:"name"`
-	JobId     string    `json:"job_id"`
-	StartTime time.Time `json:"start_time"`
-	EndTime   time.Time `json:"end_time"`
-	State     string    `json:"state"`
+	Name      string `json:"name"`
+	JobId     string `json:"job_id"`
+	StartTime string `json:"start_time"` // Format MUST be time.RFC3339Nano
+	EndTime   string `json:"end_time"`   // Format MUST be time.RFC3339Nano
+	State     string `json:"state"`
 }
 
 const LimitReportResults = 1000
@@ -107,7 +107,7 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 
 	var FromStartTime, UntilStartTime int64
 	if decodedJson.FromStartTime == "" {
-		FromStartTime = time.Now().AddDate(0, 0, -30).UnixNano() // 7 days ago
+		FromStartTime = time.Now().AddDate(0, 0, -30).UnixNano() // 30 days ago
 	} else {
 		tmpTime, err := time.Parse(time.RFC3339Nano, decodedJson.FromStartTime)
 		if err != nil {
@@ -257,8 +257,8 @@ func getRowsForHandlerPostReportBackupList(dbData shared.DbData, jobName string,
 				"definition '%s', the following error was encountered: '%s'", jobName, err)
 			return results, err
 		}
-		rowResult.StartTime = time.Unix(0, tmpStartTime)
-		rowResult.EndTime = time.Unix(0, tmpEndTime)
+		rowResult.StartTime = time.Unix(0, tmpStartTime).Format(time.RFC3339Nano)
+		rowResult.EndTime = time.Unix(0, tmpEndTime).Format(time.RFC3339Nano)
 		results = append(results, rowResult)
 	}
 	if err = rows.Err(); err != nil {
