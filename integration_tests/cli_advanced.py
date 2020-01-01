@@ -35,6 +35,7 @@ class TestCliAdvanced(unittest.TestCase):
         tmpfile.close()
         # start server
         self.base_url = "http://127.0.0.1:8080"
+        self.api_root = '/api/v1'
         self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url)
 
     def tearDown(self):
@@ -48,6 +49,25 @@ class TestCliAdvanced(unittest.TestCase):
                     os.remove(entry)
         if os.path.exists(self.client_config_file_path):
             os.remove(self.client_config_file_path)
+
+    def ValidatedAndDecodeResponse(self, r, url):
+        """
+        Checks for the standard stuff we expect in any api response. Returns json decoded response
+        :param r: object returned by requests.get()
+        :param url: url which was requested (used for error messages)
+        :return: json decoded response from requests.get()
+        """
+        self.assertIn('Content-Type', r.headers, "Response for {} is missing header 'Content-Type'".format(url))
+        self.assertEqual(r.headers['Content-Type'], 'application/json',
+                         "Response for {} is has header 'Content-Type' of value '{}' instead of "
+                         "'application/json'".format(url, r.headers['Content-Type']))
+        response = r.json()
+        self.assertIn("code", response, "Response for {} is missing the 'code' key. Response was:"
+                                        " {}".format(url, r.text))
+        self.assertIn("message", response, "Response for {} is missing the 'message' key. Response was:"
+                                           " {}".format(url, r.text))
+
+        return response
 
     # ./cloudbackup client backup list -c client_config.yaml returns 3 lines
     def test_cmd_client_backup_list1(self):
@@ -183,9 +203,13 @@ class TestCliAdvanced(unittest.TestCase):
                                                     " {}".format(len(decoded['result']), result))
         # check elements names match expectation
         found_first_backup = False
+        job_id = ""
+        start_time = ""
         for backup_job in decoded['result']:
             if backup_job['name'] == 'first_backup':
                 found_first_backup = True
+                job_id = backup_job['job_id']
+                start_time = backup_job['start_time']
                 # check state of backup is "running"
                 self.assertEqual(backup_job['state'], 'running', "Backup job does not have state='running'. Command "
                                                                  "output object: {}".format(result))
@@ -193,7 +217,7 @@ class TestCliAdvanced(unittest.TestCase):
                                             "object: {}".format(result))
         # stop running backup
         result = run_shell_cmd(self.cmd + " client backup stop first_backup -c " + self.client_config_file_path)
-        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 1. Command output object: "
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
         # validate backup has stopped or is stopping
         result = run_shell_cmd(self.cmd + " client backup list -c " + self.client_config_file_path + " --json")
@@ -218,6 +242,53 @@ class TestCliAdvanced(unittest.TestCase):
                                             "object: {}".format(result))
         self.assertTrue(first_backup_stopping_or_stopped, "Backup job does not have state='stopping' or state='stopped'"
                                                           ". Command output object: {}".format(result))
+
+        # wait for backup job to complete
+        logging.info("Waiting for the backup job to complete")
+        counter = 0
+        while True:
+            # fetch again list of jobs and check that status of job, until it is no longer running
+            url = self.base_url + self.api_root + '/backup/list'
+            r = requests.get(url=url, auth=(self.username, self.password))
+            self.assertEqual(r.status_code, 200, url + " " + r.text)
+            response = self.ValidatedAndDecodeResponse(r, url)
+            is_stopped = False
+            for backup in response['result']:
+                if backup['name'] == "first_backup" and backup['state'] == 'stopped':
+                    is_stopped = True
+                    break
+            if is_stopped:
+                break
+            else:
+                if counter > 100:
+                    self.fail("Backup did not finish running in 10 seconds")
+                time.sleep(0.1)
+                counter += 1
+
+        # get list of reports for previous backups (the one above, once stopped is considered a previous backup)
+        result = run_shell_cmd(self.cmd + " client backup report list first_backup -c " + self.client_config_file_path +
+                               " --json")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        # output is JSON
+        decoded = json.loads(result['result'].stdout.decode("utf-8"))
+        # check we got 1 element as expected
+        self.assertEqual(len(decoded['result']), 1, "3. Result section of response was expected to have 1 element but "
+                                                    "instead is has {}. Command output object:"
+                                                    " {}".format(len(decoded['result']), result))
+        for backup_job in decoded['result']:
+            self.assertEqual(backup_job['name'], 'first_backup', "Report list result has a different backup job name "
+                                                                 "than the expected 'first_backup'. Returned name"
+                                                                 ": {}".format(backup_job['name']))
+            self.assertEqual(backup_job['state'], 'cancelled', "Report list result has a different backup job status "
+                                                               "than the expected 'cancelled'. Returned value:  "
+                                                               "{}".format(backup_job['state']))
+            self.assertEqual(backup_job['job_id'], job_id, "Report list result has a different job id than the "
+                                                           "expected: {}. Returned value "
+                                                           "was: {}".format(job_id, backup_job['job_id']))
+            self.assertEqual(backup_job['start_time'], start_time, "Report list result has a different start_time than"
+                                                                   " the expected: {}. Returned value was:"
+                                                                   " {}".format(start_time, backup_job['start_time']))
 
     # ./cloudbackup client backup start first_backup -c client_config.yaml -u user_with_read_access -p password
     # returns exit code 1 and expected error msg ; we also get to test command line overrides work
