@@ -201,6 +201,10 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	PreparedStatements.ReportBackupJobsListQuery = "SELECT name, id, start_time, end_time, state FROM jobs WHERE " +
 		"name = ? AND state != 'started' AND start_time >= ? AND start_time <= ? ORDER BY start_time LIMIT ? OFFSET ?"
 
+	// retrieves the job report for a previously ran jobs (excludes any running jobs)
+	PreparedStatements.ReportBackupJobsShowQuery = "SELECT report FROM jobs WHERE " +
+		"name = ? AND id = ? AND state != 'started'"
+
 	return PreparedStatements, nil
 }
 

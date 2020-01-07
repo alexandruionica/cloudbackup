@@ -44,4 +44,5 @@ type DbPreparedStatements struct {
 	FindDeletedItemsStmt                  *sql.Stmt
 	FailedFilesInsertStmt                 *sql.Stmt
 	ReportBackupJobsListQuery             string
+	ReportBackupJobsShowQuery             string
 }

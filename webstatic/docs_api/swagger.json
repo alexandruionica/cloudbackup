@@ -272,7 +272,7 @@
             }
           },
           "400": {
-            "description": "Client Error",
+            "description": "The request was malformed or mandatory key + value pairs were missing from the request or were incorrect",
             "schema": {
               "$ref": "#/definitions/ApiResponseError"
             }
@@ -569,6 +569,66 @@
           },
           "503": {
             "description": "The request should be retried later",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/report/backup/show": {
+      "post": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Show report for a backup job which ran in the past.",
+        "description": "Retrieve the report for backup job which ran in the past and is no longer in a running state.",
+        "operationId": "ReportBackupShow",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup to stop and optionally the id",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BackupJobNameAndRequiredId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseReportBackupShow"
+            }
+          },
+          "400": {
+            "description": "The request was malformed or mandatory key + value pairs were missing from the request or were incorrect",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "404": {
+            "description": "No backup definition matches the provided name",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
             "schema": {
               "$ref": "#/definitions/ApiResponseError"
             }
@@ -965,7 +1025,7 @@
         "next_run": {
           "type": "string",
           "example": "2018-06-03T16:38:55.676712775+10:00",
-          "description": "An end time time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored. Date+time format is RFC3339 with nanosecond support."
+          "description": "An next run time of 0001-01-01T00:00:00Z is the equivallent of null time and should be ignored. Date+time format is RFC3339 with nanosecond support."
         },
         "job_id": {
           "type": "string",
@@ -1318,6 +1378,24 @@
         "name"
       ]
     },
+    "BackupJobNameAndRequiredId": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server"
+        },
+        "job_id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
+        }
+      },
+      "required": [
+        "name",
+        "job_id"
+      ]
+    },
     "ReportBackupListInput": {
       "type": "object",
       "properties": {
@@ -1485,6 +1563,22 @@
           "items": {
             "$ref": "#/definitions/ResultReportBackupList"
           }
+        }
+      }
+    },
+    "ApiResponseReportBackupShow": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "success"
+        },
+        "message": {
+          "type": "string",
+          "example": "success"
+        },
+        "result": {
+          "$ref": "#/definitions/ResultBackupJobStatus"
         }
       }
     }
