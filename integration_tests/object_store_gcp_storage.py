@@ -191,6 +191,14 @@ class TestObjectStoreGcpStorage(unittest.TestCase):
                 {"name": "client_x509_cert_url",
                  "value": settings["CLD_GCP_CLIENT_X509_CERT_URL"]},
             ]
+        # count how many files/directories, symlinks we expect to backup
+        expected_num_files, expected_num_dirs, expected_num_symlinks = 0, 0, 0
+        for path in response['result']['backup'][job_index]['paths']:
+            tmp_expected_num_files, tmp_expected_num_dirs, tmp_expected_num_symlinks = count_files_folders_links(
+                path, response['result']['backup'][job_index]["dereference"])
+            expected_num_files += tmp_expected_num_files
+            expected_num_dirs += tmp_expected_num_dirs
+            expected_num_symlinks += tmp_expected_num_symlinks
         # send to server updated config
         logging.info("Adjusting service config via the API")
         r = requests.post(self.base_url + self.api_root + '/config', auth=(self.username, self.password),
@@ -276,8 +284,8 @@ class TestObjectStoreGcpStorage(unittest.TestCase):
                 time.sleep(0.1)
                 counter += 1
 
-        # TODO - get report of backup job and check that there were no errors and that the expected number of files
-        # got backed up
+        # get report and check that there were no errors and that the expected number of items got backed up
+        check_backup_report(self, job_name, job_id, expected_num_files, expected_num_dirs, expected_num_symlinks)
 
 
 def get_args():
