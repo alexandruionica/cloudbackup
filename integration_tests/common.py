@@ -493,3 +493,98 @@ def get_azure_blob_storage_config_from_env():
     azure_storage_account_key = os.environ.get('CLD_AZURE_STORAGE_ACCESS_KEY')
 
     return bucket, azure_storage_account, azure_storage_account_key
+
+
+# counts the number of files, symlinks and directories in a given path (and all of the children of said path). If
+#  $dereference==True then it follows symlinks (and will stop checking if a given item is a symlink or not) so if
+#  $dereference==True then it will report 0 symlinks found no matter how many actual symlinks exist .
+# Returns a touple with three elements: (files, directories, symlinks) examined
+def count_files_folders_links(path, dereference=False):
+    result_files = 0
+    result_dirs = 0
+    result_symlinks = 0
+    if os.path.isdir(path):
+        result_dirs = 1  # include top level dir too in result as the os.walk() function excludes it
+        for root, dirs, files in os.walk(path, followlinks=dereference):
+            for name in files:
+                if dereference:
+                    if os.path.islink(os.path.join(root, name)):
+                        result_symlinks += 1
+                    else:
+                        result_files += 1
+                else:
+                    result_files += 1
+            for _ in dirs:
+                result_dirs += 1
+    else:
+        if dereference:
+            result_files = 1
+        else:
+            if os.path.islink(path):
+                result_symlinks += 1
+            else:
+                result_files += 1
+    return result_files, result_dirs, result_symlinks
+
+
+# fetches backup report and checks that various values match expectations
+def check_backup_report(self, job_name, job_id, expected_num_files, expected_num_dirs, expected_num_symlinks):
+    # get report of backup job and check that there were no errors and that the expected number of files got backed up
+    logging.info("Getting report of backup job and checking it matches expectations")
+    req = {"name": job_name,
+           "job_id": job_id,
+           }
+    url = self.base_url + self.api_root + '/report/backup/show'
+    r = requests.post(url=url, auth=(self.username, self.password), json=req)
+    self.assertEqual(r.status_code, 200, url + " " + r.text)
+    response = self.ValidatedAndDecodeResponse(r, url)
+    # check response has expected keys
+    self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                      " {}".format(url, r.text))
+    self.assertEqual(response['code'], "success", "For {} response['code'] doesn't equal 'success'. Response was:"
+                                                  " {}".format(url, r.text))
+    self.assertEqual(response['message'], "success", "For {} response['message'] doesn't equal 'success'. Response"
+                                                     " was: {}".format(url, r.text))
+    self.assertEqual(response['result']['job_id'], job_id, "job_id in report is {} but we were expecting it to be"
+                                                           " {}".format(response['result']['job_id'], job_id))
+    self.assertEqual(response['result']['name'], job_name, "job_name in report is {} but we were expecting it to "
+                                                           "be {}".format(response['result']['name'], job_name))
+    self.assertEqual(response['result']['state'], "finished", "expected job state to be 'finished' but instead the"
+                                                              " report shows it "
+                                                              "as {}".format(response['result']['state']))
+    self.assertEqual(response['result']['stats_counters']['examined_files'], expected_num_files,
+                     "expected number of files to have been examined is {} but the report "
+                     "shows {}".format(expected_num_files, response['result']['stats_counters']['examined_files']))
+    self.assertEqual(response['result']['stats_counters']['examined_symlinks'], expected_num_symlinks,
+                     "expected number of symlinks to have been examined is {} but the report "
+                     "shows {}".format(expected_num_symlinks,
+                                       response['result']['stats_counters']['examined_symlinks']))
+    self.assertEqual(response['result']['stats_counters']['examined_directories'], expected_num_dirs,
+                     "expected number of dirs to have been examined is {} but the report "
+                     "shows {}".format(expected_num_dirs,
+                                       response['result']['stats_counters']['examined_directories']))
+
+    self.assertEqual(response['result']['stats_counters']['uploaded_files'], expected_num_files,
+                     "expected number of files to have been uploaded is {} but the report "
+                     "shows {}".format(expected_num_files, response['result']['stats_counters']['uploaded_files']))
+    self.assertEqual(response['result']['stats_counters']['uploaded_symlinks'], expected_num_symlinks,
+                     "expected number of symlinks to have been uploaded is {} but the report "
+                     "shows {}".format(expected_num_symlinks,
+                                       response['result']['stats_counters']['uploaded_symlinks']))
+    self.assertEqual(response['result']['stats_counters']['uploaded_directories'], expected_num_dirs,
+                     "expected number of dirs to have been uploaded is {} but the report "
+                     "shows {}".format(expected_num_dirs,
+                                       response['result']['stats_counters']['uploaded_directories']))
+    for counter in ["database_copy_errors", "examined_unknown", "excluded", "failed_to_enumerate",
+                    "failed_to_examine", "failed_to_find_deleted", "failed_to_mark_deleted_directories",
+                    "failed_to_mark_deleted_files", "failed_to_mark_deleted_symlinks",
+                    "failed_to_update_metadata_for_directories", "failed_to_update_metadata_for_files",
+                    "failed_to_update_metadata_for_symlinks", "failed_to_upload_directories",
+                    "failed_to_upload_files", "failed_to_upload_symlinks", "failed_to_upload_unknown",
+                    "marked_deleted_directories", "marked_deleted_files", "marked_deleted_symlinks",
+                    "scripts_failed", "scripts_num", "scripts_ran", "up_to_date_directories",
+                    "up_to_date_files", "up_to_date_symlinks", "updated_metadata_for_directories",
+                    "updated_metadata_for_files", "updated_metadata_for_symlinks"]:
+        self.assertEqual(response['result']['stats_counters'][counter], 0,
+                         "expected value of counter named '{}' in the backup report was 0 but instead {} was "
+                         "found".format(counter, response['result']['stats_counters'][counter]))
