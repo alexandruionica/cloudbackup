@@ -152,6 +152,7 @@ class BackupDaemon(object):
         Wrapper to start a shell command which then keeps running
         :param cmd: command to run
         :param base_url: where the API server will be reachable. Example "http://127.0.0.1:8080"
+        :param extra_options: extra options to pass to the backup server(Daemon)
         :return: { 'result': None/subprocess.CompletedProcess,
                    'exception: None/exception ..}
         """
