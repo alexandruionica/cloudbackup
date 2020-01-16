@@ -36,7 +36,10 @@ class TestCliAdvanced(unittest.TestCase):
         # start server
         self.base_url = "http://127.0.0.1:8080"
         self.api_root = '/api/v1'
-        self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url)
+        # if output to stdout/stderr is too large then the Daemon will hang wanting for the OS to read it
+        _, self.inttestlog = tempfile.mkstemp(prefix="integration_test_log_")
+        self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url,
+                                   extra_options="--logfile=" + self.inttestlog)
 
     def tearDown(self):
         self.daemon.kill()

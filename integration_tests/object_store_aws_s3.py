@@ -37,14 +37,11 @@ class TestObjectStoreAwsS3(unittest.TestCase):
             fd.write(yaml.dump(parsed))
         # start server
         self.base_url = "http://127.0.0.1:8080"
-        if platform.system() == 'Windows':
-            _, self.inttestlog = tempfile.mkstemp(prefix="integration_test_log_")
-            # for some reason (I guess Python + Windows bug) output to stdout which is beyond some arbitrary length make
-            # the test fail; ugly workaround is to send output to the logfile
-            self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url,
-                                       extra_options="--logfile=" + self.inttestlog)
-        else:
-            self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url)
+        # if output to stdout/stderr is too large then the Daemon will hang wanting for the OS to read it
+        _, self.inttestlog = tempfile.mkstemp(prefix="integration_test_log_")
+        # start server
+        self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url,
+                                   extra_options="--logfile=" + self.inttestlog)
         self.api_root = '/api/v1'
 
     def tearDown(self):
