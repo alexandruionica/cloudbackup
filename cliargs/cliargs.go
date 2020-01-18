@@ -105,7 +105,7 @@ type ArgsCommandClientBackupTarget struct {
 
 type ArgsCommandClientBackupReport struct {
 	List ArgsCommandClientBackupReportList `command:"list" description:"List available reports of previously ran backup jobs"`
-	// Status ArgsCommandClientBackupReportStatus `command:"status" description:"Show details about a specific backup definition"`
+	Show ArgsCommandClientBackupReportShow `command:"show" description:"Show report of a previously ran backup job"`
 }
 
 type ArgsCommandClientBackupReportList struct {
@@ -116,6 +116,15 @@ type ArgsCommandClientBackupReportList struct {
 	} `positional-args:"yes" required:"yes"`
 	StartTime string `long:"from-start-time" description:"Select only reports which have a job start_time which equals or is newer than the supplied value. If unspecified then a value equal to '30 days ago' will be used. Date+time format is RFC3339 with nanosecond support"`
 	EndTime   string `long:"until-start-time" description:"Select only reports which have a job start_time which equals or is up to (earlier than) the supplied value. If unspecified then a value equal to 'now' will be used. Date+time format is RFC3339 with nanosecond support"`
+}
+
+type ArgsCommandClientBackupReportShow struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job for which to show the list of available reports. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
+	JobId string `short:"i" long:"job-id" required:"yes" description:"Id of the job for which to show the report"`
 }
 
 type ArgsCommandClientBackupStart struct {
@@ -500,5 +509,24 @@ func (command *ArgsCommandClientBackupReportList) Execute(args []string) error {
 	}
 
 	clientBackupReport.List(clConfig, command.Json, command.Job.Name, FromStartTime, UntilStartTime)
+	return nil
+}
+
+func (command *ArgsCommandClientBackupReportShow) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+
+	clientBackupReport.Show(clConfig, command.Json, command.Job.Name, command.JobId)
 	return nil
 }
