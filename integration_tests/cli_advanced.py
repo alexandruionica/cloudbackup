@@ -130,9 +130,6 @@ class TestCliAdvanced(unittest.TestCase):
                 found_expected_error = True
         self.assertTrue(found_expected_error)
 
-    # TODO - start a backup and then check that the output of "cloudbackup client backup list" matches expectations in
-    #  both plain and --json output
-
     # ./cloudbackup client backup status first_backup -c client_config.yaml returns 3 lines
     def test_cmd_client_backup_status1(self):
         result = run_shell_cmd(self.cmd + " client backup status first_backup -c " + self.client_config_file_path)
@@ -185,9 +182,6 @@ class TestCliAdvanced(unittest.TestCase):
             if 'Invalid username or password'.lower() in line.lower():
                 found_expected_error = True
         self.assertTrue(found_expected_error)
-
-    # TODO - start a backup and then check that the output of "cloudbackup client backup status" matches expectations in
-    #  both plain and --json output
 
     # ./cloudbackup client backup start first_backup -c client_config.yaml works
     def test_cmd_client_backup_start_stop(self):
@@ -292,6 +286,24 @@ class TestCliAdvanced(unittest.TestCase):
             self.assertEqual(backup_job['start_time'], start_time, "Report list result has a different start_time than"
                                                                    " the expected: {}. Returned value was:"
                                                                    " {}".format(start_time, backup_job['start_time']))
+        # check we can get a backup report using the CLI
+        result = run_shell_cmd(
+            self.cmd + " client backup report show -i {} first_backup -c ".format(job_id) +
+            self.client_config_file_path + " --json")
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+        # output is JSON
+        decoded = json.loads(result['result'].stdout.decode("utf-8"))
+        # check elements match expectation
+        self.assertEqual(decoded["result"]["name"], "first_backup", "Result from command doesn't match expected "
+                                                                    "JSON output")
+        self.assertEqual(decoded["result"]["state"], "cancelled", "Result from command doesn't match expected "
+                                                                  "JSON output")
+        # check we get get an error when fetching a report if we don't specify the job_id
+        result = run_shell_cmd(
+            self.cmd + " client backup report show first_backup -c " + self.client_config_file_path + " --json")
+        self.assertEqual(result['result'].returncode, 1, "Exit code from {} is not 1. Command output object: "
+                                                         "{}".format(cmd_default, result))
 
     # ./cloudbackup client backup start first_backup -c client_config.yaml -u user_with_read_access -p password
     # returns exit code 1 and expected error msg ; we also get to test command line overrides work
