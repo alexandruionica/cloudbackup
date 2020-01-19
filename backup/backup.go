@@ -339,8 +339,8 @@ func addDbEntryToRemoteFiles(target string, jobUuid string, deleteMarker int, db
 	}
 	entryUuid := u.String()
 
-	_, err = dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, fileDbRecord.Path, target,
-		time.Now().UnixNano(), jobUuid, deleteMarker, version, remoteVersion, runtime.GOOS, fileDbRecord.Type,
+	_, err = dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, fileDbRecord.Path, filepath.Dir(filepath.Clean(fileDbRecord.Path)),
+		target, time.Now().UnixNano(), jobUuid, deleteMarker, version, remoteVersion, runtime.GOOS, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
 		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
 		fileDbRecord.Permissions, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted)
@@ -1217,12 +1217,7 @@ func UploadBackupConfigCopy(sanitisedCfgCopyFile string, jobUuid string, backupC
 // of: "file"/"dir"/"symlink"/"unknown" (where unknown generally means that the step which failed happened before the
 // items's properties were established
 func MarkItemAsFailed(path string, fileType string, jobUuid string, dbData shared.DbData) {
-	u, err := uuid.NewV4()
-	if err != nil {
-		logger.Errorf("Could not generate a UUID so the so item '%s' can't be marked as failed to have backed up. Encountered error is: %s", path, err)
-		return
-	}
-	_, err = dbData.PreparedStatements.FailedFilesInsertStmt.Exec(u, jobUuid, path, fileType)
+	_, err := dbData.PreparedStatements.FailedFilesInsertStmt.Exec(jobUuid, path, fileType)
 	if err != nil {
 		logger.Errorf("Could not mark '%s' as failed to backup due to the following error being encountered when trying to add the entry to the database: %s", path, err)
 	}

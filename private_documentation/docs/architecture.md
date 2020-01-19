@@ -102,6 +102,11 @@ The `version` field represents the newest backup state for a given item. The `re
 
 During a particular backup run, if an item fails to be backed up, then a entry will be added to this table, mentioning the job_id of the backup job.
 
+### top_items
+
+Contains the top level paths for a given backup job run. These correspond to the "paths" mentioned in the backup section for a given job and their use in the DB is related to restores
+so when a file listing of a given backup is requested, we can figure out what was the "top" and descend from there on.
+
 ### backup_collections
 
 When a file is successfully backed up then an entry is added to `remote_files` table and a reference to that entry added to this table.

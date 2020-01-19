@@ -33,6 +33,7 @@ var logger = log.WithFields(log.Fields{
 
 func CreateDb(db *sql.DB, dbfilepath string) error {
 
+	// TODO - remove "uuid" field from "failed_files" table and replace with a composite primary key based on "job_id" and "path"
 	sqlStmt := `
 	CREATE TABLE files (path TEXT NOT NULL PRIMARY KEY, type TEXT, link_target TEXT, size INTEGER, mtime INTEGER, 
 	ctime INTEGER, owner TEXT, permissions TEXT, checksum TEXT, checksum_type, encrypted INTEGER, job_id TEXT,
@@ -45,7 +46,7 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time INTEGER, end_time INTEGER, state TEXT, 
 	report TEXT);
 
-	CREATE TABLE remote_files (uuid NOT NULL PRIMARY KEY, local_path TEXT, target TEXT, 
+	CREATE TABLE remote_files (uuid TEXT NOT NULL PRIMARY KEY, local_path TEXT, parent TEXT, target TEXT, 
 	upload_date INTEGER, job_id TEXT, delete_marker INTEGER, version INTEGER, remote_version TEXT, src_os TEXT, type TEXT, 
 	link_target TEXT, size INTEGER, mtime INTEGER, ctime INTEGER, owner TEXT, permissions TEXT, checksum TEXT, 
 	checksum_type, encrypted INTEGER,
@@ -53,12 +54,16 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	
 	CREATE INDEX remote_files_job_id ON remote_files(job_id);
 	CREATE INDEX remote_files_local_path ON remote_files(local_path);
+    CREATE INDEX remote_files_parent ON remote_files(parent);
 	CREATE INDEX remote_files_upload_date ON remote_files(upload_date);
 
-	CREATE TABLE failed_files (uuid NOT NULL PRIMARY KEY, job_id TEXT, path TEXT, type TEXT,
+	CREATE TABLE failed_files (job_id TEXT NOT NULL, path TEXT NOT NULL, type TEXT, PRIMARY KEY(job_id, path), 
 	FOREIGN KEY(job_id) REFERENCES jobs(id));
 
 	CREATE INDEX failed_files_job_id ON failed_files(job_id);
+
+	CREATE TABLE top_items (job_id TEXT NOT NULL, path TEXT NOT NULL, type TEXT, FOREIGN KEY(job_id) REFERENCES jobs(id), 
+	PRIMARY KEY(job_id, path));
 
 	CREATE TABLE backup_collections (file_uuid TEXT, job_id TEXT, target TEST, FOREIGN KEY(file_uuid) REFERENCES remote_files(uuid), 
 	FOREIGN KEY(job_id) REFERENCES jobs(id), FOREIGN KEY(target) REFERENCES targets(name));
