@@ -184,6 +184,20 @@ func ValidateBackup(backups []shared.ConfigBackup, logError bool) error {
 			return errors.New(msg)
 		}
 
+		// ensure only absolute Paths are specified to be backed up. Various logic in the database records (relared to
+		// figuring out what is the parent directory) expects that paths are always absolute
+		for _, path := range backup.Paths {
+			if !filepath.IsAbs(path) {
+				msg := fmt.Sprintf("backup[%d] having 'name=%s' has specified that path '%s' is to be backed "+
+					"but this particular path is not absolute. Only absolute paths are permitted in the 'paths' section",
+					i, backup.Name, path)
+				if logError {
+					logger.Error(msg)
+				}
+				return errors.New(msg)
+			}
+		}
+
 		if backup.VersionsMaxAge != "0" { //nolint:staticcheck
 			// TODO - validate that the AGE string is valid (to figure out what valid means)
 			//msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +

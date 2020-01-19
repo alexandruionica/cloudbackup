@@ -79,9 +79,9 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
 
 	// insert statement - having it as text only and not an actual prepared statement (as this will be used only in transactions, and called generally once per transaction)
-	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, local_path, target, upload_date, " +
+	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, local_path, parent, target, upload_date, " +
 		"job_id, delete_marker, version, remote_version, src_os, type, link_target, size, mtime, ctime, owner, permissions, " +
-		"checksum, checksum_type, encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		"checksum, checksum_type, encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	//  query statement used to figure out the largest version for a particular path and target name pair
 	PreparedStatements.RemoteFilesQueryNewestVersion = "SELECT version FROM remote_files WHERE local_path = ? AND target = ? ORDER BY version DESC LIMIT 1"
@@ -164,7 +164,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
 
 	// add files/dirs/symlinks which failed to be backed up due to various reasons
-	PreparedStatements.FailedFilesInsertStmt, err = db.Prepare("INSERT INTO failed_files (uuid, job_id, path, type) VALUES (?, ?, ?, ?)")
+	PreparedStatements.FailedFilesInsertStmt, err = db.Prepare("INSERT INTO failed_files (job_id, path, type) VALUES (?, ?, ?)")
 	if err != nil {
 		logger.Errorf("While trying to prepare an SQL update statement, encountered error: '%s'", err)
 		// close other opened statements before returning
