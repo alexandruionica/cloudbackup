@@ -392,11 +392,11 @@ def setup_tmp_config_file_and_tmp_dirs(suffix, config_file_content=working_serve
     data_dir = tempfile.mkdtemp(suffix=suffix + '__datadir')
     server_config = config_file_content.replace("data_dir: ./tmp/", "data_dir: " + data_dir, 1)
     # ensure windows compatible paths are in the config on MS Windows
-    if platform.system() == 'Windows':
-        server_config = config_file_content.replace("- /something", '- c:\something', 1)
-        server_config = config_file_content.replace("- /var/lib", '- c:\Windows\system', 1)
-        server_config = config_file_content.replace("- /var/log", '- c:\Program Files', 1)
-        server_config = config_file_content.replace("- /var/www/html/data/", '- C:\Windows\system32', 1)
+    if platform.system().lower() == 'windows':
+        server_config = server_config.replace("- /something", '- c:\something', 1)
+        server_config = server_config.replace("- /var/lib", '- c:\Windows\system', 1)
+        server_config = server_config.replace("- /var/log", '- c:\Program Files', 1)
+        server_config = server_config.replace("- /var/www/html/data/", '- C:\Windows\system32', 1)
     tmpfile = os.fdopen(tmphandle, "w")
     tmpfile.write(server_config)
     tmpfile.close()
