@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -414,6 +415,13 @@ func SetupMockConfigAndTmpPaths(t *testing.T, prefix string) (string, []string) 
 	HtmlDirPath := utils.SetupTmpDir(prefix+"_htmldir_", t)
 	newMockYaml := bytes.Replace(MockYaml, []byte("data_dir: /tmp"), []byte("data_dir: "+dbDataDirPath), 1)
 	newMockYaml = bytes.Replace(newMockYaml, []byte("html_dir: /tmp"), []byte("html_dir: "+HtmlDirPath), 1)
+	if runtime.GOOS == "windows" {
+		newMockYaml = bytes.Replace(newMockYaml, []byte("- /something"), []byte(`- c:\something`), 1)
+		newMockYaml = bytes.Replace(newMockYaml, []byte("- /var/lib"), []byte(`- c:\Windows\system`), 1)
+
+		newMockYaml = bytes.Replace(newMockYaml, []byte("- /var/log"), []byte(`- c:\Program Files\`), 1)
+		newMockYaml = bytes.Replace(newMockYaml, []byte("- /var/www/html/data/"), []byte(`- C:\Windows\system32`), 1)
+	}
 	path, err := utils.SetupTmpFileWithContent(newMockYaml, prefix+"_config_")
 	if err != nil {
 		err2 := os.RemoveAll(dbDataDirPath)
