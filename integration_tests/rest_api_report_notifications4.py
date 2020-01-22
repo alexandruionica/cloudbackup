@@ -34,7 +34,12 @@ class TestRestAPIReportNotification4(unittest.TestCase):
         # adjust server config for job to include above tmpdir
         with open(self.server_config_file_path) as fd:
             parsed = yaml.load(fd, Loader=yaml.SafeLoader)
-            parsed['backup'][0]['paths'] = [os.sep + 'aPath' + os.sep + 'which' + os.sep + 'doesNot' + os.sep + 'exist']
+            if platform.system().lower() == 'windows':
+                parsed['backup'][0]['paths'] = ['c:' + os.sep + 'aPath' + os.sep + 'which' + os.sep + 'doesNot' +
+                                                os.sep + 'exist']
+            else:
+                parsed['backup'][0]['paths'] = [
+                    os.sep + 'aPath' + os.sep + 'which' + os.sep + 'doesNot' + os.sep + 'exist']
         with open(self.server_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
         # start SMTP server on Linux only as it doesn't work on other platforms

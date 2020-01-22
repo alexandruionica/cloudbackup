@@ -159,7 +159,7 @@ class BackupDaemon(object):
         # check ip:port is available
         wait_for_socket(base_url)
 
-        if platform.system() == 'Windows':
+        if platform.system().lower() == 'windows':
             # Windows needs absolute paths because we're not running the command in a shell
             full_cmd = os.path.abspath(cmd) + ' server start -c {} '\
                 .format(os.path.abspath(config_path)) + extra_options

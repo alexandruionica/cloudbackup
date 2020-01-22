@@ -14,6 +14,8 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -254,7 +256,11 @@ func (command *ArgsCommandServerStart) Execute(args []string) error {
 }
 
 func (command *ArgsCommandServerConfigExample) Execute(args []string) error {
-	fmt.Println(misc.SampleServerYamlConfig)
+	if strings.ToLower(runtime.GOOS) == "windows" {
+		fmt.Println(misc.SampleWindowsServerYamlConfig)
+	} else {
+		fmt.Println(misc.SampleUnixServerYamlConfig)
+	}
 	os.Exit(0)
 	return nil
 }
