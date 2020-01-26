@@ -72,7 +72,7 @@ func getFilePropertiesUsingPowershell(t *testing.T, file string) []propertiesFro
 	BUILTIN\Administrators       FullControl             Allow        True ContainerInherit, ObjectInherit
 	VAGRANT-RS57QRT\vagrant      FullControl             Allow        True ContainerInherit, ObjectInherit
 	*/
-	cmd := exec.Command("powershell", "-NonInteractive", `(get-acl `+file+`).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto`)
+	cmd := exec.Command("powershell", "-NonInteractive", `(get-acl `+file+`).access | ft IdentityReference,FileSystemRights,AccessControlType,IsInherited,InheritanceFlags -auto`) // #nosec
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatalf("Could not setup pipe for Powershell command due to error: %s", err)
