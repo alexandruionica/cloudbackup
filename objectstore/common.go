@@ -363,7 +363,7 @@ func setupRateLimiterBucket(rateLimitStr string, targetName string, backupConfig
 func GetStringParameter(searchedParam string, destinationParam *string, parameters []shared.ConfigBackupTargetParams, defaultValue string) {
 	found := false
 	for _, entry := range parameters {
-		if strings.ToLower(searchedParam) == strings.ToLower(entry.Name) {
+		if strings.EqualFold(searchedParam, entry.Name) {
 			found = true
 			*destinationParam = entry.Value
 		}
@@ -378,7 +378,7 @@ func GetStringParameter(searchedParam string, destinationParam *string, paramete
 func GetBoolParameter(searchedParam string, destinationParam *bool, parameters []shared.ConfigBackupTargetParams, defaultValue bool) {
 	found := false
 	for _, entry := range parameters {
-		if strings.ToLower(searchedParam) == strings.ToLower(entry.Name) {
+		if strings.EqualFold(searchedParam, entry.Name) {
 			found = true
 			var err error
 			*destinationParam, err = config.StringParameterToBoolean(entry.Value)

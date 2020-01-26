@@ -339,12 +339,12 @@ func ValidateBackupTarget(targets []shared.ConfigBackupTarget, logError bool, Ba
 		matched := false
 		// check target type is allowed
 		for _, AllowedTargetType := range BackupTargetTypes {
-			if strings.ToLower(target.Type) == strings.ToLower(AllowedTargetType) {
+			if strings.EqualFold(target.Type, AllowedTargetType) {
 				matched = true
 			}
 		}
 		for _, AllowedTargetType := range HiddenBackupTargetTypes {
-			if strings.ToLower(target.Type) == strings.ToLower(AllowedTargetType) {
+			if strings.EqualFold(target.Type, AllowedTargetType) {
 				matched = true
 			}
 		}
@@ -377,7 +377,7 @@ func ValidateBackupTargetParameters(parameters []shared.ConfigBackupTargetParams
 	for _, i := range parameters {
 		foundMatches := 0
 		for _, j := range parameters {
-			if strings.ToLower(i.Name) == strings.ToLower(j.Name) {
+			if strings.EqualFold(i.Name, j.Name) {
 				foundMatches += 1
 			}
 			if foundMatches > 1 {
@@ -857,7 +857,7 @@ func SanitizeCfgTemplate(config shared.CfgTemplate) shared.CfgTemplate {
 		for j := 0; j < len(config.Backup[i].Target); j++ {
 			for k := 0; k < len(config.Backup[i].Target[j].Parameters); k++ {
 				for _, val := range ParemtersWithSecrets {
-					if strings.ToLower(config.Backup[i].Target[j].Parameters[k].Name) == strings.ToLower(val) {
+					if strings.EqualFold(config.Backup[i].Target[j].Parameters[k].Name, val) {
 						config.Backup[i].Target[j].Parameters[k].Value = SecretReplace
 					}
 				}
@@ -1011,7 +1011,7 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []shared.ConfigBackup, old
 		for j := 0; j < len(newConfigBackup[i].Target); j++ {
 			for k := 0; k < len(newConfigBackup[i].Target[j].Parameters); k++ {
 				for _, parameter := range ParemtersWithSecrets {
-					if strings.ToLower(newConfigBackup[i].Target[j].Parameters[k].Name) == strings.ToLower(parameter) {
+					if strings.EqualFold(newConfigBackup[i].Target[j].Parameters[k].Name, parameter) {
 						// if the new value contains only "*" then copy the secret from the old Value
 						if CheckStringIsOnly(newConfigBackup[i].Target[j].Parameters[k].Value, "*") {
 							// check if the old config has a Backup with the same name
@@ -1055,7 +1055,7 @@ func CopyPasswordsFromOldConfigBackup(newConfigBackup []shared.ConfigBackup, old
 							foundMatchingParameter := false
 							// check if the old config has Parameter with the same name
 							for _, oldParameter := range matchingOldTarget.Parameters {
-								if strings.ToLower(oldParameter.Name) == strings.ToLower(newConfigBackup[i].Target[j].Parameters[k].Name) {
+								if strings.EqualFold(oldParameter.Name, newConfigBackup[i].Target[j].Parameters[k].Name) {
 									if oldParameter.Value == "" {
 										return fmt.Errorf("backup having name '%s' and target '%s' has secret "+
 											"parameter '%s' with value '%s' which implies the value "+
