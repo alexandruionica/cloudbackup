@@ -23,7 +23,7 @@ func TestExecute1OfArgsCommandConfigCommandValidate(t *testing.T) {
 		_ = testobj.Execute(make([]string, 0))
 		return
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestExecute1OfArgsCommandConfigCommandValidate")
+	cmd := exec.Command(os.Args[0], "-test.run=TestExecute1OfArgsCommandConfigCommandValidate") // #nosec
 	cmd.Env = append(os.Environ(), "TEST_RUNNING=1")
 	err := cmd.Run()
 	if err != nil {
@@ -45,7 +45,7 @@ func TestExecute2OfArgsCommandConfigCommandValidate(t *testing.T) {
 		return
 	}
 
-	cmd := exec.Command(os.Args[0], "-test.run=TestExecute2OfArgsCommandConfigCommandValidate")
+	cmd := exec.Command(os.Args[0], "-test.run=TestExecute2OfArgsCommandConfigCommandValidate") // #nosec
 	cmd.Env = append(os.Environ(), "TEST_RUNNING=1")
 	err := cmd.Run()
 	if err == nil {
