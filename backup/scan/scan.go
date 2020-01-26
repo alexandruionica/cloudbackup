@@ -48,9 +48,11 @@ func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, ba
 			}
 		default:
 			if stat.IsDir() {
-				err := AddTopLevelJobPath(dbData, jobUuid, path, "dir")
-				if err != nil {
-					return false, err
+				if !dryRun {
+					err := AddTopLevelJobPath(dbData, jobUuid, path, "dir")
+					if err != nil {
+						return false, err
+					}
 				}
 				exiting, err := walk(ctx, path, stat, backupConfig, backupJobsState, dryRun, dbData, objectStores, jobUuid)
 				// backup job was signalled to exit - Examine FIRST $exiting and then $err
@@ -83,12 +85,12 @@ func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, ba
 						fileType = "unknown"
 					}
 				}
-				err = AddTopLevelJobPath(dbData, jobUuid, path, fileType)
-				if err != nil {
-					return false, err
-				}
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
 				if !dryRun {
+					err = AddTopLevelJobPath(dbData, jobUuid, path, fileType)
+					if err != nil {
+						return false, err
+					}
 					// call to function dealing with backing up individual files
 					cancelled, err := backup.Do(ctx, path, stat, backupConfig, dbData, objectStores, backupJobsState, jobUuid)
 					if cancelled {

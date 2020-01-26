@@ -75,16 +75,20 @@ class TestCliBackupValidate(unittest.TestCase):
         re_result = re.search('^Completed run: ([0-9]+) examined files, ([0-9]+) examined directories, ([0-9]+) '
                               'excluded files or directories, ([0-9]+) errors encountered', last_line)
         # check regex worked
-        self.assertTrue(re_result)
+        self.assertTrue(re_result, "command output was: {}".format(re_result))
         examined_files = int(re_result.group(1))
         examined_directories = int(re_result.group(2))
         excluded_files_or_dirs = int(re_result.group(3))
         errors_encountered = int(re_result.group(4))
-        self.assertEqual(num_files, examined_files)
+        self.assertEqual(num_files, examined_files, "expected {} files to have been examined but got"
+                                                    " {}".format(num_files, examined_files))
         # top level dir counts too so we increment with 1 the initial list of directories
-        self.assertEqual(num_dirs + 1, examined_directories)
-        self.assertEqual(0, excluded_files_or_dirs)
-        self.assertEqual(0, errors_encountered)
+        self.assertEqual(num_dirs + 1, examined_directories, "expected {} directories to have been examined but got"
+                                                             " {}".format(num_dirs + 1, examined_directories))
+        self.assertEqual(0, excluded_files_or_dirs, "expected {} files and directories to have been excluded but got"
+                                                    " {}".format(0, excluded_files_or_dirs))
+        self.assertEqual(0, errors_encountered, "expected to have had {} errors encountered but instead found"
+                                                " {}".format(0, errors_encountered))
 
     # ./cloudbackup client backup dryrun first_backup --json -c client_config.yaml     works
     def test_cmd_client_backup_dryrun2(self):
