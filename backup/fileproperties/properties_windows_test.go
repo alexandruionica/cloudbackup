@@ -141,12 +141,12 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	// variable depicts if the creator  of the file is shown as the "Onwer" in the top level entry or in one of the ACE
 	// entries
 	creatorInACES := false
-	if strings.ToLower(username) != strings.ToLower(owner) {
+	if strings.EqualFold(username, owner) {
 		// check the json structure to see if the ACLs contain the user we run under . Windows permissions seem to work in misterious ways
 		for _, AceEntry := range expandedPerm.ACEs {
-			if strings.ToLower(username) == strings.ToLower(AceEntry.Account.Name) {
+			if strings.EqualFold(username, AceEntry.Account.Name) {
 				creatorInACES = true
-				if strings.ToLower(domain) != strings.ToLower(AceEntry.Account.Domain) {
+				if strings.EqualFold(domain, AceEntry.Account.Domain) {
 					t.Fatalf("Expected domain user %s who created %s to be %s but instead got domain %s", username, file, strings.ToLower(domain),
 						strings.ToLower(AceEntry.Account.Domain))
 				}
@@ -162,10 +162,10 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	// entries
 	creatorInACES = false
 	// check permissions object has expected content
-	if strings.ToLower(username) != strings.ToLower(expandedPerm.Owner.Name) {
+	if strings.EqualFold(username, expandedPerm.Owner.Name) {
 		// check the json structure to see if the ACLs contain the user we run under . Windows permissions seem to work in mysterious ways
 		for _, AceEntry := range expandedPerm.ACEs {
-			if strings.ToLower(username) == strings.ToLower(AceEntry.Account.Name) {
+			if strings.EqualFold(username, AceEntry.Account.Name) {
 				creatorInACES = true
 			}
 		}
@@ -175,7 +175,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 		}
 	}
 
-	if strings.ToLower(owner) != strings.ToLower(expandedPerm.Owner.Name) {
+	if strings.EqualFold(owner, expandedPerm.Owner.Name) {
 		t.Fatalf("owner is %s while expandedPerm.Owner.Name is %s and it is expected they match", owner, expandedPerm.Owner.Name)
 	}
 
@@ -199,7 +199,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 		if sid != expandedPerm.Owner.SID {
 			t.Fatalf("Expected owner sid of %s to be %s but instead got sid %s", file, sid, expandedPerm.Owner.SID)
 		}
-		if strings.ToLower(domain) != strings.ToLower(expandedPerm.Owner.Domain) {
+		if strings.EqualFold(domain, expandedPerm.Owner.Domain) {
 			t.Fatalf("Expected owner domain of %s to be %s but instead got domain %s", file, strings.ToLower(domain),
 				strings.ToLower(expandedPerm.Owner.Domain))
 		}
@@ -211,7 +211,7 @@ func examineFile(t *testing.T, file string, filestat os.FileInfo, sid, username,
 	foundMatchInProperties := false
 	filePropertiesFromPowerShell := getFilePropertiesUsingPowershell(t, file)
 	for _, fileProperties := range filePropertiesFromPowerShell {
-		if strings.ToLower(username) == strings.ToLower(fileProperties.Name) && strings.ToLower(domain) == strings.ToLower(fileProperties.Domain) {
+		if strings.EqualFold(username, fileProperties.Name) && strings.EqualFold(domain, fileProperties.Domain) {
 			// FileSystemRights AccessControlType
 			// FullControl             Allow
 			if fileProperties.FileSystemRights == "FullControl" && fileProperties.AccessControlType == "Allow" {
