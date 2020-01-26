@@ -205,6 +205,9 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	PreparedStatements.ReportBackupJobsShowQuery = "SELECT report FROM jobs WHERE " +
 		"name = ? AND id = ? AND state != 'started'"
 
+	// adds an entry for each top level item in the config file (backup.paths[]) which is being processed
+	PreparedStatements.TopItemsInsert = "INSERT INTO top_items (job_id, path, type) VALUES (?, ?, ?)"
+
 	return PreparedStatements, nil
 }
 

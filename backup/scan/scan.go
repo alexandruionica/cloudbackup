@@ -2,15 +2,14 @@ package scan
 
 import (
 	"cloudbackup/backup"
-	"cloudbackup/objectstore"
-	"cloudbackup/utils"
-	"os"
-	"path/filepath"
-
 	"cloudbackup/daemon/globals"
+	"cloudbackup/objectstore"
 	"cloudbackup/shared"
+	"cloudbackup/utils"
 	"context"
 	log "github.com/sirupsen/logrus"
+	"os"
+	"path/filepath"
 )
 
 const loggingContext = "backup.scan"
@@ -49,6 +48,10 @@ func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, ba
 			}
 		default:
 			if stat.IsDir() {
+				err := AddTopLevelJobPath(dbData, jobUuid, path, "dir")
+				if err != nil {
+					return false, err
+				}
 				exiting, err := walk(ctx, path, stat, backupConfig, backupJobsState, dryRun, dbData, objectStores, jobUuid)
 				// backup job was signalled to exit - Examine FIRST $exiting and then $err
 				if exiting {
@@ -80,6 +83,10 @@ func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, ba
 						fileType = "unknown"
 					}
 				}
+				err = AddTopLevelJobPath(dbData, jobUuid, path, fileType)
+				if err != nil {
+					return false, err
+				}
 				backupJobsState.UpdateStatsText(backupConfig.Name, "current_file", path, "", "")
 				if !dryRun {
 					// call to function dealing with backing up individual files
@@ -92,7 +99,6 @@ func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, ba
 						backup.MarkItemAsFailed(path, fileType, jobUuid, dbData)
 					}
 				}
-
 			}
 		}
 	}
@@ -258,4 +264,16 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig share
 		}
 	}
 	return false, nil
+}
+
+// adds a new record in the "top_items" table which represents a top level path (meaning which was mentioned in the
+// config file in the "paths" section of a backup job) for a given backup job run
+func AddTopLevelJobPath(dbData shared.DbData, jobId string, path string, fileType string) error {
+	_, err := dbData.Db.Exec(dbData.PreparedStatements.TopItemsInsert, jobId, path, fileType)
+	if err != nil {
+		logger.Errorf("While trying to add information about path %s to the "+
+			"database, the following error was encountered: '%s'", path, err)
+		return err
+	}
+	return nil
 }
