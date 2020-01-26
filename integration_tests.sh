@@ -32,6 +32,14 @@ fi
 
 echo "Running Python integration tests ..."
 ${TESTSFOLDER}/.venv/bin/python -m unittest discover -s ${TESTSFOLDER}/ -p '*.py*' -v
+if [ $? -ne 0 ]; then
+  echo 'Test error'
+  exit 1
+fi
 
 echo "Cleaning up object stores as the test is complete ..."
 ${TESTSFOLDER}/.venv/bin/python ${TESTSFOLDER}/clean_object_stores_after_tests.py
+if [ $? -ne 0 ]; then
+  echo 'Post test cleanup error'
+  exit 1
+fi
