@@ -411,7 +411,7 @@ paths:
         - report
       summary: List available reports for a given back job definition.
       description: >-
-        List available reports for a given back job definition.
+        List available reports for a given back job definition. If a report is available it means the files, directories and symlinks backed up by said backup job run should also be available for restoring.
       operationId: ReportBackupList
       produces:
         - application/json
@@ -488,6 +488,51 @@ paths:
             $ref: '#/definitions/ApiResponseError'
         '500':
           description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ApiResponseError'
+      security: []
+  /report/backup/file/list:
+    post:
+      tags:
+        - report
+      summary: List backed up files
+      description: >-
+        List backed up files, directories and symlinks during a specific backup job run or all files to have backups for the given backup job definition. To discover all available backup job runs for a given backup definition, use the /report/backup/list API call.
+      operationId: ReportBackupFileList
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: name of the backup job definition for which to list available reports
+          required: true
+          schema:
+            $ref: '#/definitions/ReportBackupFileListInput'
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/definitions/ApiResponseReportBackupFileList'
+        '400':
+          description: The request was malformed or mandatory key + value pairs were missing from the request or were incorrect
+          schema:
+            $ref: '#/definitions/ApiResponseError'
+        '401':
+          description: Basic authentication required
+          schema:
+            $ref: '#/definitions/ApiResponseError'
+        '404':
+          description: No backup path matches the provided name for the given job id or no job id matches the provided one
+          schema:
+            $ref: '#/definitions/ApiResponseError'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ApiResponseError'
+        '503':
+          description: The request should be retried later
           schema:
             $ref: '#/definitions/ApiResponseError'
       security: []
@@ -1222,6 +1267,52 @@ definitions:
         type: string
         example: stopped
         pattern: ^(stopped|crashed)$
+  ResultReportBackupFileList:
+    type: object
+    properties:
+      path:
+        type: string
+        example: /var/data/myapp/
+        description: Absolute respresentation of the path, as it was when it was backed up from the source Operating System
+      instances:
+        type: array
+        description: This array containa one or more job ids having a backup of the item $path represents. This array will have one item if in the request $job_id was specified and potentially more items if $job_id was not specified during the request (or it was provided as an empty string).
+        items:
+          $ref: '#/definitions/ResultReportBackupFileListItemInstance'
+  ResultReportBackupFileListItemInstance:
+    type: object
+    properties:
+      job_id:
+        type: string
+        example: 163A61FE-2205-4EB2-A0CB-B19A033C1CE3
+        description: Id of the Backup Job which backed up this item
+        pattern: >-
+          ^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$
+      job_name:
+        type: string
+        example: generic-server
+        description: Job definition name as it is in the configuration file
+      job_start_time:
+        type: string
+        example: '2018-06-02T17:21:32.476812215+10:00'
+        description: >-
+          Date+time when the backup job started (this is not the time the item was backed up but the time the backup job run was started). Date+time format of the response is RFC3339 with nanosecond support.
+      type:
+        type: string
+        example: file
+        pattern: ^(file|directory|symlink)$
+        description: >-
+          Type of this item: on of file, dir, symlink
+      size:
+        type: integer
+        example: 324231
+        description: >-
+          Type of this item: Size of the file. For directories this will be 0.
+      upload_date:
+        type: string
+        example: '2018-06-02T17:21:32.476812215+10:00'
+        description: >-
+          Date+time when this item got uploaded to the object store. Multiple backup job runs can have the same "upload_date" if the item itself did not change between each backup run so while the backup run is recent, it could be that the item has not changed since 10 backup runs ago so all subsequent backups will have the same value for "upload_date". If it is needed to find out details regarding when this particular job_id ran then the /report/backup/list API call can be used. Date+time format of the response is RFC3339 with nanosecond support.
   BackupJobName:
     type: object
     properties:
@@ -1282,6 +1373,36 @@ definitions:
         description: Select only reports which have a job start_time which equals or is up to (earlier than) the supplied value. If unspecified then a value equal to "now" will be used. If the $next parameter is supplied then this field will be ignored. Date+time format is RFC3339 with nanosecond support.
     required:
       - name
+  ReportBackupFileListInput:
+    type: object
+    properties:
+      name:
+        type: string
+        example: generic-server
+        description: Name of the backup job definition for which the report list is requested
+      next:
+        type: string
+        example: NTAwOjUwMAo=
+        description: Pagination token received from a previous request. Leave empty otherwise.
+      max_results:
+        type: integer
+        example: 100
+        description: maximum results to return in one response. If more results are available then a $next token will be returned in the response and it is expected said $next token will be supplied for a subsequent request. Defaults to 1000 and max accepted value is 10000. If a $next token is specified then the value of this parameter will be ignored.
+      job_id:
+        type: string
+        description: Job id corresponding to the backup job $name for which the list of successfully backed up items to be shown. If this field is not specified or is empty then the list of all files backed up during different backup job runs for $name will be shown. If the $parent parameter is specified then filtering of results may happen. If a $next token is specified then the value of this parameter will be ignored.
+        example: '163A61FE-2205-4EB2-A0CB-B19A033C1CE3'
+      path:
+        type: string
+        example: '/var/data/myapp/'
+        description: Path from where to start listing backed up items. The path must be input the same way it would have appeared on the system where it was backed up from. If this value is empty then the listing will start at the top (from a directory point of view) of the backup, accordingly to the "paths" mentioned in the configuration file, at the time the backup was made. If this value is empty and the value of $job_is also empty then all of the unique top level paths of all known backups will be used. If the path given is not a directory then that item will be the only item for which a response will be given. If the path is a directory then the directory itself and its contents will be part of the response. If a $next token is specified then the value of this parameter will be ignored.
+      descend:
+        type: boolean
+        example: true
+        description: If set to true and the value in $path is a directory then beside listing the contents of the directory, it will descend in sub directories and list their contents and their children's contents. If set to true and the value of $path is not specified then all top level directories (part of backup or backups) will be descended into. If a $next token is specified then the value of this parameter will be ignored.
+    required:
+      - name
+      - path
   ObjectStoreRates:
     type: object
     properties:
@@ -1396,6 +1517,23 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/ResultReportBackupList'
+  ApiResponseReportBackupFileList:
+    type: object
+    properties:
+      code:
+        type: string
+        example: success
+      message:
+        type: string
+        example: success
+      next:
+        type: string
+        example: NTAwOjUwMAo=
+        description: Next token. Non empty values signal that this is a partial, paginated result and subsequent requests are required in order to get the full result set.
+      result:
+        type: array
+        items:
+          $ref: '#/definitions/ResultReportBackupFileList'
   ApiResponseReportBackupShow:
     type: object
     properties:
