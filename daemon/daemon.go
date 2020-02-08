@@ -3,6 +3,7 @@ package daemon
 import (
 	"cloudbackup/config"
 	"cloudbackup/daemon/globals"
+	"cloudbackup/database"
 	"cloudbackup/httpd"
 	"cloudbackup/scheduler"
 	"cloudbackup/shared"
@@ -40,6 +41,13 @@ func Start(configFile string, debug bool) {
 	if err != nil {
 		os.Exit(1)
 	}
+
+	// find crashed jobs and update their database status to represent this
+	err = database.CheckForCrashedJobs(configuration.Config, backupJobsState)
+	if err != nil {
+		os.Exit(1)
+	}
+
 	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
