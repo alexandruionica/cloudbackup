@@ -377,8 +377,6 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 	if backupError != nil {
 		jobStateCopy.State = "failed"
 	}
-	// TODO - figure out when a job is "CRASHED" and set $jobStatus accordingly - probably doesn't make sense to do it
-	//  from this function but rather a function which runs at server startup and examines the state of the DB
 	jobReport := ""
 	b, err := json.Marshal(jobStateCopy)
 	if err != nil {

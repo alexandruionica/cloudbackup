@@ -360,3 +360,82 @@ func Start(datadir string, backupName string, backupJobsState *shared.BackupJobs
 
 	return db, nil
 }
+
+// checks if any jobs are crashed for the given database and if so then adjusts their state to reflect this
+// It is up to the caller to ensure that no back job is running when this function is called (as otherwise it will erroneously mark it as crashed)
+func CheckForCrashedJobs(config shared.CfgTemplate, backupJobsState *shared.BackupJobsState) error {
+	config.Mutex.RLock()
+	dataDir := config.DataDir
+	backupNames := make([]string, 0)
+	for _, backup := range config.Backup {
+		backupNames = append(backupNames, backup.Name)
+	}
+	config.Mutex.RUnlock()
+
+	for _, name := range backupNames {
+		err := findAndMarkCrashedJobs(dataDir, name, backupJobsState)
+		if err != nil {
+			logger.Errorf("While checking if backup definition '%s' has any crashed backup jobs, encountered "+
+				"error: %s", name, err)
+			return err
+		}
+	}
+	return nil
+}
+
+// checks if any jobs are crashed for the given database and if so then adjusts their state to reflect this
+// It is up to the caller to ensure that no back job is running when this function is called (as otherwise it will erroneously mark it as crashed)
+func findAndMarkCrashedJobs(datadir string, backupName string, backupJobsState *shared.BackupJobsState) error {
+	db, err := OpenDb(datadir, backupName, true, backupJobsState, 0) // if successful, increments number of DB clients
+	if err != nil {
+		return err
+	}
+	type toDelete struct {
+		jobId     string
+		jobName   string
+		state     string
+		startTime int64
+	}
+	results := make([]toDelete, 0)
+
+	// find Backup jobs which have status "started" or "stopping" and change it to "crashed"
+	rows, err := db.Query("SELECT id, name, start_time, state FROM jobs  WHERE name=? AND (state ='started' OR state='stopping') AND type='backup'", backupName)
+	if err != nil {
+		logger.Warnf("While trying to find crashed backup jobs in the database, received error: %s", err)
+	} else {
+		for rows.Next() {
+			item := toDelete{}
+			err := rows.Scan(&item.jobId, &item.jobName, &item.startTime, &item.state)
+			if err != nil {
+				logger.Warnf("While retrieving the database records in order to build list of crashed backup jobs for backup "+
+					"definition '%s', the following error was encountered: '%s'", backupName, err)
+			}
+			results = append(results, item)
+		}
+		if err = rows.Err(); err != nil {
+			logger.Warnf("While enumerating the results of querying the database in order to build report crashed backup jobs for "+
+				"backup definition '%s', the following error was encountered: '%s'", backupName, err)
+		}
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() a the database query used to get the list of failed jobs belonging to "+
+				"backup definition '%s', the following error was encountered: %s", backupName, err)
+		}
+	}
+
+	for _, entry := range results {
+		logger.Warnf("Marking backup job '%s' having id '%s', which has started at '%s' and currently having "+
+			"recorded in the database a state of '%s' as a crashed backup job", entry.jobName, entry.jobId,
+			time.Unix(0, entry.startTime).Format(time.RFC3339Nano), entry.state)
+		_, err = db.Exec("UPDATE jobs SET state='crashed' WHERE name=? AND type='backup' AND id=?", entry.jobName, entry.jobId)
+		if err != nil {
+			logger.Warnf("While trying to mark in the database, crashed job '%s' having id '%s' and start time "+
+				"'%s' and state '%s', received error: %s", err, entry.jobName, entry.jobId,
+				time.Unix(0, entry.startTime).Format(time.RFC3339Nano), entry.state)
+		}
+	}
+
+	// close db connection
+	DisconnectFromDb(backupName, backupJobsState)
+	return nil
+}

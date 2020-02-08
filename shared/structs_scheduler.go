@@ -85,7 +85,12 @@ func (comm *CommWithSchedulerForBackup) Init() {
 type BackupJobStatus struct {
 	// name of the backup job as it was defined in the configuration file at job start (things may have changed after)
 	Name string `json:"name"`
-	// one of "running" or "stopped" or "stopping"
+	// one of "running" or "stopped", "stopping" for Backup jobs and when this is used for reporting purposes (of Backup
+	// jobs by reading from the "jobs" DB table) then the possible values are: started, finished, failed, cancelled and
+	// crashed. "started" means the job is running, "finished" that it completed its run, "failed" means some critical
+	// enough error was encountered that all progress was aborted, "cancelled" means that the job was signaled to stop
+	// while it was running and "crashed" means that it did not reach the "finished" state (this is equivalent to "stopped"
+	// state when querying list of backup definitions and their status) and that somewhere before that the whole program crashed
 	State string `json:"state"`
 	// uuid of the backup job - makes sense only for $State == "running"
 	BackupJobId string `json:"job_id,omitempty"`
