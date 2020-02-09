@@ -1050,7 +1050,8 @@
         "state": {
           "type": "string",
           "example": "running",
-          "pattern": "^(running|stopping|stopped)$"
+          "pattern": "^(running|stopping|stopped|started|finished|failed|cancelled|crashed)$",
+          "description": "one of \"running\" or \"stopped\", \"stopping\" for the current state of backup jobs. When reading reports of previous jobs then the possible values are \"started\", \"finished\", \"failed\", \"cancelled\" and \"crashed\". \"started\" means the job thought to be still running(should not happen under normal operation), \"finished\" that it completed its run, \"failed\" means some critical enough error was   encountered that the whole job was aborted, \"cancelled\" means that the job was signaled to stop while it was running and \"crashed\" means that it did not reach the \"finished\" state (this is equivalent to \"stopped\" state when querying list of backup definitions and their status) and that somewhere before that the whole program crashed"
         },
         "start_time": {
           "type": "string",
@@ -1532,7 +1533,7 @@
         "max_results": {
           "type": "integer",
           "example": 100,
-          "description": "maximum results to return in one response. If more results are available then a $next token will be returned in the response and it is expected said $next token will be supplied for a subsequent request. If a $next token is specified then the value of $max_results will be ignored."
+          "description": "maximum results to return in one response. If more results are available then a $next token will be returned in the response and it is expected said $next token will be supplied for a subsequent request. If a $next token is specified then the value of $max_results will be ignored. Default value is 100 and the maximum value is 1000."
         },
         "from_start_time": {
           "type": "string",
@@ -1564,7 +1565,7 @@
         },
         "max_results": {
           "type": "integer",
-          "example": 100,
+          "example": 1000,
           "description": "maximum results to return in one response. If more results are available then a $next token will be returned in the response and it is expected said $next token will be supplied for a subsequent request. Defaults to 1000 and max accepted value is 10000. If a $next token is specified then the value of this parameter will be ignored."
         },
         "job_id": {

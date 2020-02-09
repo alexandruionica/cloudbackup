@@ -44,7 +44,22 @@ type ReportBackupJob struct {
 	JobId string `json:"job_id"`
 }
 
+type ReportBackupFileList struct {
+	// Job definition's name for which to build a report list
+	Name string `json:"name"`
+	// token to use when pagination is needed. Token format is:   offset:max_results
+	Next string `json:"next"`
+	// max number of results to return. Ignored when $Next is supplied
+	MaxResults uint64 `json:"max_results"`
+	JobId      string `json:"job_id"`
+	Path       string `json:"path"`
+	Descend    bool   `json:"descend"`
+}
+
 const LimitReportResults = 1000
+const LimitReportResultsDefault = 100
+const LimitReportFileResults = 10000
+const LimitReportFileResultsDefault = 1000
 
 // runs all Notification definitions from the config file, wait for them to complete(or fail) and reply to the client
 func (srvSrc SrvData) handlerPostNotificationTest(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -101,10 +116,11 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 	}
 	jobName := decodedJson.Name
 
-	var limit uint64 = LimitReportResults
+	var limit uint64 = LimitReportResultsDefault
 	if decodedJson.MaxResults > LimitReportResults {
 		logger.Debugf("Requested max results of '%d' is larger then hardcoded limit of '%d'. Will return up"+
 			" to '%d' results", decodedJson.MaxResults, LimitReportResults, LimitReportResults)
+		limit = LimitReportResults
 	} else {
 		if decodedJson.MaxResults > 0 {
 			limit = decodedJson.MaxResults
@@ -158,60 +174,17 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 		}
 	}
 
-	// while a copy, some of the data is pointers so locking is still needed
-	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostReportBackupList")
-	// while a copy, some of the data is pointers so locking is still needed
-	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostReportBackupList")
-	found := false
-	// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
-	// shared with other functions (running in other routines)
-	configCopy.Mutex.RLock()
-	for _, backup := range configCopy.Backup {
-		if backup.Name == jobName {
-			found = true
-		}
-	}
-	configCopy.Mutex.RUnlock()
-
-	if !found {
-		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job definition was found matching name:"+
-			" %s", jobName))
+	dbData, backupJobsState, err := getDbAccess(srvSrc, jobName, w, loggingContext+".handlerPostReportBackupList")
+	if err == nil {
+		// TODO - there is a potentially big problem here if a client disconnects before we setup the below defer() as
+		// the structure which records how many DB connected clients we have would end up with extra marked clients
+		// (but the actual clients have long disconnected). This leads to any attempt to close the database to hang as
+		// the closing function waits for all clients to disconnect
+		defer dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
+	} else {
+		// getDbAccess() takes care of passing the error back to the client via $w so there isn't anything else to do
 		return
 	}
-
-	// start - all the plumbing needed in order to get DB access
-	backupJobsState := srvSrc.GetJobState(".handlerPostReportBackupList")
-	db, err := database.OpenDb(configCopy.DataDir, jobName, true, backupJobsState, 15*time.Second)
-	if err != nil {
-		if err.Error() == database.ErrTimedOut {
-			logger.Debugf("Timed out while trying to get database access from handlerPostReportBackupList() being ran for job definition '%s'", jobName)
-			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable, fmt.Sprint("Timed out while trying to get database access. Please try again later."))
-			return
-		} else {
-			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, fmt.Sprintf("While trying to get database access for backup definition '%s', encountered error: %s",
-				jobName, err))
-			return
-		}
-	}
-	backupConfig, err := shared.MakeCopyOfBackupJobDefinition(jobName, configCopy)
-	if err != nil {
-		database.DisconnectFromDb(jobName, backupJobsState)
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, fmt.Sprintf("While trying to get a copy of the backup definition for bakup name '%s', encountered error: %s",
-			jobName, err))
-		return
-	}
-
-	dbData, err := dbops.PrepareDb(jobName, "", configCopy, backupJobsState, backupConfig, false, db)
-	if err != nil {
-		database.DisconnectFromDb(jobName, backupJobsState)
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, fmt.Sprintf("While trying to setup prepared SQL statements for bakup name '%s', encountered error: %s",
-			jobName, err))
-		return
-	}
-	// end - all the plumbing needed in order to get DB access
-	defer dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
-	// TODO - there is a potentially big problem here if a client disconnects before we setup the above defer() as the structure which records how many DB connected clients we have would end up with
-	// extra marked clients (but the actual clients have long disconnected). This leads to any attempt to close the database to hang as the closing function waits for all clients to disconnect
 
 	dbResults, err := getRowsForHandlerPostReportBackupList(dbData, jobName, limit, offset, FromStartTime, UntilStartTime)
 	if err != nil {
@@ -348,60 +321,17 @@ func (srvSrc SrvData) handlerPostReportBackupShow(w http.ResponseWriter, r *http
 	}
 	jobId := decodedJson.JobId
 
-	// while a copy, some of the data is pointers so locking is still needed
-	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostReportBackupShow")
-	// while a copy, some of the data is pointers so locking is still needed
-	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostReportBackupShow")
-	found := false
-	// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
-	// shared with other functions (running in other routines)
-	configCopy.Mutex.RLock()
-	for _, backup := range configCopy.Backup {
-		if backup.Name == jobName {
-			found = true
-		}
-	}
-	configCopy.Mutex.RUnlock()
-
-	if !found {
-		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job definition was found matching name:"+
-			" %s", jobName))
+	dbData, backupJobsState, err := getDbAccess(srvSrc, jobName, w, loggingContext+".handlerPostReportBackupShow")
+	if err == nil {
+		// TODO - there is a potentially big problem here if a client disconnects before we setup the below defer() as
+		// the structure which records how many DB connected clients we have would end up with extra marked clients
+		// (but the actual clients have long disconnected). This leads to any attempt to close the database to hang as
+		// the closing function waits for all clients to disconnect
+		defer dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
+	} else {
+		// getDbAccess() takes care of passing the error back to the client via $w so there isn't anything else to do
 		return
 	}
-
-	// start - all the plumbing needed in order to get DB access
-	backupJobsState := srvSrc.GetJobState(".handlerPostReportBackupShow")
-	db, err := database.OpenDb(configCopy.DataDir, jobName, true, backupJobsState, 15*time.Second)
-	if err != nil {
-		if err.Error() == database.ErrTimedOut {
-			logger.Debugf("Timed out while trying to get database access from handlerPostReportBackupShow() being ran for job definition '%s'", jobName)
-			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable, fmt.Sprint("Timed out while trying to get database access. Please try again later."))
-			return
-		} else {
-			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, fmt.Sprintf("While trying to get database access for backup definition '%s', encountered error: %s",
-				jobName, err))
-			return
-		}
-	}
-	backupConfig, err := shared.MakeCopyOfBackupJobDefinition(jobName, configCopy)
-	if err != nil {
-		database.DisconnectFromDb(jobName, backupJobsState)
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, fmt.Sprintf("While trying to get a copy of the backup definition for bakup name '%s', encountered error: %s",
-			jobName, err))
-		return
-	}
-
-	dbData, err := dbops.PrepareDb(jobName, "", configCopy, backupJobsState, backupConfig, false, db)
-	if err != nil {
-		database.DisconnectFromDb(jobName, backupJobsState)
-		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, fmt.Sprintf("While trying to setup prepared SQL statements for bakup name '%s', encountered error: %s",
-			jobName, err))
-		return
-	}
-	// end - all the plumbing needed in order to get DB access
-	defer dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
-	// TODO - there is a potentially big problem here if a client disconnects before we setup the above defer() as the structure which records how many DB connected clients we have would end up with
-	// extra marked clients (but the actual clients have long disconnected). This leads to any attempt to close the database to hang as the closing function waits for all clients to disconnect
 
 	dbResult, numResults, err := getRowsForHandlerPostReportBackupShow(dbData, jobName, jobId)
 	if err != nil {
@@ -435,10 +365,10 @@ func getRowsForHandlerPostReportBackupShow(dbData shared.DbData, jobName string,
 	}()
 
 	numRows := 0
-	var rawResult string
+	var rawResult, state string
 	for rows.Next() {
 		numRows += 1
-		err := rows.Scan(&rawResult)
+		err := rows.Scan(&rawResult, &state)
 		if err != nil {
 			logger.Errorf("While retrieving the database record in with the job report for backup "+
 				"definition '%s' having job id '%s', the following error was encountered: '%s'", jobName, jobId, err)
@@ -466,6 +396,14 @@ func getRowsForHandlerPostReportBackupShow(dbData shared.DbData, jobName string,
 		return shared.BackupJobStatus{}, numRows, errors.New(msg)
 	}
 
+	if state == "crashed" && rawResult == "" {
+		msg := fmt.Sprintf("Job report for backup "+
+			"definition '%s' having job id '%s' could not be retreived because the job is marked as 'crashed' and no "+
+			"report is available for it", jobName, jobId)
+		logger.Debugf(msg)
+		return shared.BackupJobStatus{}, numRows, errors.New(msg)
+	}
+
 	var result shared.BackupJobStatus
 	err = json.Unmarshal([]byte(rawResult), &result)
 	if err != nil {
@@ -476,4 +414,129 @@ func getRowsForHandlerPostReportBackupShow(dbData shared.DbData, jobName string,
 	}
 
 	return result, numRows, nil
+}
+
+func (srvSrc SrvData) handlerPostReportBackupFileList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		// the ValidateJsonHTTPInput takes care of sending a reply to the user so there isn't much else to do here
+		return
+	}
+	var decodedJson ReportBackupFileList
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
+	if decodedJson.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
+			" is needed in order to know what backup definition you're requesting a file listing for"))
+		return
+	}
+	jobName := decodedJson.Name
+
+	var limit uint64 = LimitReportFileResultsDefault
+	if decodedJson.MaxResults > LimitReportFileResults {
+		logger.Debugf("Requested max results of '%d' is larger then hardcoded limit of '%d'. Will return up"+
+			" to '%d' results", decodedJson.MaxResults, LimitReportFileResults, LimitReportFileResults)
+		limit = LimitReportFileResults
+	} else {
+		if decodedJson.MaxResults > 0 {
+			limit = decodedJson.MaxResults
+		}
+	}
+	// TODO - delete
+	logger.Debug(limit)
+
+	jobId := decodedJson.JobId
+
+	dbData, backupJobsState, err := getDbAccess(srvSrc, jobName, w, loggingContext+".handlerPostReportBackupFileList")
+	if err == nil {
+		// TODO - there is a potentially big problem here if a client disconnects before we setup the below defer() as
+		// the structure which records how many DB connected clients we have would end up with extra marked clients
+		// (but the actual clients have long disconnected). This leads to any attempt to close the database to hang as
+		// the closing function waits for all clients to disconnect
+		defer dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
+	} else {
+		// getDbAccess() takes care of passing the error back to the client via $w so there isn't anything else to do
+		return
+	}
+
+	if jobId != "" {
+		// reuse getRowsForHandlerPostReportBackupShow as if don't have a report for this jobid then the job didn't run
+		_, numResults, err := getRowsForHandlerPostReportBackupShow(dbData, jobName, jobId)
+		if err != nil {
+			if numResults == 0 {
+				JSONError(w, http.StatusNotFound, HttpErrNotFound, err.Error())
+				return
+			}
+			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+			return
+		}
+	}
+
+}
+
+// parses srvSrc in order to figure out various details and then proceeds to get database access. On failure it will
+// write back to the http client a specific error message and return control to the calling function but the caller
+// should no longer attempt to write to the http client. Returns: shared.DbData struct with required details for DB
+// operations followed by an *shared.BackupJobsState pointer and error object if the error object is populated then
+// the shared.DbData struct and *shared.BackupJobsState should be discarded
+func getDbAccess(srvSrc SrvData, jobName string, w http.ResponseWriter, logContext string) (shared.DbData, *shared.BackupJobsState, error) {
+	// while a copy, some of the data is pointers so locking is still needed
+	srvCopy := srvSrc.GetCopyWithLock(logContext)
+	// while a copy, some of the data is pointers so locking is still needed
+	configCopy := srvCopy.globalcfg.GetCopyWithLock(logContext)
+	found := false
+	// while "runtimeCfg" is a copy, some of the data is pointers so locking is still needed as it may be
+	// shared with other functions (running in other routines)
+	configCopy.Mutex.RLock()
+	for _, backup := range configCopy.Backup {
+		if backup.Name == jobName {
+			found = true
+		}
+	}
+	configCopy.Mutex.RUnlock()
+
+	if !found {
+		msg := fmt.Sprintf("No backup job definition was found matching name: %s", jobName)
+		JSONError(w, http.StatusNotFound, HttpErrNotFound, msg)
+		return shared.DbData{}, nil, errors.New(msg)
+	}
+
+	// start - all the plumbing needed in order to get DB access
+	backupJobsState := srvSrc.GetJobState(logContext)
+	db, err := database.OpenDb(configCopy.DataDir, jobName, true, backupJobsState, 15*time.Second)
+	if err != nil {
+		if err.Error() == database.ErrTimedOut {
+			logger.Debugf("Timed out while trying to get database access from '%s' being ran for job definition '%s'", logContext, jobName)
+			msg := fmt.Sprint("Timed out while trying to get database access. Please try again later.")
+			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable, msg)
+			return shared.DbData{}, nil, errors.New(msg)
+		} else {
+			msg := fmt.Sprintf("While trying to get database access for backup definition '%s', encountered error: %s", jobName, err)
+			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+			return shared.DbData{}, nil, errors.New(msg)
+		}
+	}
+	backupConfig, err := shared.MakeCopyOfBackupJobDefinition(jobName, configCopy)
+	if err != nil {
+		database.DisconnectFromDb(jobName, backupJobsState)
+		msg := fmt.Sprintf("While trying to get a copy of the backup definition for bakup name '%s', encountered error: %s", jobName, err)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return shared.DbData{}, backupJobsState, errors.New(msg)
+	}
+
+	dbData, err := dbops.PrepareDb(jobName, "", configCopy, backupJobsState, backupConfig, false, db)
+	if err != nil {
+		database.DisconnectFromDb(jobName, backupJobsState)
+		msg := fmt.Sprintf("While trying to setup prepared SQL statements for bakup name '%s', encountered error: %s", jobName, err)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return shared.DbData{}, backupJobsState, errors.New(msg)
+	}
+	return dbData, backupJobsState, nil
+	// end - all the plumbing needed in order to get DB access
 }
