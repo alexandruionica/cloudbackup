@@ -199,11 +199,11 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// shows previously ran jobs (excludes any running jobs)
 	PreparedStatements.ReportBackupJobsListQuery = "SELECT name, id, start_time, end_time, state FROM jobs WHERE " +
-		"name = ? AND state != 'started' AND start_time >= ? AND start_time <= ? ORDER BY start_time LIMIT ? OFFSET ?"
+		"name = ? AND state != 'started' AND type = 'backup' AND start_time >= ? AND start_time <= ? ORDER BY start_time LIMIT ? OFFSET ?"
 
 	// retrieves the job report for a previously ran jobs (excludes any running jobs)
 	PreparedStatements.ReportBackupJobsShowQuery = "SELECT report, state FROM jobs WHERE " +
-		"name = ? AND id = ? AND state != 'started'"
+		"name = ? AND id = ? AND state != 'started' AND type = 'backup'"
 
 	// adds an entry for each top level item in the config file (backup.paths[]) which is being processed
 	PreparedStatements.TopItemsInsert = "INSERT INTO top_items (job_id, path, type) VALUES (?, ?, ?)"
