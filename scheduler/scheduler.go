@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -293,7 +294,7 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 			}
 		default:
 			// backupJobsState MUST be a pointer
-			cancelled, err := scan.Path(ctx, path, backupConfig, backupJobsState, false, dbData, objectStores, jobUuid)
+			cancelled, err := scan.Path(ctx, filepath.Clean(path), backupConfig, backupJobsState, false, dbData, objectStores, jobUuid)
 			// Examine FIRST $exit and then $err
 			if cancelled {
 				cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, true, nil, objectStores)
