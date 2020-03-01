@@ -21,7 +21,7 @@ func CloseStatementsAndDisconnectFromDb(dbData shared.DbData, backupJobsState *s
 		// close common used prepare statements
 		ClosePreparedStatements(dbData.PreparedStatements)
 		// close db connection
-		database.DisconnectFromDb(dbData.Name, backupJobsState)
+		database.DisconnectFromDb(dbData.Name, backupJobsState, dbData.Db)
 	}
 }
 

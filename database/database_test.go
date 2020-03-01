@@ -92,7 +92,7 @@ func TestOpenDb1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -115,7 +115,7 @@ func TestCreateDb1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -209,7 +209,7 @@ func TestCreateDbOpenDb2(t *testing.T) {
 	}
 
 	for i := 0; i < numDbClients; i++ {
-		DisconnectFromDb(backupName, backupJobsState)
+		DisconnectFromDb(backupName, backupJobsState, db)
 	}
 	CloseDb(backupName, backupJobsState, true)
 	// test that the state structure is as expected after closing the database
@@ -240,7 +240,7 @@ func TestCreateDbOpenDb2(t *testing.T) {
 	}
 
 	for i := 0; i < numDbClients; i++ {
-		DisconnectFromDb(backupName, backupJobsState)
+		DisconnectFromDb(backupName, backupJobsState, db)
 	}
 	CloseDb(backupName, backupJobsState, true)
 	err = os.RemoveAll(dbDataDirPath) // #nosec
@@ -268,7 +268,7 @@ func TestCreateDb2_1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -303,7 +303,7 @@ func TestCreateDb3(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -355,7 +355,7 @@ func TestValidateAndCreate1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -378,7 +378,7 @@ func TestValidateAndCreate2(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -401,7 +401,7 @@ func TestValidateAndCreate3(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -435,7 +435,7 @@ func TestValidateAndCreate4(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -468,7 +468,7 @@ func TestStart1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -492,7 +492,7 @@ func TestStart2(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec

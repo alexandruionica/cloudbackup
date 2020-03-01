@@ -370,7 +370,7 @@ func TestPath1(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
-	database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+	database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 }
 
 // test number of examined files as reported by Path() when  dereference=false
@@ -481,7 +481,7 @@ func TestPath2(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
-	database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+	database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 }
 
 // test number of examined files as reported by Path() when  dereference=false and top level folder is unreadable
@@ -603,7 +603,7 @@ func TestPath3(t *testing.T) {
 			t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 				backupJobsState.Running[0].StatsCounters, expectedStats)
 		}
-		database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+		database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 	}
 }
 
@@ -719,7 +719,7 @@ func TestPath4(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
-	database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+	database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 }
 
 // test number of examined files as reported by Path() when  dereference=true and we have an exclusion rule
@@ -834,7 +834,7 @@ func TestPath5(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
-	database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+	database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 }
 
 // test number of examined files as reported by Path() when  dereference=true and the top level path is a file
@@ -1628,7 +1628,7 @@ func TestPath12(t *testing.T) {
 		t.Fatalf("Stats reported by Path() are %+v don't match expected %+v",
 			backupJobsState.Running[0].StatsCounters, expectedStats)
 	}
-	database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+	database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 }
 
 // test number of examined files as reported by Path() when  dereference=true and when using an actual DB
@@ -1642,7 +1642,7 @@ func TestPath13(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		testutils.DeleteTestFilesAndDirs(pathsToDelete)
@@ -1795,7 +1795,7 @@ func TestPath14(t *testing.T) {
 		// remove tmpfile which holds the yaml as the config has been parsed and loaded
 		defer func() {
 			for i := 0; i < numDbClients; i++ {
-				database.DisconnectFromDb(backupName, backupJobsState)
+				database.DisconnectFromDb(backupName, backupJobsState, nil)
 			}
 			database.CloseDb(backupName, backupJobsState, true)
 			testutils.DeleteTestFilesAndDirs(pathsToDelete)
@@ -1858,7 +1858,7 @@ func TestPath14(t *testing.T) {
 
 		preparedStatements, err := dbops.Prepare(db)
 		if err != nil {
-			database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+			database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 			t.Fatalf("dbops.Prepare() returned error: '%s'", err)
 		}
 
@@ -1957,7 +1957,7 @@ func TestPath15(t *testing.T) {
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		testutils.DeleteTestFilesAndDirs(pathsToDelete)
@@ -2010,7 +2010,7 @@ func TestPath15(t *testing.T) {
 
 	preparedStatements, err := dbops.Prepare(db)
 	if err != nil {
-		database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+		database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 		t.Fatalf("dbops.Prepare() returned error: '%s'", err)
 	}
 
@@ -2140,7 +2140,7 @@ func TestPath15(t *testing.T) {
 
 	preparedStatements, err = dbops.Prepare(db)
 	if err != nil {
-		database.DisconnectFromDb(backupConfig.Name, backupJobsState)
+		database.DisconnectFromDb(backupConfig.Name, backupJobsState, db)
 		t.Fatalf("dbops.Prepare() returned error: '%s'", err)
 	}
 

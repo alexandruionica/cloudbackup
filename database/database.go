@@ -156,23 +156,14 @@ func OpenDb(datadir string, dbName string, fileExists bool, backupJobsState *sha
 			entry.DbOpenAllowed.GetLock()
 		}
 		atomic.AddUint32(&entry.NumClients, 1)
-		if entry.DB != nil {
-			logger.Debugf("Found an existing DB connection for database '%s'", dbName)
+		db, err := openDbFile(datadir, dbName, fileExists)
+		if err != nil {
+			atomic.AddUint32(&entry.NumClients, ^uint32(0)) // decrements NumClients
 			entry.DbOpenAllowed.ReleaseLock()
-			return entry.DB, nil
-		} else { // we have an entry by no active opened DB (pointer nil) so we need to open the DB file
-			logger.Debugf("Did not find an existing DB connection for database '%s' despite "+
-				"this database having been opened before.Proceeding to setup a new connection", dbName)
-			db, err := openDbFile(datadir, dbName, fileExists)
-			if err != nil {
-				atomic.AddUint32(&entry.NumClients, ^uint32(0)) // decrements NumClients
-				entry.DbOpenAllowed.ReleaseLock()
-				return db, err
-			} else {
-				entry.DB = db
-				entry.DbOpenAllowed.ReleaseLock()
-				return db, nil
-			}
+			return db, err
+		} else {
+			entry.DbOpenAllowed.ReleaseLock()
+			return db, nil
 		}
 	} else { // $BackupJobName was not yet added to the map
 		logger.Debugf("Did not find an existing DB connection for database '%s' so "+
@@ -187,7 +178,6 @@ func OpenDb(datadir string, dbName string, fileExists bool, backupJobsState *sha
 			backupJobsState.DbOpenAllowed[dbName] = &shared.DbAccess{
 				DbOpenAllowed: utils.NewMutexWithTimeout(),
 				NumClients:    1,
-				DB:            db,
 			}
 			backupJobsState.Lock.Unlock() // close as soon as possible as if the struct is Locked, actual backups may stop
 		}
@@ -195,11 +185,11 @@ func OpenDb(datadir string, dbName string, fileExists bool, backupJobsState *sha
 	}
 }
 
-// removes a client from the list of clients connected to a database; the $dbName parameter MUST be either the name of the
-// backup job as defined in the configuration file or the name of a restore job;
+// removes a client from the list of clients connected to a database and closes the database connection;
+// the $dbName parameter MUST be either the name of the backup job as defined in the configuration file or the name of a restore job;
 // $backupJobsState is used get the struct which contains number of connected clients and then proceed to decrement it
 // This function must be safe to run even on a closed / not opened DB
-func DisconnectFromDb(dbName string, backupJobsState *shared.BackupJobsState) {
+func DisconnectFromDb(dbName string, backupJobsState *shared.BackupJobsState, db *sql.DB) {
 	logger.Debugf("Disconnecting from database '%s'", dbName)
 	backupJobsState.Lock.RLock()
 	entry, ok := backupJobsState.DbOpenAllowed[dbName]
@@ -207,13 +197,31 @@ func DisconnectFromDb(dbName string, backupJobsState *shared.BackupJobsState) {
 	if ok { // the map has an entry for our database
 		atomic.AddUint32(&entry.NumClients, ^uint32(0)) // decrements NumClients
 		logger.Debugf("remaining '%d' connected clients to database '%s'", atomic.LoadUint32(&entry.NumClients), dbName)
+		if db != nil {
+			err := db.Close()
+			if err != nil {
+				logger.Errorf("While trying to close database '%s' encountered error: '%s'. This may lead to any "+
+					"attempts to copy the database (in order to back it up to the remote object store) to produce corrupted DB "+
+					"copies (the original should remain unaffected). Also this may eventually lead to memory leaks and some "+
+					"resource being exhausted and a program restart to be needed.", dbName, err)
+			}
+		}
 	} else { // no entry exists for this DB which is unexpected (an error)
 		logger.Warnf("Tried to disconnect from database '%s' but no connections to the database are recorded to exist", dbName)
+		if db != nil {
+			err := db.Close()
+			if err != nil {
+				logger.Errorf("While trying to close database '%s' encountered error: '%s'. This may lead to any "+
+					"attempts to copy the database (in order to back it up to the remote object store) to produce corrupted DB "+
+					"copies (the original should remain unaffected). Also this may eventually lead to memory leaks and some "+
+					"resource being exhausted and a program restart to be needed.", dbName, err)
+			}
+		}
 		return
 	}
 }
 
-// waits for all clients to disconnect from the database and then closes down the DB connection. If $releaseLock is
+// waits for all clients to disconnect from the database. If $releaseLock is
 // set to false the the DB lock won't be released which mean no one can re-open the database until the lock is released.
 func CloseDb(dbName string, backupJobsState *shared.BackupJobsState, releaseLock bool) {
 	logger.Debugf("Closing database '%s'", dbName)
@@ -232,14 +240,6 @@ func CloseDb(dbName string, backupJobsState *shared.BackupJobsState, releaseLock
 			} else {
 				break
 			}
-		}
-		db := entry.DB
-		entry.DB = nil // this makes is clear that any new attempts to use this DB will have to setup a new connection
-		err := db.Close()
-		if err != nil {
-			logger.Errorf("While trying to close database '%s' encountered error: '%s'. This may lead to any "+
-				"attempts to copy the database (in order to back it up to the remote object store) to produce corrupted DB "+
-				"copies (the original should remain unaffected).", dbName, err)
 		}
 		if releaseLock {
 			entry.DbOpenAllowed.ReleaseLock()
@@ -330,14 +330,14 @@ func ValidateAndCreate(datadir string, backupName string, configInit bool, backu
 
 		err = CreateDb(db, backupName)
 		if err != nil {
-			DisconnectFromDb(backupName, backupJobsState)
+			DisconnectFromDb(backupName, backupJobsState, db)
 			logger.Errorf("Backups for job '%s' are not possible as the database file can't be created or "+
 				"initialised",
 				backupName)
 			return err
 		}
 		// close db connection
-		DisconnectFromDb(backupName, backupJobsState)
+		DisconnectFromDb(backupName, backupJobsState, db)
 	}
 	return nil
 }
@@ -436,6 +436,6 @@ func findAndMarkCrashedJobs(datadir string, backupName string, backupJobsState *
 	}
 
 	// close db connection
-	DisconnectFromDb(backupName, backupJobsState)
+	DisconnectFromDb(backupName, backupJobsState, db)
 	return nil
 }

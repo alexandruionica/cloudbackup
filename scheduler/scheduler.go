@@ -589,14 +589,14 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 		// check db
 		foundUuidInDB, err := dbops.CheckJobUuidExists(db, jobUuid)
 		if err != nil {
-			database.DisconnectFromDb(Name, backupJobsState)
+			database.DisconnectFromDb(Name, backupJobsState, db)
 			return "", err
 		}
 		if foundUuidInDB {
-			database.DisconnectFromDb(Name, backupJobsState)
+			database.DisconnectFromDb(Name, backupJobsState, db)
 			continue
 		} else {
-			database.DisconnectFromDb(Name, backupJobsState)
+			database.DisconnectFromDb(Name, backupJobsState, db)
 			return jobUuid, nil
 		}
 	}

@@ -33,7 +33,7 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -123,7 +123,7 @@ func TestEnsureTargetsInDb2(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -172,7 +172,7 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -271,7 +271,7 @@ func TestPrepare1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -342,7 +342,7 @@ func TestClosePreparedStatements1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -380,7 +380,7 @@ func TestCloseStatementsAndDb2(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -411,7 +411,7 @@ func TestCloseStatementsAndDb3(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -452,7 +452,7 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
@@ -534,7 +534,7 @@ func TestCheckJobUuidExists1(t *testing.T) {
 	numDbClients := 0
 	defer func() {
 		for i := 0; i < numDbClients; i++ {
-			database.DisconnectFromDb(backupName, backupJobsState)
+			database.DisconnectFromDb(backupName, backupJobsState, nil)
 		}
 		database.CloseDb(backupName, backupJobsState, true)
 		err := os.RemoveAll(dbDataDirPath) // #nosec
