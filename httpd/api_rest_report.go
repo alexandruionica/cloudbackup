@@ -582,7 +582,7 @@ func getDbAccess(srvSrc SrvData, jobName string, w http.ResponseWriter, logConte
 	}
 	backupConfig, err := shared.MakeCopyOfBackupJobDefinition(jobName, configCopy)
 	if err != nil {
-		database.DisconnectFromDb(jobName, backupJobsState)
+		database.DisconnectFromDb(jobName, backupJobsState, db)
 		msg := fmt.Sprintf("While trying to get a copy of the backup definition for bakup name '%s', encountered error: %s", jobName, err)
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
 		return shared.DbData{}, backupJobsState, errors.New(msg)
@@ -590,7 +590,7 @@ func getDbAccess(srvSrc SrvData, jobName string, w http.ResponseWriter, logConte
 
 	dbData, err := dbops.PrepareDb(jobName, "", configCopy, backupJobsState, backupConfig, false, db)
 	if err != nil {
-		database.DisconnectFromDb(jobName, backupJobsState)
+		database.DisconnectFromDb(jobName, backupJobsState, db)
 		msg := fmt.Sprintf("While trying to setup prepared SQL statements for bakup name '%s', encountered error: %s", jobName, err)
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
 		return shared.DbData{}, backupJobsState, errors.New(msg)
