@@ -35,6 +35,7 @@ type DbPreparedStatements struct {
 	FilesUpdate                           string
 	FilesUpdateStmt                       *sql.Stmt
 	FilesDelete                           string
+	JobStartTime                          string
 	RemoteFilesInsert                     string
 	RemoteFilesQueryNewestVersion         string
 	RemoteFilesQueryNewestVersionUuidStmt *sql.Stmt
@@ -45,5 +46,7 @@ type DbPreparedStatements struct {
 	FailedFilesInsertStmt                 *sql.Stmt
 	ReportBackupJobsListQuery             string
 	ReportBackupJobsShowQuery             string
+	ReportBackupJobsFileListFindJobQuery  string
+	ReportBackupJobsFileListWithJobId     string
 	TopItemsInsert                        string
 }

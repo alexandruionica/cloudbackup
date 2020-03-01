@@ -802,7 +802,7 @@ definitions:
         type: string
         example: running
         pattern: ^(running|stopping|stopped|started|finished|failed|cancelled|crashed)$
-        description: one of "running" or "stopped", "stopping" for the current state of backup jobs. When reading reports of previous jobs then the possible values are "started", "finished", "failed", "cancelled" and "crashed". "started" means the job is running, "finished" that it completed its run, "failed" means some critical enough error was   encountered that the whole job was aborted, "cancelled" means that the job was signaled to stop while it was running and "crashed" means that it did not reach the "finished" state (this is equivalent to "stopped" state when querying list of backup definitions and their status) and that somewhere before that the whole program crashed
+        description: one of "running" or "stopped", "stopping" for the current state of backup jobs. When reading reports of previous jobs then the possible values are "started", "finished", "failed", "cancelled" and "crashed". "started" means the job thought to be still running(should not happen under normal operation), "finished" that it completed its run, "failed" means some critical enough error was   encountered that the whole job was aborted, "cancelled" means that the job was signaled to stop while it was running and "crashed" means that it did not reach the "finished" state (this is equivalent to "stopped" state when querying list of backup definitions and their status) and that somewhere before that the whole program crashed
       start_time:
         type: string
         example: '2018-06-02T16:38:55.676712775+10:00'
@@ -1298,6 +1298,10 @@ definitions:
         example: '2018-06-02T17:21:32.476812215+10:00'
         description: >-
           Date+time when the backup job started (this is not the time the item was backed up but the time the backup job run was started). Date+time format of the response is RFC3339 with nanosecond support.
+      job_target:
+        type: string
+        example: 's3_east'
+        description: Backup target name as defined in the configuration file when this backup ran.
       type:
         type: string
         example: file
@@ -1313,7 +1317,11 @@ definitions:
         type: string
         example: '2018-06-02T17:21:32.476812215+10:00'
         description: >-
-          Date+time when this item got uploaded to the object store. Multiple backup job runs can have the same "upload_date" if the item itself did not change between each backup run so while the backup run is recent, it could be that the item has not changed since 10 backup runs ago so all subsequent backups will have the same value for "upload_date". If it is needed to find out details regarding when this particular job_id ran then the /report/backup/list API call can be used. Date+time format of the response is RFC3339 with nanosecond support.
+          Date+time when this item got uploaded to the object store. Multiple backup job runs can have the same "upload_date" if the item itself did not change between each backup run so while the backup run is recent, it could be that the item has not changed since 10 backup runs ago so all subsequent backups will have the same value for "upload_date". Date+time format of the response is RFC3339 with nanosecond support.
+      deleted:
+        type: boolean
+        example: true
+        description: If true then it means that the item(filed/dir/symlink) no longer existed at the time of this backup. This implies that this particular item was backed up in the past hence we have knowledge of it. Evenutally this knowledge will be lost once this particular backup and all before it will be deleted (and no further backup still has any reference to the item). If the item was never backed up by the backup software then no knowledge of it would exist in the internal database. The main use for this value is to know when a particular item was no longer on the system and if it subsequently re-appeared. If this value is true then $upload_date meaning becomes "when it was detected the item no longer exists".
   BackupJobName:
     type: object
     properties:
@@ -1391,7 +1399,7 @@ definitions:
         description: maximum results to return in one response. If more results are available then a $next token will be returned in the response and it is expected said $next token will be supplied for a subsequent request. Defaults to 1000 and max accepted value is 10000. If a $next token is specified then the value of this parameter will be ignored.
       job_id:
         type: string
-        description: Job id corresponding to the backup job $name for which the list of successfully backed up items to be shown. If this field is not specified or is empty then the list of all files backed up during different backup job runs for $name will be shown. If the $parent parameter is specified then filtering of results may happen. If a $next token is specified then the value of this parameter will be ignored.
+        description: Job id corresponding to the backup job $name for which the list of successfully backed up items to be shown. If this field is not specified or is empty then the list of all files backed up during different backup job runs for $name will be shown but this operation will be allowed only as long as there isn't a running backup for the given $name. If the $parent parameter is specified then filtering of results may happen. If a $next token is specified then the value of this parameter will be ignored.
         example: '163A61FE-2205-4EB2-A0CB-B19A033C1CE3'
       path:
         type: string
