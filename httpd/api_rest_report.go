@@ -56,6 +56,32 @@ type ReportBackupFileList struct {
 	Descend    bool   `json:"descend"`
 }
 
+type ReportBackupFileListInstanceDbResults struct {
+	JobId string `json:"job_id"`
+	// Job definition's name for which to build a report list
+	JobName      string `json:"job_name"`
+	JobStartTime string `json:"job_start_time"` // Format MUST be time.RFC3339Nano
+	// Backup target name as defined in the configuration file, at the time of the backup
+	JobTarget string `json:"target"`
+	// File size. For directories this will be 0.
+	Size uint64 `json:"size"`
+	// One of file|directory|symlink
+	Type string `json:"type"`
+	// when was this particular version of the file/dir/symlink uploaded to the remote object store. It is very likely
+	// that for example a backup done yesterday would have a file unchanged so it would lets say have been initially
+	// backed up 3 weeks ago so this upload_date would be the date of 3 weeks ago
+	UploadDate string `json:"upload_date"` // Format MUST be time.RFC3339Nano
+	// same meaning as in the DB - if true then the file/dir/symlink is in a deleted state
+	DeleteMarker bool `json:"deleted"`
+}
+
+type ReportBackupFileListDbResults struct {
+	// Absolute path of the file/dir/symlink
+	Path string `json:"path"`
+	// One or more backed up versions of this item
+	Instances []ReportBackupFileListInstanceDbResults `json:"instances"`
+}
+
 const LimitReportResults = 1000
 const LimitReportResultsDefault = 100
 const LimitReportFileResults = 10000
@@ -167,7 +193,7 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 	if decodedJson.Next != "" {
 		logger.Debugf("Ignoring any values passed in for 'max_results', 'from_start_time' and 'until_start_time'" +
 			" as we had a valid 'next' supplied too")
-		limit, offset, FromStartTime, UntilStartTime, err = decodeNextToken(decodedJson.Next)
+		limit, offset, FromStartTime, UntilStartTime, err = decodeNextTokenOfReportBackupList(decodedJson.Next)
 		if err != nil {
 			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
 			return
@@ -195,7 +221,7 @@ func (srvSrc SrvData) handlerPostReportBackupList(w http.ResponseWriter, r *http
 	next := ""
 	// if returned results == $limit  then sent back a "next" value to client so it knows it doesn't have the full result set
 	if uint64(len(dbResults)) == limit {
-		next = buildNextToken(limit, offset+limit, FromStartTime, UntilStartTime)
+		next = buildNextTokenOfReportBackupList(limit, offset+limit, FromStartTime, UntilStartTime)
 	}
 
 	JSONSuccessWithResultPaginated(w, "success", "success", next, dbResults)
@@ -247,15 +273,15 @@ func getRowsForHandlerPostReportBackupList(dbData shared.DbData, jobName string,
 }
 
 // builds a next token by concatenating $limit + ":" + $offset + ":" + $earliestStart + ":" $latestStart and then base64 encoding the result
-func buildNextToken(limit uint64, offset uint64, earliestStart int64, latestStart int64) string {
-	// format is offset:max_results:earliestStart:latestStart
+func buildNextTokenOfReportBackupList(limit uint64, offset uint64, earliestStart int64, latestStart int64) string {
+	// format is limit:offset:earliestStart:latestStart
 	plain := strconv.FormatUint(limit, 10) + ":" + strconv.FormatUint(offset, 10) + ":" +
 		strconv.FormatInt(earliestStart, 10) + ":" + strconv.FormatInt(latestStart, 10)
 	return base64.StdEncoding.EncodeToString([]byte(plain))
 }
 
-// decodes a $nextToken produced by buildNextToken(); if returned $err is not nil then all other returned values should be ignored
-func decodeNextToken(nextToken string) (limit uint64, offset uint64, earliestStart int64, latestStart int64, err error) {
+// decodes a $nextToken produced by buildNextTokenOfReportBackupList(); if returned $err is not nil then all other returned values should be ignored
+func decodeNextTokenOfReportBackupList(nextToken string) (limit uint64, offset uint64, earliestStart int64, latestStart int64, err error) {
 	decoded, err := base64.StdEncoding.DecodeString(nextToken)
 	if err != nil {
 		return limit, offset, earliestStart, latestStart, fmt.Errorf("could not base64 decode 'Next' token '%s' due to error: %s", nextToken, err)
@@ -437,8 +463,22 @@ func (srvSrc SrvData) handlerPostReportBackupFileList(w http.ResponseWriter, r *
 		return
 	}
 	jobName := decodedJson.Name
-
+	jobId := decodedJson.JobId
+	descend := decodedJson.Descend
+	path := decodedJson.Path
 	var limit uint64 = LimitReportFileResultsDefault
+	var offset uint64 = 0
+
+	if decodedJson.Next != "" {
+		// overwrite decodedJson.MaxResults with the $limit value from the Next token and then validate that
+		// The API documentation makes it clear that decodedJson.MaxResults will be ignored if a $Next token is present
+		decodedJson.MaxResults, offset, jobId, path, descend, err = decodeNextTokenOfReportBackupFileList(decodedJson.Next)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+			return
+		}
+	}
+
 	if decodedJson.MaxResults > LimitReportFileResults {
 		logger.Debugf("Requested max results of '%d' is larger then hardcoded limit of '%d'. Will return up"+
 			" to '%d' results", decodedJson.MaxResults, LimitReportFileResults, LimitReportFileResults)
@@ -448,10 +488,6 @@ func (srvSrc SrvData) handlerPostReportBackupFileList(w http.ResponseWriter, r *
 			limit = decodedJson.MaxResults
 		}
 	}
-	// TODO - delete
-	logger.Debug(limit)
-
-	jobId := decodedJson.JobId
 
 	dbData, backupJobsState, err := getDbAccess(srvSrc, jobName, w, loggingContext+".handlerPostReportBackupFileList")
 	if err == nil {
@@ -465,18 +501,40 @@ func (srvSrc SrvData) handlerPostReportBackupFileList(w http.ResponseWriter, r *
 		return
 	}
 
-	if jobId != "" {
-		// reuse getRowsForHandlerPostReportBackupShow as if don't have a report for this jobid then the job didn't run
-		_, numResults, err := getRowsForHandlerPostReportBackupShow(dbData, jobName, jobId)
+	if jobId == "" {
+		// if we don't have specified job id then the only way to reliably produce a file listing is if a backup is
+		//  not running for the given backup name. Even so, between calls to this handler, if using a Next token it is
+		// still possible to have a backup run in between and then the result would be incomplete and unreliable
+		if backupJobsState.IsRunning(decodedJson.Name, "", loggingContext+".handlerPostReportBackupFileList") {
+			JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Backup for job having "+
+				"name '%s' is running and you have requested a file listing without supplying the jobid. In this case a "+
+				"running backup may lead to incomplete and inconsistent results during file listing. Please retry the "+
+				"operation once the running backup is completed or specify a job id", decodedJson.Name))
+			return
+		}
+	} else {
+		err := checkIfBackupJobIdIsUsable(dbData, jobName, jobId)
 		if err != nil {
-			if numResults == 0 {
-				JSONError(w, http.StatusNotFound, HttpErrNotFound, err.Error())
-				return
-			}
 			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
 			return
 		}
 	}
+	// TODO - remove next line
+	logger.Infof("descend %t, path: %s limit: %d offset: %d", descend, path, limit, offset)
+	dbResults, err := getRowsForHandlerPostReportBackupFileListWithJobId(dbData, jobId, jobName, path, limit, offset)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+		return
+	}
+
+	// TODO - enable "next" generator
+	next := ""
+	//// if returned results == $limit  then sent back a "next" value to client so it knows it doesn't have the full result set
+	//if uint64(len(dbResults)) == limit {
+	//	next = buildNextTokenOfReportBackupList(limit, offset+limit, FromStartTime, UntilStartTime)
+	//}
+
+	JSONSuccessWithResultPaginated(w, "success", "success", next, dbResults)
 
 }
 
@@ -539,4 +597,204 @@ func getDbAccess(srvSrc SrvData, jobName string, w http.ResponseWriter, logConte
 	}
 	return dbData, backupJobsState, nil
 	// end - all the plumbing needed in order to get DB access
+}
+
+// for a given job id and backup definition name, checks if there are previusly ran jobs
+func checkIfBackupJobIdIsUsable(dbData shared.DbData, jobName string, jobId string) error {
+	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListFindJobQuery, jobName, jobId)
+	if err != nil {
+		return fmt.Errorf("While querying the database in order validate that job id '%s' belonging to  backup "+
+			"definition '%s' is usable, the following error was encountered: %s", jobId, jobName, err)
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Error("While trying to Close() a the database query used to validate that job id '%s' belonging"+
+				" to backup definition '%s' is usable, the following error was encountered: %s", jobId, jobName, err)
+		}
+	}()
+
+	var matches int
+	for rows.Next() {
+		err := rows.Scan(&matches)
+		if err != nil {
+			return fmt.Errorf("while retrieving the database record in with the details for backup definition "+
+				"'%s' having job id '%s', the following error was encountered: '%s'", jobName, jobId, err)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("while enumerating the results of querying the database details of job id '%s' belonging to "+
+			"backup definition '%s', the following error was encountered: '%s'", jobId, jobName, err)
+	}
+
+	if matches != 1 {
+		return fmt.Errorf("no previously ran backup jobs were found for given job id '%s' belonging to backup "+
+			"definition '%s'. Expected to find 1 match but instead found '%d'", jobId, jobName, matches)
+	}
+	return nil
+}
+
+// decodes a $nextToken produced by buildNextTokenOfReportBackupFileList(); if returned $err is not nil then all other returned values should be ignored
+func decodeNextTokenOfReportBackupFileList(nextToken string) (limit uint64, offset uint64, jobId string, path string, descend bool, err error) {
+	decoded, err := base64.StdEncoding.DecodeString(nextToken)
+	if err != nil {
+		return limit, offset, jobId, path, descend, fmt.Errorf("could not base64 decode 'Next' token '%s' due to error: %s", nextToken, err)
+	}
+	parts := strings.Split(string(decoded), ":")
+	// expected format is limit:offset:jobId:path:descend
+	if len(parts) != 5 {
+		return limit, offset, jobId, path, descend, fmt.Errorf("base64 decoded token '%s' to '%+v' is "+
+			"not made up of five parts separated by ':'", nextToken, parts)
+	}
+	limit, err = strconv.ParseUint(parts[0], 10, 64)
+	if err != nil {
+		return limit, offset, jobId, path, descend, fmt.Errorf("base64 decoded token '%s' to '%+v'. First "+
+			"part which is '%s' could not be converted to an integer due to error: %s", nextToken, parts, parts[0], err)
+	}
+
+	offset, err = strconv.ParseUint(parts[1], 10, 64)
+	if err != nil {
+		return limit, offset, jobId, path, descend, fmt.Errorf("base64 decoded token '%s' to '%+v'. Second"+
+			" part which is '%s' could not be converted to an integer due to error: %s", nextToken, parts, parts[1], err)
+	}
+
+	jobId = parts[2]
+	path = parts[3]
+
+	descend, err = strconv.ParseBool(parts[4])
+	if err != nil {
+		return limit, offset, jobId, path, descend, fmt.Errorf("base64 decoded token '%s' to '%+v'. Fifth "+
+			"part which is '%s' could not be converted to a boolean due to error: %s", nextToken, parts, parts[4], err)
+	}
+
+	return limit, offset, jobId, path, descend, nil
+}
+
+// retrieves results from the database and reports any errors. If an error is returned then the
+// []ReportBackupFileListDbResults should be discarded/disregarded
+// $limit represents how many records to retrieve in one go; $offset is the offset to start request records from
+// (this is related to $limit); $jobId represents the job id to look for and if its an empty string then all jobs will be searched
+// (for the current backup definition which the $dbData represents); $parentDir is the parent directory for the items to search.
+func getRowsForHandlerPostReportBackupFileListWithJobId(dbData shared.DbData, jobId string, jobName string, parentDir string, limit uint64, offset uint64) ([]ReportBackupFileListDbResults, error) {
+	results := make([]ReportBackupFileListDbResults, 0)
+	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobId, jobId, parentDir, limit, offset)
+	if err != nil {
+		logger.Errorf("While querying the database in order to get the list of backed up files, the "+
+			"following error was encountered: %s", err)
+		return results, err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() a the database query used to get the list of backed up files for "+
+				"backup job id '%s', the following error was encountered: %s", jobId, err)
+		}
+	}()
+
+	for rows.Next() {
+		// "SELECT local_path, upload_date, rf.target, type, size, delete_marker FROM remote_files rf
+		// INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND rf.parent=? ORDER BY local_path ASC LIMIT ? OFFSET ?"
+		rowResult := ReportBackupFileListInstanceDbResults{}
+		var path string
+		var tmpUploadDate int64
+		rowResult.JobId = jobId
+		rowResult.JobName = jobName
+		err := rows.Scan(&path, &tmpUploadDate, &rowResult.JobTarget, &rowResult.Type, &rowResult.Size, &rowResult.DeleteMarker)
+		if err != nil {
+			logger.Errorf("While retrieving the database records in order to build report list for backup "+
+				"job id '%s', the following error was encountered: '%s'", jobId, err)
+			return results, err
+		}
+		rowResult.UploadDate = time.Unix(0, tmpUploadDate).Format(time.RFC3339Nano)
+		if len(results) > 0 {
+			lastItem := results[len(results)-1]
+			// this is a new "instance" of an already examined path
+			if lastItem.Path == path {
+				results[len(results)-1].Instances = append(results[len(results)-1].Instances, rowResult)
+			} else {
+				results = append(results, ReportBackupFileListDbResults{
+					Path:      path,
+					Instances: []ReportBackupFileListInstanceDbResults{rowResult}})
+			}
+		} else {
+			results = append(results, ReportBackupFileListDbResults{
+				Path:      path,
+				Instances: []ReportBackupFileListInstanceDbResults{rowResult}})
+		}
+	}
+	if err = rows.Err(); err != nil {
+		logger.Error("While enumerating the results of querying the database in order to build report list for "+
+			"backup job id '%s', the following error was encountered: '%s'", jobId, err)
+		return results, err
+	}
+	err = addJobStartTimeToReportBackupFileListDbResults(dbData, jobId, jobName, "backup", results)
+	if err != nil {
+		logger.Error("While adding the backup job start time to the list of results, the following error was "+
+			"encountered: '%s'", jobId, err)
+		return results, err
+	}
+
+	return results, nil
+}
+
+// Gets the start time for a give job name + id + type and returns it as RFC3339Nano formatted string
+func GetJobStartTime(dbData shared.DbData, jobId string, jobName string, jobType string) (string, error) {
+	rows, err := dbData.Db.Query(dbData.PreparedStatements.JobStartTime, jobId, jobName, jobType)
+	if err != nil {
+		logger.Errorf("While trying to get from the database any the start time for job '%s' having id '%s' the "+
+			"following error was encountered: '%s'", jobName, jobId, err)
+		return "", err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() a db.Query for retrieving job start time of a previously ran "+
+				"job, the following error was encountered: '%s'", err)
+		}
+	}()
+	var tmpResult int64
+	for rows.Next() {
+		err := rows.Scan(&tmpResult)
+		if err != nil {
+			logger.Errorf("While enumerating from the database the start time for job '%s' having id '%s' , the "+
+				"following error was encountered: '%s'", jobName, jobId, err)
+			return "", err
+		}
+		// any result row means we had a match
+		return time.Unix(0, tmpResult).Format(time.RFC3339Nano), nil // nolint:staticcheck
+	}
+	err = rows.Err()
+	if err != nil {
+		logger.Errorf("Could not enumerate the list of all targets from the database due to the following "+
+			"error: '%s'", err)
+		return "", err
+	}
+	// if we got here there there wasn't any match and no error was encountered
+	return "", fmt.Errorf("did not find in the database a record of job '%s' having id '%s'", jobName, jobId)
+}
+
+// traverses a []ReportBackupFileListDbResults and adds job start time. Returns error if any encountered. Given that
+//   []ReportBackupFileListDbResults is basically a pointer then we don't really need to return a changed data set as we adjust it in place
+func addJobStartTimeToReportBackupFileListDbResults(dbData shared.DbData, jobId string, jobName string, jobType string, results []ReportBackupFileListDbResults) error {
+	var err error
+	// key is job id + job name + job type   and value is the start time
+	startTimeCache := make(map[string]string)
+	for k, v := range results {
+		for instanceId, instanceValues := range v.Instances {
+			startTime, ok := startTimeCache[instanceValues.JobId+jobName+jobType]
+			if ok {
+				// using cached value
+				results[k].Instances[instanceId].JobStartTime = startTime
+			} else {
+				// db lookup
+				startTime, err = GetJobStartTime(dbData, jobId, jobName, jobType)
+				if err != nil {
+					return err
+				}
+				results[k].Instances[instanceId].JobStartTime = startTime
+				startTimeCache[instanceValues.JobId+jobName+jobType] = startTime
+			}
+		}
+	}
+	return nil
 }

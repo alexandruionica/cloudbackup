@@ -78,6 +78,9 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// !!! ANY ADDITIONS OF PREPARED STATEMENTS REQUIRE TO ALSO BE CLOSE IN ClosePreparedStatements()
 
+	// get a job's start time
+	PreparedStatements.JobStartTime = "SELECT start_time FROM jobs WHERE id=? and name=? AND type=?"
+
 	// insert statement - having it as text only and not an actual prepared statement (as this will be used only in transactions, and called generally once per transaction)
 	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, local_path, parent, target, upload_date, " +
 		"job_id, delete_marker, version, remote_version, src_os, type, link_target, size, mtime, ctime, owner, permissions, " +
@@ -204,6 +207,13 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	// retrieves the job report for a previously ran jobs (excludes any running jobs)
 	PreparedStatements.ReportBackupJobsShowQuery = "SELECT report, state FROM jobs WHERE " +
 		"name = ? AND id = ? AND state != 'started' AND type = 'backup'"
+
+	// used to asses if for the given name + id we have a job (which can be used to restore whatever it managed to backup).
+	PreparedStatements.ReportBackupJobsFileListFindJobQuery = "SELECT count(*) FROM jobs WHERE name = ? AND id = ? AND state != 'started' AND type = 'backup'"
+
+	// list backed up files for a given backup job id and parent directory
+	PreparedStatements.ReportBackupJobsFileListWithJobId = "SELECT local_path, upload_date, rf.target, type, size, delete_marker FROM remote_files " +
+		"rf INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND rf.parent=? ORDER BY local_path ASC LIMIT ? OFFSET ?"
 
 	// adds an entry for each top level item in the config file (backup.paths[]) which is being processed
 	PreparedStatements.TopItemsInsert = "INSERT INTO top_items (job_id, path, type) VALUES (?, ?, ?)"
