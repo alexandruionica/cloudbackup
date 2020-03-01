@@ -101,6 +101,10 @@ func TestEnsureTargetsInDb1(t *testing.T) {
 			t.Fatalf("Target '%s' exists in the config file but it wasn't found in the DB", targetInConfig.Name)
 		}
 	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 // test EnsureTargetsInDb() with empty db and then with non empty db where it doesn't need to do anything
@@ -149,6 +153,10 @@ func TestEnsureTargetsInDb2(t *testing.T) {
 	err = EnsureTargetsInDb(db, backupConfig)
 	if err != nil {
 		t.Fatalf("EnsureTargetsInDb() returned error: '%s'", err)
+	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
 	}
 }
 
@@ -255,6 +263,10 @@ func TestEnsureTargetsInDb3(t *testing.T) {
 			t.Fatalf("Target '%s' exists in the config file but it wasn't found in the DB", targetInConfig.Name)
 		}
 	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 // test that Prepare() produces usable prepared statements
@@ -327,6 +339,10 @@ func TestPrepare1(t *testing.T) {
 	}
 
 	ClosePreparedStatements(preparedStatements)
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 func TestClosePreparedStatements1(t *testing.T) {
@@ -363,6 +379,10 @@ func TestClosePreparedStatements1(t *testing.T) {
 	}
 
 	ClosePreparedStatements(preparedStatements)
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 // test with empty shared.DbData struct
@@ -524,6 +544,10 @@ func TestAddJobDetails1_and_CheckJobUuidExists1(t *testing.T) {
 	if foundRecordUsingFunction {
 		t.Fatalf("CheckJobUuidExists() found a record in the DB but it should have not")
 	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 // should return false as we're using an empty db
@@ -561,5 +585,8 @@ func TestCheckJobUuidExists1(t *testing.T) {
 	if foundRecordUsingFunction {
 		t.Fatalf("CheckJobUuidExists() found a record in the DB but it should have not as we're using an empty DB")
 	}
-
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }

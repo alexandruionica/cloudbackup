@@ -166,6 +166,10 @@ func TestCreateDb1(t *testing.T) {
 			}
 		}
 	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 // test CreateDb() with valid, absolute path to the .sqlite database file and then test that OpenDB produces the expected state files in multiple scenarios
@@ -292,6 +296,10 @@ func TestCreateDb2_1(t *testing.T) {
 	if err.Error() != expectedErr {
 		t.Fatalf("CreateDb() was expected to return error: '%s' but it returned: '%s'", expectedErr, err)
 	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 // test CreateDb() with valid, absolute path to the .sqlite database file and then call it again with same path ; 2nd
@@ -325,6 +333,11 @@ func TestCreateDb3(t *testing.T) {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
 
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
+
 	db2, err := OpenDb(dbDataDirPath, backupName, true, backupJobsState, 0)
 	if err != nil {
 		t.Fatalf("OpenDb() returned error: '%s'", err)
@@ -343,6 +356,10 @@ func TestCreateDb3(t *testing.T) {
 			t.Fatalf("2nd call to CreateDb() was expected to return error: '%s' but it returned: '%s'; %+v",
 				expectedErr, err, backupJobsState.DbOpenAllowed[backupName])
 		}
+	}
+	err = db2.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
 	}
 }
 
@@ -424,6 +441,10 @@ func TestValidateAndCreate3(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 // ValidateAndCreate() with valid parameters and configInit=true - db file already exists
@@ -457,6 +478,10 @@ func TestValidateAndCreate4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateAndCreate() returned error: '%s'", err)
 	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 
 }
 
@@ -477,11 +502,15 @@ func TestStart1(t *testing.T) {
 		}
 	}()
 
-	_, err := Start(dbDataDirPath, backupName, backupJobsState)
+	db, err := Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
 	numDbClients += 1
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
 
 // Start() with valid parameters - db file already exists
@@ -510,10 +539,18 @@ func TestStart2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateDb() returned error: '%s'", err)
 	}
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 
-	_, err = Start(dbDataDirPath, backupName, backupJobsState)
+	db2, err := Start(dbDataDirPath, backupName, backupJobsState)
 	if err != nil {
 		t.Fatalf("Start() returned error: '%s'", err)
 	}
 	numDbClients += 1
+	err = db2.Close()
+	if err != nil {
+		t.Fatalf("Failed to close DB due to: %s", err)
+	}
 }
