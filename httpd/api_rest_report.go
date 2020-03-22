@@ -519,21 +519,17 @@ func (srvSrc SrvData) handlerPostReportBackupFileList(w http.ResponseWriter, r *
 			return
 		}
 	}
-	// TODO - remove next line
-	logger.Infof("descend %t, path: %s limit: %d offset: %d", descend, path, limit, offset)
 	dbResults, err := getRowsForHandlerPostReportBackupFileListWithJobId(dbData, jobId, jobName, path, limit, offset)
 	if err != nil {
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
 		return
 	}
 
-	// TODO - enable "next" generator
 	next := ""
-	//// if returned results == $limit  then sent back a "next" value to client so it knows it doesn't have the full result set
-	//if uint64(len(dbResults)) == limit {
-	//	next = buildNextTokenOfReportBackupList(limit, offset+limit, FromStartTime, UntilStartTime)
-	//}
-
+	// if returned results == $limit  then sent back a "next" value to client so it knows it doesn't have the full result set
+	if uint64(len(dbResults)) == limit {
+		next = buildNextTokenOfReportBackupFileList(limit, offset+limit, jobId, path, descend)
+	}
 	JSONSuccessWithResultPaginated(w, "success", "success", next, dbResults)
 
 }
@@ -797,4 +793,12 @@ func addJobStartTimeToReportBackupFileListDbResults(dbData shared.DbData, jobId 
 		}
 	}
 	return nil
+}
+
+// builds a next token by concatenating $limit + ":" + $offset + ":" + $jobId + ":" $path  + ":" $descend and then base64 encoding the result
+func buildNextTokenOfReportBackupFileList(limit uint64, offset uint64, jobId string, path string, descend bool) string {
+	// format is limit:offset:earliestStart:latestStart
+	plain := strconv.FormatUint(limit, 10) + ":" + strconv.FormatUint(offset, 10) + ":" +
+		jobId + ":" + path + ":" + strconv.FormatBool(descend)
+	return base64.StdEncoding.EncodeToString([]byte(plain))
 }
