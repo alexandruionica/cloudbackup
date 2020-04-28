@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -52,6 +52,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -68,6 +69,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "cloudbuild:v1alpha1"
 const apiName = "cloudbuild"
@@ -87,6 +89,7 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -374,6 +377,15 @@ type Build struct {
 	// ProjectId: Output only. ID of the project.
 	ProjectId string `json:"projectId,omitempty"`
 
+	// QueueTtl: TTL in queue for this build. If provided and the build is
+	// enqueued longer
+	// than this value, the build will expire and the build status will
+	// be
+	// `EXPIRED`.
+	//
+	// The TTL starts ticking from create_time.
+	QueueTtl string `json:"queueTtl,omitempty"`
+
 	// Results: Output only. Results of the build.
 	Results *Results `json:"results,omitempty"`
 
@@ -402,6 +414,8 @@ type Build struct {
 	//   "INTERNAL_ERROR" - Build or step failed due to an internal cause.
 	//   "TIMEOUT" - Build or step took longer than was allowed.
 	//   "CANCELLED" - Build or step was canceled by a user.
+	//   "EXPIRED" - Build was enqueued for longer than the value of
+	// `queue_ttl`.
 	Status string `json:"status,omitempty"`
 
 	// StatusDetail: Output only. Customer-readable message about the
@@ -602,10 +616,10 @@ type BuildOptions struct {
 	// it is indicative of a build request with an incorrect configuration.
 	Volumes []*Volume `json:"volumes,omitempty"`
 
-	// WorkerPool: Option to specify a `WorkerPool` for the build. User
-	// specifies the pool
-	// with the format "[WORKERPOOL_PROJECT_ID]/[WORKERPOOL_NAME]".
-	// This is an experimental field.
+	// WorkerPool: Option to specify a `WorkerPool` for the build.
+	// Format: projects/{project}/workerPools/{workerPool}
+	//
+	// This field is experimental.
 	WorkerPool string `json:"workerPool,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "DiskSizeGb") to
@@ -738,6 +752,8 @@ type BuildStep struct {
 	//   "INTERNAL_ERROR" - Build or step failed due to an internal cause.
 	//   "TIMEOUT" - Build or step took longer than was allowed.
 	//   "CANCELLED" - Build or step was canceled by a user.
+	//   "EXPIRED" - Build was enqueued for longer than the value of
+	// `queue_ttl`.
 	Status string `json:"status,omitempty"`
 
 	// Timeout: Time limit for executing this build step. If not defined,
@@ -1017,15 +1033,22 @@ type RepoSource struct {
 	// absolute path, this value is ignored for that step's execution.
 	Dir string `json:"dir,omitempty"`
 
+	// InvertRegex: Only trigger a build if the revision regex does NOT
+	// match the revision
+	// regex.
+	InvertRegex bool `json:"invertRegex,omitempty"`
+
 	// ProjectId: ID of the project that owns the Cloud Source Repository.
 	// If omitted, the
 	// project ID requesting the build is assumed.
 	ProjectId string `json:"projectId,omitempty"`
 
-	// RepoName: Name of the Cloud Source Repository. If omitted, the name
-	// "default" is
-	// assumed.
+	// RepoName: Required. Name of the Cloud Source Repository.
 	RepoName string `json:"repoName,omitempty"`
+
+	// Substitutions: Substitutions to use in a triggered build.
+	// Should only be used with RunBuildTrigger
+	Substitutions map[string]string `json:"substitutions,omitempty"`
 
 	// TagName: Regex matching tags to build.
 	//
@@ -1493,7 +1516,7 @@ type WorkerPool struct {
 	//   "STATUS_UNSPECIFIED" - Status of the `WorkerPool` is unknown.
 	//   "CREATING" - `WorkerPool` is being created.
 	//   "RUNNING" - `WorkerPool` is running.
-	//   "DELETING" - `WorkerPool` is being deleting: cancelling builds and
+	//   "DELETING" - `WorkerPool` is being deleted: cancelling builds and
 	// draining workers.
 	//   "DELETED" - `WorkerPool` is deleted.
 	Status string `json:"status,omitempty"`
@@ -1551,8 +1574,6 @@ type ProjectsWorkerPoolsCreateCall struct {
 
 // Create: Creates a `WorkerPool` to run the builds, and returns the new
 // worker pool.
-//
-// This API is experimental.
 func (r *ProjectsWorkerPoolsService) Create(parent string, workerpool *WorkerPool) *ProjectsWorkerPoolsCreateCall {
 	c := &ProjectsWorkerPoolsCreateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.parent = parent
@@ -1587,7 +1608,7 @@ func (c *ProjectsWorkerPoolsCreateCall) Header() http.Header {
 
 func (c *ProjectsWorkerPoolsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1651,7 +1672,7 @@ func (c *ProjectsWorkerPoolsCreateCall) Do(opts ...googleapi.CallOption) (*Worke
 	}
 	return ret, nil
 	// {
-	//   "description": "Creates a `WorkerPool` to run the builds, and returns the new worker pool.\n\nThis API is experimental.",
+	//   "description": "Creates a `WorkerPool` to run the builds, and returns the new worker pool.",
 	//   "flatPath": "v1alpha1/projects/{projectsId}/workerPools",
 	//   "httpMethod": "POST",
 	//   "id": "cloudbuild.projects.workerPools.create",
@@ -1691,10 +1712,7 @@ type ProjectsWorkerPoolsDeleteCall struct {
 	header_    http.Header
 }
 
-// Delete: Deletes a `WorkerPool` by its project ID and WorkerPool
-// name.
-//
-// This API is experimental.
+// Delete: Deletes a `WorkerPool` by its project ID and WorkerPool name.
 func (r *ProjectsWorkerPoolsService) Delete(name string) *ProjectsWorkerPoolsDeleteCall {
 	c := &ProjectsWorkerPoolsDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -1728,7 +1746,7 @@ func (c *ProjectsWorkerPoolsDeleteCall) Header() http.Header {
 
 func (c *ProjectsWorkerPoolsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1787,7 +1805,7 @@ func (c *ProjectsWorkerPoolsDeleteCall) Do(opts ...googleapi.CallOption) (*Empty
 	}
 	return ret, nil
 	// {
-	//   "description": "Deletes a `WorkerPool` by its project ID and WorkerPool name.\n\nThis API is experimental.",
+	//   "description": "Deletes a `WorkerPool` by its project ID and WorkerPool name.",
 	//   "flatPath": "v1alpha1/projects/{projectsId}/workerPools/{workerPoolsId}",
 	//   "httpMethod": "DELETE",
 	//   "id": "cloudbuild.projects.workerPools.delete",
@@ -1826,8 +1844,6 @@ type ProjectsWorkerPoolsGetCall struct {
 }
 
 // Get: Returns information about a `WorkerPool`.
-//
-// This API is experimental.
 func (r *ProjectsWorkerPoolsService) Get(name string) *ProjectsWorkerPoolsGetCall {
 	c := &ProjectsWorkerPoolsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -1871,7 +1887,7 @@ func (c *ProjectsWorkerPoolsGetCall) Header() http.Header {
 
 func (c *ProjectsWorkerPoolsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1933,7 +1949,7 @@ func (c *ProjectsWorkerPoolsGetCall) Do(opts ...googleapi.CallOption) (*WorkerPo
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns information about a `WorkerPool`.\n\nThis API is experimental.",
+	//   "description": "Returns information about a `WorkerPool`.",
 	//   "flatPath": "v1alpha1/projects/{projectsId}/workerPools/{workerPoolsId}",
 	//   "httpMethod": "GET",
 	//   "id": "cloudbuild.projects.workerPools.get",
@@ -1972,8 +1988,6 @@ type ProjectsWorkerPoolsListCall struct {
 }
 
 // List: List project's `WorkerPool`s.
-//
-// This API is experimental.
 func (r *ProjectsWorkerPoolsService) List(parent string) *ProjectsWorkerPoolsListCall {
 	c := &ProjectsWorkerPoolsListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.parent = parent
@@ -2017,7 +2031,7 @@ func (c *ProjectsWorkerPoolsListCall) Header() http.Header {
 
 func (c *ProjectsWorkerPoolsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2079,7 +2093,7 @@ func (c *ProjectsWorkerPoolsListCall) Do(opts ...googleapi.CallOption) (*ListWor
 	}
 	return ret, nil
 	// {
-	//   "description": "List project's `WorkerPool`s.\n\nThis API is experimental.",
+	//   "description": "List project's `WorkerPool`s.",
 	//   "flatPath": "v1alpha1/projects/{projectsId}/workerPools",
 	//   "httpMethod": "GET",
 	//   "id": "cloudbuild.projects.workerPools.list",
@@ -2118,8 +2132,6 @@ type ProjectsWorkerPoolsPatchCall struct {
 }
 
 // Patch: Update a `WorkerPool`.
-//
-// This API is experimental.
 func (r *ProjectsWorkerPoolsService) Patch(name string, workerpool *WorkerPool) *ProjectsWorkerPoolsPatchCall {
 	c := &ProjectsWorkerPoolsPatchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -2154,7 +2166,7 @@ func (c *ProjectsWorkerPoolsPatchCall) Header() http.Header {
 
 func (c *ProjectsWorkerPoolsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2218,7 +2230,7 @@ func (c *ProjectsWorkerPoolsPatchCall) Do(opts ...googleapi.CallOption) (*Worker
 	}
 	return ret, nil
 	// {
-	//   "description": "Update a `WorkerPool`.\n\nThis API is experimental.",
+	//   "description": "Update a `WorkerPool`.",
 	//   "flatPath": "v1alpha1/projects/{projectsId}/workerPools/{workerPoolsId}",
 	//   "httpMethod": "PATCH",
 	//   "id": "cloudbuild.projects.workerPools.patch",

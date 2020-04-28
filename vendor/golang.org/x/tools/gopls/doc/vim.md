@@ -68,7 +68,8 @@ let g:lsc_server_commands = {
 ```
 
 The `log_level` and `suppress_stderr` parts are needed to prevent breakage from logging. See
-[natebosch/vim-lsc#180] and [natebosch/vim-lsc#213].
+issues [#180](https://github.com/natebosch/vim-lsc/issues/180) and
+[#213](https://github.com/natebosch/vim-lsc/issues/213).
 
 ## coc.nvim
 
@@ -79,10 +80,15 @@ Use [coc.nvim], with the following `coc-settings.json` configuration:
     "golang": {
       "command": "gopls",
       "rootPatterns": ["go.mod", ".vim/", ".git/", ".hg/"],
-      "filetypes": ["go"]
+      "filetypes": ["go"],
+      "initializationOptions": {
+        "usePlaceholders": true
+      }
     }
   }
 ```
+
+Other [settings](settings.md) can be added in `initializationOptions` too.
 
 The `editor.action.organizeImport` code action will auto-format code and add missing imports. To run this automatically on save, add the following line to your `init.vim`:
 
@@ -94,6 +100,10 @@ autocmd BufWritePre *.go :call CocAction('runCommand', 'editor.action.organizeIm
 
 In vim classic only, use the experimental [`govim`], simply follow the [install steps][govim-install].
 
+## nvim-lsp
+
+To use the new builtin lsp client from neovim, using `nvim-lsp`, follow the install steps [neovim/nvim-lsp] and check the gopls [configuration][nvim-lsp-config].
+
 [vim-go]: https://github.com/fatih/vim-go
 [LanguageClient-neovim]: https://github.com/autozimu/LanguageClient-neovim
 [ale]: https://github.com/w0rp/ale
@@ -104,3 +114,5 @@ In vim classic only, use the experimental [`govim`], simply follow the [install 
 [coc.nvim]: https://github.com/neoclide/coc.nvim/
 [`govim`]: https://github.com/myitcv/govim
 [govim-install]: https://github.com/myitcv/govim/blob/master/README.md#govim---go-development-plugin-for-vim8
+[neovim/nvim-lsp]: https://github.com/neovim/nvim-lsp#install
+[nvim-lsp-config]: https://github.com/neovim/nvim-lsp#gopls

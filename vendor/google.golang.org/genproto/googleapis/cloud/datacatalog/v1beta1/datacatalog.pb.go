@@ -29,30 +29,42 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-// Entry resources in Data Catalog can be of different types e.g. BigQuery
-// Table entry is of type 'TABLE'. This enum describes all the possible types
+// Entry resources in Data Catalog can be of different types e.g. a BigQuery
+// Table entry is of type `TABLE`. This enum describes all the possible types
 // Data Catalog contains.
 type EntryType int32
 
 const (
-	// Default unknown type
+	// Default unknown type.
 	EntryType_ENTRY_TYPE_UNSPECIFIED EntryType = 0
-	// The type of entry that has a GoogleSQL schema, including logical views.
+	// Output only. The type of entry that has a GoogleSQL schema, including
+	// logical views.
 	EntryType_TABLE EntryType = 2
-	// An entry type which is used for streaming entries. Example - Pub/Sub.
+	// Output only. The type of models.
+	// https://cloud.google.com/bigquery-ml/docs/bigqueryml-intro
+	EntryType_MODEL EntryType = 5
+	// Output only. An entry type which is used for streaming entries. Example:
+	// Pub/Sub topic.
 	EntryType_DATA_STREAM EntryType = 3
+	// An entry type which is a set of files or objects. Example:
+	// Cloud Storage fileset.
+	EntryType_FILESET EntryType = 4
 )
 
 var EntryType_name = map[int32]string{
 	0: "ENTRY_TYPE_UNSPECIFIED",
 	2: "TABLE",
+	5: "MODEL",
 	3: "DATA_STREAM",
+	4: "FILESET",
 }
 
 var EntryType_value = map[string]int32{
 	"ENTRY_TYPE_UNSPECIFIED": 0,
 	"TABLE":                  2,
+	"MODEL":                  5,
 	"DATA_STREAM":            3,
+	"FILESET":                4,
 }
 
 func (x EntryType) String() string {
@@ -66,10 +78,12 @@ func (EntryType) EnumDescriptor() ([]byte, []int) {
 // Request message for
 // [SearchCatalog][google.cloud.datacatalog.v1beta1.DataCatalog.SearchCatalog].
 type SearchCatalogRequest struct {
-	// Required. The scope of this search request.
+	// Required. The scope of this search request. A `scope` that has empty
+	// `include_org_ids`, `include_project_ids` AND false
+	// `include_gcp_public_datasets` is considered invalid. Data Catalog will
+	// return an error in such a case.
 	Scope *SearchCatalogRequest_Scope `protobuf:"bytes,6,opt,name=scope,proto3" json:"scope,omitempty"`
-	// Required. The query string in search query syntax. The query must be
-	// non-empty.
+	// Required. The query string in search query syntax. The query must be non-empty.
 	//
 	// Query strings can be simple as "x" or more qualified as:
 	//
@@ -79,27 +93,27 @@ type SearchCatalogRequest struct {
 	//
 	// Note: Query tokens need to have a minimum of 3 characters for substring
 	// matching to work correctly. See [Data Catalog Search
-	// Syntax](/data-catalog/docs/how-to/search-reference) for more information.
+	// Syntax](https://cloud.google.com/data-catalog/docs/how-to/search-reference)
+	// for more information.
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// Number of results in the search page. If <=0 then defaults to 10. Max limit
 	// for page_size is 1000. Throws an invalid argument for page_size > 1000.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	// Optional pagination token returned in an earlier
-	// [SearchCatalogResponse.next_page_token][google.cloud.datacatalog.v1beta1.DataCatalog.SearchCatalogResponse.next_page_token];
+	// Optional. Pagination token returned in an earlier
+	// [SearchCatalogResponse.next_page_token][google.cloud.datacatalog.v1beta1.SearchCatalogResponse.next_page_token], which
 	// indicates that this is a continuation of a prior
-	// [SearchCatalog][google.cloud.datacatalog.v1beta1.DataCatalog.SearchCatalog]
-	// call, and that the system should return the next page of data. If empty
-	// then the first page is returned.
+	// [SearchCatalogRequest][google.cloud.datacatalog.v1beta1.DataCatalog.SearchCatalog]
+	// call, and that the system should return the next page of data. If empty,
+	// the first page is returned.
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// Specifies the ordering of results, currently supported case-sensitive
 	// choices are:
-	// <ul>
-	//   <li> relevance </li>
-	//   <li> last_access_timestamp [asc|desc], defaults to descending if not
-	//   specified, </li>
-	//   <li> last_modified_timestamp [asc|desc], defaults to descending if not
-	//   specified. </li>
-	// </ul>
+	//
+	//   * `relevance`, only supports descending
+	//   * `last_modified_timestamp [asc|desc]`, defaults to descending if not
+	//     specified
+	//
+	// If not specified, defaults to `relevance` descending.
 	OrderBy              string   `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -166,22 +180,17 @@ func (m *SearchCatalogRequest) GetOrderBy() string {
 	return ""
 }
 
+// The criteria that select the subspace used for query matching.
 type SearchCatalogRequest_Scope struct {
-	// Data Catalog tries to automatically choose the right corpus of data to
-	// search through. You can ensure an organization is included by adding it
-	// to "include_org_ids". You can ensure a project's org is included with
-	// "include_project_ids". You must specify at least one organization
-	// using "include_org_ids" or "include_project_ids" in all search requests.
-	//
-	// List of organization IDs to search within. To find your organization ID,
-	// follow instructions in
-	// https://cloud.google.com/resource-manager/docs/creating-managing-organization
+	// The list of organization IDs to search within. To find your organization
+	// ID, follow instructions in
+	// https://cloud.google.com/resource-manager/docs/creating-managing-organization.
 	IncludeOrgIds []string `protobuf:"bytes,2,rep,name=include_org_ids,json=includeOrgIds,proto3" json:"include_org_ids,omitempty"`
-	// List of project IDs to search within. To learn more about the
+	// The list of project IDs to search within. To learn more about the
 	// distinction between project names/IDs/numbers, go to
-	// https://cloud.google.com/docs/overview/#projects
+	// https://cloud.google.com/docs/overview/#projects.
 	IncludeProjectIds []string `protobuf:"bytes,3,rep,name=include_project_ids,json=includeProjectIds,proto3" json:"include_project_ids,omitempty"`
-	// If true, include Google Cloud Platform (GCP) public datasets in the
+	// If `true`, include Google Cloud Platform (GCP) public datasets in the
 	// search results. Info on GCP public datasets is available at
 	// https://cloud.google.com/public-datasets/. By default, GCP public
 	// datasets are excluded.
@@ -240,7 +249,7 @@ func (m *SearchCatalogRequest_Scope) GetIncludeGcpPublicDatasets() bool {
 // Response message for
 // [SearchCatalog][google.cloud.datacatalog.v1beta1.DataCatalog.SearchCatalog].
 type SearchCatalogResponse struct {
-	// Search results in descending order of relevance.
+	// Search results.
 	Results []*SearchCatalogResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
 	// The token that can be used to retrieve the next page of results.
 	NextPageToken        string   `protobuf:"bytes,3,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
@@ -289,22 +298,435 @@ func (m *SearchCatalogResponse) GetNextPageToken() string {
 }
 
 // Request message for
+// [CreateEntryGroup][google.cloud.datacatalog.v1beta1.DataCatalog.CreateEntryGroup].
+type CreateEntryGroupRequest struct {
+	// Required. The name of the project this entry group is in. Example:
+	//
+	// * projects/{project_id}/locations/{location}
+	//
+	// Note that this EntryGroup and its child resources may not actually be
+	// stored in the location in this name.
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// Required. The id of the entry group to create.
+	// The id must begin with a letter or underscore, contain only English
+	// letters, numbers and underscores, and be at most 64 characters.
+	EntryGroupId string `protobuf:"bytes,3,opt,name=entry_group_id,json=entryGroupId,proto3" json:"entry_group_id,omitempty"`
+	// The entry group to create. Defaults to an empty entry group.
+	EntryGroup           *EntryGroup `protobuf:"bytes,2,opt,name=entry_group,json=entryGroup,proto3" json:"entry_group,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *CreateEntryGroupRequest) Reset()         { *m = CreateEntryGroupRequest{} }
+func (m *CreateEntryGroupRequest) String() string { return proto.CompactTextString(m) }
+func (*CreateEntryGroupRequest) ProtoMessage()    {}
+func (*CreateEntryGroupRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{2}
+}
+
+func (m *CreateEntryGroupRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CreateEntryGroupRequest.Unmarshal(m, b)
+}
+func (m *CreateEntryGroupRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CreateEntryGroupRequest.Marshal(b, m, deterministic)
+}
+func (m *CreateEntryGroupRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CreateEntryGroupRequest.Merge(m, src)
+}
+func (m *CreateEntryGroupRequest) XXX_Size() int {
+	return xxx_messageInfo_CreateEntryGroupRequest.Size(m)
+}
+func (m *CreateEntryGroupRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CreateEntryGroupRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CreateEntryGroupRequest proto.InternalMessageInfo
+
+func (m *CreateEntryGroupRequest) GetParent() string {
+	if m != nil {
+		return m.Parent
+	}
+	return ""
+}
+
+func (m *CreateEntryGroupRequest) GetEntryGroupId() string {
+	if m != nil {
+		return m.EntryGroupId
+	}
+	return ""
+}
+
+func (m *CreateEntryGroupRequest) GetEntryGroup() *EntryGroup {
+	if m != nil {
+		return m.EntryGroup
+	}
+	return nil
+}
+
+// Request message for
+// [UpdateEntryGroup][google.cloud.datacatalog.v1beta1.DataCatalog.UpdateEntryGroup].
+type UpdateEntryGroupRequest struct {
+	// Required. The updated entry group. "name" field must be set.
+	EntryGroup *EntryGroup `protobuf:"bytes,1,opt,name=entry_group,json=entryGroup,proto3" json:"entry_group,omitempty"`
+	// The fields to update on the entry group. If absent or empty, all modifiable
+	// fields are updated.
+	UpdateMask           *field_mask.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *UpdateEntryGroupRequest) Reset()         { *m = UpdateEntryGroupRequest{} }
+func (m *UpdateEntryGroupRequest) String() string { return proto.CompactTextString(m) }
+func (*UpdateEntryGroupRequest) ProtoMessage()    {}
+func (*UpdateEntryGroupRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{3}
+}
+
+func (m *UpdateEntryGroupRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_UpdateEntryGroupRequest.Unmarshal(m, b)
+}
+func (m *UpdateEntryGroupRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_UpdateEntryGroupRequest.Marshal(b, m, deterministic)
+}
+func (m *UpdateEntryGroupRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UpdateEntryGroupRequest.Merge(m, src)
+}
+func (m *UpdateEntryGroupRequest) XXX_Size() int {
+	return xxx_messageInfo_UpdateEntryGroupRequest.Size(m)
+}
+func (m *UpdateEntryGroupRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_UpdateEntryGroupRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UpdateEntryGroupRequest proto.InternalMessageInfo
+
+func (m *UpdateEntryGroupRequest) GetEntryGroup() *EntryGroup {
+	if m != nil {
+		return m.EntryGroup
+	}
+	return nil
+}
+
+func (m *UpdateEntryGroupRequest) GetUpdateMask() *field_mask.FieldMask {
+	if m != nil {
+		return m.UpdateMask
+	}
+	return nil
+}
+
+// Request message for
+// [GetEntryGroup][google.cloud.datacatalog.v1beta1.DataCatalog.GetEntryGroup].
+type GetEntryGroupRequest struct {
+	// Required. The name of the entry group. For example,
+	// `projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}`.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// The fields to return. If not set or empty, all fields are returned.
+	ReadMask             *field_mask.FieldMask `protobuf:"bytes,2,opt,name=read_mask,json=readMask,proto3" json:"read_mask,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *GetEntryGroupRequest) Reset()         { *m = GetEntryGroupRequest{} }
+func (m *GetEntryGroupRequest) String() string { return proto.CompactTextString(m) }
+func (*GetEntryGroupRequest) ProtoMessage()    {}
+func (*GetEntryGroupRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{4}
+}
+
+func (m *GetEntryGroupRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_GetEntryGroupRequest.Unmarshal(m, b)
+}
+func (m *GetEntryGroupRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_GetEntryGroupRequest.Marshal(b, m, deterministic)
+}
+func (m *GetEntryGroupRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetEntryGroupRequest.Merge(m, src)
+}
+func (m *GetEntryGroupRequest) XXX_Size() int {
+	return xxx_messageInfo_GetEntryGroupRequest.Size(m)
+}
+func (m *GetEntryGroupRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetEntryGroupRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetEntryGroupRequest proto.InternalMessageInfo
+
+func (m *GetEntryGroupRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *GetEntryGroupRequest) GetReadMask() *field_mask.FieldMask {
+	if m != nil {
+		return m.ReadMask
+	}
+	return nil
+}
+
+// Request message for
+// [DeleteEntryGroup][google.cloud.datacatalog.v1beta1.DataCatalog.DeleteEntryGroup].
+type DeleteEntryGroupRequest struct {
+	// Required. The name of the entry group. For example,
+	// `projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}`.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional. If true, deletes all entries in the entry group.
+	Force                bool     `protobuf:"varint,2,opt,name=force,proto3" json:"force,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DeleteEntryGroupRequest) Reset()         { *m = DeleteEntryGroupRequest{} }
+func (m *DeleteEntryGroupRequest) String() string { return proto.CompactTextString(m) }
+func (*DeleteEntryGroupRequest) ProtoMessage()    {}
+func (*DeleteEntryGroupRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{5}
+}
+
+func (m *DeleteEntryGroupRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DeleteEntryGroupRequest.Unmarshal(m, b)
+}
+func (m *DeleteEntryGroupRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DeleteEntryGroupRequest.Marshal(b, m, deterministic)
+}
+func (m *DeleteEntryGroupRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeleteEntryGroupRequest.Merge(m, src)
+}
+func (m *DeleteEntryGroupRequest) XXX_Size() int {
+	return xxx_messageInfo_DeleteEntryGroupRequest.Size(m)
+}
+func (m *DeleteEntryGroupRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeleteEntryGroupRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeleteEntryGroupRequest proto.InternalMessageInfo
+
+func (m *DeleteEntryGroupRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *DeleteEntryGroupRequest) GetForce() bool {
+	if m != nil {
+		return m.Force
+	}
+	return false
+}
+
+// Request message for
+// [ListEntryGroups][google.cloud.datacatalog.v1beta1.DataCatalog.ListEntryGroups].
+type ListEntryGroupsRequest struct {
+	// Required. The name of the location that contains the entry groups, which can be
+	// provided in URL format. Example:
+	//
+	// * projects/{project_id}/locations/{location}
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// Optional. The maximum number of items to return. Default is 10. Max limit is 1000.
+	// Throws an invalid argument for `page_size > 1000`.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Optional. Token that specifies which page is requested. If empty, the first page is
+	// returned.
+	PageToken            string   `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListEntryGroupsRequest) Reset()         { *m = ListEntryGroupsRequest{} }
+func (m *ListEntryGroupsRequest) String() string { return proto.CompactTextString(m) }
+func (*ListEntryGroupsRequest) ProtoMessage()    {}
+func (*ListEntryGroupsRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{6}
+}
+
+func (m *ListEntryGroupsRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListEntryGroupsRequest.Unmarshal(m, b)
+}
+func (m *ListEntryGroupsRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListEntryGroupsRequest.Marshal(b, m, deterministic)
+}
+func (m *ListEntryGroupsRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListEntryGroupsRequest.Merge(m, src)
+}
+func (m *ListEntryGroupsRequest) XXX_Size() int {
+	return xxx_messageInfo_ListEntryGroupsRequest.Size(m)
+}
+func (m *ListEntryGroupsRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListEntryGroupsRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListEntryGroupsRequest proto.InternalMessageInfo
+
+func (m *ListEntryGroupsRequest) GetParent() string {
+	if m != nil {
+		return m.Parent
+	}
+	return ""
+}
+
+func (m *ListEntryGroupsRequest) GetPageSize() int32 {
+	if m != nil {
+		return m.PageSize
+	}
+	return 0
+}
+
+func (m *ListEntryGroupsRequest) GetPageToken() string {
+	if m != nil {
+		return m.PageToken
+	}
+	return ""
+}
+
+// Response message for
+// [ListEntryGroups][google.cloud.datacatalog.v1beta1.DataCatalog.ListEntryGroups].
+type ListEntryGroupsResponse struct {
+	// EntryGroup details.
+	EntryGroups []*EntryGroup `protobuf:"bytes,1,rep,name=entry_groups,json=entryGroups,proto3" json:"entry_groups,omitempty"`
+	// Token to retrieve the next page of results. It is set to empty if no items
+	// remain in results.
+	NextPageToken        string   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListEntryGroupsResponse) Reset()         { *m = ListEntryGroupsResponse{} }
+func (m *ListEntryGroupsResponse) String() string { return proto.CompactTextString(m) }
+func (*ListEntryGroupsResponse) ProtoMessage()    {}
+func (*ListEntryGroupsResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{7}
+}
+
+func (m *ListEntryGroupsResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListEntryGroupsResponse.Unmarshal(m, b)
+}
+func (m *ListEntryGroupsResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListEntryGroupsResponse.Marshal(b, m, deterministic)
+}
+func (m *ListEntryGroupsResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListEntryGroupsResponse.Merge(m, src)
+}
+func (m *ListEntryGroupsResponse) XXX_Size() int {
+	return xxx_messageInfo_ListEntryGroupsResponse.Size(m)
+}
+func (m *ListEntryGroupsResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListEntryGroupsResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListEntryGroupsResponse proto.InternalMessageInfo
+
+func (m *ListEntryGroupsResponse) GetEntryGroups() []*EntryGroup {
+	if m != nil {
+		return m.EntryGroups
+	}
+	return nil
+}
+
+func (m *ListEntryGroupsResponse) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
+// Request message for
+// [CreateEntry][google.cloud.datacatalog.v1beta1.DataCatalog.CreateEntry].
+type CreateEntryRequest struct {
+	// Required. The name of the entry group this entry is in. Example:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}
+	//
+	// Note that this Entry and its child resources may not actually be stored in
+	// the location in this name.
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// Required. The id of the entry to create.
+	EntryId string `protobuf:"bytes,3,opt,name=entry_id,json=entryId,proto3" json:"entry_id,omitempty"`
+	// Required. The entry to create.
+	Entry                *Entry   `protobuf:"bytes,2,opt,name=entry,proto3" json:"entry,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *CreateEntryRequest) Reset()         { *m = CreateEntryRequest{} }
+func (m *CreateEntryRequest) String() string { return proto.CompactTextString(m) }
+func (*CreateEntryRequest) ProtoMessage()    {}
+func (*CreateEntryRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{8}
+}
+
+func (m *CreateEntryRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CreateEntryRequest.Unmarshal(m, b)
+}
+func (m *CreateEntryRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CreateEntryRequest.Marshal(b, m, deterministic)
+}
+func (m *CreateEntryRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CreateEntryRequest.Merge(m, src)
+}
+func (m *CreateEntryRequest) XXX_Size() int {
+	return xxx_messageInfo_CreateEntryRequest.Size(m)
+}
+func (m *CreateEntryRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_CreateEntryRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CreateEntryRequest proto.InternalMessageInfo
+
+func (m *CreateEntryRequest) GetParent() string {
+	if m != nil {
+		return m.Parent
+	}
+	return ""
+}
+
+func (m *CreateEntryRequest) GetEntryId() string {
+	if m != nil {
+		return m.EntryId
+	}
+	return ""
+}
+
+func (m *CreateEntryRequest) GetEntry() *Entry {
+	if m != nil {
+		return m.Entry
+	}
+	return nil
+}
+
+// Request message for
 // [UpdateEntry][google.cloud.datacatalog.v1beta1.DataCatalog.UpdateEntry].
 type UpdateEntryRequest struct {
-	// Required. The updated Entry.
+	// Required. The updated entry. The "name" field must be set.
 	Entry *Entry `protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
-	// Optional. The fields to update on the entry.  If absent or empty, all
-	// modifiable fields are updated.
+	// The fields to update on the entry. If absent or empty, all modifiable
+	// fields are updated.
 	//
-	// Modifiable fields in synced entries:
-	//
-	// 1. schema (Pub/Sub topics only)
-	//
-	// Modifiable fields in native entries:
-	//
-	// 1. display_name
-	// 2. description
-	// 3. schema
+	// The following fields are modifiable:
+	// * For entries with type `DATA_STREAM`:
+	//    * `schema`
+	// * For entries with type `FILESET`
+	//    * `schema`
+	//    * `display_name`
+	//    * `description`
+	//    * `gcs_fileset_spec`
+	//    * `gcs_fileset_spec.file_patterns`
+	// * For entries with `user_specified_type`
+	//    * `schema`
+	//    * `display_name`
+	//    * `description`
+	//    * user_specified_type
+	//    * user_specified_system
+	//    * linked_resource
+	//    * source_system_timestamps
 	UpdateMask           *field_mask.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
 	XXX_unrecognized     []byte                `json:"-"`
@@ -315,7 +737,7 @@ func (m *UpdateEntryRequest) Reset()         { *m = UpdateEntryRequest{} }
 func (m *UpdateEntryRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateEntryRequest) ProtoMessage()    {}
 func (*UpdateEntryRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{2}
+	return fileDescriptor_2054d97e7b16f897, []int{9}
 }
 
 func (m *UpdateEntryRequest) XXX_Unmarshal(b []byte) error {
@@ -351,10 +773,55 @@ func (m *UpdateEntryRequest) GetUpdateMask() *field_mask.FieldMask {
 }
 
 // Request message for
+// [DeleteEntry][google.cloud.datacatalog.v1beta1.DataCatalog.DeleteEntry].
+type DeleteEntryRequest struct {
+	// Required. The name of the entry. Example:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}
+	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DeleteEntryRequest) Reset()         { *m = DeleteEntryRequest{} }
+func (m *DeleteEntryRequest) String() string { return proto.CompactTextString(m) }
+func (*DeleteEntryRequest) ProtoMessage()    {}
+func (*DeleteEntryRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{10}
+}
+
+func (m *DeleteEntryRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DeleteEntryRequest.Unmarshal(m, b)
+}
+func (m *DeleteEntryRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DeleteEntryRequest.Marshal(b, m, deterministic)
+}
+func (m *DeleteEntryRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeleteEntryRequest.Merge(m, src)
+}
+func (m *DeleteEntryRequest) XXX_Size() int {
+	return xxx_messageInfo_DeleteEntryRequest.Size(m)
+}
+func (m *DeleteEntryRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeleteEntryRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeleteEntryRequest proto.InternalMessageInfo
+
+func (m *DeleteEntryRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+// Request message for
 // [GetEntry][google.cloud.datacatalog.v1beta1.DataCatalog.GetEntry].
 type GetEntryRequest struct {
-	// Required. The name of the entry. For example,
-	// "projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}".
+	// Required. The name of the entry. Example:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -365,7 +832,7 @@ func (m *GetEntryRequest) Reset()         { *m = GetEntryRequest{} }
 func (m *GetEntryRequest) String() string { return proto.CompactTextString(m) }
 func (*GetEntryRequest) ProtoMessage()    {}
 func (*GetEntryRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{3}
+	return fileDescriptor_2054d97e7b16f897, []int{11}
 }
 
 func (m *GetEntryRequest) XXX_Unmarshal(b []byte) error {
@@ -412,7 +879,7 @@ func (m *LookupEntryRequest) Reset()         { *m = LookupEntryRequest{} }
 func (m *LookupEntryRequest) String() string { return proto.CompactTextString(m) }
 func (*LookupEntryRequest) ProtoMessage()    {}
 func (*LookupEntryRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{4}
+	return fileDescriptor_2054d97e7b16f897, []int{12}
 }
 
 func (m *LookupEntryRequest) XXX_Unmarshal(b []byte) error {
@@ -480,50 +947,67 @@ func (*LookupEntryRequest) XXX_OneofWrappers() []interface{} {
 
 // Entry Metadata.
 // A Data Catalog Entry resource represents another resource in Google
-// Cloud Platform, such as a BigQuery Dataset or a Pub/Sub Topic. Clients can
-// use the `linked_resource` field in the Entry resource to refer to the
-// original resource id of the source system.
+// Cloud Platform (such as a BigQuery dataset or a Pub/Sub topic), or
+// outside of Google Cloud Platform. Clients can use the `linked_resource` field
+// in the Entry resource to refer to the original resource ID of the source
+// system.
 //
 // An Entry resource contains resource details, such as its schema. An Entry can
 // also be used to attach flexible metadata, such as a
 // [Tag][google.cloud.datacatalog.v1beta1.Tag].
 type Entry struct {
-	// Required when used in
-	// [UpdateEntryRequest][google.cloud.datacatalog.v1beta1.UpdateEntryRequest].
-	// The Data Catalog resource name of the entry in URL format. For example,
-	// "projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}".
+	// The Data Catalog resource name of the entry in URL format. Example:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}
+	//
 	// Note that this Entry and its child resources may not actually be stored in
 	// the location in this name.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Output only. The full name of the cloud resource the entry belongs to. See:
-	// https://cloud.google.com/apis/design/resource_names#full_resource_name
+	// The resource this metadata entry refers to.
 	//
-	// Data Catalog supports resources from select Google Cloud Platform systems.
-	// `linked_resource` is the full name of the Google Cloud Platform resource.
+	// For Google Cloud Platform resources, `linked_resource` is the [full name of
+	// the
+	// resource](https://cloud.google.com/apis/design/resource_names#full_resource_name).
 	// For example, the `linked_resource` for a table resource from BigQuery is:
 	//
-	// "//bigquery.googleapis.com/projects/projectId/datasets/datasetId/tables/tableId".
+	// * //bigquery.googleapis.com/projects/projectId/datasets/datasetId/tables/tableId
+	//
+	// Output only when Entry is of type in the EntryType enum. For entries with
+	// user_specified_type, this field is optional and defaults to an empty
+	// string.
 	LinkedResource string `protobuf:"bytes,9,opt,name=linked_resource,json=linkedResource,proto3" json:"linked_resource,omitempty"`
-	// Required. Type of entry.
-	Type EntryType `protobuf:"varint,2,opt,name=type,proto3,enum=google.cloud.datacatalog.v1beta1.EntryType" json:"type,omitempty"`
-	// Optional. Type specification information.
+	// Required. Entry type.
+	//
+	// Types that are valid to be assigned to EntryType:
+	//	*Entry_Type
+	//	*Entry_UserSpecifiedType
+	EntryType isEntry_EntryType `protobuf_oneof:"entry_type"`
+	// The source system of the entry.
+	//
+	// Types that are valid to be assigned to System:
+	//	*Entry_IntegratedSystem
+	//	*Entry_UserSpecifiedSystem
+	System isEntry_System `protobuf_oneof:"system"`
+	// Type specification information.
 	//
 	// Types that are valid to be assigned to TypeSpec:
+	//	*Entry_GcsFilesetSpec
 	//	*Entry_BigqueryTableSpec
 	//	*Entry_BigqueryDateShardedSpec
 	TypeSpec isEntry_TypeSpec `protobuf_oneof:"type_spec"`
-	// Optional. Display information such as title and description. A short name
-	// to identify the entry, for example, "Analytics Data - Jan 2011". Default
-	// value is an empty string.
+	// Display information such as title and description. A short name to identify
+	// the entry, for example, "Analytics Data - Jan 2011". Default value is an
+	// empty string.
 	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	// Optional. Entry description, which can consist of several sentences or
-	// paragraphs that describe entry contents. Default value is an empty string.
+	// Entry description, which can consist of several sentences or paragraphs
+	// that describe entry contents. Default value is an empty string.
 	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	// Optional. Schema of the entry. An entry might not have any schema attached
-	// to it.
+	// Schema of the entry. An entry might not have any schema attached to it.
 	Schema *Schema `protobuf:"bytes,5,opt,name=schema,proto3" json:"schema,omitempty"`
-	// Output only. Timestamps about the underlying Google Cloud Platform resource
-	// -- not about this Data Catalog Entry.
+	// Output only. Timestamps about the underlying resource, not about this Data Catalog
+	// entry. Output only when Entry is of type in the EntryType enum. For entries
+	// with user_specified_type, this field is optional and defaults to an empty
+	// timestamp.
 	SourceSystemTimestamps *SystemTimestamps `protobuf:"bytes,7,opt,name=source_system_timestamps,json=sourceSystemTimestamps,proto3" json:"source_system_timestamps,omitempty"`
 	XXX_NoUnkeyedLiteral   struct{}          `json:"-"`
 	XXX_unrecognized       []byte            `json:"-"`
@@ -534,7 +1018,7 @@ func (m *Entry) Reset()         { *m = Entry{} }
 func (m *Entry) String() string { return proto.CompactTextString(m) }
 func (*Entry) ProtoMessage()    {}
 func (*Entry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{5}
+	return fileDescriptor_2054d97e7b16f897, []int{13}
 }
 
 func (m *Entry) XXX_Unmarshal(b []byte) error {
@@ -569,15 +1053,86 @@ func (m *Entry) GetLinkedResource() string {
 	return ""
 }
 
-func (m *Entry) GetType() EntryType {
+type isEntry_EntryType interface {
+	isEntry_EntryType()
+}
+
+type Entry_Type struct {
+	Type EntryType `protobuf:"varint,2,opt,name=type,proto3,enum=google.cloud.datacatalog.v1beta1.EntryType,oneof"`
+}
+
+type Entry_UserSpecifiedType struct {
+	UserSpecifiedType string `protobuf:"bytes,16,opt,name=user_specified_type,json=userSpecifiedType,proto3,oneof"`
+}
+
+func (*Entry_Type) isEntry_EntryType() {}
+
+func (*Entry_UserSpecifiedType) isEntry_EntryType() {}
+
+func (m *Entry) GetEntryType() isEntry_EntryType {
 	if m != nil {
-		return m.Type
+		return m.EntryType
+	}
+	return nil
+}
+
+func (m *Entry) GetType() EntryType {
+	if x, ok := m.GetEntryType().(*Entry_Type); ok {
+		return x.Type
 	}
 	return EntryType_ENTRY_TYPE_UNSPECIFIED
 }
 
+func (m *Entry) GetUserSpecifiedType() string {
+	if x, ok := m.GetEntryType().(*Entry_UserSpecifiedType); ok {
+		return x.UserSpecifiedType
+	}
+	return ""
+}
+
+type isEntry_System interface {
+	isEntry_System()
+}
+
+type Entry_IntegratedSystem struct {
+	IntegratedSystem IntegratedSystem `protobuf:"varint,17,opt,name=integrated_system,json=integratedSystem,proto3,enum=google.cloud.datacatalog.v1beta1.IntegratedSystem,oneof"`
+}
+
+type Entry_UserSpecifiedSystem struct {
+	UserSpecifiedSystem string `protobuf:"bytes,18,opt,name=user_specified_system,json=userSpecifiedSystem,proto3,oneof"`
+}
+
+func (*Entry_IntegratedSystem) isEntry_System() {}
+
+func (*Entry_UserSpecifiedSystem) isEntry_System() {}
+
+func (m *Entry) GetSystem() isEntry_System {
+	if m != nil {
+		return m.System
+	}
+	return nil
+}
+
+func (m *Entry) GetIntegratedSystem() IntegratedSystem {
+	if x, ok := m.GetSystem().(*Entry_IntegratedSystem); ok {
+		return x.IntegratedSystem
+	}
+	return IntegratedSystem_INTEGRATED_SYSTEM_UNSPECIFIED
+}
+
+func (m *Entry) GetUserSpecifiedSystem() string {
+	if x, ok := m.GetSystem().(*Entry_UserSpecifiedSystem); ok {
+		return x.UserSpecifiedSystem
+	}
+	return ""
+}
+
 type isEntry_TypeSpec interface {
 	isEntry_TypeSpec()
+}
+
+type Entry_GcsFilesetSpec struct {
+	GcsFilesetSpec *GcsFilesetSpec `protobuf:"bytes,6,opt,name=gcs_fileset_spec,json=gcsFilesetSpec,proto3,oneof"`
 }
 
 type Entry_BigqueryTableSpec struct {
@@ -588,6 +1143,8 @@ type Entry_BigqueryDateShardedSpec struct {
 	BigqueryDateShardedSpec *BigQueryDateShardedSpec `protobuf:"bytes,15,opt,name=bigquery_date_sharded_spec,json=bigqueryDateShardedSpec,proto3,oneof"`
 }
 
+func (*Entry_GcsFilesetSpec) isEntry_TypeSpec() {}
+
 func (*Entry_BigqueryTableSpec) isEntry_TypeSpec() {}
 
 func (*Entry_BigqueryDateShardedSpec) isEntry_TypeSpec() {}
@@ -595,6 +1152,13 @@ func (*Entry_BigqueryDateShardedSpec) isEntry_TypeSpec() {}
 func (m *Entry) GetTypeSpec() isEntry_TypeSpec {
 	if m != nil {
 		return m.TypeSpec
+	}
+	return nil
+}
+
+func (m *Entry) GetGcsFilesetSpec() *GcsFilesetSpec {
+	if x, ok := m.GetTypeSpec().(*Entry_GcsFilesetSpec); ok {
+		return x.GcsFilesetSpec
 	}
 	return nil
 }
@@ -644,18 +1208,103 @@ func (m *Entry) GetSourceSystemTimestamps() *SystemTimestamps {
 // XXX_OneofWrappers is for the internal use of the proto package.
 func (*Entry) XXX_OneofWrappers() []interface{} {
 	return []interface{}{
+		(*Entry_Type)(nil),
+		(*Entry_UserSpecifiedType)(nil),
+		(*Entry_IntegratedSystem)(nil),
+		(*Entry_UserSpecifiedSystem)(nil),
+		(*Entry_GcsFilesetSpec)(nil),
 		(*Entry_BigqueryTableSpec)(nil),
 		(*Entry_BigqueryDateShardedSpec)(nil),
 	}
 }
 
+// EntryGroup Metadata.
+// An EntryGroup resource represents a logical grouping of zero or more
+// Data Catalog [Entry][google.cloud.datacatalog.v1beta1.Entry] resources.
+type EntryGroup struct {
+	// The resource name of the entry group in URL format. Example:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}
+	//
+	// Note that this EntryGroup and its child resources may not actually be
+	// stored in the location in this name.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// A short name to identify the entry group, for example,
+	// "analytics data - jan 2011". Default value is an empty string.
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// Entry group description, which can consist of several sentences or
+	// paragraphs that describe entry group contents. Default value is an empty
+	// string.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Output only. Timestamps about this EntryGroup. Default value is empty timestamps.
+	DataCatalogTimestamps *SystemTimestamps `protobuf:"bytes,4,opt,name=data_catalog_timestamps,json=dataCatalogTimestamps,proto3" json:"data_catalog_timestamps,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}          `json:"-"`
+	XXX_unrecognized      []byte            `json:"-"`
+	XXX_sizecache         int32             `json:"-"`
+}
+
+func (m *EntryGroup) Reset()         { *m = EntryGroup{} }
+func (m *EntryGroup) String() string { return proto.CompactTextString(m) }
+func (*EntryGroup) ProtoMessage()    {}
+func (*EntryGroup) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{14}
+}
+
+func (m *EntryGroup) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_EntryGroup.Unmarshal(m, b)
+}
+func (m *EntryGroup) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_EntryGroup.Marshal(b, m, deterministic)
+}
+func (m *EntryGroup) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EntryGroup.Merge(m, src)
+}
+func (m *EntryGroup) XXX_Size() int {
+	return xxx_messageInfo_EntryGroup.Size(m)
+}
+func (m *EntryGroup) XXX_DiscardUnknown() {
+	xxx_messageInfo_EntryGroup.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EntryGroup proto.InternalMessageInfo
+
+func (m *EntryGroup) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *EntryGroup) GetDisplayName() string {
+	if m != nil {
+		return m.DisplayName
+	}
+	return ""
+}
+
+func (m *EntryGroup) GetDescription() string {
+	if m != nil {
+		return m.Description
+	}
+	return ""
+}
+
+func (m *EntryGroup) GetDataCatalogTimestamps() *SystemTimestamps {
+	if m != nil {
+		return m.DataCatalogTimestamps
+	}
+	return nil
+}
+
 // Request message for
 // [CreateTagTemplate][google.cloud.datacatalog.v1beta1.DataCatalog.CreateTagTemplate].
 type CreateTagTemplateRequest struct {
-	// Required. The name of the project and the location this template is in.
-	// Example: "projects/{project_id}/locations/{location}". Note that this
-	// TagTemplate and its child resources may not actually be stored in the
-	// location in this name.
+	// Required. The name of the project and the template location
+	// [region](https://cloud.google.com/data-catalog/docs/concepts/regions.
+	//
+	// Example:
+	//
+	// * projects/{project_id}/locations/us-central1
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
 	// Required. The id of the tag template to create.
 	TagTemplateId string `protobuf:"bytes,3,opt,name=tag_template_id,json=tagTemplateId,proto3" json:"tag_template_id,omitempty"`
@@ -670,7 +1319,7 @@ func (m *CreateTagTemplateRequest) Reset()         { *m = CreateTagTemplateReque
 func (m *CreateTagTemplateRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateTagTemplateRequest) ProtoMessage()    {}
 func (*CreateTagTemplateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{6}
+	return fileDescriptor_2054d97e7b16f897, []int{15}
 }
 
 func (m *CreateTagTemplateRequest) XXX_Unmarshal(b []byte) error {
@@ -715,8 +1364,9 @@ func (m *CreateTagTemplateRequest) GetTagTemplate() *TagTemplate {
 // Request message for
 // [GetTagTemplate][google.cloud.datacatalog.v1beta1.DataCatalog.GetTagTemplate].
 type GetTagTemplateRequest struct {
-	// Required. The name of the tag template. For example,
-	// "projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}".
+	// Required. The name of the tag template. Example:
+	//
+	// * projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -727,7 +1377,7 @@ func (m *GetTagTemplateRequest) Reset()         { *m = GetTagTemplateRequest{} }
 func (m *GetTagTemplateRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTagTemplateRequest) ProtoMessage()    {}
 func (*GetTagTemplateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{7}
+	return fileDescriptor_2054d97e7b16f897, []int{16}
 }
 
 func (m *GetTagTemplateRequest) XXX_Unmarshal(b []byte) error {
@@ -758,15 +1408,15 @@ func (m *GetTagTemplateRequest) GetName() string {
 // Request message for
 // [UpdateTagTemplate][google.cloud.datacatalog.v1beta1.DataCatalog.UpdateTagTemplate].
 type UpdateTagTemplateRequest struct {
-	// Required. The template to update.
+	// Required. The template to update. The "name" field must be set.
 	TagTemplate *TagTemplate `protobuf:"bytes,1,opt,name=tag_template,json=tagTemplate,proto3" json:"tag_template,omitempty"`
-	// Optional. The field mask specifies the parts of the template to overwrite.
+	// The field mask specifies the parts of the template to overwrite.
 	//
 	// Allowed fields:
 	//
-	//   * display_name
+	//   * `display_name`
 	//
-	// If update_mask is omitted, all of the allowed fields above will be updated.
+	// If absent or empty, all of the allowed fields above will be updated.
 	UpdateMask           *field_mask.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
 	XXX_unrecognized     []byte                `json:"-"`
@@ -777,7 +1427,7 @@ func (m *UpdateTagTemplateRequest) Reset()         { *m = UpdateTagTemplateReque
 func (m *UpdateTagTemplateRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateTagTemplateRequest) ProtoMessage()    {}
 func (*UpdateTagTemplateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{8}
+	return fileDescriptor_2054d97e7b16f897, []int{17}
 }
 
 func (m *UpdateTagTemplateRequest) XXX_Unmarshal(b []byte) error {
@@ -815,12 +1465,13 @@ func (m *UpdateTagTemplateRequest) GetUpdateMask() *field_mask.FieldMask {
 // Request message for
 // [DeleteTagTemplate][google.cloud.datacatalog.v1beta1.DataCatalog.DeleteTagTemplate].
 type DeleteTagTemplateRequest struct {
-	// Required. The name of the tag template to delete. For example,
-	// "projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}".
+	// Required. The name of the tag template to delete. Example:
+	//
+	// * projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Required. Currently, this field must always be set to <code>true</code>.
+	// Required. Currently, this field must always be set to `true`.
 	// This confirms the deletion of any possible tags using this template.
-	// <code>force = false</code> will be supported in the future.
+	// `force = false` will be supported in the future.
 	Force                bool     `protobuf:"varint,2,opt,name=force,proto3" json:"force,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -831,7 +1482,7 @@ func (m *DeleteTagTemplateRequest) Reset()         { *m = DeleteTagTemplateReque
 func (m *DeleteTagTemplateRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteTagTemplateRequest) ProtoMessage()    {}
 func (*DeleteTagTemplateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{9}
+	return fileDescriptor_2054d97e7b16f897, []int{18}
 }
 
 func (m *DeleteTagTemplateRequest) XXX_Unmarshal(b []byte) error {
@@ -869,10 +1520,11 @@ func (m *DeleteTagTemplateRequest) GetForce() bool {
 // Request message for
 // [CreateTag][google.cloud.datacatalog.v1beta1.DataCatalog.CreateTag].
 type CreateTagRequest struct {
-	// Required.
-	// The name of the resource to attach this tag to. Tags can be attached to
-	// Entries. (example:
-	// "projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}").
+	// Required. The name of the resource to attach this tag to. Tags can be attached to
+	// Entries. Example:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}
+	//
 	// Note that this Tag and its child resources may not actually be stored in
 	// the location in this name.
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
@@ -887,7 +1539,7 @@ func (m *CreateTagRequest) Reset()         { *m = CreateTagRequest{} }
 func (m *CreateTagRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateTagRequest) ProtoMessage()    {}
 func (*CreateTagRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{10}
+	return fileDescriptor_2054d97e7b16f897, []int{19}
 }
 
 func (m *CreateTagRequest) XXX_Unmarshal(b []byte) error {
@@ -925,11 +1577,10 @@ func (m *CreateTagRequest) GetTag() *Tag {
 // Request message for
 // [UpdateTag][google.cloud.datacatalog.v1beta1.DataCatalog.UpdateTag].
 type UpdateTagRequest struct {
-	// Required. The updated tag.
+	// Required. The updated tag. The "name" field must be set.
 	Tag *Tag `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
-	// Optional. The fields to update on the Tag.  If absent or empty, all
-	// modifiable fields are updated. Currently the only modifiable field is the
-	// field `fields`.
+	// The fields to update on the Tag. If absent or empty, all modifiable fields
+	// are updated. Currently the only modifiable field is the field `fields`.
 	UpdateMask           *field_mask.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
 	XXX_unrecognized     []byte                `json:"-"`
@@ -940,7 +1591,7 @@ func (m *UpdateTagRequest) Reset()         { *m = UpdateTagRequest{} }
 func (m *UpdateTagRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateTagRequest) ProtoMessage()    {}
 func (*UpdateTagRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{11}
+	return fileDescriptor_2054d97e7b16f897, []int{20}
 }
 
 func (m *UpdateTagRequest) XXX_Unmarshal(b []byte) error {
@@ -978,8 +1629,9 @@ func (m *UpdateTagRequest) GetUpdateMask() *field_mask.FieldMask {
 // Request message for
 // [DeleteTag][google.cloud.datacatalog.v1beta1.DataCatalog.DeleteTag].
 type DeleteTagRequest struct {
-	// Required. The name of the tag to delete. For example,
-	// "projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}/tags/{tag_id}".
+	// Required. The name of the tag to delete. Example:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}/tags/{tag_id}
 	Name                 string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -990,7 +1642,7 @@ func (m *DeleteTagRequest) Reset()         { *m = DeleteTagRequest{} }
 func (m *DeleteTagRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteTagRequest) ProtoMessage()    {}
 func (*DeleteTagRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{12}
+	return fileDescriptor_2054d97e7b16f897, []int{21}
 }
 
 func (m *DeleteTagRequest) XXX_Unmarshal(b []byte) error {
@@ -1021,16 +1673,18 @@ func (m *DeleteTagRequest) GetName() string {
 // Request message for
 // [CreateTagTemplateField][google.cloud.datacatalog.v1beta1.DataCatalog.CreateTagTemplateField].
 type CreateTagTemplateFieldRequest struct {
-	// Required. The name of the project this template is in. Example:
-	// "projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}".
-	// Note that this TagTemplateField may not actually be stored in the location
-	// in this name.
+	// Required. The name of the project and the template location
+	// [region](https://cloud.google.com/data-catalog/docs/concepts/regions).
+	//
+	// Example:
+	//
+	// * projects/{project_id}/locations/us-central1/tagTemplates/{tag_template_id}
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// Required. The id of the tag template field to create.
+	// Required. The ID of the tag template field to create.
 	// Field ids can contain letters (both uppercase and lowercase), numbers
-	// (0-9), underscores (_) and dashes (-). Field ids must be at least 1
-	// character long and at most 128 characters long. Field ids must also be
-	// unique to their template.
+	// (0-9), underscores (_) and dashes (-). Field IDs must be at least 1
+	// character long and at most 128 characters long. Field IDs must also be
+	// unique within their template.
 	TagTemplateFieldId string `protobuf:"bytes,2,opt,name=tag_template_field_id,json=tagTemplateFieldId,proto3" json:"tag_template_field_id,omitempty"`
 	// Required. The tag template field to create.
 	TagTemplateField     *TagTemplateField `protobuf:"bytes,3,opt,name=tag_template_field,json=tagTemplateField,proto3" json:"tag_template_field,omitempty"`
@@ -1043,7 +1697,7 @@ func (m *CreateTagTemplateFieldRequest) Reset()         { *m = CreateTagTemplate
 func (m *CreateTagTemplateFieldRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateTagTemplateFieldRequest) ProtoMessage()    {}
 func (*CreateTagTemplateFieldRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{13}
+	return fileDescriptor_2054d97e7b16f897, []int{22}
 }
 
 func (m *CreateTagTemplateFieldRequest) XXX_Unmarshal(b []byte) error {
@@ -1088,22 +1742,26 @@ func (m *CreateTagTemplateFieldRequest) GetTagTemplateField() *TagTemplateField 
 // Request message for
 // [UpdateTagTemplateField][google.cloud.datacatalog.v1beta1.DataCatalog.UpdateTagTemplateField].
 type UpdateTagTemplateFieldRequest struct {
-	// Required. The name of the tag template field. For example,
-	// "projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}/fields/{tag_template_field_id}".
+	// Required. The name of the tag template field. Example:
+	//
+	// * projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}/fields/{tag_template_field_id}
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Required. The template to update.
 	TagTemplateField *TagTemplateField `protobuf:"bytes,2,opt,name=tag_template_field,json=tagTemplateField,proto3" json:"tag_template_field,omitempty"`
-	// Optional. The field mask specifies the parts of the template to overwrite.
+	// Optional. The field mask specifies the parts of the template to be updated.
 	// Allowed fields:
 	//
-	//   * display_name
-	//   * type.enum_type
+	//   * `display_name`
+	//   * `type.enum_type`
+	//   * `is_required`
 	//
-	// If update_mask is omitted, all of the allowed fields above will be updated.
+	// If `update_mask` is not set or empty, all of the allowed fields above will
+	// be updated.
 	//
 	// When updating an enum type, the provided values will be merged with the
 	// existing values. Therefore, enum values can only be added, existing enum
-	// values cannot be deleted nor renamed.
+	// values cannot be deleted nor renamed. Updating a template field from
+	// optional to required is NOT allowed.
 	UpdateMask           *field_mask.FieldMask `protobuf:"bytes,3,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
 	XXX_unrecognized     []byte                `json:"-"`
@@ -1114,7 +1772,7 @@ func (m *UpdateTagTemplateFieldRequest) Reset()         { *m = UpdateTagTemplate
 func (m *UpdateTagTemplateFieldRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateTagTemplateFieldRequest) ProtoMessage()    {}
 func (*UpdateTagTemplateFieldRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{14}
+	return fileDescriptor_2054d97e7b16f897, []int{23}
 }
 
 func (m *UpdateTagTemplateFieldRequest) XXX_Unmarshal(b []byte) error {
@@ -1159,11 +1817,11 @@ func (m *UpdateTagTemplateFieldRequest) GetUpdateMask() *field_mask.FieldMask {
 // Request message for
 // [RenameTagTemplateField][google.cloud.datacatalog.v1beta1.DataCatalog.RenameTagTemplateField].
 type RenameTagTemplateFieldRequest struct {
-	// Required. The name of the tag template. For example,
-	// "projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}/fields/{tag_template_field_id}".
+	// Required. The name of the tag template. Example:
+	//
+	// * projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}/fields/{tag_template_field_id}
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Required. The new ID of this tag template field. For example,
-	// "my_new_field".
+	// Required. The new ID of this tag template field. For example, `my_new_field`.
 	NewTagTemplateFieldId string   `protobuf:"bytes,2,opt,name=new_tag_template_field_id,json=newTagTemplateFieldId,proto3" json:"new_tag_template_field_id,omitempty"`
 	XXX_NoUnkeyedLiteral  struct{} `json:"-"`
 	XXX_unrecognized      []byte   `json:"-"`
@@ -1174,7 +1832,7 @@ func (m *RenameTagTemplateFieldRequest) Reset()         { *m = RenameTagTemplate
 func (m *RenameTagTemplateFieldRequest) String() string { return proto.CompactTextString(m) }
 func (*RenameTagTemplateFieldRequest) ProtoMessage()    {}
 func (*RenameTagTemplateFieldRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{15}
+	return fileDescriptor_2054d97e7b16f897, []int{24}
 }
 
 func (m *RenameTagTemplateFieldRequest) XXX_Unmarshal(b []byte) error {
@@ -1212,12 +1870,13 @@ func (m *RenameTagTemplateFieldRequest) GetNewTagTemplateFieldId() string {
 // Request message for
 // [DeleteTagTemplateField][google.cloud.datacatalog.v1beta1.DataCatalog.DeleteTagTemplateField].
 type DeleteTagTemplateFieldRequest struct {
-	// Required. The name of the tag template field to delete. For example,
-	// "projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}/fields/{tag_template_field_id}".
+	// Required. The name of the tag template field to delete. Example:
+	//
+	// * projects/{project_id}/locations/{location}/tagTemplates/{tag_template_id}/fields/{tag_template_field_id}
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Required. Currently, this field must always be set to <code>true</code>.
+	// Required. Currently, this field must always be set to `true`.
 	// This confirms the deletion of this field from any tags using this field.
-	// <code>force = false</code> will be supported in the future.
+	// `force = false` will be supported in the future.
 	Force                bool     `protobuf:"varint,2,opt,name=force,proto3" json:"force,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1228,7 +1887,7 @@ func (m *DeleteTagTemplateFieldRequest) Reset()         { *m = DeleteTagTemplate
 func (m *DeleteTagTemplateFieldRequest) String() string { return proto.CompactTextString(m) }
 func (*DeleteTagTemplateFieldRequest) ProtoMessage()    {}
 func (*DeleteTagTemplateFieldRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{16}
+	return fileDescriptor_2054d97e7b16f897, []int{25}
 }
 
 func (m *DeleteTagTemplateFieldRequest) XXX_Unmarshal(b []byte) error {
@@ -1266,14 +1925,19 @@ func (m *DeleteTagTemplateFieldRequest) GetForce() bool {
 // Request message for
 // [ListTags][google.cloud.datacatalog.v1beta1.DataCatalog.ListTags].
 type ListTagsRequest struct {
-	// Required. The name of the Data Catalog resource to list the tags of. The
-	// resource could be an [Entry][google.cloud.datacatalog.v1beta1.Entry].
+	// Required. The name of the Data Catalog resource to list the tags of. The resource
+	// could be an [Entry][google.cloud.datacatalog.v1beta1.Entry] or an
+	// [EntryGroup][google.cloud.datacatalog.v1beta1.EntryGroup].
+	//
+	// Examples:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}/entries/{entry_id}
 	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	// Optional. The maximum number of tags to return. Default is 10. Max limit is
-	// 1000.
+	// The maximum number of tags to return. Default is 10. Max limit is 1000.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	// Optional. Token that specifies which page is requested. If empty, the first
-	// page is returned.
+	// Token that specifies which page is requested. If empty, the first page is
+	// returned.
 	PageToken            string   `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -1284,7 +1948,7 @@ func (m *ListTagsRequest) Reset()         { *m = ListTagsRequest{} }
 func (m *ListTagsRequest) String() string { return proto.CompactTextString(m) }
 func (*ListTagsRequest) ProtoMessage()    {}
 func (*ListTagsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{17}
+	return fileDescriptor_2054d97e7b16f897, []int{26}
 }
 
 func (m *ListTagsRequest) XXX_Unmarshal(b []byte) error {
@@ -1343,7 +2007,7 @@ func (m *ListTagsResponse) Reset()         { *m = ListTagsResponse{} }
 func (m *ListTagsResponse) String() string { return proto.CompactTextString(m) }
 func (*ListTagsResponse) ProtoMessage()    {}
 func (*ListTagsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_2054d97e7b16f897, []int{18}
+	return fileDescriptor_2054d97e7b16f897, []int{27}
 }
 
 func (m *ListTagsResponse) XXX_Unmarshal(b []byte) error {
@@ -1378,15 +2042,153 @@ func (m *ListTagsResponse) GetNextPageToken() string {
 	return ""
 }
 
+// Request message for
+// [ListEntries][google.cloud.datacatalog.v1beta1.DataCatalog.ListEntries].
+type ListEntriesRequest struct {
+	// Required. The name of the entry group that contains the entries, which can
+	// be provided in URL format. Example:
+	//
+	// * projects/{project_id}/locations/{location}/entryGroups/{entry_group_id}
+	Parent string `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	// The maximum number of items to return. Default is 10. Max limit is 1000.
+	// Throws an invalid argument for `page_size > 1000`.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Token that specifies which page is requested. If empty, the first page is
+	// returned.
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// The fields to return for each Entry. If not set or empty, all
+	// fields are returned.
+	// For example, setting read_mask to contain only one path "name" will cause
+	// ListEntries to return a list of Entries with only "name" field.
+	ReadMask             *field_mask.FieldMask `protobuf:"bytes,4,opt,name=read_mask,json=readMask,proto3" json:"read_mask,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
+}
+
+func (m *ListEntriesRequest) Reset()         { *m = ListEntriesRequest{} }
+func (m *ListEntriesRequest) String() string { return proto.CompactTextString(m) }
+func (*ListEntriesRequest) ProtoMessage()    {}
+func (*ListEntriesRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{28}
+}
+
+func (m *ListEntriesRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListEntriesRequest.Unmarshal(m, b)
+}
+func (m *ListEntriesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListEntriesRequest.Marshal(b, m, deterministic)
+}
+func (m *ListEntriesRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListEntriesRequest.Merge(m, src)
+}
+func (m *ListEntriesRequest) XXX_Size() int {
+	return xxx_messageInfo_ListEntriesRequest.Size(m)
+}
+func (m *ListEntriesRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListEntriesRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListEntriesRequest proto.InternalMessageInfo
+
+func (m *ListEntriesRequest) GetParent() string {
+	if m != nil {
+		return m.Parent
+	}
+	return ""
+}
+
+func (m *ListEntriesRequest) GetPageSize() int32 {
+	if m != nil {
+		return m.PageSize
+	}
+	return 0
+}
+
+func (m *ListEntriesRequest) GetPageToken() string {
+	if m != nil {
+		return m.PageToken
+	}
+	return ""
+}
+
+func (m *ListEntriesRequest) GetReadMask() *field_mask.FieldMask {
+	if m != nil {
+		return m.ReadMask
+	}
+	return nil
+}
+
+// Response message for
+// [ListEntries][google.cloud.datacatalog.v1beta1.DataCatalog.ListEntries].
+type ListEntriesResponse struct {
+	// Entry details.
+	Entries []*Entry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	// Token to retrieve the next page of results. It is set to empty if no items
+	// remain in results.
+	NextPageToken        string   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ListEntriesResponse) Reset()         { *m = ListEntriesResponse{} }
+func (m *ListEntriesResponse) String() string { return proto.CompactTextString(m) }
+func (*ListEntriesResponse) ProtoMessage()    {}
+func (*ListEntriesResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_2054d97e7b16f897, []int{29}
+}
+
+func (m *ListEntriesResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ListEntriesResponse.Unmarshal(m, b)
+}
+func (m *ListEntriesResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ListEntriesResponse.Marshal(b, m, deterministic)
+}
+func (m *ListEntriesResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ListEntriesResponse.Merge(m, src)
+}
+func (m *ListEntriesResponse) XXX_Size() int {
+	return xxx_messageInfo_ListEntriesResponse.Size(m)
+}
+func (m *ListEntriesResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_ListEntriesResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ListEntriesResponse proto.InternalMessageInfo
+
+func (m *ListEntriesResponse) GetEntries() []*Entry {
+	if m != nil {
+		return m.Entries
+	}
+	return nil
+}
+
+func (m *ListEntriesResponse) GetNextPageToken() string {
+	if m != nil {
+		return m.NextPageToken
+	}
+	return ""
+}
+
 func init() {
 	proto.RegisterEnum("google.cloud.datacatalog.v1beta1.EntryType", EntryType_name, EntryType_value)
 	proto.RegisterType((*SearchCatalogRequest)(nil), "google.cloud.datacatalog.v1beta1.SearchCatalogRequest")
 	proto.RegisterType((*SearchCatalogRequest_Scope)(nil), "google.cloud.datacatalog.v1beta1.SearchCatalogRequest.Scope")
 	proto.RegisterType((*SearchCatalogResponse)(nil), "google.cloud.datacatalog.v1beta1.SearchCatalogResponse")
+	proto.RegisterType((*CreateEntryGroupRequest)(nil), "google.cloud.datacatalog.v1beta1.CreateEntryGroupRequest")
+	proto.RegisterType((*UpdateEntryGroupRequest)(nil), "google.cloud.datacatalog.v1beta1.UpdateEntryGroupRequest")
+	proto.RegisterType((*GetEntryGroupRequest)(nil), "google.cloud.datacatalog.v1beta1.GetEntryGroupRequest")
+	proto.RegisterType((*DeleteEntryGroupRequest)(nil), "google.cloud.datacatalog.v1beta1.DeleteEntryGroupRequest")
+	proto.RegisterType((*ListEntryGroupsRequest)(nil), "google.cloud.datacatalog.v1beta1.ListEntryGroupsRequest")
+	proto.RegisterType((*ListEntryGroupsResponse)(nil), "google.cloud.datacatalog.v1beta1.ListEntryGroupsResponse")
+	proto.RegisterType((*CreateEntryRequest)(nil), "google.cloud.datacatalog.v1beta1.CreateEntryRequest")
 	proto.RegisterType((*UpdateEntryRequest)(nil), "google.cloud.datacatalog.v1beta1.UpdateEntryRequest")
+	proto.RegisterType((*DeleteEntryRequest)(nil), "google.cloud.datacatalog.v1beta1.DeleteEntryRequest")
 	proto.RegisterType((*GetEntryRequest)(nil), "google.cloud.datacatalog.v1beta1.GetEntryRequest")
 	proto.RegisterType((*LookupEntryRequest)(nil), "google.cloud.datacatalog.v1beta1.LookupEntryRequest")
 	proto.RegisterType((*Entry)(nil), "google.cloud.datacatalog.v1beta1.Entry")
+	proto.RegisterType((*EntryGroup)(nil), "google.cloud.datacatalog.v1beta1.EntryGroup")
 	proto.RegisterType((*CreateTagTemplateRequest)(nil), "google.cloud.datacatalog.v1beta1.CreateTagTemplateRequest")
 	proto.RegisterType((*GetTagTemplateRequest)(nil), "google.cloud.datacatalog.v1beta1.GetTagTemplateRequest")
 	proto.RegisterType((*UpdateTagTemplateRequest)(nil), "google.cloud.datacatalog.v1beta1.UpdateTagTemplateRequest")
@@ -1400,6 +2202,8 @@ func init() {
 	proto.RegisterType((*DeleteTagTemplateFieldRequest)(nil), "google.cloud.datacatalog.v1beta1.DeleteTagTemplateFieldRequest")
 	proto.RegisterType((*ListTagsRequest)(nil), "google.cloud.datacatalog.v1beta1.ListTagsRequest")
 	proto.RegisterType((*ListTagsResponse)(nil), "google.cloud.datacatalog.v1beta1.ListTagsResponse")
+	proto.RegisterType((*ListEntriesRequest)(nil), "google.cloud.datacatalog.v1beta1.ListEntriesRequest")
+	proto.RegisterType((*ListEntriesResponse)(nil), "google.cloud.datacatalog.v1beta1.ListEntriesResponse")
 }
 
 func init() {
@@ -1407,135 +2211,208 @@ func init() {
 }
 
 var fileDescriptor_2054d97e7b16f897 = []byte{
-	// 1904 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x59, 0xcb, 0x73, 0x1b, 0x49,
-	0x19, 0x4f, 0xdb, 0x56, 0x62, 0x7d, 0x72, 0x62, 0xbb, 0x37, 0x76, 0x14, 0x25, 0x06, 0x31, 0xd4,
-	0xee, 0x7a, 0x95, 0x8a, 0x54, 0xd6, 0x12, 0xc2, 0x6a, 0x49, 0x76, 0xed, 0x58, 0xf1, 0x9a, 0x38,
-	0x59, 0x65, 0xa4, 0x05, 0x76, 0x2f, 0xc3, 0x78, 0xa6, 0x33, 0x1e, 0x3c, 0xa3, 0x99, 0x4c, 0xb7,
-	0xe2, 0xd5, 0x52, 0x7b, 0xe1, 0xc4, 0x85, 0x2a, 0xaa, 0xb8, 0x52, 0x9c, 0xa8, 0xad, 0xa2, 0x8a,
-	0xe2, 0x4a, 0xc1, 0x81, 0x02, 0x8e, 0xc0, 0x69, 0xb9, 0x70, 0xe3, 0xc2, 0x01, 0xfe, 0x83, 0x1c,
-	0xa9, 0xee, 0xe9, 0xd1, 0x63, 0x34, 0xb2, 0x46, 0x52, 0x8a, 0x53, 0x32, 0xfd, 0x3d, 0xfa, 0xf7,
-	0xbd, 0xba, 0x7f, 0x6d, 0x41, 0xd5, 0xf2, 0x3c, 0xcb, 0x21, 0x15, 0xc3, 0xf1, 0x3a, 0x66, 0xc5,
-	0xd4, 0x99, 0x6e, 0xe8, 0x4c, 0x77, 0x3c, 0xab, 0xf2, 0x62, 0xe7, 0x98, 0x30, 0x7d, 0x67, 0x70,
-	0xad, 0xec, 0x07, 0x1e, 0xf3, 0x70, 0x31, 0xb4, 0x29, 0x0b, 0x9b, 0xf2, 0xa0, 0x5c, 0xda, 0x14,
-	0x6e, 0x4a, 0xaf, 0xba, 0x6f, 0x57, 0xf4, 0x76, 0xdb, 0x63, 0x3a, 0xb3, 0xbd, 0x36, 0x0d, 0xed,
-	0x0b, 0xb7, 0x27, 0xee, 0x49, 0x8d, 0x13, 0xe2, 0xea, 0xe9, 0xd5, 0x89, 0x1e, 0x18, 0x27, 0x52,
-	0x7d, 0x67, 0xa2, 0x3a, 0xd3, 0x8f, 0x1d, 0xa2, 0x51, 0x9f, 0x18, 0xd2, 0xe4, 0x56, 0x0a, 0x13,
-	0x8b, 0xa6, 0xf7, 0x6f, 0xbb, 0x84, 0x32, 0xdd, 0xf5, 0x23, 0x93, 0xaf, 0x48, 0x13, 0x5b, 0x77,
-	0x2b, 0x2f, 0x76, 0xf8, 0x3f, 0x9a, 0xef, 0x39, 0xb6, 0xd1, 0x95, 0xf2, 0xc2, 0xb0, 0x7c, 0x48,
-	0x76, 0x43, 0xca, 0xc4, 0xd7, 0x71, 0xe7, 0x59, 0x85, 0xb8, 0x3e, 0x8b, 0x84, 0xc5, 0xb8, 0xf0,
-	0x99, 0x4d, 0x1c, 0x53, 0x73, 0x75, 0x7a, 0x2a, 0x35, 0xae, 0x0d, 0x54, 0xc2, 0x70, 0x6c, 0xd2,
-	0x66, 0xa1, 0x40, 0x79, 0xb9, 0x00, 0x57, 0x9b, 0x22, 0x6f, 0x0f, 0x42, 0xf8, 0x2a, 0x79, 0xde,
-	0x21, 0x94, 0x61, 0x15, 0x32, 0xd4, 0xf0, 0x7c, 0x92, 0xbf, 0x58, 0x44, 0xdb, 0xb9, 0xea, 0xb7,
-	0xcb, 0x93, 0xaa, 0x5d, 0x4e, 0x72, 0x53, 0x6e, 0x72, 0x1f, 0x6a, 0xe8, 0x0a, 0x5f, 0x85, 0xcc,
-	0xf3, 0x0e, 0x09, 0xba, 0x79, 0x54, 0x44, 0xdb, 0x59, 0x35, 0xfc, 0xc0, 0x37, 0x20, 0xeb, 0xeb,
-	0x16, 0xd1, 0xa8, 0xfd, 0x19, 0xc9, 0x2f, 0x14, 0xd1, 0x76, 0x46, 0x5d, 0xe6, 0x0b, 0x4d, 0xfb,
-	0x33, 0x82, 0xb7, 0x00, 0x84, 0x90, 0x79, 0xa7, 0xa4, 0x9d, 0x5f, 0x14, 0x76, 0x42, 0xbd, 0xc5,
-	0x17, 0xf0, 0x75, 0x58, 0xf6, 0x02, 0x93, 0x04, 0xda, 0x71, 0x37, 0x9f, 0x11, 0xc2, 0x4b, 0xe2,
-	0x7b, 0xaf, 0x5b, 0xf8, 0x25, 0x82, 0x8c, 0xd8, 0x1d, 0xbf, 0x01, 0xab, 0x76, 0xdb, 0x70, 0x3a,
-	0x26, 0xd1, 0xbc, 0xc0, 0xd2, 0x6c, 0x93, 0xe6, 0x17, 0x8a, 0x8b, 0xdb, 0x59, 0xf5, 0xb2, 0x5c,
-	0xfe, 0x30, 0xb0, 0x0e, 0x4d, 0x8a, 0xcb, 0xf0, 0x5a, 0xa4, 0xe7, 0x07, 0xde, 0x0f, 0x89, 0xc1,
-	0x84, 0xee, 0xa2, 0xd0, 0x5d, 0x97, 0xa2, 0x46, 0x28, 0xe1, 0xfa, 0xf7, 0xe0, 0x46, 0xa4, 0x6f,
-	0x19, 0xbe, 0xe6, 0x77, 0x8e, 0x1d, 0xdb, 0xd0, 0x78, 0x6a, 0x28, 0x61, 0x34, 0x7f, 0xa9, 0x88,
-	0xb6, 0x97, 0xd5, 0xbc, 0x54, 0x39, 0x30, 0xfc, 0x86, 0x50, 0xd8, 0x97, 0x72, 0xe5, 0x67, 0x08,
-	0x36, 0x62, 0x39, 0xa3, 0xbe, 0xd7, 0xa6, 0x04, 0x7f, 0x08, 0x97, 0x02, 0x42, 0x3b, 0x0e, 0xa3,
-	0x79, 0x54, 0x5c, 0xdc, 0xce, 0x55, 0xef, 0x4c, 0x9d, 0x7d, 0x6e, 0xad, 0x46, 0x5e, 0x78, 0x06,
-	0xda, 0xe4, 0x53, 0xa6, 0x8d, 0xa4, 0xf2, 0x32, 0x5f, 0x6e, 0x44, 0xe9, 0xe4, 0x90, 0xf0, 0x47,
-	0xbe, 0xa9, 0x33, 0x52, 0x6f, 0xb3, 0xa0, 0x1b, 0xf5, 0xc2, 0x3d, 0xc8, 0x10, 0xfe, 0x2d, 0xea,
-	0x96, 0xab, 0xbe, 0x39, 0x19, 0x4d, 0x68, 0x1e, 0x5a, 0xe1, 0x77, 0x21, 0xd7, 0x11, 0x4e, 0x45,
-	0x47, 0x8a, 0x12, 0xe7, 0xaa, 0x85, 0xc8, 0x49, 0xd4, 0xb4, 0xe5, 0x87, 0xbc, 0x69, 0x1f, 0xeb,
-	0xf4, 0x54, 0x85, 0x50, 0x9d, 0xff, 0x5f, 0x79, 0x1d, 0x56, 0x0f, 0x08, 0x1b, 0x82, 0x83, 0x61,
-	0xa9, 0xad, 0xbb, 0x44, 0x76, 0x91, 0xf8, 0xbf, 0x42, 0x01, 0x1f, 0x79, 0xde, 0x69, 0xc7, 0x1f,
-	0xd2, 0x7c, 0x0b, 0x56, 0x1d, 0xbb, 0x7d, 0x4a, 0x4c, 0x2d, 0x20, 0xd4, 0xeb, 0x04, 0x86, 0x34,
-	0xfa, 0xe0, 0x82, 0x7a, 0x25, 0x14, 0xa8, 0x72, 0x1d, 0x7f, 0x1d, 0x56, 0xe8, 0x73, 0xa7, 0xaf,
-	0xb7, 0x28, 0xf5, 0x72, 0xf4, 0xb9, 0x13, 0x29, 0xed, 0x5d, 0x86, 0x1c, 0xd3, 0x03, 0x8b, 0x30,
-	0x4d, 0x6c, 0xfa, 0x9f, 0x25, 0xc8, 0x88, 0xfd, 0x92, 0x20, 0xe1, 0x37, 0x47, 0x37, 0xcf, 0x0a,
-	0x71, 0x7c, 0xeb, 0xf7, 0x60, 0x89, 0x75, 0xfd, 0xb0, 0xf7, 0xaf, 0x54, 0x6f, 0xa5, 0xcc, 0x6e,
-	0xab, 0xeb, 0x13, 0x55, 0x18, 0x62, 0x02, 0xaf, 0x1d, 0xdb, 0x96, 0x98, 0x26, 0xad, 0x7f, 0xaa,
-	0xe5, 0x57, 0x44, 0xa2, 0xdf, 0x9e, 0xec, 0x6f, 0xcf, 0xb6, 0x9e, 0x72, 0xe3, 0x16, 0xb7, 0x6d,
-	0xfa, 0xc4, 0xf8, 0xe0, 0x82, 0xba, 0x1e, 0x79, 0xec, 0x2d, 0xe2, 0x4f, 0xa1, 0xd0, 0xdb, 0x46,
-	0x94, 0x93, 0x9e, 0xe8, 0x81, 0x49, 0xcc, 0x70, 0xb7, 0x55, 0xb1, 0xdb, 0x3b, 0xe9, 0x77, 0xdb,
-	0xd7, 0x19, 0x69, 0x86, 0x1e, 0xe4, 0x9e, 0xd7, 0x22, 0xf7, 0x31, 0x11, 0xfe, 0x1a, 0xac, 0x98,
-	0x36, 0xf5, 0x1d, 0xbd, 0x2b, 0x12, 0x2f, 0x9b, 0x37, 0x27, 0xd7, 0x9e, 0xf0, 0x6c, 0x17, 0x21,
-	0x67, 0x12, 0x6a, 0x04, 0xb6, 0xcf, 0xef, 0x98, 0xfc, 0x92, 0xd4, 0xe8, 0x2f, 0xe1, 0xf7, 0xe1,
-	0x62, 0x78, 0xa1, 0x88, 0x93, 0x22, 0x57, 0xdd, 0x4e, 0x31, 0x54, 0x42, 0x5f, 0x95, 0x76, 0xd8,
-	0x81, 0x7c, 0x58, 0x32, 0x8d, 0x76, 0x29, 0x23, 0xae, 0xd6, 0x3f, 0xe2, 0xc5, 0xb4, 0xe7, 0xaa,
-	0xd5, 0x14, 0x3e, 0x85, 0x69, 0xab, 0x67, 0xa9, 0x6e, 0x86, 0x3e, 0xe3, 0xeb, 0x7b, 0x39, 0xc8,
-	0xf2, 0xea, 0x8a, 0xec, 0x2a, 0xbf, 0x41, 0x90, 0x7f, 0x10, 0x10, 0x9d, 0x91, 0x96, 0x6e, 0xb5,
-	0x88, 0xeb, 0x3b, 0x3a, 0x23, 0x51, 0x9b, 0x6f, 0xc2, 0x45, 0x5f, 0x0f, 0x48, 0x9b, 0xc9, 0xfe,
-	0x93, 0x5f, 0x7c, 0xec, 0x99, 0x6e, 0x69, 0x4c, 0xaa, 0x6b, 0xb6, 0x19, 0x8d, 0x3d, 0xeb, 0x3b,
-	0x39, 0x34, 0x71, 0x03, 0x56, 0x06, 0xf5, 0xe4, 0x84, 0xde, 0x9e, 0x1c, 0xcb, 0x20, 0x96, 0xdc,
-	0x80, 0x4f, 0xe5, 0x16, 0x6c, 0x1c, 0x10, 0x96, 0x00, 0x35, 0x69, 0x76, 0x7f, 0x8d, 0x20, 0x1f,
-	0x9e, 0x3a, 0x09, 0x06, 0x71, 0x6c, 0x68, 0x5e, 0x6c, 0xf3, 0x1d, 0x47, 0xfb, 0x90, 0xdf, 0x27,
-	0x0e, 0x49, 0x84, 0x9a, 0x74, 0x08, 0x5c, 0x85, 0xcc, 0x33, 0x8f, 0x8f, 0xfe, 0x82, 0xb8, 0x0d,
-	0xc2, 0x0f, 0xc5, 0x80, 0xb5, 0x5e, 0x31, 0x27, 0x15, 0xf1, 0x2e, 0x2c, 0x32, 0xdd, 0x92, 0x30,
-	0x5f, 0x4f, 0x15, 0xb7, 0xca, 0x2d, 0x94, 0x9f, 0x20, 0x58, 0xeb, 0xa5, 0x35, 0xda, 0x45, 0x7a,
-	0x43, 0xd3, 0x7a, 0x9b, 0x2f, 0x6b, 0x6f, 0xc0, 0x5a, 0x2f, 0x6b, 0xe7, 0x75, 0xc2, 0xdf, 0x11,
-	0x6c, 0x8d, 0x74, 0xb9, 0x70, 0x39, 0x29, 0x4b, 0x3b, 0xb0, 0x31, 0xd4, 0xea, 0x21, 0x03, 0xb2,
-	0x4d, 0x01, 0x34, 0xab, 0x62, 0x16, 0xf3, 0x77, 0x68, 0xe2, 0x1f, 0x00, 0x1e, 0x35, 0x11, 0x03,
-	0x92, 0x6a, 0x8e, 0x47, 0x10, 0xae, 0xc5, 0xf7, 0x50, 0xbe, 0x44, 0xb0, 0x35, 0xd2, 0xd8, 0x43,
-	0xe1, 0x24, 0xb5, 0x4c, 0x32, 0xae, 0x85, 0x57, 0x87, 0x2b, 0x5e, 0xcb, 0xc5, 0xa9, 0x6a, 0xe9,
-	0xc2, 0x96, 0x4a, 0x38, 0xd0, 0x69, 0x62, 0xfa, 0x16, 0x5c, 0x6f, 0x93, 0x33, 0xed, 0xbc, 0x12,
-	0x6d, 0xb4, 0xc9, 0x59, 0x6b, 0xa4, 0x4a, 0xca, 0x21, 0x6c, 0x8d, 0x0c, 0xdc, 0xc4, 0xed, 0x92,
-	0xa7, 0x8e, 0xc0, 0xea, 0x91, 0x4d, 0xf9, 0xa9, 0x44, 0x27, 0xb5, 0xd3, 0x1c, 0x9c, 0x54, 0xe9,
-	0xc0, 0x5a, 0x7f, 0x1b, 0xc9, 0xe8, 0xde, 0x81, 0x25, 0xfe, 0x76, 0x90, 0x74, 0x2e, 0xe5, 0xdc,
-	0x09, 0x93, 0x24, 0xee, 0xb6, 0x90, 0xc0, 0xdd, 0x4a, 0x0f, 0x20, 0xdb, 0xe3, 0x05, 0xb8, 0x00,
-	0x9b, 0xf5, 0x27, 0x2d, 0xf5, 0x63, 0xad, 0xf5, 0x71, 0xa3, 0xae, 0x7d, 0xf4, 0xa4, 0xd9, 0xa8,
-	0x3f, 0x38, 0x7c, 0x78, 0x58, 0xdf, 0x5f, 0xbb, 0x80, 0xb3, 0x90, 0x69, 0xed, 0xee, 0x1d, 0xd5,
-	0xd7, 0x16, 0xf0, 0x2a, 0xe4, 0xf6, 0x77, 0x5b, 0xbb, 0x5a, 0xb3, 0xa5, 0xd6, 0x77, 0x1f, 0xaf,
-	0x2d, 0x56, 0x5f, 0xde, 0x84, 0x1c, 0x27, 0xa8, 0x92, 0x47, 0xe2, 0x5f, 0x21, 0xb8, 0x3c, 0xc4,
-	0x2c, 0xf1, 0x37, 0x67, 0x7b, 0x08, 0x14, 0xee, 0x4e, 0x4f, 0x61, 0x45, 0xea, 0x14, 0xe5, 0xc7,
-	0xff, 0xf8, 0xf7, 0xcf, 0x17, 0x6e, 0x2a, 0xd7, 0x7a, 0x0f, 0x2b, 0x69, 0x57, 0x0b, 0xdf, 0x7b,
-	0x35, 0x54, 0xc2, 0x7f, 0x46, 0x90, 0x1b, 0xe0, 0xad, 0xf8, 0x1b, 0x93, 0x37, 0x1b, 0xa5, 0xb9,
-	0x85, 0xb4, 0xbc, 0x56, 0x69, 0x0a, 0x48, 0x8f, 0xab, 0xfb, 0x3d, 0x48, 0x3f, 0x12, 0x4c, 0xb7,
-	0xcc, 0x9b, 0xef, 0x9e, 0x7c, 0x3b, 0xd0, 0x4a, 0xa9, 0xe2, 0x78, 0x46, 0xf8, 0xe4, 0xad, 0x94,
-	0x2a, 0x42, 0xe3, 0x20, 0xf0, 0x3a, 0x7e, 0xf4, 0x65, 0x13, 0x5a, 0x29, 0x7d, 0x5e, 0x93, 0x2c,
-	0xf9, 0xb7, 0x08, 0x96, 0x23, 0xa6, 0x8b, 0x77, 0x26, 0x43, 0x89, 0xb1, 0xe2, 0xf4, 0xe8, 0x1f,
-	0x0a, 0xf4, 0xef, 0xe3, 0xfb, 0x7d, 0xf4, 0xb3, 0xe0, 0xc6, 0x3f, 0x45, 0x90, 0x1b, 0xe0, 0xdc,
-	0x69, 0x92, 0x3e, 0x4a, 0xd1, 0xd3, 0xc3, 0xfe, 0xaa, 0x80, 0x7d, 0x1d, 0xf7, 0xfb, 0x40, 0x62,
-	0xa9, 0x39, 0xc2, 0x2b, 0xfe, 0x1b, 0x82, 0xf5, 0x91, 0xcb, 0x03, 0xd7, 0x26, 0xfb, 0x1f, 0xc7,
-	0xab, 0x0a, 0xd3, 0xb1, 0x0c, 0xe5, 0x91, 0x40, 0x58, 0x57, 0xee, 0xf4, 0x13, 0x1b, 0x1e, 0x27,
-	0x63, 0x52, 0xfb, 0x79, 0x65, 0xe0, 0x64, 0xa6, 0xb5, 0x21, 0x9e, 0x83, 0x7f, 0x87, 0xe0, 0xca,
-	0x30, 0x85, 0xc2, 0x77, 0x53, 0x35, 0xc5, 0xfc, 0x71, 0xdc, 0x13, 0x71, 0xdc, 0xc5, 0x77, 0xd2,
-	0x35, 0xc8, 0x60, 0x10, 0xbc, 0x2f, 0xfe, 0x89, 0x60, 0x7d, 0xe4, 0xd6, 0x4b, 0x53, 0x87, 0x71,
-	0x1c, 0x70, 0x5a, 0xfc, 0xdf, 0x17, 0xf8, 0xd5, 0xea, 0x5e, 0x1f, 0xff, 0x60, 0x6a, 0xcb, 0x53,
-	0x04, 0x13, 0x2b, 0xca, 0x17, 0x08, 0xd6, 0x47, 0x6e, 0xa3, 0x34, 0xa1, 0x8d, 0xe3, 0x8c, 0x85,
-	0xcd, 0x91, 0x5b, 0xb7, 0xee, 0xfa, 0xac, 0x1b, 0xd5, 0xa0, 0x34, 0x63, 0x0d, 0xfe, 0x8b, 0x60,
-	0x33, 0x99, 0x48, 0xe1, 0xf7, 0x66, 0x18, 0x88, 0xc1, 0x0b, 0xb7, 0x30, 0x03, 0x07, 0x51, 0x3e,
-	0x11, 0xe1, 0xb4, 0x94, 0xfb, 0x29, 0x47, 0x23, 0x1e, 0x50, 0xf8, 0x17, 0x2d, 0x5a, 0x4b, 0x60,
-	0x46, 0x22, 0xd6, 0x64, 0x96, 0x95, 0x26, 0xd6, 0x73, 0xf9, 0xd9, 0x3c, 0xb1, 0x56, 0xef, 0xcf,
-	0x52, 0x3a, 0x19, 0x28, 0x6f, 0xbd, 0xa4, 0x58, 0xff, 0x85, 0x60, 0x33, 0x99, 0x7d, 0xa5, 0x89,
-	0xf5, 0x5c, 0xde, 0x36, 0x53, 0xac, 0x0d, 0x11, 0xeb, 0x77, 0x94, 0xfa, 0x9c, 0xb1, 0x06, 0x02,
-	0x19, 0xbf, 0xca, 0x7f, 0x8f, 0x60, 0x33, 0x99, 0xf0, 0xa5, 0x89, 0xf0, 0x5c, 0xaa, 0x38, 0x76,
-	0xd8, 0xe4, 0x8d, 0x58, 0x9a, 0xb3, 0x62, 0xf8, 0x0f, 0x08, 0xb2, 0xbd, 0xd9, 0xc1, 0xd5, 0x29,
-	0x06, 0x2d, 0x42, 0x98, 0x8e, 0x19, 0x2a, 0xaa, 0x00, 0x7c, 0x34, 0x98, 0xf6, 0xf3, 0xc7, 0x69,
-	0xdc, 0x25, 0x2e, 0xfe, 0xa2, 0x5d, 0x13, 0x0f, 0xbc, 0x3f, 0x22, 0xc8, 0xf6, 0x86, 0x21, 0x0d,
-	0xf8, 0xf8, 0xdb, 0x32, 0x2d, 0xf8, 0xef, 0x0a, 0xf0, 0x8d, 0xea, 0xe1, 0xd0, 0xf1, 0x3c, 0x0b,
-	0x77, 0x12, 0xe8, 0x79, 0xfb, 0x88, 0x00, 0xbe, 0x40, 0x90, 0xed, 0xd5, 0x3f, 0x4d, 0x00, 0xf1,
-	0x27, 0xe9, 0xd8, 0xfe, 0x78, 0x2c, 0x10, 0x1f, 0x94, 0xea, 0x73, 0x31, 0xa6, 0x08, 0x2d, 0xfe,
-	0x13, 0x82, 0xe5, 0xe8, 0x85, 0x90, 0x86, 0xe9, 0xc5, 0x1e, 0x2d, 0x69, 0x06, 0x35, 0xfe, 0x00,
-	0x89, 0x42, 0xc0, 0xaf, 0xa6, 0x63, 0xf0, 0x2f, 0x10, 0xac, 0x34, 0x09, 0x3b, 0xd4, 0xdd, 0x86,
-	0xf8, 0x95, 0x02, 0x2b, 0x11, 0x26, 0x5b, 0x77, 0xcb, 0x2f, 0x38, 0x97, 0xef, 0x0b, 0x23, 0xdc,
-	0x1b, 0x31, 0x9d, 0x50, 0xaa, 0x3c, 0x15, 0xd0, 0x1e, 0x29, 0x0f, 0xfb, 0xd0, 0xa2, 0x3f, 0x98,
-	0xa6, 0xbd, 0xa5, 0xe9, 0xc0, 0x6e, 0xfc, 0x10, 0xe1, 0xf0, 0x0e, 0xce, 0x83, 0x77, 0xf0, 0x7f,
-	0x85, 0x67, 0xc5, 0xe0, 0xfd, 0x05, 0x01, 0x6e, 0x11, 0x2a, 0x16, 0x49, 0xe0, 0xda, 0x94, 0x72,
-	0x43, 0xbc, 0x1d, 0x03, 0x30, 0xaa, 0x12, 0x41, 0x7d, 0x2b, 0x85, 0xa6, 0x2c, 0xfc, 0xf7, 0x04,
-	0xfc, 0xa7, 0xca, 0xd1, 0xec, 0xf0, 0xd9, 0x88, 0xf7, 0x1a, 0x2a, 0x15, 0x9e, 0xfc, 0x75, 0xb7,
-	0x30, 0xd8, 0x7a, 0x21, 0x22, 0xdd, 0xb7, 0x69, 0xd9, 0xf0, 0xdc, 0x2f, 0x77, 0xcb, 0x27, 0x8c,
-	0xf9, 0xb4, 0x56, 0xa9, 0x9c, 0x9d, 0x9d, 0xc5, 0x84, 0x15, 0xbd, 0xc3, 0x4e, 0xc2, 0x5f, 0xce,
-	0x6e, 0xf3, 0x6d, 0x9e, 0x79, 0x81, 0xbb, 0xe7, 0xc3, 0x4d, 0xc3, 0x73, 0xc7, 0xb6, 0x76, 0x03,
-	0x7d, 0xf2, 0x48, 0xca, 0x2c, 0xcf, 0xd1, 0xdb, 0x56, 0xd9, 0x0b, 0xac, 0x8a, 0x45, 0xda, 0x62,
-	0x56, 0x2b, 0xfd, 0x0d, 0xc6, 0xff, 0x22, 0xf7, 0xee, 0xc0, 0xda, 0x4b, 0x84, 0x8e, 0x2f, 0x0a,
-	0xd3, 0xb7, 0xff, 0x17, 0x00, 0x00, 0xff, 0xff, 0x96, 0xae, 0x5d, 0x62, 0xfd, 0x1c, 0x00, 0x00,
+	// 3059 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x5b, 0x4d, 0x6c, 0x1b, 0xc7,
+	0x15, 0xce, 0x50, 0x96, 0x2d, 0x3d, 0xca, 0x96, 0x34, 0x8e, 0x24, 0x9a, 0x89, 0x1d, 0x65, 0xdd,
+	0x24, 0x8a, 0x6c, 0x93, 0x31, 0x13, 0xc7, 0x0d, 0x1d, 0x3b, 0x5e, 0x5a, 0x94, 0xac, 0xc4, 0xb6,
+	0x94, 0x15, 0x9d, 0x22, 0x8e, 0x01, 0x62, 0x45, 0x8e, 0xd6, 0x1b, 0x93, 0x5c, 0x6a, 0x77, 0x69,
+	0x47, 0x31, 0x0c, 0x04, 0x09, 0xe0, 0x02, 0x45, 0x0d, 0xa4, 0xff, 0x45, 0x51, 0xa4, 0x3d, 0xb4,
+	0x28, 0xe0, 0x43, 0x0f, 0x2d, 0x8a, 0xde, 0xda, 0x5e, 0xda, 0x43, 0x8a, 0x02, 0x45, 0x73, 0x63,
+	0x51, 0x20, 0x87, 0xa0, 0x07, 0x03, 0x2d, 0xd0, 0xa2, 0x87, 0x22, 0x97, 0x16, 0x3b, 0x33, 0x4b,
+	0xce, 0xee, 0x92, 0xe2, 0x90, 0x52, 0x4e, 0x22, 0x67, 0xde, 0xef, 0x37, 0xef, 0xbd, 0x7d, 0xf3,
+	0x96, 0x82, 0x8c, 0x61, 0x59, 0x46, 0x85, 0xa4, 0x4b, 0x15, 0xab, 0x51, 0x4e, 0x97, 0x75, 0x57,
+	0x2f, 0xe9, 0xae, 0x5e, 0xb1, 0x8c, 0xf4, 0xad, 0x93, 0xeb, 0xc4, 0xd5, 0x4f, 0x8a, 0x6b, 0xa9,
+	0xba, 0x6d, 0xb9, 0x16, 0x9e, 0x65, 0x3c, 0x29, 0xca, 0x93, 0x12, 0xf7, 0x39, 0x4f, 0xf2, 0x71,
+	0x2e, 0x55, 0xaf, 0x9b, 0x69, 0xbd, 0x56, 0xb3, 0x5c, 0xdd, 0x35, 0xad, 0x9a, 0xc3, 0xf8, 0x93,
+	0x33, 0xc2, 0x6e, 0xa9, 0x62, 0x92, 0x9a, 0xcb, 0x37, 0x9e, 0x10, 0x36, 0x36, 0x4c, 0x52, 0x29,
+	0x17, 0xd7, 0xc9, 0x0d, 0xfd, 0x96, 0x69, 0xd9, 0x9c, 0xe0, 0x90, 0x40, 0x60, 0x13, 0xc7, 0x6a,
+	0xd8, 0x25, 0xc2, 0xb7, 0x4e, 0xf4, 0x74, 0xa4, 0x64, 0x55, 0xab, 0x56, 0x8d, 0x93, 0x9f, 0xee,
+	0x49, 0x6e, 0x94, 0x9c, 0xe2, 0x86, 0x59, 0x21, 0x0e, 0x71, 0x8b, 0x4e, 0x9d, 0x94, 0xa4, 0xf5,
+	0x38, 0xa5, 0x1b, 0xa4, 0xaa, 0xcb, 0x93, 0x13, 0xdd, 0x2e, 0xdd, 0xe0, 0xe4, 0x27, 0x7b, 0x92,
+	0xbb, 0xfa, 0x7a, 0x85, 0x88, 0x06, 0x1d, 0x93, 0x60, 0x31, 0x1c, 0x79, 0xf9, 0x66, 0x95, 0x38,
+	0xae, 0x5e, 0xad, 0xfb, 0x2c, 0x47, 0x38, 0x8b, 0xa9, 0x57, 0xd3, 0xb7, 0x4e, 0x7a, 0x7f, 0x8a,
+	0x75, 0xab, 0x62, 0x96, 0xb6, 0xf8, 0x7e, 0x32, 0xb8, 0x1f, 0xd8, 0x7b, 0x8c, 0xef, 0xd1, 0x6f,
+	0xeb, 0x8d, 0x8d, 0x34, 0xa9, 0xd6, 0x5d, 0x7f, 0x73, 0x36, 0xbc, 0xc9, 0x8e, 0xbc, 0xaa, 0x3b,
+	0x37, 0x19, 0x85, 0xf2, 0xd5, 0x21, 0x78, 0x74, 0x8d, 0xc2, 0x73, 0x81, 0x59, 0xa9, 0x91, 0xcd,
+	0x06, 0x71, 0x5c, 0xfc, 0x15, 0x18, 0x76, 0x4a, 0x56, 0x9d, 0x24, 0xf6, 0xce, 0xa2, 0xb9, 0x78,
+	0xe6, 0xe5, 0x54, 0xaf, 0x88, 0x4c, 0x75, 0x12, 0x93, 0x5a, 0xf3, 0x64, 0xe4, 0x86, 0x3e, 0x55,
+	0x63, 0x1a, 0x93, 0x87, 0x0f, 0xc1, 0xf0, 0x66, 0x83, 0xd8, 0x5b, 0x09, 0x34, 0x8b, 0xe6, 0x46,
+	0xf9, 0x16, 0x5d, 0xc1, 0x8f, 0xc1, 0x68, 0x5d, 0x37, 0x48, 0xd1, 0x31, 0xdf, 0x25, 0x89, 0xd8,
+	0x2c, 0x9a, 0x1b, 0xd6, 0x46, 0xbc, 0x85, 0x35, 0xf3, 0x5d, 0x82, 0x15, 0x00, 0xba, 0xe9, 0x5a,
+	0x37, 0x49, 0x2d, 0x31, 0xe4, 0x33, 0x23, 0x8d, 0xf2, 0x14, 0xbc, 0x55, 0x7c, 0x08, 0x46, 0x2c,
+	0xbb, 0x4c, 0xec, 0xe2, 0xfa, 0x56, 0x62, 0xd8, 0xa3, 0xd0, 0xf6, 0xd1, 0xef, 0xb9, 0xad, 0xe4,
+	0x47, 0x08, 0x86, 0xa9, 0x31, 0xf8, 0x69, 0x18, 0x37, 0x6b, 0xa5, 0x4a, 0xa3, 0x4c, 0x8a, 0x96,
+	0x6d, 0x14, 0xcd, 0xb2, 0x93, 0x88, 0xcd, 0x0e, 0xcd, 0x8d, 0x6a, 0xfb, 0xf9, 0xf2, 0x8a, 0x6d,
+	0x2c, 0x97, 0x1d, 0x9c, 0x82, 0x83, 0x3e, 0x5d, 0xdd, 0xb6, 0xde, 0x26, 0x25, 0x97, 0xd2, 0x0e,
+	0x51, 0xda, 0x49, 0xbe, 0xb5, 0xca, 0x76, 0x3c, 0xfa, 0xb3, 0xf0, 0x98, 0x4f, 0x6f, 0x94, 0xea,
+	0xc5, 0x7a, 0x63, 0xbd, 0x62, 0x96, 0x8a, 0x1e, 0x52, 0x0e, 0x71, 0x9d, 0xc4, 0xbe, 0x59, 0x34,
+	0x37, 0xa2, 0x25, 0x38, 0xc9, 0x52, 0xa9, 0xbe, 0x4a, 0x09, 0x16, 0xf8, 0xbe, 0xf2, 0x21, 0x82,
+	0xa9, 0x10, 0x84, 0x4e, 0xdd, 0xaa, 0x39, 0x04, 0xaf, 0xc0, 0x3e, 0x9b, 0x38, 0x8d, 0x8a, 0xeb,
+	0x24, 0xd0, 0xec, 0xd0, 0x5c, 0x3c, 0x73, 0xaa, 0xef, 0xc3, 0xf0, 0xb8, 0x35, 0x5f, 0x8a, 0x87,
+	0x40, 0x8d, 0xbc, 0xe3, 0x16, 0xc3, 0x78, 0x6a, 0xfb, 0xbd, 0xe5, 0x55, 0x1f, 0x4e, 0xa5, 0x89,
+	0x60, 0xe6, 0x82, 0x4d, 0x74, 0x97, 0xe4, 0x6b, 0xae, 0xbd, 0xb5, 0x64, 0x5b, 0x8d, 0xba, 0x1f,
+	0x1f, 0x79, 0xd8, 0x5b, 0xd7, 0x6d, 0x52, 0x73, 0xf9, 0x39, 0x9e, 0xf8, 0x54, 0x8d, 0x7d, 0xae,
+	0x3e, 0x83, 0x9f, 0x12, 0xad, 0x61, 0x66, 0xea, 0x75, 0xd3, 0x49, 0x95, 0xac, 0x6a, 0x5a, 0x90,
+	0xc2, 0x99, 0xf1, 0xb3, 0x70, 0x80, 0x78, 0xab, 0x45, 0xc3, 0x5b, 0x2e, 0x9a, 0xe5, 0xf6, 0xc9,
+	0xc6, 0xb4, 0x31, 0xd2, 0x62, 0x58, 0x2e, 0xe3, 0xcb, 0x10, 0x17, 0x48, 0x69, 0x7c, 0xc4, 0x33,
+	0xc7, 0x7b, 0x43, 0x21, 0x68, 0x85, 0xb6, 0x40, 0xe5, 0x01, 0x82, 0x99, 0xab, 0xf5, 0x72, 0x47,
+	0xe7, 0xb4, 0xa0, 0x2a, 0xd4, 0xbf, 0x2a, 0xe6, 0x80, 0xa0, 0x0f, 0x9f, 0x81, 0x78, 0x83, 0xaa,
+	0xa3, 0xe9, 0xc7, 0xcd, 0x4f, 0xfa, 0x32, 0xfd, 0x0c, 0x4d, 0x2d, 0x7a, 0x19, 0x7a, 0x59, 0x77,
+	0x6e, 0x6a, 0xc0, 0xc8, 0xbd, 0xcf, 0xca, 0x37, 0x11, 0x3c, 0xba, 0x44, 0xdc, 0xa8, 0xa5, 0x2a,
+	0xec, 0xa9, 0xe9, 0x55, 0x12, 0x3c, 0x04, 0x90, 0x3c, 0x04, 0xca, 0x8a, 0x4f, 0xc3, 0xa8, 0x4d,
+	0xf4, 0xb2, 0xac, 0x59, 0x23, 0x1e, 0x31, 0x35, 0xea, 0x36, 0xcc, 0x2c, 0x90, 0x0a, 0xe9, 0x04,
+	0xe0, 0x2e, 0x98, 0x75, 0x08, 0x86, 0x37, 0x2c, 0xbb, 0xc4, 0x0a, 0xc1, 0x08, 0x4b, 0x75, 0xb6,
+	0xa2, 0xfc, 0x14, 0xc1, 0xf4, 0x25, 0xd3, 0x11, 0xe0, 0x70, 0x7a, 0x84, 0x25, 0xf4, 0x19, 0x96,
+	0xb3, 0x91, 0x4a, 0xc4, 0x0c, 0xe8, 0xab, 0x1c, 0x79, 0xa7, 0x36, 0x13, 0xb1, 0xb3, 0x95, 0xd4,
+	0x63, 0x42, 0x88, 0xf9, 0x99, 0xdd, 0x5f, 0x38, 0xc7, 0xdb, 0xe1, 0xd5, 0x31, 0xa9, 0x63, 0x9d,
+	0x92, 0xfa, 0xb7, 0x08, 0xb0, 0x90, 0xd4, 0xbb, 0x0c, 0xdc, 0x11, 0x18, 0x61, 0x6e, 0x05, 0x33,
+	0x79, 0x1f, 0x5d, 0x5c, 0x2e, 0xe3, 0x1c, 0x0c, 0xd3, 0x8f, 0x3c, 0xd0, 0x9e, 0x91, 0xf4, 0x97,
+	0x3f, 0x26, 0x28, 0xab, 0xf2, 0x1d, 0x04, 0x58, 0xc8, 0x5c, 0xdf, 0x83, 0x96, 0x68, 0x34, 0xb0,
+	0xe8, 0x9d, 0x25, 0xa9, 0x06, 0x58, 0xc8, 0x07, 0xdf, 0xac, 0x97, 0x03, 0xa9, 0x30, 0x47, 0x61,
+	0x55, 0x60, 0xb6, 0x17, 0xac, 0x2c, 0x0b, 0x94, 0x15, 0x18, 0xf7, 0xf3, 0x7e, 0x77, 0x04, 0x3a,
+	0x80, 0x2f, 0x59, 0xd6, 0xcd, 0x46, 0x3d, 0x20, 0xf3, 0x59, 0x18, 0xaf, 0x98, 0xb5, 0x9b, 0xa4,
+	0x5c, 0xf4, 0x7b, 0x3e, 0x26, 0xfe, 0xe2, 0x23, 0xda, 0x01, 0xb6, 0xa1, 0xf1, 0x75, 0x7c, 0x14,
+	0xc6, 0x9c, 0xcd, 0x4a, 0x9b, 0x6e, 0x88, 0xd3, 0xc5, 0x9d, 0xcd, 0x8a, 0x4f, 0x94, 0xdb, 0x0f,
+	0x71, 0x57, 0xb7, 0x0d, 0xe2, 0x16, 0xa9, 0xd2, 0xbf, 0x8e, 0xc0, 0x30, 0xd5, 0x87, 0xcf, 0x05,
+	0x8c, 0x9f, 0xef, 0xbb, 0x2a, 0x3c, 0x13, 0x35, 0x74, 0x94, 0x46, 0x79, 0xd8, 0x4c, 0x15, 0xf6,
+	0xb8, 0x5b, 0x75, 0x96, 0xbc, 0x07, 0x32, 0xc7, 0x24, 0x83, 0xa1, 0xb0, 0x55, 0x27, 0x17, 0x1f,
+	0xd1, 0x28, 0x2b, 0x7e, 0x0e, 0x0e, 0x36, 0x1c, 0x62, 0xd3, 0x4e, 0xd0, 0xdc, 0x30, 0x49, 0xb9,
+	0x48, 0x25, 0x4e, 0x70, 0x87, 0x27, 0xbd, 0xcd, 0x35, 0x7f, 0xcf, 0xe3, 0xc4, 0x1b, 0x30, 0x69,
+	0xd6, 0x5c, 0x62, 0xd8, 0xba, 0x4b, 0xca, 0x45, 0x67, 0xcb, 0x71, 0x49, 0x35, 0x31, 0x49, 0x2d,
+	0xc8, 0xf4, 0xb6, 0x60, 0xb9, 0xc5, 0xba, 0x46, 0x39, 0xbd, 0xc8, 0x1c, 0xba, 0x88, 0xb4, 0x09,
+	0x33, 0xb4, 0x81, 0x5f, 0x80, 0xa9, 0x90, 0x65, 0x5c, 0x17, 0xa6, 0xb6, 0x21, 0xed, 0x60, 0xc0,
+	0x36, 0xce, 0x75, 0x1d, 0x26, 0xc2, 0x1d, 0x37, 0xef, 0xee, 0x9e, 0xeb, 0x6d, 0xdc, 0x52, 0xc9,
+	0x59, 0x64, 0x8c, 0x9e, 0xd8, 0x8b, 0x31, 0xed, 0x80, 0x11, 0x58, 0xc1, 0x04, 0x0e, 0xae, 0x9b,
+	0x06, 0x6d, 0xe4, 0x8a, 0xed, 0x0e, 0x3a, 0x31, 0x46, 0x15, 0x3c, 0xdf, 0x5b, 0x41, 0xce, 0x34,
+	0x5e, 0xf7, 0x98, 0x0b, 0x1e, 0x2f, 0xd7, 0x31, 0xe9, 0x4b, 0x6c, 0x2d, 0xe2, 0x77, 0x20, 0xd9,
+	0x52, 0x43, 0x13, 0xd5, 0xb9, 0xa1, 0xdb, 0x65, 0x0f, 0x01, 0x4f, 0xdb, 0x38, 0xd5, 0xf6, 0x92,
+	0xbc, 0xb6, 0x05, 0xdd, 0x25, 0x6b, 0x4c, 0x02, 0xd7, 0x39, 0xe3, 0x8b, 0x0f, 0x6d, 0xe1, 0x27,
+	0x61, 0xac, 0x6c, 0x3a, 0xf5, 0x8a, 0xbe, 0x45, 0x83, 0x9a, 0xb7, 0x4c, 0x71, 0xbe, 0x76, 0xc5,
+	0x8b, 0xce, 0x59, 0x88, 0x97, 0x89, 0x53, 0xb2, 0xcd, 0xba, 0x77, 0x19, 0x4b, 0xec, 0xe1, 0x14,
+	0xed, 0x25, 0x7c, 0x1e, 0xf6, 0xb2, 0xcb, 0x0b, 0xed, 0x4f, 0xe3, 0x99, 0x39, 0x89, 0x56, 0x8e,
+	0xd2, 0x6b, 0x9c, 0x0f, 0x6f, 0x42, 0x82, 0x85, 0x38, 0x3f, 0xf3, 0x62, 0xfb, 0x3a, 0x41, 0x7b,
+	0xcc, 0xb8, 0x4c, 0xa8, 0xb1, 0x88, 0x28, 0xb4, 0x38, 0x69, 0xa8, 0x69, 0xd3, 0x4c, 0x70, 0x78,
+	0x33, 0xfb, 0xce, 0x43, 0xb5, 0xd1, 0xbb, 0xc0, 0xe0, 0xd7, 0x79, 0x9b, 0xec, 0xa4, 0xef, 0xf0,
+	0x4f, 0x77, 0xd3, 0x15, 0xab, 0xc4, 0x2e, 0xa6, 0xe9, 0x3b, 0xfe, 0xc7, 0xbb, 0x69, 0xe1, 0xb1,
+	0x95, 0xbe, 0x23, 0x3c, 0x05, 0xd9, 0x8e, 0x49, 0xfc, 0xd5, 0xbb, 0xb9, 0x31, 0x60, 0x2d, 0x14,
+	0xcd, 0xbc, 0xdc, 0x08, 0xec, 0x65, 0x3e, 0xe7, 0xe2, 0x30, 0xea, 0xad, 0xd0, 0x43, 0x57, 0x7e,
+	0x1f, 0x03, 0x68, 0x17, 0x0a, 0x8c, 0xc5, 0x12, 0xc3, 0xcb, 0x46, 0xf8, 0xec, 0x62, 0x3d, 0xcf,
+	0x6e, 0x28, 0x7a, 0x76, 0x16, 0xcc, 0x78, 0x18, 0x14, 0x39, 0x08, 0x22, 0xf0, 0x7b, 0x76, 0x06,
+	0xfc, 0x94, 0x47, 0xca, 0x9b, 0x75, 0x01, 0xf7, 0xea, 0x43, 0xf5, 0x6d, 0xc9, 0xf2, 0x88, 0xd5,
+	0x1d, 0x83, 0xaf, 0xfc, 0x1d, 0x41, 0x82, 0x75, 0x06, 0x05, 0xdd, 0x28, 0x90, 0x6a, 0xbd, 0xa2,
+	0xbb, 0xc4, 0x7f, 0x42, 0x2c, 0x86, 0xfa, 0x83, 0x14, 0x7d, 0xee, 0xcc, 0xe1, 0xa7, 0xb7, 0x31,
+	0x4f, 0x14, 0xe3, 0x37, 0x08, 0xc7, 0x60, 0xdc, 0xd5, 0x8d, 0xa2, 0xcb, 0xd7, 0x43, 0x7d, 0xc2,
+	0x7e, 0xb7, 0xcd, 0xb2, 0x5c, 0xc6, 0x57, 0x61, 0x4c, 0x24, 0xe6, 0xcf, 0xe3, 0x13, 0xbd, 0x61,
+	0x16, 0x34, 0x33, 0xc1, 0x71, 0x41, 0xb0, 0xf2, 0x16, 0x4c, 0x2d, 0x11, 0xb7, 0x83, 0x93, 0xb9,
+	0xc0, 0xd3, 0x89, 0xbb, 0x08, 0xb2, 0x2e, 0xb2, 0x07, 0xec, 0xcf, 0x11, 0x24, 0x58, 0x77, 0xd2,
+	0x41, 0x41, 0xd8, 0x21, 0xb4, 0x2b, 0x0e, 0xed, 0xac, 0x6d, 0xd9, 0x82, 0x04, 0x6b, 0x5b, 0xbe,
+	0x18, 0x40, 0x3a, 0x34, 0xf2, 0x31, 0xbf, 0x91, 0xff, 0x10, 0xc1, 0x44, 0x2b, 0xe2, 0x7c, 0x9d,
+	0xe7, 0x42, 0x91, 0xf6, 0x34, 0xd5, 0x3a, 0x0b, 0x47, 0xb6, 0xd7, 0xda, 0x8a, 0xb0, 0x97, 0x61,
+	0xc8, 0xd5, 0x0d, 0x0e, 0xc2, 0x53, 0x52, 0xd0, 0x32, 0xa3, 0x3c, 0x36, 0xe5, 0x3e, 0x82, 0x89,
+	0xd6, 0xf1, 0xb5, 0x5b, 0x2e, 0x2a, 0x12, 0x0d, 0x24, 0x72, 0x67, 0xa7, 0x73, 0x05, 0x26, 0x5a,
+	0xa7, 0xe3, 0x9b, 0x93, 0x0d, 0x9c, 0x0a, 0xc7, 0x07, 0xf7, 0xc2, 0x87, 0x85, 0xe7, 0xbd, 0x18,
+	0x1c, 0x8e, 0x24, 0x39, 0x55, 0xdd, 0x23, 0xd3, 0xa1, 0xdf, 0x4c, 0x7f, 0x11, 0xa6, 0x02, 0x99,
+	0xce, 0x66, 0x4f, 0x66, 0x99, 0x15, 0x5f, 0x86, 0x0f, 0x76, 0x43, 0x46, 0x2c, 0x97, 0x31, 0x01,
+	0x1c, 0xe5, 0xa3, 0x45, 0x42, 0xaa, 0xc2, 0x86, 0xdd, 0x62, 0x8a, 0x26, 0xc2, 0x8a, 0x94, 0x6f,
+	0xc4, 0xe0, 0x70, 0x24, 0x4f, 0x03, 0x40, 0x2c, 0x05, 0x60, 0x7e, 0x9e, 0xc2, 0x70, 0x02, 0x8e,
+	0xc9, 0xc1, 0xc0, 0x24, 0xb1, 0x0c, 0xe8, 0xec, 0x51, 0x6c, 0x97, 0x3d, 0xc2, 0xe7, 0x83, 0x71,
+	0x36, 0xd4, 0x2b, 0xce, 0xd8, 0x7d, 0x55, 0x0c, 0xb6, 0x9f, 0x21, 0x38, 0xac, 0x11, 0xcf, 0xe6,
+	0x2f, 0x1c, 0x93, 0xb3, 0x70, 0xa8, 0x46, 0x6e, 0x17, 0x7b, 0x46, 0xc8, 0x54, 0x8d, 0xdc, 0x2e,
+	0x44, 0x82, 0x44, 0xf9, 0x00, 0xc1, 0xe1, 0x48, 0xd5, 0xfa, 0x62, 0x2c, 0xdd, 0xa6, 0x7e, 0xdd,
+	0x47, 0x30, 0xee, 0x5d, 0xf0, 0x0b, 0xba, 0xe1, 0xf4, 0x28, 0x5f, 0x58, 0xb6, 0x7c, 0x6d, 0x3b,
+	0x04, 0x3d, 0x1c, 0x9d, 0x3a, 0x88, 0x03, 0x87, 0x06, 0x4c, 0xb4, 0xcd, 0xe1, 0x83, 0x86, 0x97,
+	0x60, 0x8f, 0xab, 0x1b, 0xfe, 0x80, 0x41, 0xae, 0x78, 0x69, 0x94, 0x45, 0x7a, 0xa4, 0xf0, 0x67,
+	0x04, 0xd8, 0x9f, 0x73, 0x98, 0x64, 0xb7, 0x67, 0x31, 0x3b, 0x00, 0x24, 0x38, 0xdb, 0xda, 0xd3,
+	0xc7, 0x6c, 0xeb, 0x3d, 0x04, 0x07, 0x03, 0x2e, 0x71, 0x34, 0x55, 0xd8, 0xc7, 0x7b, 0x54, 0x0e,
+	0xa8, 0xec, 0x98, 0x41, 0xf3, 0xf9, 0x64, 0x51, 0x9d, 0x7f, 0x0b, 0x46, 0x5b, 0x77, 0x52, 0x9c,
+	0x84, 0xe9, 0xfc, 0x95, 0x82, 0xf6, 0x66, 0xb1, 0xf0, 0xe6, 0x6a, 0xbe, 0x78, 0xf5, 0xca, 0xda,
+	0x6a, 0xfe, 0xc2, 0xf2, 0xe2, 0x72, 0x7e, 0x61, 0xe2, 0x11, 0x3c, 0x0a, 0xc3, 0x05, 0x35, 0x77,
+	0x29, 0x3f, 0x11, 0xf3, 0x3e, 0x5e, 0x5e, 0x59, 0xc8, 0x5f, 0x9a, 0x18, 0xc6, 0xe3, 0x10, 0x5f,
+	0x50, 0x0b, 0x6a, 0x71, 0xad, 0xa0, 0xe5, 0xd5, 0xcb, 0x13, 0x43, 0x38, 0x0e, 0xfb, 0x16, 0x97,
+	0x2f, 0xe5, 0xd7, 0xf2, 0x85, 0x89, 0x3d, 0x99, 0x1f, 0x65, 0x20, 0xbe, 0xd0, 0x6e, 0x3a, 0xf1,
+	0x2f, 0x10, 0xec, 0x0f, 0xcc, 0x8c, 0xf1, 0x8b, 0x83, 0x4d, 0xfc, 0x93, 0xa7, 0xfb, 0x1f, 0x4e,
+	0x53, 0x68, 0x95, 0xe7, 0x9a, 0x6a, 0x9c, 0xbe, 0x22, 0x38, 0x4e, 0xaf, 0x5f, 0xef, 0x7f, 0xf2,
+	0xd9, 0xb7, 0x62, 0x8f, 0x2b, 0x33, 0xed, 0x97, 0x4b, 0x8c, 0x3e, 0xcb, 0xde, 0xe6, 0x64, 0xd1,
+	0x3c, 0x7e, 0xd8, 0x6a, 0x1f, 0x84, 0x46, 0x58, 0xe2, 0xf2, 0xd7, 0x65, 0xa6, 0x9d, 0xec, 0x6b,
+	0xfa, 0xa6, 0x54, 0x9b, 0xea, 0x93, 0x2c, 0x44, 0x8f, 0x07, 0x47, 0xd8, 0xe2, 0x57, 0xea, 0xc5,
+	0x05, 0xe5, 0x85, 0x96, 0x17, 0x77, 0x18, 0xcb, 0xd9, 0x56, 0xbb, 0x3e, 0x2f, 0xb4, 0xe9, 0xf3,
+	0x81, 0xf6, 0x3c, 0x2b, 0x0e, 0xa1, 0xf1, 0xe7, 0xad, 0xc6, 0xa4, 0x3f, 0x67, 0xbb, 0xcc, 0xb8,
+	0xfb, 0x74, 0xf6, 0x6e, 0x53, 0x15, 0xad, 0x69, 0xaa, 0x33, 0xc2, 0xb7, 0xe3, 0xc2, 0x63, 0x87,
+	0x3a, 0xbc, 0x92, 0x39, 0xdf, 0x76, 0x58, 0x20, 0x4c, 0x79, 0x05, 0xb5, 0x8b, 0xeb, 0x81, 0x8b,
+	0xc9, 0xfc, 0xdd, 0xa0, 0xf3, 0x7f, 0x44, 0xb0, 0x3f, 0x30, 0xff, 0x96, 0x09, 0xcf, 0x4e, 0x03,
+	0xf3, 0x3e, 0xdd, 0x2e, 0x34, 0x55, 0xfa, 0x10, 0x68, 0xaa, 0x07, 0xbc, 0x3f, 0xc7, 0x5b, 0xc5,
+	0x84, 0xba, 0xf9, 0x22, 0x16, 0xce, 0x55, 0xde, 0x35, 0xfc, 0x00, 0xf9, 0x4d, 0x5d, 0x7f, 0x47,
+	0xd9, 0x65, 0xda, 0x9e, 0x9c, 0x8e, 0x94, 0xb4, 0x7c, 0xb5, 0xee, 0x6e, 0x29, 0x17, 0xb8, 0xf5,
+	0xcc, 0xd8, 0xf9, 0xc1, 0x8c, 0xfd, 0x13, 0x7f, 0xc6, 0x09, 0x43, 0x6c, 0xfc, 0xe5, 0xde, 0xb6,
+	0x76, 0x9e, 0xcf, 0x27, 0x5f, 0x1a, 0x80, 0x93, 0xd7, 0x87, 0x7c, 0x53, 0xe5, 0x8f, 0x84, 0x28,
+	0xf8, 0xf2, 0x49, 0x85, 0x3f, 0x41, 0x10, 0x17, 0x0a, 0x00, 0x7e, 0xa1, 0xaf, 0x7a, 0xe1, 0xfb,
+	0x21, 0x5b, 0xf6, 0x15, 0xd2, 0x54, 0xa7, 0x02, 0x55, 0xc2, 0xaf, 0x0f, 0xd4, 0x89, 0x25, 0xe5,
+	0x9c, 0xa4, 0x13, 0xa1, 0x63, 0xf1, 0x27, 0x25, 0x59, 0x3e, 0xb8, 0xfe, 0x1b, 0x82, 0xb8, 0x90,
+	0xe9, 0x32, 0x5e, 0x45, 0x47, 0xe8, 0xf2, 0x5e, 0x59, 0x4d, 0x95, 0x29, 0x6e, 0xaa, 0x93, 0xf4,
+	0x6f, 0xa4, 0x04, 0x5c, 0xce, 0x2c, 0x84, 0x4a, 0x80, 0x7c, 0xf2, 0xb7, 0xc6, 0x40, 0xf3, 0x77,
+	0x7d, 0xff, 0x1e, 0x20, 0x88, 0x0b, 0xe1, 0x2f, 0xe3, 0x5f, 0x74, 0x16, 0xdf, 0x35, 0x51, 0x2e,
+	0x8b, 0x89, 0x72, 0x7e, 0xfe, 0xdc, 0x00, 0x89, 0x22, 0xd8, 0x8c, 0x7f, 0x85, 0x60, 0xc4, 0x2f,
+	0x3e, 0xf8, 0xa4, 0x7c, 0xa1, 0xea, 0xfb, 0x18, 0x82, 0x76, 0xe3, 0x9d, 0xda, 0x7d, 0x1f, 0x41,
+	0x5c, 0x78, 0x39, 0x20, 0x03, 0x72, 0xf4, 0x5d, 0x82, 0xbc, 0xf5, 0x4f, 0x50, 0xb3, 0x0f, 0xe1,
+	0xf6, 0x23, 0xde, 0x0f, 0xea, 0x0a, 0x95, 0xea, 0x55, 0xfd, 0xb8, 0xd0, 0x84, 0x49, 0xd9, 0x13,
+	0x69, 0x43, 0x93, 0xa7, 0xfa, 0xe4, 0xe2, 0xe5, 0x66, 0x25, 0x58, 0x6e, 0x02, 0xe8, 0x0e, 0x92,
+	0xa9, 0xf8, 0x5f, 0x08, 0x26, 0x23, 0x37, 0x6f, 0x9c, 0x95, 0x2d, 0x3f, 0xd1, 0xe9, 0x4c, 0xb2,
+	0xbf, 0xb9, 0x91, 0xb2, 0xd9, 0x54, 0x8f, 0xf2, 0x52, 0x14, 0x1a, 0xc1, 0x05, 0xbe, 0x53, 0x77,
+	0xf3, 0xca, 0x29, 0xe9, 0xea, 0x2a, 0x5c, 0x44, 0x9d, 0x6c, 0x60, 0xbe, 0x85, 0x7f, 0x83, 0xe0,
+	0x40, 0x70, 0xd4, 0x86, 0x4f, 0x4b, 0xe5, 0xc3, 0xce, 0xbd, 0x5d, 0x10, 0x73, 0xe3, 0x34, 0x3e,
+	0x25, 0x97, 0x1b, 0xa2, 0x2f, 0x5e, 0x4a, 0x7c, 0x10, 0x83, 0xc9, 0xc8, 0x94, 0x40, 0xe6, 0xd0,
+	0xba, 0x8d, 0x00, 0xfb, 0x75, 0xe3, 0x7d, 0xd4, 0x54, 0x03, 0x98, 0x36, 0xd5, 0x84, 0xf8, 0x35,
+	0x52, 0x78, 0xb5, 0x4c, 0xae, 0xed, 0xaa, 0x48, 0x99, 0xea, 0xc3, 0xef, 0xd0, 0x31, 0xfe, 0x12,
+	0xc1, 0x64, 0xe4, 0xb6, 0x2d, 0x83, 0x42, 0xb7, 0xc1, 0x62, 0xd7, 0x4a, 0xfc, 0x6a, 0x53, 0x05,
+	0xda, 0x69, 0xd1, 0x0b, 0x36, 0x3b, 0xbb, 0xf9, 0x01, 0xcf, 0xee, 0x87, 0x31, 0x98, 0xee, 0x3c,
+	0xea, 0xc2, 0xaf, 0x0c, 0x90, 0x75, 0xe2, 0x74, 0x21, 0x39, 0xc0, 0xd8, 0x46, 0xf9, 0x3a, 0x6a,
+	0xaa, 0xe9, 0x4e, 0x09, 0xe8, 0xcf, 0x3d, 0x3a, 0xac, 0x52, 0x04, 0x0a, 0xf2, 0x5d, 0x42, 0x08,
+	0x03, 0xf6, 0x83, 0x2f, 0x27, 0xdb, 0x61, 0xfe, 0x84, 0x1f, 0xc4, 0x60, 0xba, 0xf3, 0x00, 0x4c,
+	0x06, 0x9e, 0x6d, 0x47, 0x67, 0x03, 0xc1, 0xf3, 0x03, 0xd4, 0x54, 0x67, 0xe8, 0xd9, 0x47, 0x8d,
+	0x6d, 0xaa, 0x47, 0xbb, 0xec, 0x44, 0xe2, 0xbf, 0x90, 0x39, 0x37, 0x48, 0xb8, 0x70, 0xa4, 0xbc,
+	0xd8, 0xef, 0x04, 0xd6, 0x7b, 0x31, 0x98, 0xee, 0x3c, 0x19, 0x93, 0x01, 0x6b, 0xdb, 0x99, 0xda,
+	0x40, 0x60, 0x6d, 0x36, 0xd5, 0x23, 0x14, 0x91, 0xae, 0x43, 0x34, 0x0a, 0xc6, 0xab, 0x4a, 0x7e,
+	0x87, 0x60, 0xd8, 0xd4, 0x74, 0xef, 0xb6, 0xfd, 0x07, 0x04, 0xd3, 0x9d, 0x47, 0x6e, 0x32, 0x10,
+	0x6c, 0x3b, 0xac, 0xeb, 0x5a, 0x0e, 0xd6, 0xa2, 0xe5, 0x40, 0xba, 0x3d, 0xeb, 0xe6, 0x12, 0xbe,
+	0x1f, 0x83, 0xd1, 0x56, 0x76, 0xe3, 0x4c, 0x1f, 0xa5, 0xc0, 0x37, 0x57, 0x6e, 0x8a, 0xa6, 0xfc,
+	0x04, 0x35, 0x55, 0x68, 0x27, 0x3c, 0x35, 0xff, 0x43, 0x24, 0x1e, 0x49, 0x1f, 0x8d, 0x84, 0xd0,
+	0xa8, 0xd1, 0x9f, 0x9b, 0x66, 0x87, 0x5c, 0xdd, 0xb8, 0x96, 0x53, 0xce, 0x0c, 0xd8, 0x96, 0xb4,
+	0x64, 0xe0, 0x1f, 0xc7, 0x60, 0xb4, 0x95, 0xce, 0x32, 0x78, 0x84, 0xdf, 0x8f, 0xc8, 0xe2, 0xf1,
+	0x6b, 0xd4, 0x54, 0x3d, 0x8d, 0x4d, 0x75, 0xdc, 0xd5, 0x8d, 0x48, 0xe6, 0x7e, 0x1f, 0x65, 0x96,
+	0x03, 0x8f, 0xae, 0x41, 0x6e, 0x0c, 0xd4, 0x2f, 0x2f, 0x70, 0x29, 0x3c, 0x8b, 0x99, 0x57, 0x06,
+	0x95, 0x28, 0xca, 0xc1, 0xff, 0x44, 0x30, 0xda, 0x8a, 0x60, 0x19, 0x88, 0xc2, 0xef, 0x6c, 0xba,
+	0x46, 0xf8, 0xb7, 0x91, 0xd8, 0xa7, 0xdc, 0x43, 0xf3, 0xf9, 0x1d, 0x35, 0xf1, 0xbe, 0xd9, 0xd7,
+	0xce, 0xce, 0x9f, 0x19, 0x44, 0x10, 0x67, 0xc7, 0x5f, 0x8b, 0xc1, 0x88, 0x3f, 0x4a, 0x96, 0xb9,
+	0xc2, 0x84, 0xa6, 0xe0, 0x32, 0x35, 0x2d, 0x3c, 0xa9, 0x56, 0xbe, 0x8b, 0x82, 0x2d, 0xf7, 0x3d,
+	0x84, 0x77, 0x27, 0x55, 0xae, 0x9d, 0xc5, 0x3b, 0xc9, 0x12, 0xfc, 0x10, 0xc1, 0xd8, 0x1a, 0x71,
+	0x97, 0xf5, 0xea, 0x2a, 0xfd, 0xe9, 0x35, 0x56, 0x7c, 0xef, 0x4c, 0xbd, 0x9a, 0xba, 0x75, 0x32,
+	0x25, 0x6e, 0xfa, 0x08, 0x4c, 0x85, 0x68, 0xd8, 0xae, 0xf2, 0x11, 0xa2, 0xbe, 0x7d, 0x0f, 0x29,
+	0x8b, 0x6d, 0x93, 0xfc, 0xdf, 0x32, 0xc9, 0x76, 0x67, 0x8e, 0xa0, 0x2f, 0x8b, 0xe6, 0xaf, 0x05,
+	0xca, 0x7c, 0x2f, 0x61, 0xa1, 0x39, 0x5b, 0x48, 0x16, 0xfe, 0x5d, 0x0c, 0xc6, 0x96, 0xb6, 0x73,
+	0x76, 0x49, 0xde, 0xd9, 0xff, 0x30, 0x67, 0xff, 0xb1, 0x23, 0x67, 0x8d, 0x5d, 0x74, 0x36, 0x2c,
+	0xab, 0xa0, 0xac, 0x0c, 0x28, 0x4b, 0x9c, 0x51, 0x84, 0xa4, 0xe2, 0x7f, 0xc7, 0x00, 0x17, 0x88,
+	0x43, 0x17, 0x89, 0x5d, 0x35, 0x1d, 0xc7, 0x93, 0x80, 0xe7, 0x42, 0x20, 0x45, 0x49, 0x7c, 0x38,
+	0x9f, 0x95, 0xa0, 0xe4, 0x49, 0x73, 0x2f, 0x46, 0x21, 0xfe, 0x1f, 0x52, 0x2e, 0x0d, 0x0e, 0xb1,
+	0x1b, 0x91, 0xef, 0x81, 0xb3, 0xaa, 0xbc, 0x36, 0x30, 0xd0, 0x9d, 0x25, 0x5e, 0x53, 0xae, 0xee,
+	0x02, 0xdc, 0x1d, 0x65, 0x27, 0xaf, 0x7c, 0xac, 0x26, 0xbb, 0xbf, 0x58, 0xfa, 0x8b, 0x9a, 0xba,
+	0xe1, 0xba, 0x75, 0x27, 0x9b, 0x4e, 0xdf, 0xbe, 0x7d, 0x3b, 0xfc, 0xd6, 0x49, 0x6f, 0xb8, 0x37,
+	0xd8, 0x3f, 0x6c, 0x9c, 0xf0, 0x40, 0xd9, 0xb0, 0xec, 0x6a, 0xee, 0x33, 0x04, 0x5f, 0x2a, 0x59,
+	0xd5, 0x9e, 0x75, 0x6c, 0x15, 0x5d, 0x7b, 0x8d, 0xd3, 0x18, 0x56, 0x45, 0xaf, 0x19, 0x29, 0xcb,
+	0x36, 0xd2, 0x06, 0xa9, 0xd1, 0x42, 0x9f, 0x6e, 0x6b, 0xea, 0xfe, 0x1f, 0x21, 0x67, 0x84, 0xb5,
+	0xff, 0x22, 0xf4, 0x20, 0x36, 0xbb, 0xc4, 0x04, 0x5e, 0xa0, 0x4a, 0x85, 0xf7, 0x34, 0xa9, 0x37,
+	0x4e, 0xe6, 0x3c, 0x8e, 0x8f, 0x7d, 0x92, 0xeb, 0x94, 0xe4, 0xba, 0x40, 0x72, 0xfd, 0x0d, 0x26,
+	0xf4, 0x61, 0xec, 0x28, 0x23, 0xc9, 0x66, 0x29, 0x4d, 0x36, 0x2b, 0x10, 0x65, 0xb3, 0x9c, 0x6a,
+	0x7d, 0x2f, 0x35, 0xf3, 0xf9, 0xff, 0x07, 0x00, 0x00, 0xff, 0xff, 0xcb, 0xdb, 0x03, 0xc4, 0xa6,
+	0x34, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ context.Context
-var _ grpc.ClientConn
+var _ grpc.ClientConnInterface
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion4
+const _ = grpc.SupportPackageIsVersion6
 
 // DataCatalogClient is the client API for DataCatalog service.
 //
@@ -1547,44 +2424,126 @@ type DataCatalogClient interface {
 	// This is a custom method
 	// (https://cloud.google.com/apis/design/custom_methods) and does not return
 	// the complete resource, only the resource identifier and high level
-	// fields. Clients can subsequentally call Get methods.
+	// fields. Clients can subsequentally call `Get` methods.
 	//
-	// Note that searches do not have full recall. There may be results that match
-	// your query but are not returned, even in subsequent pages of results. These
-	// missing results may vary across repeated calls to search. Do not rely on
-	// this method if you need to guarantee full recall.
+	// Note that Data Catalog search queries do not guarantee full recall. Query
+	// results that match your query may not be returned, even in subsequent
+	// result pages. Also note that results returned (and not returned) can vary
+	// across repeated search queries.
 	//
 	// See [Data Catalog Search
-	// Syntax](/data-catalog/docs/how-to/search-reference) for more information.
+	// Syntax](https://cloud.google.com/data-catalog/docs/how-to/search-reference)
+	// for more information.
 	SearchCatalog(ctx context.Context, in *SearchCatalogRequest, opts ...grpc.CallOption) (*SearchCatalogResponse, error)
+	// A maximum of 10,000 entry groups may be created per organization across all
+	// locations.
+	//
+	// Users should enable the Data Catalog API in the project identified by
+	// the `parent` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	CreateEntryGroup(ctx context.Context, in *CreateEntryGroupRequest, opts ...grpc.CallOption) (*EntryGroup, error)
+	// Updates an EntryGroup. The user should enable the Data Catalog API in the
+	// project identified by the `entry_group.name` parameter (see [Data Catalog
+	// Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	UpdateEntryGroup(ctx context.Context, in *UpdateEntryGroupRequest, opts ...grpc.CallOption) (*EntryGroup, error)
+	// Gets an EntryGroup.
+	GetEntryGroup(ctx context.Context, in *GetEntryGroupRequest, opts ...grpc.CallOption) (*EntryGroup, error)
+	// Deletes an EntryGroup. Only entry groups that do not contain entries can be
+	// deleted. Users should enable the Data Catalog API in the project
+	// identified by the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	DeleteEntryGroup(ctx context.Context, in *DeleteEntryGroupRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	// Lists entry groups.
+	ListEntryGroups(ctx context.Context, in *ListEntryGroupsRequest, opts ...grpc.CallOption) (*ListEntryGroupsResponse, error)
+	// Creates an entry. Only entries of 'FILESET' type or user-specified type can
+	// be created.
+	//
+	// Users should enable the Data Catalog API in the project identified by
+	// the `parent` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	//
+	// A maximum of 100,000 entries may be created per entry group.
+	CreateEntry(ctx context.Context, in *CreateEntryRequest, opts ...grpc.CallOption) (*Entry, error)
 	// Updates an existing entry.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `entry.name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	UpdateEntry(ctx context.Context, in *UpdateEntryRequest, opts ...grpc.CallOption) (*Entry, error)
+	// Deletes an existing entry. Only entries created through
+	// [CreateEntry][google.cloud.datacatalog.v1beta1.DataCatalog.CreateEntry]
+	// method can be deleted.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	DeleteEntry(ctx context.Context, in *DeleteEntryRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	// Gets an entry.
 	GetEntry(ctx context.Context, in *GetEntryRequest, opts ...grpc.CallOption) (*Entry, error)
 	// Get an entry by target resource name. This method allows clients to use
 	// the resource name from the source Google Cloud Platform service to get the
 	// Data Catalog Entry.
 	LookupEntry(ctx context.Context, in *LookupEntryRequest, opts ...grpc.CallOption) (*Entry, error)
-	// Creates a tag template.
+	// Lists entries.
+	ListEntries(ctx context.Context, in *ListEntriesRequest, opts ...grpc.CallOption) (*ListEntriesResponse, error)
+	// Creates a tag template. The user should enable the Data Catalog API in
+	// the project identified by the `parent` parameter (see [Data Catalog
+	// Resource
+	// Project](https://cloud.google.com/data-catalog/docs/concepts/resource-project)
+	// for more information).
 	CreateTagTemplate(ctx context.Context, in *CreateTagTemplateRequest, opts ...grpc.CallOption) (*TagTemplate, error)
 	// Gets a tag template.
 	GetTagTemplate(ctx context.Context, in *GetTagTemplateRequest, opts ...grpc.CallOption) (*TagTemplate, error)
 	// Updates a tag template. This method cannot be used to update the fields of
 	// a template. The tag template fields are represented as separate resources
 	// and should be updated using their own create/update/delete methods.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `tag_template.name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	UpdateTagTemplate(ctx context.Context, in *UpdateTagTemplateRequest, opts ...grpc.CallOption) (*TagTemplate, error)
 	// Deletes a tag template and all tags using the template.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	DeleteTagTemplate(ctx context.Context, in *DeleteTagTemplateRequest, opts ...grpc.CallOption) (*empty.Empty, error)
-	// Creates a field in a tag template.
+	// Creates a field in a tag template. The user should enable the Data Catalog
+	// API in the project identified by the `parent` parameter (see
+	// [Data Catalog Resource
+	// Project](https://cloud.google.com/data-catalog/docs/concepts/resource-project)
+	// for more information).
 	CreateTagTemplateField(ctx context.Context, in *CreateTagTemplateFieldRequest, opts ...grpc.CallOption) (*TagTemplateField, error)
 	// Updates a field in a tag template. This method cannot be used to update the
-	// field type.
+	// field type. Users should enable the Data Catalog API in the project
+	// identified by the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	UpdateTagTemplateField(ctx context.Context, in *UpdateTagTemplateFieldRequest, opts ...grpc.CallOption) (*TagTemplateField, error)
-	// Renames a field in a tag template.
+	// Renames a field in a tag template. The user should enable the Data Catalog
+	// API in the project identified by the `name` parameter (see [Data Catalog
+	// Resource
+	// Project](https://cloud.google.com/data-catalog/docs/concepts/resource-project)
+	// for more information).
 	RenameTagTemplateField(ctx context.Context, in *RenameTagTemplateFieldRequest, opts ...grpc.CallOption) (*TagTemplateField, error)
 	// Deletes a field in a tag template and all uses of that field.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	DeleteTagTemplateField(ctx context.Context, in *DeleteTagTemplateFieldRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	// Creates a tag on an [Entry][google.cloud.datacatalog.v1beta1.Entry].
+	// Note: The project identified by the `parent` parameter for the
+	// [tag](https://cloud.google.com/data-catalog/docs/reference/rest/v1beta1/projects.locations.entryGroups.entries.tags/create#path-parameters)
+	// and the
+	// [tag
+	// template](https://cloud.google.com/data-catalog/docs/reference/rest/v1beta1/projects.locations.tagTemplates/create#path-parameters)
+	// used to create the tag must be from the same organization.
 	CreateTag(ctx context.Context, in *CreateTagRequest, opts ...grpc.CallOption) (*Tag, error)
 	// Updates an existing tag.
 	UpdateTag(ctx context.Context, in *UpdateTagRequest, opts ...grpc.CallOption) (*Tag, error)
@@ -1596,12 +2555,16 @@ type DataCatalogClient interface {
 	// policy.
 	// Supported resources are:
 	//   - Tag templates.
-	// Note, this method cannot be used to manage policies for BigQuery, Cloud
-	// Pub/Sub and any external Google Cloud Platform resources synced to Cloud
-	// Data Catalog.
+	//   - Entries.
+	//   - Entry groups.
+	// Note, this method cannot be used to manage policies for BigQuery, Pub/Sub
+	// and any external Google Cloud Platform resources synced to Data Catalog.
 	//
 	// Callers must have following Google IAM permission
-	// `datacatalog.tagTemplates.setIamPolicy` to set policies on tag templates.
+	//   - `datacatalog.tagTemplates.setIamPolicy` to set policies on tag
+	//     templates.
+	//   - `datacatalog.entries.setIamPolicy` to set policies on entries.
+	//   - `datacatalog.entryGroups.setIamPolicy` to set policies on entry groups.
 	SetIamPolicy(ctx context.Context, in *v1.SetIamPolicyRequest, opts ...grpc.CallOption) (*v1.Policy, error)
 	// Gets the access control policy for a resource. A `NOT_FOUND` error
 	// is returned if the resource does not exist. An empty policy is returned
@@ -1609,22 +2572,27 @@ type DataCatalogClient interface {
 	//
 	// Supported resources are:
 	//   - Tag templates.
-	// Note, this method cannot be used to manage policies for BigQuery, Cloud
-	// Pub/Sub and any external Google Cloud Platform resources synced to Cloud
-	// Data Catalog.
+	//   - Entries.
+	//   - Entry groups.
+	// Note, this method cannot be used to manage policies for BigQuery, Pub/Sub
+	// and any external Google Cloud Platform resources synced to Data Catalog.
 	//
 	// Callers must have following Google IAM permission
-	// `datacatalog.tagTemplates.getIamPolicy` to get policies on tag templates.
+	//   - `datacatalog.tagTemplates.getIamPolicy` to get policies on tag
+	//     templates.
+	//   - `datacatalog.entries.getIamPolicy` to get policies on entries.
+	//   - `datacatalog.entryGroups.getIamPolicy` to get policies on entry groups.
 	GetIamPolicy(ctx context.Context, in *v1.GetIamPolicyRequest, opts ...grpc.CallOption) (*v1.Policy, error)
 	// Returns the caller's permissions on a resource.
 	// If the resource does not exist, an empty set of permissions is returned
 	// (We don't return a `NOT_FOUND` error).
 	//
-	// Supported resource are:
-	//   - tag templates.
-	// Note, this method cannot be used to manage policies for BigQuery, Cloud
-	// Pub/Sub and any external Google Cloud Platform resources synced to Cloud
-	// Data Catalog.
+	// Supported resources are:
+	//   - Tag templates.
+	//   - Entries.
+	//   - Entry groups.
+	// Note, this method cannot be used to manage policies for BigQuery, Pub/Sub
+	// and any external Google Cloud Platform resources synced to Data Catalog.
 	//
 	// A caller is not required to have Google IAM permission to make this
 	// request.
@@ -1632,10 +2600,10 @@ type DataCatalogClient interface {
 }
 
 type dataCatalogClient struct {
-	cc *grpc.ClientConn
+	cc grpc.ClientConnInterface
 }
 
-func NewDataCatalogClient(cc *grpc.ClientConn) DataCatalogClient {
+func NewDataCatalogClient(cc grpc.ClientConnInterface) DataCatalogClient {
 	return &dataCatalogClient{cc}
 }
 
@@ -1648,9 +2616,72 @@ func (c *dataCatalogClient) SearchCatalog(ctx context.Context, in *SearchCatalog
 	return out, nil
 }
 
+func (c *dataCatalogClient) CreateEntryGroup(ctx context.Context, in *CreateEntryGroupRequest, opts ...grpc.CallOption) (*EntryGroup, error) {
+	out := new(EntryGroup)
+	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/CreateEntryGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataCatalogClient) UpdateEntryGroup(ctx context.Context, in *UpdateEntryGroupRequest, opts ...grpc.CallOption) (*EntryGroup, error) {
+	out := new(EntryGroup)
+	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/UpdateEntryGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataCatalogClient) GetEntryGroup(ctx context.Context, in *GetEntryGroupRequest, opts ...grpc.CallOption) (*EntryGroup, error) {
+	out := new(EntryGroup)
+	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/GetEntryGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataCatalogClient) DeleteEntryGroup(ctx context.Context, in *DeleteEntryGroupRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/DeleteEntryGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataCatalogClient) ListEntryGroups(ctx context.Context, in *ListEntryGroupsRequest, opts ...grpc.CallOption) (*ListEntryGroupsResponse, error) {
+	out := new(ListEntryGroupsResponse)
+	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/ListEntryGroups", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataCatalogClient) CreateEntry(ctx context.Context, in *CreateEntryRequest, opts ...grpc.CallOption) (*Entry, error) {
+	out := new(Entry)
+	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/CreateEntry", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *dataCatalogClient) UpdateEntry(ctx context.Context, in *UpdateEntryRequest, opts ...grpc.CallOption) (*Entry, error) {
 	out := new(Entry)
 	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/UpdateEntry", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataCatalogClient) DeleteEntry(ctx context.Context, in *DeleteEntryRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/DeleteEntry", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1669,6 +2700,15 @@ func (c *dataCatalogClient) GetEntry(ctx context.Context, in *GetEntryRequest, o
 func (c *dataCatalogClient) LookupEntry(ctx context.Context, in *LookupEntryRequest, opts ...grpc.CallOption) (*Entry, error) {
 	out := new(Entry)
 	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/LookupEntry", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataCatalogClient) ListEntries(ctx context.Context, in *ListEntriesRequest, opts ...grpc.CallOption) (*ListEntriesResponse, error) {
+	out := new(ListEntriesResponse)
+	err := c.cc.Invoke(ctx, "/google.cloud.datacatalog.v1beta1.DataCatalog/ListEntries", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1818,44 +2858,126 @@ type DataCatalogServer interface {
 	// This is a custom method
 	// (https://cloud.google.com/apis/design/custom_methods) and does not return
 	// the complete resource, only the resource identifier and high level
-	// fields. Clients can subsequentally call Get methods.
+	// fields. Clients can subsequentally call `Get` methods.
 	//
-	// Note that searches do not have full recall. There may be results that match
-	// your query but are not returned, even in subsequent pages of results. These
-	// missing results may vary across repeated calls to search. Do not rely on
-	// this method if you need to guarantee full recall.
+	// Note that Data Catalog search queries do not guarantee full recall. Query
+	// results that match your query may not be returned, even in subsequent
+	// result pages. Also note that results returned (and not returned) can vary
+	// across repeated search queries.
 	//
 	// See [Data Catalog Search
-	// Syntax](/data-catalog/docs/how-to/search-reference) for more information.
+	// Syntax](https://cloud.google.com/data-catalog/docs/how-to/search-reference)
+	// for more information.
 	SearchCatalog(context.Context, *SearchCatalogRequest) (*SearchCatalogResponse, error)
+	// A maximum of 10,000 entry groups may be created per organization across all
+	// locations.
+	//
+	// Users should enable the Data Catalog API in the project identified by
+	// the `parent` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	CreateEntryGroup(context.Context, *CreateEntryGroupRequest) (*EntryGroup, error)
+	// Updates an EntryGroup. The user should enable the Data Catalog API in the
+	// project identified by the `entry_group.name` parameter (see [Data Catalog
+	// Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	UpdateEntryGroup(context.Context, *UpdateEntryGroupRequest) (*EntryGroup, error)
+	// Gets an EntryGroup.
+	GetEntryGroup(context.Context, *GetEntryGroupRequest) (*EntryGroup, error)
+	// Deletes an EntryGroup. Only entry groups that do not contain entries can be
+	// deleted. Users should enable the Data Catalog API in the project
+	// identified by the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	DeleteEntryGroup(context.Context, *DeleteEntryGroupRequest) (*empty.Empty, error)
+	// Lists entry groups.
+	ListEntryGroups(context.Context, *ListEntryGroupsRequest) (*ListEntryGroupsResponse, error)
+	// Creates an entry. Only entries of 'FILESET' type or user-specified type can
+	// be created.
+	//
+	// Users should enable the Data Catalog API in the project identified by
+	// the `parent` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	//
+	// A maximum of 100,000 entries may be created per entry group.
+	CreateEntry(context.Context, *CreateEntryRequest) (*Entry, error)
 	// Updates an existing entry.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `entry.name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	UpdateEntry(context.Context, *UpdateEntryRequest) (*Entry, error)
+	// Deletes an existing entry. Only entries created through
+	// [CreateEntry][google.cloud.datacatalog.v1beta1.DataCatalog.CreateEntry]
+	// method can be deleted.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
+	DeleteEntry(context.Context, *DeleteEntryRequest) (*empty.Empty, error)
 	// Gets an entry.
 	GetEntry(context.Context, *GetEntryRequest) (*Entry, error)
 	// Get an entry by target resource name. This method allows clients to use
 	// the resource name from the source Google Cloud Platform service to get the
 	// Data Catalog Entry.
 	LookupEntry(context.Context, *LookupEntryRequest) (*Entry, error)
-	// Creates a tag template.
+	// Lists entries.
+	ListEntries(context.Context, *ListEntriesRequest) (*ListEntriesResponse, error)
+	// Creates a tag template. The user should enable the Data Catalog API in
+	// the project identified by the `parent` parameter (see [Data Catalog
+	// Resource
+	// Project](https://cloud.google.com/data-catalog/docs/concepts/resource-project)
+	// for more information).
 	CreateTagTemplate(context.Context, *CreateTagTemplateRequest) (*TagTemplate, error)
 	// Gets a tag template.
 	GetTagTemplate(context.Context, *GetTagTemplateRequest) (*TagTemplate, error)
 	// Updates a tag template. This method cannot be used to update the fields of
 	// a template. The tag template fields are represented as separate resources
 	// and should be updated using their own create/update/delete methods.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `tag_template.name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	UpdateTagTemplate(context.Context, *UpdateTagTemplateRequest) (*TagTemplate, error)
 	// Deletes a tag template and all tags using the template.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	DeleteTagTemplate(context.Context, *DeleteTagTemplateRequest) (*empty.Empty, error)
-	// Creates a field in a tag template.
+	// Creates a field in a tag template. The user should enable the Data Catalog
+	// API in the project identified by the `parent` parameter (see
+	// [Data Catalog Resource
+	// Project](https://cloud.google.com/data-catalog/docs/concepts/resource-project)
+	// for more information).
 	CreateTagTemplateField(context.Context, *CreateTagTemplateFieldRequest) (*TagTemplateField, error)
 	// Updates a field in a tag template. This method cannot be used to update the
-	// field type.
+	// field type. Users should enable the Data Catalog API in the project
+	// identified by the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	UpdateTagTemplateField(context.Context, *UpdateTagTemplateFieldRequest) (*TagTemplateField, error)
-	// Renames a field in a tag template.
+	// Renames a field in a tag template. The user should enable the Data Catalog
+	// API in the project identified by the `name` parameter (see [Data Catalog
+	// Resource
+	// Project](https://cloud.google.com/data-catalog/docs/concepts/resource-project)
+	// for more information).
 	RenameTagTemplateField(context.Context, *RenameTagTemplateFieldRequest) (*TagTemplateField, error)
 	// Deletes a field in a tag template and all uses of that field.
+	// Users should enable the Data Catalog API in the project identified by
+	// the `name` parameter (see [Data Catalog Resource Project]
+	// (https://cloud.google.com/data-catalog/docs/concepts/resource-project) for
+	// more information).
 	DeleteTagTemplateField(context.Context, *DeleteTagTemplateFieldRequest) (*empty.Empty, error)
 	// Creates a tag on an [Entry][google.cloud.datacatalog.v1beta1.Entry].
+	// Note: The project identified by the `parent` parameter for the
+	// [tag](https://cloud.google.com/data-catalog/docs/reference/rest/v1beta1/projects.locations.entryGroups.entries.tags/create#path-parameters)
+	// and the
+	// [tag
+	// template](https://cloud.google.com/data-catalog/docs/reference/rest/v1beta1/projects.locations.tagTemplates/create#path-parameters)
+	// used to create the tag must be from the same organization.
 	CreateTag(context.Context, *CreateTagRequest) (*Tag, error)
 	// Updates an existing tag.
 	UpdateTag(context.Context, *UpdateTagRequest) (*Tag, error)
@@ -1867,12 +2989,16 @@ type DataCatalogServer interface {
 	// policy.
 	// Supported resources are:
 	//   - Tag templates.
-	// Note, this method cannot be used to manage policies for BigQuery, Cloud
-	// Pub/Sub and any external Google Cloud Platform resources synced to Cloud
-	// Data Catalog.
+	//   - Entries.
+	//   - Entry groups.
+	// Note, this method cannot be used to manage policies for BigQuery, Pub/Sub
+	// and any external Google Cloud Platform resources synced to Data Catalog.
 	//
 	// Callers must have following Google IAM permission
-	// `datacatalog.tagTemplates.setIamPolicy` to set policies on tag templates.
+	//   - `datacatalog.tagTemplates.setIamPolicy` to set policies on tag
+	//     templates.
+	//   - `datacatalog.entries.setIamPolicy` to set policies on entries.
+	//   - `datacatalog.entryGroups.setIamPolicy` to set policies on entry groups.
 	SetIamPolicy(context.Context, *v1.SetIamPolicyRequest) (*v1.Policy, error)
 	// Gets the access control policy for a resource. A `NOT_FOUND` error
 	// is returned if the resource does not exist. An empty policy is returned
@@ -1880,22 +3006,27 @@ type DataCatalogServer interface {
 	//
 	// Supported resources are:
 	//   - Tag templates.
-	// Note, this method cannot be used to manage policies for BigQuery, Cloud
-	// Pub/Sub and any external Google Cloud Platform resources synced to Cloud
-	// Data Catalog.
+	//   - Entries.
+	//   - Entry groups.
+	// Note, this method cannot be used to manage policies for BigQuery, Pub/Sub
+	// and any external Google Cloud Platform resources synced to Data Catalog.
 	//
 	// Callers must have following Google IAM permission
-	// `datacatalog.tagTemplates.getIamPolicy` to get policies on tag templates.
+	//   - `datacatalog.tagTemplates.getIamPolicy` to get policies on tag
+	//     templates.
+	//   - `datacatalog.entries.getIamPolicy` to get policies on entries.
+	//   - `datacatalog.entryGroups.getIamPolicy` to get policies on entry groups.
 	GetIamPolicy(context.Context, *v1.GetIamPolicyRequest) (*v1.Policy, error)
 	// Returns the caller's permissions on a resource.
 	// If the resource does not exist, an empty set of permissions is returned
 	// (We don't return a `NOT_FOUND` error).
 	//
-	// Supported resource are:
-	//   - tag templates.
-	// Note, this method cannot be used to manage policies for BigQuery, Cloud
-	// Pub/Sub and any external Google Cloud Platform resources synced to Cloud
-	// Data Catalog.
+	// Supported resources are:
+	//   - Tag templates.
+	//   - Entries.
+	//   - Entry groups.
+	// Note, this method cannot be used to manage policies for BigQuery, Pub/Sub
+	// and any external Google Cloud Platform resources synced to Data Catalog.
 	//
 	// A caller is not required to have Google IAM permission to make this
 	// request.
@@ -1909,14 +3040,38 @@ type UnimplementedDataCatalogServer struct {
 func (*UnimplementedDataCatalogServer) SearchCatalog(ctx context.Context, req *SearchCatalogRequest) (*SearchCatalogResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SearchCatalog not implemented")
 }
+func (*UnimplementedDataCatalogServer) CreateEntryGroup(ctx context.Context, req *CreateEntryGroupRequest) (*EntryGroup, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateEntryGroup not implemented")
+}
+func (*UnimplementedDataCatalogServer) UpdateEntryGroup(ctx context.Context, req *UpdateEntryGroupRequest) (*EntryGroup, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateEntryGroup not implemented")
+}
+func (*UnimplementedDataCatalogServer) GetEntryGroup(ctx context.Context, req *GetEntryGroupRequest) (*EntryGroup, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEntryGroup not implemented")
+}
+func (*UnimplementedDataCatalogServer) DeleteEntryGroup(ctx context.Context, req *DeleteEntryGroupRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteEntryGroup not implemented")
+}
+func (*UnimplementedDataCatalogServer) ListEntryGroups(ctx context.Context, req *ListEntryGroupsRequest) (*ListEntryGroupsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListEntryGroups not implemented")
+}
+func (*UnimplementedDataCatalogServer) CreateEntry(ctx context.Context, req *CreateEntryRequest) (*Entry, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateEntry not implemented")
+}
 func (*UnimplementedDataCatalogServer) UpdateEntry(ctx context.Context, req *UpdateEntryRequest) (*Entry, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateEntry not implemented")
+}
+func (*UnimplementedDataCatalogServer) DeleteEntry(ctx context.Context, req *DeleteEntryRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteEntry not implemented")
 }
 func (*UnimplementedDataCatalogServer) GetEntry(ctx context.Context, req *GetEntryRequest) (*Entry, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEntry not implemented")
 }
 func (*UnimplementedDataCatalogServer) LookupEntry(ctx context.Context, req *LookupEntryRequest) (*Entry, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupEntry not implemented")
+}
+func (*UnimplementedDataCatalogServer) ListEntries(ctx context.Context, req *ListEntriesRequest) (*ListEntriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListEntries not implemented")
 }
 func (*UnimplementedDataCatalogServer) CreateTagTemplate(ctx context.Context, req *CreateTagTemplateRequest) (*TagTemplate, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateTagTemplate not implemented")
@@ -1986,6 +3141,114 @@ func _DataCatalog_SearchCatalog_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DataCatalog_CreateEntryGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateEntryGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataCatalogServer).CreateEntryGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.datacatalog.v1beta1.DataCatalog/CreateEntryGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataCatalogServer).CreateEntryGroup(ctx, req.(*CreateEntryGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataCatalog_UpdateEntryGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateEntryGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataCatalogServer).UpdateEntryGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.datacatalog.v1beta1.DataCatalog/UpdateEntryGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataCatalogServer).UpdateEntryGroup(ctx, req.(*UpdateEntryGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataCatalog_GetEntryGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEntryGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataCatalogServer).GetEntryGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.datacatalog.v1beta1.DataCatalog/GetEntryGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataCatalogServer).GetEntryGroup(ctx, req.(*GetEntryGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataCatalog_DeleteEntryGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteEntryGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataCatalogServer).DeleteEntryGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.datacatalog.v1beta1.DataCatalog/DeleteEntryGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataCatalogServer).DeleteEntryGroup(ctx, req.(*DeleteEntryGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataCatalog_ListEntryGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEntryGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataCatalogServer).ListEntryGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.datacatalog.v1beta1.DataCatalog/ListEntryGroups",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataCatalogServer).ListEntryGroups(ctx, req.(*ListEntryGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataCatalog_CreateEntry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateEntryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataCatalogServer).CreateEntry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.datacatalog.v1beta1.DataCatalog/CreateEntry",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataCatalogServer).CreateEntry(ctx, req.(*CreateEntryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DataCatalog_UpdateEntry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateEntryRequest)
 	if err := dec(in); err != nil {
@@ -2000,6 +3263,24 @@ func _DataCatalog_UpdateEntry_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataCatalogServer).UpdateEntry(ctx, req.(*UpdateEntryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataCatalog_DeleteEntry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteEntryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataCatalogServer).DeleteEntry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.datacatalog.v1beta1.DataCatalog/DeleteEntry",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataCatalogServer).DeleteEntry(ctx, req.(*DeleteEntryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2036,6 +3317,24 @@ func _DataCatalog_LookupEntry_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataCatalogServer).LookupEntry(ctx, req.(*LookupEntryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataCatalog_ListEntries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEntriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataCatalogServer).ListEntries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/google.cloud.datacatalog.v1beta1.DataCatalog/ListEntries",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataCatalogServer).ListEntries(ctx, req.(*ListEntriesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2319,8 +3618,36 @@ var _DataCatalog_serviceDesc = grpc.ServiceDesc{
 			Handler:    _DataCatalog_SearchCatalog_Handler,
 		},
 		{
+			MethodName: "CreateEntryGroup",
+			Handler:    _DataCatalog_CreateEntryGroup_Handler,
+		},
+		{
+			MethodName: "UpdateEntryGroup",
+			Handler:    _DataCatalog_UpdateEntryGroup_Handler,
+		},
+		{
+			MethodName: "GetEntryGroup",
+			Handler:    _DataCatalog_GetEntryGroup_Handler,
+		},
+		{
+			MethodName: "DeleteEntryGroup",
+			Handler:    _DataCatalog_DeleteEntryGroup_Handler,
+		},
+		{
+			MethodName: "ListEntryGroups",
+			Handler:    _DataCatalog_ListEntryGroups_Handler,
+		},
+		{
+			MethodName: "CreateEntry",
+			Handler:    _DataCatalog_CreateEntry_Handler,
+		},
+		{
 			MethodName: "UpdateEntry",
 			Handler:    _DataCatalog_UpdateEntry_Handler,
+		},
+		{
+			MethodName: "DeleteEntry",
+			Handler:    _DataCatalog_DeleteEntry_Handler,
 		},
 		{
 			MethodName: "GetEntry",
@@ -2329,6 +3656,10 @@ var _DataCatalog_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LookupEntry",
 			Handler:    _DataCatalog_LookupEntry_Handler,
+		},
+		{
+			MethodName: "ListEntries",
+			Handler:    _DataCatalog_ListEntries_Handler,
 		},
 		{
 			MethodName: "CreateTagTemplate",

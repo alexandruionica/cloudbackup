@@ -1353,6 +1353,21 @@
         {"shape":"OperationTimeoutException"}
       ]
     },
+    "ListMLTransforms":{
+      "name":"ListMLTransforms",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"ListMLTransformsRequest"},
+      "output":{"shape":"ListMLTransformsResponse"},
+      "errors":[
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InternalServiceException"}
+      ]
+    },
     "ListTriggers":{
       "name":"ListTriggers",
       "http":{
@@ -2502,14 +2517,21 @@
         "CONFIG_FILES",
         "INSTANCE_ID",
         "JDBC_CONNECTION_URL",
-        "JDBC_ENFORCE_SSL"
+        "JDBC_ENFORCE_SSL",
+        "CUSTOM_JDBC_CERT",
+        "SKIP_CUSTOM_JDBC_CERT_VALIDATION",
+        "CUSTOM_JDBC_CERT_STRING",
+        "CONNECTION_URL",
+        "KAFKA_BOOTSTRAP_SERVERS"
       ]
     },
     "ConnectionType":{
       "type":"string",
       "enum":[
         "JDBC",
-        "SFTP"
+        "SFTP",
+        "MONGODB",
+        "KAFKA"
       ]
     },
     "ConnectionsList":{
@@ -2798,6 +2820,7 @@
         "ExecutionProperty":{"shape":"ExecutionProperty"},
         "Command":{"shape":"JobCommand"},
         "DefaultArguments":{"shape":"GenericMap"},
+        "NonOverridableArguments":{"shape":"GenericMap"},
         "Connections":{"shape":"ConnectionsList"},
         "MaxRetries":{"shape":"MaxRetries"},
         "AllocatedCapacity":{
@@ -2846,11 +2869,13 @@
         "InputRecordTables":{"shape":"GlueTables"},
         "Parameters":{"shape":"TransformParameters"},
         "Role":{"shape":"RoleString"},
+        "GlueVersion":{"shape":"GlueVersionString"},
         "MaxCapacity":{"shape":"NullableDouble"},
         "WorkerType":{"shape":"WorkerType"},
         "NumberOfWorkers":{"shape":"NullableInteger"},
         "Timeout":{"shape":"Timeout"},
-        "MaxRetries":{"shape":"NullableInteger"}
+        "MaxRetries":{"shape":"NullableInteger"},
+        "Tags":{"shape":"TagsMap"}
       }
     },
     "CreateMLTransformResponse":{
@@ -3865,6 +3890,7 @@
         "LabelCount":{"shape":"LabelCount"},
         "Schema":{"shape":"TransformSchema"},
         "Role":{"shape":"RoleString"},
+        "GlueVersion":{"shape":"GlueVersionString"},
         "MaxCapacity":{"shape":"NullableDouble"},
         "WorkerType":{"shape":"WorkerType"},
         "NumberOfWorkers":{"shape":"NullableInteger"},
@@ -4151,10 +4177,7 @@
     },
     "GetUserDefinedFunctionsRequest":{
       "type":"structure",
-      "required":[
-        "DatabaseName",
-        "Pattern"
-      ],
+      "required":["Pattern"],
       "members":{
         "CatalogId":{"shape":"CatalogIdString"},
         "DatabaseName":{"shape":"NameString"},
@@ -4380,6 +4403,7 @@
         "ExecutionProperty":{"shape":"ExecutionProperty"},
         "Command":{"shape":"JobCommand"},
         "DefaultArguments":{"shape":"GenericMap"},
+        "NonOverridableArguments":{"shape":"GenericMap"},
         "Connections":{"shape":"ConnectionsList"},
         "MaxRetries":{"shape":"MaxRetries"},
         "AllocatedCapacity":{
@@ -4501,6 +4525,7 @@
         "ExecutionProperty":{"shape":"ExecutionProperty"},
         "Command":{"shape":"JobCommand"},
         "DefaultArguments":{"shape":"GenericMap"},
+        "NonOverridableArguments":{"shape":"GenericMap"},
         "Connections":{"shape":"ConnectionsList"},
         "MaxRetries":{"shape":"MaxRetries"},
         "AllocatedCapacity":{
@@ -4621,6 +4646,24 @@
         "NextToken":{"shape":"GenericString"}
       }
     },
+    "ListMLTransformsRequest":{
+      "type":"structure",
+      "members":{
+        "NextToken":{"shape":"PaginationToken"},
+        "MaxResults":{"shape":"PageSize"},
+        "Filter":{"shape":"TransformFilterCriteria"},
+        "Sort":{"shape":"TransformSortCriteria"},
+        "Tags":{"shape":"TagsMap"}
+      }
+    },
+    "ListMLTransformsResponse":{
+      "type":"structure",
+      "required":["TransformIds"],
+      "members":{
+        "TransformIds":{"shape":"TransformIdList"},
+        "NextToken":{"shape":"PaginationToken"}
+      }
+    },
     "ListTriggersRequest":{
       "type":"structure",
       "members":{
@@ -4707,6 +4750,7 @@
         "LabelCount":{"shape":"LabelCount"},
         "Schema":{"shape":"TransformSchema"},
         "Role":{"shape":"RoleString"},
+        "GlueVersion":{"shape":"GlueVersionString"},
         "MaxCapacity":{"shape":"NullableDouble"},
         "WorkerType":{"shape":"WorkerType"},
         "NumberOfWorkers":{"shape":"NullableInteger"},
@@ -5719,12 +5763,17 @@
         "Name":{"shape":"NameString"},
         "TransformType":{"shape":"TransformType"},
         "Status":{"shape":"TransformStatusType"},
+        "GlueVersion":{"shape":"GlueVersionString"},
         "CreatedBefore":{"shape":"Timestamp"},
         "CreatedAfter":{"shape":"Timestamp"},
         "LastModifiedBefore":{"shape":"Timestamp"},
         "LastModifiedAfter":{"shape":"Timestamp"},
         "Schema":{"shape":"TransformSchema"}
       }
+    },
+    "TransformIdList":{
+      "type":"list",
+      "member":{"shape":"HashString"}
     },
     "TransformList":{
       "type":"list",
@@ -6023,6 +6072,7 @@
         "Description":{"shape":"DescriptionString"},
         "Parameters":{"shape":"TransformParameters"},
         "Role":{"shape":"RoleString"},
+        "GlueVersion":{"shape":"GlueVersionString"},
         "MaxCapacity":{"shape":"NullableDouble"},
         "WorkerType":{"shape":"WorkerType"},
         "NumberOfWorkers":{"shape":"NullableInteger"},

@@ -32,6 +32,17 @@ import (
 // PartitionedUpdate returns an estimated count of the number of rows affected.
 // The actual number of affected rows may be greater than the estimate.
 func (c *Client) PartitionedUpdate(ctx context.Context, statement Statement) (count int64, err error) {
+	return c.partitionedUpdate(ctx, statement, c.qo)
+}
+
+// PartitionedUpdateWithOptions executes a DML statement in parallel across the database,
+// using separate, internal transactions that commit independently. The sql
+// query execution will be optimized based on the given query options.
+func (c *Client) PartitionedUpdateWithOptions(ctx context.Context, statement Statement, opts QueryOptions) (count int64, err error) {
+	return c.partitionedUpdate(ctx, statement, c.qo.merge(opts))
+}
+
+func (c *Client) partitionedUpdate(ctx context.Context, statement Statement, options QueryOptions) (count int64, err error) {
 	ctx = trace.StartSpan(ctx, "cloud.google.com/go/spanner.PartitionedUpdate")
 	defer func() { trace.EndSpan(ctx, err) }()
 	if err := checkNestedTxn(ctx); err != nil {
@@ -41,9 +52,8 @@ func (c *Client) PartitionedUpdate(ctx context.Context, statement Statement) (co
 		s  *session
 		sh *sessionHandle
 	)
-	// Create a session that will be used only for this request.
-	sc := c.rrNext()
-	s, err = createSession(ctx, sc, c.database, c.sessionLabels, c.md)
+	// Create session.
+	s, err = c.sc.createSession(ctx)
 	if err != nil {
 		return 0, toSpannerError(err)
 	}
@@ -59,10 +69,11 @@ func (c *Client) PartitionedUpdate(ctx context.Context, statement Statement) (co
 		return 0, toSpannerError(err)
 	}
 	req := &sppb.ExecuteSqlRequest{
-		Session:    sh.getID(),
-		Sql:        statement.SQL,
-		Params:     params,
-		ParamTypes: paramTypes,
+		Session:      sh.getID(),
+		Sql:          statement.SQL,
+		Params:       params,
+		ParamTypes:   paramTypes,
+		QueryOptions: options.Options,
 	}
 
 	// Make a retryer for Aborted errors.

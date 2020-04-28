@@ -1,17 +1,21 @@
 module cloud.google.com/go/pubsub
 
-go 1.9
+go 1.11
 
 require (
-	cloud.google.com/go v0.45.1
-	github.com/golang/protobuf v1.3.2
-	github.com/google/go-cmp v0.3.0
+	cloud.google.com/go v0.55.0
+	cloud.google.com/go/bigquery v1.5.0 // indirect
+	github.com/golang/protobuf v1.3.5
+	github.com/google/go-cmp v0.4.0
 	github.com/googleapis/gax-go/v2 v2.0.5
-	go.opencensus.io v0.22.0
-	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
-	google.golang.org/api v0.9.0
-	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
-	google.golang.org/grpc v1.21.1
+	go.opencensus.io v0.22.3
+	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
+	golang.org/x/sys v0.0.0-20200331124033-c3d80250170d // indirect
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
+	golang.org/x/tools v0.0.0-20200331025713-a30bf2db82d4 // indirect
+	google.golang.org/api v0.20.0
+	google.golang.org/genproto v0.0.0-20200331122359-1ee6d9798940
+	google.golang.org/grpc v1.28.0
 )

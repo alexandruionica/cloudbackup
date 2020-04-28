@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -6,7 +6,7 @@
 
 // Package gamesconfiguration provides access to the Google Play Game Services Publishing API.
 //
-// For product documentation, see: https://developers.google.com/games/services
+// For product documentation, see: https://developers.google.com/games/
 //
 // Creating a client
 //
@@ -52,6 +52,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -68,11 +69,12 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "gamesConfiguration:v1configuration"
 const apiName = "gamesConfiguration"
 const apiVersion = "v1configuration"
-const basePath = "https://www.googleapis.com/games/v1configuration/"
+const basePath = "https://www.googleapis.com/"
 
 // OAuth2 scopes used by this API.
 const (
@@ -87,6 +89,7 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -163,13 +166,15 @@ type LeaderboardConfigurationsService struct {
 	s *Service
 }
 
-// AchievementConfiguration: This is a JSON template for an achievement
-// configuration resource.
+// AchievementConfiguration: An achievement configuration resource.
 type AchievementConfiguration struct {
 	// AchievementType: The type of the achievement.
-	// Possible values are:
-	// - "STANDARD" - Achievement is either locked or unlocked.
-	// - "INCREMENTAL" - Achievement is incremental.
+	//
+	// Possible values:
+	//   "ACHIEVEMENT_TYPE_UNSPECIFIED" - Default value. This value is
+	// unused.
+	//   "STANDARD" - Achievement is either locked or unlocked.
+	//   "INCREMENTAL" - Achievement is incremental.
 	AchievementType string `json:"achievementType,omitempty"`
 
 	// Draft: The draft data of the achievement.
@@ -179,20 +184,22 @@ type AchievementConfiguration struct {
 	Id string `json:"id,omitempty"`
 
 	// InitialState: The initial state of the achievement.
-	// Possible values are:
-	// - "HIDDEN" - Achievement is hidden.
-	// - "REVEALED" - Achievement is revealed.
-	// - "UNLOCKED" - Achievement is unlocked.
+	//
+	// Possible values:
+	//   "INITIAL_STATE_UNSPECIFIED" - Default value. This value is unused.
+	//   "HIDDEN" - Achievement is hidden.
+	//   "REVEALED" - Achievement is revealed.
 	InitialState string `json:"initialState,omitempty"`
 
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string gamesConfiguration#achievementConfiguration.
+	// the fixed
+	// string `gamesConfiguration#achievementConfiguration`.
 	Kind string `json:"kind,omitempty"`
 
 	// Published: The read-only published data of the achievement.
 	Published *AchievementConfigurationDetail `json:"published,omitempty"`
 
-	// StepsToUnlock: Steps to unlock. Only applicable to incremental
+	// StepsToUnlock: Steps to unlock.  Only applicable to incremental
 	// achievements.
 	StepsToUnlock int64 `json:"stepsToUnlock,omitempty"`
 
@@ -227,8 +234,7 @@ func (s *AchievementConfiguration) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// AchievementConfigurationDetail: This is a JSON template for an
-// achievement configuration detail.
+// AchievementConfigurationDetail: An achievement configuration detail.
 type AchievementConfigurationDetail struct {
 	// Description: Localized strings for the achievement description.
 	Description *LocalizedStringBundle `json:"description,omitempty"`
@@ -238,7 +244,8 @@ type AchievementConfigurationDetail struct {
 	IconUrl string `json:"iconUrl,omitempty"`
 
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string gamesConfiguration#achievementConfigurationDetail.
+	// the fixed
+	// string `gamesConfiguration#achievementConfigurationDetail`.
 	Kind string `json:"kind,omitempty"`
 
 	// Name: Localized strings for the achievement name.
@@ -274,14 +281,14 @@ func (s *AchievementConfigurationDetail) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// AchievementConfigurationListResponse: This is a JSON template for a
-// ListConfigurations response.
+// AchievementConfigurationListResponse: A ListConfigurations response.
 type AchievementConfigurationListResponse struct {
 	// Items: The achievement configurations.
 	Items []*AchievementConfiguration `json:"items,omitempty"`
 
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string games#achievementConfigurationListResponse.
+	// the fixed
+	// string `gamesConfiguration#achievementConfigurationListResponse`.
 	Kind string `json:"kind,omitempty"`
 
 	// NextPageToken: The pagination token for the next page of results.
@@ -314,34 +321,40 @@ func (s *AchievementConfigurationListResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// GamesNumberAffixConfiguration: This is a JSON template for a number
-// affix resource.
+// GamesNumberAffixConfiguration: A number affix resource.
 type GamesNumberAffixConfiguration struct {
 	// Few: When the language requires special treatment of "small" numbers
-	// (as with 2, 3, and 4 in Czech; or numbers ending 2, 3, or 4 but not
-	// 12, 13, or 14 in Polish).
+	// (as with 2,
+	// 3, and 4 in Czech; or numbers ending 2, 3, or 4 but not 12, 13, or 14
+	// in
+	// Polish).
 	Few *LocalizedStringBundle `json:"few,omitempty"`
 
 	// Many: When the language requires special treatment of "large" numbers
-	// (as with numbers ending 11-99 in Maltese).
+	// (as with
+	// numbers ending 11-99 in Maltese).
 	Many *LocalizedStringBundle `json:"many,omitempty"`
 
 	// One: When the language requires special treatment of numbers like one
-	// (as with the number 1 in English and most other languages; in
-	// Russian, any number ending in 1 but not ending in 11 is in this
-	// class).
+	// (as with
+	// the number 1 in English and most other languages; in Russian, any
+	// number
+	// ending in 1 but not ending in 11 is in this class).
 	One *LocalizedStringBundle `json:"one,omitempty"`
 
 	// Other: When the language does not require special treatment of the
-	// given quantity (as with all numbers in Chinese, or 42 in English).
+	// given quantity
+	// (as with all numbers in Chinese, or 42 in English).
 	Other *LocalizedStringBundle `json:"other,omitempty"`
 
 	// Two: When the language requires special treatment of numbers like two
-	// (as with 2 in Welsh, or 102 in Slovenian).
+	// (as with 2
+	// in Welsh, or 102 in Slovenian).
 	Two *LocalizedStringBundle `json:"two,omitempty"`
 
 	// Zero: When the language requires special treatment of the number 0
-	// (as in Arabic).
+	// (as in
+	// Arabic).
 	Zero *LocalizedStringBundle `json:"zero,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Few") to
@@ -367,8 +380,7 @@ func (s *GamesNumberAffixConfiguration) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// GamesNumberFormatConfiguration: This is a JSON template for a number
-// format resource.
+// GamesNumberFormatConfiguration: A number format resource.
 type GamesNumberFormatConfiguration struct {
 	// CurrencyCode: The curreny code string. Only used for CURRENCY format
 	// type.
@@ -379,17 +391,27 @@ type GamesNumberFormatConfiguration struct {
 	NumDecimalPlaces int64 `json:"numDecimalPlaces,omitempty"`
 
 	// NumberFormatType: The formatting for the number.
-	// Possible values are:
-	// - "NUMERIC" - Numbers are formatted to have no digits or a fixed
-	// number of digits after the decimal point according to locale. An
-	// optional custom unit can be added.
-	// - "TIME_DURATION" - Numbers are formatted to hours, minutes and
+	//
+	// Possible values:
+	//   "NUMBER_FORMAT_TYPE_UNSPECIFIED" - Default value. This value is
+	// unused.
+	//   "NUMERIC" - Numbers are formatted to have no digits or fixed number
+	// of digits after
+	// the decimal point according to locale. An optional custom unit can
+	// be
+	// added.
+	//   "TIME_DURATION" - Numbers are formatted to hours, minutes and
 	// seconds.
-	// - "CURRENCY" - Numbers are formatted to currency according to locale.
+	//   "CURRENCY" - Numbers are formatted to currency according to locale.
 	NumberFormatType string `json:"numberFormatType,omitempty"`
 
-	// Suffix: An optional suffix for the NUMERIC format type. These strings
-	// follow the same  plural rules as all Android string resources.
+	// Suffix: An optional suffix for the NUMERIC format type.  These
+	// strings follow the
+	// same
+	// <a
+	// href="http://developer.android.com/guide/topics/resources/string-re
+	// source.html#Plurals">
+	// plural rules</a> as all Android string resources.
 	Suffix *GamesNumberAffixConfiguration `json:"suffix,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "CurrencyCode") to
@@ -415,14 +437,19 @@ func (s *GamesNumberFormatConfiguration) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// ImageConfiguration: This is a JSON template for an image
-// configuration resource.
+// ImageConfiguration: An image configuration resource.
 type ImageConfiguration struct {
 	// ImageType: The image type for the image.
+	//
+	// Possible values:
+	//   "IMAGE_TYPE_UNSPECIFIED" - Default value. This value is unused.
+	//   "ACHIEVEMENT_ICON" - The icon image for an achievement resource.
+	//   "LEADERBOARD_ICON" - The icon image for a leaderboard resource.
 	ImageType string `json:"imageType,omitempty"`
 
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string gamesConfiguration#imageConfiguration.
+	// the fixed
+	// string `gamesConfiguration#imageConfiguration`.
 	Kind string `json:"kind,omitempty"`
 
 	// ResourceId: The resource ID of resource which the image belongs to.
@@ -458,8 +485,7 @@ func (s *ImageConfiguration) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// LeaderboardConfiguration: This is a JSON template for an leaderboard
-// configuration resource.
+// LeaderboardConfiguration: An leaderboard configuration resource.
 type LeaderboardConfiguration struct {
 	// Draft: The draft data of the leaderboard.
 	Draft *LeaderboardConfigurationDetail `json:"draft,omitempty"`
@@ -468,7 +494,8 @@ type LeaderboardConfiguration struct {
 	Id string `json:"id,omitempty"`
 
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string gamesConfiguration#leaderboardConfiguration.
+	// the fixed
+	// string `gamesConfiguration#leaderboardConfiguration`.
 	Kind string `json:"kind,omitempty"`
 
 	// Published: The read-only published data of the leaderboard.
@@ -480,10 +507,10 @@ type LeaderboardConfiguration struct {
 	// ScoreMin: Minimum score that can be posted to this leaderboard.
 	ScoreMin int64 `json:"scoreMin,omitempty,string"`
 
-	// ScoreOrder: The type of the leaderboard.
-	// Possible values are:
-	// - "LARGER_IS_BETTER" - Larger scores posted are ranked higher.
-	// - "SMALLER_IS_BETTER" - Smaller scores posted are ranked higher.
+	// Possible values:
+	//   "SCORE_ORDER_UNSPECIFIED" - Default value. This value is unused.
+	//   "LARGER_IS_BETTER" - Larger scores posted are ranked higher.
+	//   "SMALLER_IS_BETTER" - Smaller scores posted are ranked higher.
 	ScoreOrder string `json:"scoreOrder,omitempty"`
 
 	// Token: The token for this resource.
@@ -516,15 +543,15 @@ func (s *LeaderboardConfiguration) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// LeaderboardConfigurationDetail: This is a JSON template for a
-// leaderboard configuration detail.
+// LeaderboardConfigurationDetail: A leaderboard configuration detail.
 type LeaderboardConfigurationDetail struct {
 	// IconUrl: The icon url of this leaderboard. Writes to this field are
 	// ignored.
 	IconUrl string `json:"iconUrl,omitempty"`
 
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string gamesConfiguration#leaderboardConfigurationDetail.
+	// the fixed
+	// string `gamesConfiguration#leaderboardConfigurationDetail`.
 	Kind string `json:"kind,omitempty"`
 
 	// Name: Localized strings for the leaderboard name.
@@ -560,14 +587,17 @@ func (s *LeaderboardConfigurationDetail) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// LeaderboardConfigurationListResponse: This is a JSON template for a
-// ListConfigurations response.
+// LeaderboardConfigurationListResponse: A ListConfigurations response.
 type LeaderboardConfigurationListResponse struct {
 	// Items: The leaderboard configurations.
 	Items []*LeaderboardConfiguration `json:"items,omitempty"`
 
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string games#leaderboardConfigurationListResponse.
+	// the
+	// fixed
+	// string
+	// `gamesConfiguration#leaderboardConfigurationListResponse`
+	// .
 	Kind string `json:"kind,omitempty"`
 
 	// NextPageToken: The pagination token for the next page of results.
@@ -600,11 +630,11 @@ func (s *LeaderboardConfigurationListResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// LocalizedString: This is a JSON template for a localized string
-// resource.
+// LocalizedString: A localized string resource.
 type LocalizedString struct {
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string gamesConfiguration#localizedString.
+	// the fixed
+	// string `gamesConfiguration#localizedString`.
 	Kind string `json:"kind,omitempty"`
 
 	// Locale: The locale string.
@@ -636,11 +666,11 @@ func (s *LocalizedString) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// LocalizedStringBundle: This is a JSON template for a localized string
-// bundle resource.
+// LocalizedStringBundle: A localized string bundle resource.
 type LocalizedStringBundle struct {
 	// Kind: Uniquely identifies the type of this resource. Value is always
-	// the fixed string gamesConfiguration#localizedStringBundle.
+	// the fixed
+	// string `gamesConfiguration#localizedStringBundle`.
 	Kind string `json:"kind,omitempty"`
 
 	// Translations: The locale strings.
@@ -713,7 +743,7 @@ func (c *AchievementConfigurationsDeleteCall) Header() http.Header {
 
 func (c *AchievementConfigurationsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -721,7 +751,7 @@ func (c *AchievementConfigurationsDeleteCall) doRequest(alt string) (*http.Respo
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "achievements/{achievementId}")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/achievements/{achievementId}")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("DELETE", urls, body)
 	if err != nil {
@@ -748,6 +778,7 @@ func (c *AchievementConfigurationsDeleteCall) Do(opts ...googleapi.CallOption) e
 	return nil
 	// {
 	//   "description": "Delete the achievement configuration with the given ID.",
+	//   "flatPath": "games/v1configuration/achievements/{achievementId}",
 	//   "httpMethod": "DELETE",
 	//   "id": "gamesConfiguration.achievementConfigurations.delete",
 	//   "parameterOrder": [
@@ -761,7 +792,7 @@ func (c *AchievementConfigurationsDeleteCall) Do(opts ...googleapi.CallOption) e
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "achievements/{achievementId}",
+	//   "path": "games/v1configuration/achievements/{achievementId}",
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/androidpublisher"
 	//   ]
@@ -825,7 +856,7 @@ func (c *AchievementConfigurationsGetCall) Header() http.Header {
 
 func (c *AchievementConfigurationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -836,7 +867,7 @@ func (c *AchievementConfigurationsGetCall) doRequest(alt string) (*http.Response
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "achievements/{achievementId}")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/achievements/{achievementId}")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("GET", urls, body)
 	if err != nil {
@@ -888,6 +919,7 @@ func (c *AchievementConfigurationsGetCall) Do(opts ...googleapi.CallOption) (*Ac
 	return ret, nil
 	// {
 	//   "description": "Retrieves the metadata of the achievement configuration with the given ID.",
+	//   "flatPath": "games/v1configuration/achievements/{achievementId}",
 	//   "httpMethod": "GET",
 	//   "id": "gamesConfiguration.achievementConfigurations.get",
 	//   "parameterOrder": [
@@ -901,7 +933,7 @@ func (c *AchievementConfigurationsGetCall) Do(opts ...googleapi.CallOption) (*Ac
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "achievements/{achievementId}",
+	//   "path": "games/v1configuration/achievements/{achievementId}",
 	//   "response": {
 	//     "$ref": "AchievementConfiguration"
 	//   },
@@ -958,7 +990,7 @@ func (c *AchievementConfigurationsInsertCall) Header() http.Header {
 
 func (c *AchievementConfigurationsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -971,7 +1003,7 @@ func (c *AchievementConfigurationsInsertCall) doRequest(alt string) (*http.Respo
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "applications/{applicationId}/achievements")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/applications/{applicationId}/achievements")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("POST", urls, body)
 	if err != nil {
@@ -1023,6 +1055,7 @@ func (c *AchievementConfigurationsInsertCall) Do(opts ...googleapi.CallOption) (
 	return ret, nil
 	// {
 	//   "description": "Insert a new achievement configuration in this application.",
+	//   "flatPath": "games/v1configuration/applications/{applicationId}/achievements",
 	//   "httpMethod": "POST",
 	//   "id": "gamesConfiguration.achievementConfigurations.insert",
 	//   "parameterOrder": [
@@ -1036,7 +1069,7 @@ func (c *AchievementConfigurationsInsertCall) Do(opts ...googleapi.CallOption) (
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "applications/{applicationId}/achievements",
+	//   "path": "games/v1configuration/applications/{applicationId}/achievements",
 	//   "request": {
 	//     "$ref": "AchievementConfiguration"
 	//   },
@@ -1070,9 +1103,10 @@ func (r *AchievementConfigurationsService) List(applicationId string) *Achieveme
 }
 
 // MaxResults sets the optional parameter "maxResults": The maximum
-// number of resource configurations to return in the response, used for
-// paging. For any response, the actual number of resources returned may
-// be less than the specified maxResults.
+// number of resource configurations to return in the response,
+// used for paging. For any response, the actual number of resources
+// returned
+// may be less than the specified `maxResults`.
 func (c *AchievementConfigurationsListCall) MaxResults(maxResults int64) *AchievementConfigurationsListCall {
 	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
 	return c
@@ -1122,7 +1156,7 @@ func (c *AchievementConfigurationsListCall) Header() http.Header {
 
 func (c *AchievementConfigurationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1133,7 +1167,7 @@ func (c *AchievementConfigurationsListCall) doRequest(alt string) (*http.Respons
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "applications/{applicationId}/achievements")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/applications/{applicationId}/achievements")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("GET", urls, body)
 	if err != nil {
@@ -1186,6 +1220,7 @@ func (c *AchievementConfigurationsListCall) Do(opts ...googleapi.CallOption) (*A
 	return ret, nil
 	// {
 	//   "description": "Returns a list of the achievement configurations in this application.",
+	//   "flatPath": "games/v1configuration/applications/{applicationId}/achievements",
 	//   "httpMethod": "GET",
 	//   "id": "gamesConfiguration.achievementConfigurations.list",
 	//   "parameterOrder": [
@@ -1199,11 +1234,9 @@ func (c *AchievementConfigurationsListCall) Do(opts ...googleapi.CallOption) (*A
 	//       "type": "string"
 	//     },
 	//     "maxResults": {
-	//       "description": "The maximum number of resource configurations to return in the response, used for paging. For any response, the actual number of resources returned may be less than the specified maxResults.",
+	//       "description": "The maximum number of resource configurations to return in the response,\nused for paging. For any response, the actual number of resources returned\nmay be less than the specified `maxResults`.",
 	//       "format": "int32",
 	//       "location": "query",
-	//       "maximum": "200",
-	//       "minimum": "1",
 	//       "type": "integer"
 	//     },
 	//     "pageToken": {
@@ -1212,7 +1245,7 @@ func (c *AchievementConfigurationsListCall) Do(opts ...googleapi.CallOption) (*A
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "applications/{applicationId}/achievements",
+	//   "path": "games/v1configuration/applications/{applicationId}/achievements",
 	//   "response": {
 	//     "$ref": "AchievementConfigurationListResponse"
 	//   },
@@ -1242,145 +1275,6 @@ func (c *AchievementConfigurationsListCall) Pages(ctx context.Context, f func(*A
 		}
 		c.PageToken(x.NextPageToken)
 	}
-}
-
-// method id "gamesConfiguration.achievementConfigurations.patch":
-
-type AchievementConfigurationsPatchCall struct {
-	s                        *Service
-	achievementId            string
-	achievementconfiguration *AchievementConfiguration
-	urlParams_               gensupport.URLParams
-	ctx_                     context.Context
-	header_                  http.Header
-}
-
-// Patch: Update the metadata of the achievement configuration with the
-// given ID. This method supports patch semantics.
-func (r *AchievementConfigurationsService) Patch(achievementId string, achievementconfiguration *AchievementConfiguration) *AchievementConfigurationsPatchCall {
-	c := &AchievementConfigurationsPatchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
-	c.achievementId = achievementId
-	c.achievementconfiguration = achievementconfiguration
-	return c
-}
-
-// Fields allows partial responses to be retrieved. See
-// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
-// for more information.
-func (c *AchievementConfigurationsPatchCall) Fields(s ...googleapi.Field) *AchievementConfigurationsPatchCall {
-	c.urlParams_.Set("fields", googleapi.CombineFields(s))
-	return c
-}
-
-// Context sets the context to be used in this call's Do method. Any
-// pending HTTP request will be aborted if the provided context is
-// canceled.
-func (c *AchievementConfigurationsPatchCall) Context(ctx context.Context) *AchievementConfigurationsPatchCall {
-	c.ctx_ = ctx
-	return c
-}
-
-// Header returns an http.Header that can be modified by the caller to
-// add HTTP headers to the request.
-func (c *AchievementConfigurationsPatchCall) Header() http.Header {
-	if c.header_ == nil {
-		c.header_ = make(http.Header)
-	}
-	return c.header_
-}
-
-func (c *AchievementConfigurationsPatchCall) doRequest(alt string) (*http.Response, error) {
-	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
-	for k, v := range c.header_ {
-		reqHeaders[k] = v
-	}
-	reqHeaders.Set("User-Agent", c.s.userAgent())
-	var body io.Reader = nil
-	body, err := googleapi.WithoutDataWrapper.JSONReader(c.achievementconfiguration)
-	if err != nil {
-		return nil, err
-	}
-	reqHeaders.Set("Content-Type", "application/json")
-	c.urlParams_.Set("alt", alt)
-	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "achievements/{achievementId}")
-	urls += "?" + c.urlParams_.Encode()
-	req, err := http.NewRequest("PATCH", urls, body)
-	if err != nil {
-		return nil, err
-	}
-	req.Header = reqHeaders
-	googleapi.Expand(req.URL, map[string]string{
-		"achievementId": c.achievementId,
-	})
-	return gensupport.SendRequest(c.ctx_, c.s.client, req)
-}
-
-// Do executes the "gamesConfiguration.achievementConfigurations.patch" call.
-// Exactly one of *AchievementConfiguration or error will be non-nil.
-// Any non-2xx status code is an error. Response headers are in either
-// *AchievementConfiguration.ServerResponse.Header or (if a response was
-// returned at all) in error.(*googleapi.Error).Header. Use
-// googleapi.IsNotModified to check whether the returned error was
-// because http.StatusNotModified was returned.
-func (c *AchievementConfigurationsPatchCall) Do(opts ...googleapi.CallOption) (*AchievementConfiguration, error) {
-	gensupport.SetOptions(c.urlParams_, opts...)
-	res, err := c.doRequest("json")
-	if res != nil && res.StatusCode == http.StatusNotModified {
-		if res.Body != nil {
-			res.Body.Close()
-		}
-		return nil, &googleapi.Error{
-			Code:   res.StatusCode,
-			Header: res.Header,
-		}
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer googleapi.CloseBody(res)
-	if err := googleapi.CheckResponse(res); err != nil {
-		return nil, err
-	}
-	ret := &AchievementConfiguration{
-		ServerResponse: googleapi.ServerResponse{
-			Header:         res.Header,
-			HTTPStatusCode: res.StatusCode,
-		},
-	}
-	target := &ret
-	if err := gensupport.DecodeResponse(target, res); err != nil {
-		return nil, err
-	}
-	return ret, nil
-	// {
-	//   "description": "Update the metadata of the achievement configuration with the given ID. This method supports patch semantics.",
-	//   "httpMethod": "PATCH",
-	//   "id": "gamesConfiguration.achievementConfigurations.patch",
-	//   "parameterOrder": [
-	//     "achievementId"
-	//   ],
-	//   "parameters": {
-	//     "achievementId": {
-	//       "description": "The ID of the achievement used by this method.",
-	//       "location": "path",
-	//       "required": true,
-	//       "type": "string"
-	//     }
-	//   },
-	//   "path": "achievements/{achievementId}",
-	//   "request": {
-	//     "$ref": "AchievementConfiguration"
-	//   },
-	//   "response": {
-	//     "$ref": "AchievementConfiguration"
-	//   },
-	//   "scopes": [
-	//     "https://www.googleapis.com/auth/androidpublisher"
-	//   ]
-	// }
-
 }
 
 // method id "gamesConfiguration.achievementConfigurations.update":
@@ -1430,7 +1324,7 @@ func (c *AchievementConfigurationsUpdateCall) Header() http.Header {
 
 func (c *AchievementConfigurationsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1443,7 +1337,7 @@ func (c *AchievementConfigurationsUpdateCall) doRequest(alt string) (*http.Respo
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "achievements/{achievementId}")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/achievements/{achievementId}")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("PUT", urls, body)
 	if err != nil {
@@ -1495,6 +1389,7 @@ func (c *AchievementConfigurationsUpdateCall) Do(opts ...googleapi.CallOption) (
 	return ret, nil
 	// {
 	//   "description": "Update the metadata of the achievement configuration with the given ID.",
+	//   "flatPath": "games/v1configuration/achievements/{achievementId}",
 	//   "httpMethod": "PUT",
 	//   "id": "gamesConfiguration.achievementConfigurations.update",
 	//   "parameterOrder": [
@@ -1508,7 +1403,7 @@ func (c *AchievementConfigurationsUpdateCall) Do(opts ...googleapi.CallOption) (
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "achievements/{achievementId}",
+	//   "path": "games/v1configuration/achievements/{achievementId}",
 	//   "request": {
 	//     "$ref": "AchievementConfiguration"
 	//   },
@@ -1609,7 +1504,7 @@ func (c *ImageConfigurationsUploadCall) Header() http.Header {
 
 func (c *ImageConfigurationsUploadCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1617,9 +1512,9 @@ func (c *ImageConfigurationsUploadCall) doRequest(alt string) (*http.Response, e
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "images/{resourceId}/imageType/{imageType}")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/images/{resourceId}/imageType/{imageType}")
 	if c.mediaInfo_ != nil {
-		urls = strings.Replace(urls, "https://www.googleapis.com/", "https://www.googleapis.com/upload/", 1)
+		urls = googleapi.ResolveRelative(c.s.BasePath, "/upload/games/v1configuration/images/{resourceId}/imageType/{imageType}")
 		c.urlParams_.Set("uploadType", c.mediaInfo_.UploadType())
 	}
 	if body == nil {
@@ -1698,18 +1593,15 @@ func (c *ImageConfigurationsUploadCall) Do(opts ...googleapi.CallOption) (*Image
 	return ret, nil
 	// {
 	//   "description": "Uploads an image for a resource with the given ID and image type.",
+	//   "flatPath": "games/v1configuration/images/{resourceId}/imageType/{imageType}",
 	//   "httpMethod": "POST",
 	//   "id": "gamesConfiguration.imageConfigurations.upload",
 	//   "mediaUpload": {
 	//     "accept": [
 	//       "image/*"
 	//     ],
-	//     "maxSize": "15MB",
+	//     "maxSize": "15728640",
 	//     "protocols": {
-	//       "resumable": {
-	//         "multipart": true,
-	//         "path": "/resumable/upload/games/v1configuration/images/{resourceId}/imageType/{imageType}"
-	//       },
 	//       "simple": {
 	//         "multipart": true,
 	//         "path": "/upload/games/v1configuration/images/{resourceId}/imageType/{imageType}"
@@ -1724,12 +1616,9 @@ func (c *ImageConfigurationsUploadCall) Do(opts ...googleapi.CallOption) (*Image
 	//     "imageType": {
 	//       "description": "Selects which image in a resource for this method.",
 	//       "enum": [
+	//         "IMAGE_TYPE_UNSPECIFIED",
 	//         "ACHIEVEMENT_ICON",
 	//         "LEADERBOARD_ICON"
-	//       ],
-	//       "enumDescriptions": [
-	//         "The icon image for an achievement resource.",
-	//         "The icon image for a leaderboard resource."
 	//       ],
 	//       "location": "path",
 	//       "required": true,
@@ -1742,7 +1631,7 @@ func (c *ImageConfigurationsUploadCall) Do(opts ...googleapi.CallOption) (*Image
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "images/{resourceId}/imageType/{imageType}",
+	//   "path": "games/v1configuration/images/{resourceId}/imageType/{imageType}",
 	//   "response": {
 	//     "$ref": "ImageConfiguration"
 	//   },
@@ -1798,7 +1687,7 @@ func (c *LeaderboardConfigurationsDeleteCall) Header() http.Header {
 
 func (c *LeaderboardConfigurationsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1806,7 +1695,7 @@ func (c *LeaderboardConfigurationsDeleteCall) doRequest(alt string) (*http.Respo
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "leaderboards/{leaderboardId}")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/leaderboards/{leaderboardId}")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("DELETE", urls, body)
 	if err != nil {
@@ -1833,6 +1722,7 @@ func (c *LeaderboardConfigurationsDeleteCall) Do(opts ...googleapi.CallOption) e
 	return nil
 	// {
 	//   "description": "Delete the leaderboard configuration with the given ID.",
+	//   "flatPath": "games/v1configuration/leaderboards/{leaderboardId}",
 	//   "httpMethod": "DELETE",
 	//   "id": "gamesConfiguration.leaderboardConfigurations.delete",
 	//   "parameterOrder": [
@@ -1846,7 +1736,7 @@ func (c *LeaderboardConfigurationsDeleteCall) Do(opts ...googleapi.CallOption) e
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "leaderboards/{leaderboardId}",
+	//   "path": "games/v1configuration/leaderboards/{leaderboardId}",
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/androidpublisher"
 	//   ]
@@ -1910,7 +1800,7 @@ func (c *LeaderboardConfigurationsGetCall) Header() http.Header {
 
 func (c *LeaderboardConfigurationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1921,7 +1811,7 @@ func (c *LeaderboardConfigurationsGetCall) doRequest(alt string) (*http.Response
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "leaderboards/{leaderboardId}")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/leaderboards/{leaderboardId}")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("GET", urls, body)
 	if err != nil {
@@ -1973,6 +1863,7 @@ func (c *LeaderboardConfigurationsGetCall) Do(opts ...googleapi.CallOption) (*Le
 	return ret, nil
 	// {
 	//   "description": "Retrieves the metadata of the leaderboard configuration with the given ID.",
+	//   "flatPath": "games/v1configuration/leaderboards/{leaderboardId}",
 	//   "httpMethod": "GET",
 	//   "id": "gamesConfiguration.leaderboardConfigurations.get",
 	//   "parameterOrder": [
@@ -1986,7 +1877,7 @@ func (c *LeaderboardConfigurationsGetCall) Do(opts ...googleapi.CallOption) (*Le
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "leaderboards/{leaderboardId}",
+	//   "path": "games/v1configuration/leaderboards/{leaderboardId}",
 	//   "response": {
 	//     "$ref": "LeaderboardConfiguration"
 	//   },
@@ -2043,7 +1934,7 @@ func (c *LeaderboardConfigurationsInsertCall) Header() http.Header {
 
 func (c *LeaderboardConfigurationsInsertCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2056,7 +1947,7 @@ func (c *LeaderboardConfigurationsInsertCall) doRequest(alt string) (*http.Respo
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "applications/{applicationId}/leaderboards")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/applications/{applicationId}/leaderboards")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("POST", urls, body)
 	if err != nil {
@@ -2108,6 +1999,7 @@ func (c *LeaderboardConfigurationsInsertCall) Do(opts ...googleapi.CallOption) (
 	return ret, nil
 	// {
 	//   "description": "Insert a new leaderboard configuration in this application.",
+	//   "flatPath": "games/v1configuration/applications/{applicationId}/leaderboards",
 	//   "httpMethod": "POST",
 	//   "id": "gamesConfiguration.leaderboardConfigurations.insert",
 	//   "parameterOrder": [
@@ -2121,7 +2013,7 @@ func (c *LeaderboardConfigurationsInsertCall) Do(opts ...googleapi.CallOption) (
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "applications/{applicationId}/leaderboards",
+	//   "path": "games/v1configuration/applications/{applicationId}/leaderboards",
 	//   "request": {
 	//     "$ref": "LeaderboardConfiguration"
 	//   },
@@ -2155,9 +2047,10 @@ func (r *LeaderboardConfigurationsService) List(applicationId string) *Leaderboa
 }
 
 // MaxResults sets the optional parameter "maxResults": The maximum
-// number of resource configurations to return in the response, used for
-// paging. For any response, the actual number of resources returned may
-// be less than the specified maxResults.
+// number of resource configurations to return in the response,
+// used for paging. For any response, the actual number of resources
+// returned
+// may be less than the specified `maxResults`.
 func (c *LeaderboardConfigurationsListCall) MaxResults(maxResults int64) *LeaderboardConfigurationsListCall {
 	c.urlParams_.Set("maxResults", fmt.Sprint(maxResults))
 	return c
@@ -2207,7 +2100,7 @@ func (c *LeaderboardConfigurationsListCall) Header() http.Header {
 
 func (c *LeaderboardConfigurationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2218,7 +2111,7 @@ func (c *LeaderboardConfigurationsListCall) doRequest(alt string) (*http.Respons
 	var body io.Reader = nil
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "applications/{applicationId}/leaderboards")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/applications/{applicationId}/leaderboards")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("GET", urls, body)
 	if err != nil {
@@ -2271,6 +2164,7 @@ func (c *LeaderboardConfigurationsListCall) Do(opts ...googleapi.CallOption) (*L
 	return ret, nil
 	// {
 	//   "description": "Returns a list of the leaderboard configurations in this application.",
+	//   "flatPath": "games/v1configuration/applications/{applicationId}/leaderboards",
 	//   "httpMethod": "GET",
 	//   "id": "gamesConfiguration.leaderboardConfigurations.list",
 	//   "parameterOrder": [
@@ -2284,11 +2178,9 @@ func (c *LeaderboardConfigurationsListCall) Do(opts ...googleapi.CallOption) (*L
 	//       "type": "string"
 	//     },
 	//     "maxResults": {
-	//       "description": "The maximum number of resource configurations to return in the response, used for paging. For any response, the actual number of resources returned may be less than the specified maxResults.",
+	//       "description": "The maximum number of resource configurations to return in the response,\nused for paging. For any response, the actual number of resources returned\nmay be less than the specified `maxResults`.",
 	//       "format": "int32",
 	//       "location": "query",
-	//       "maximum": "200",
-	//       "minimum": "1",
 	//       "type": "integer"
 	//     },
 	//     "pageToken": {
@@ -2297,7 +2189,7 @@ func (c *LeaderboardConfigurationsListCall) Do(opts ...googleapi.CallOption) (*L
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "applications/{applicationId}/leaderboards",
+	//   "path": "games/v1configuration/applications/{applicationId}/leaderboards",
 	//   "response": {
 	//     "$ref": "LeaderboardConfigurationListResponse"
 	//   },
@@ -2327,145 +2219,6 @@ func (c *LeaderboardConfigurationsListCall) Pages(ctx context.Context, f func(*L
 		}
 		c.PageToken(x.NextPageToken)
 	}
-}
-
-// method id "gamesConfiguration.leaderboardConfigurations.patch":
-
-type LeaderboardConfigurationsPatchCall struct {
-	s                        *Service
-	leaderboardId            string
-	leaderboardconfiguration *LeaderboardConfiguration
-	urlParams_               gensupport.URLParams
-	ctx_                     context.Context
-	header_                  http.Header
-}
-
-// Patch: Update the metadata of the leaderboard configuration with the
-// given ID. This method supports patch semantics.
-func (r *LeaderboardConfigurationsService) Patch(leaderboardId string, leaderboardconfiguration *LeaderboardConfiguration) *LeaderboardConfigurationsPatchCall {
-	c := &LeaderboardConfigurationsPatchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
-	c.leaderboardId = leaderboardId
-	c.leaderboardconfiguration = leaderboardconfiguration
-	return c
-}
-
-// Fields allows partial responses to be retrieved. See
-// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
-// for more information.
-func (c *LeaderboardConfigurationsPatchCall) Fields(s ...googleapi.Field) *LeaderboardConfigurationsPatchCall {
-	c.urlParams_.Set("fields", googleapi.CombineFields(s))
-	return c
-}
-
-// Context sets the context to be used in this call's Do method. Any
-// pending HTTP request will be aborted if the provided context is
-// canceled.
-func (c *LeaderboardConfigurationsPatchCall) Context(ctx context.Context) *LeaderboardConfigurationsPatchCall {
-	c.ctx_ = ctx
-	return c
-}
-
-// Header returns an http.Header that can be modified by the caller to
-// add HTTP headers to the request.
-func (c *LeaderboardConfigurationsPatchCall) Header() http.Header {
-	if c.header_ == nil {
-		c.header_ = make(http.Header)
-	}
-	return c.header_
-}
-
-func (c *LeaderboardConfigurationsPatchCall) doRequest(alt string) (*http.Response, error) {
-	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
-	for k, v := range c.header_ {
-		reqHeaders[k] = v
-	}
-	reqHeaders.Set("User-Agent", c.s.userAgent())
-	var body io.Reader = nil
-	body, err := googleapi.WithoutDataWrapper.JSONReader(c.leaderboardconfiguration)
-	if err != nil {
-		return nil, err
-	}
-	reqHeaders.Set("Content-Type", "application/json")
-	c.urlParams_.Set("alt", alt)
-	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "leaderboards/{leaderboardId}")
-	urls += "?" + c.urlParams_.Encode()
-	req, err := http.NewRequest("PATCH", urls, body)
-	if err != nil {
-		return nil, err
-	}
-	req.Header = reqHeaders
-	googleapi.Expand(req.URL, map[string]string{
-		"leaderboardId": c.leaderboardId,
-	})
-	return gensupport.SendRequest(c.ctx_, c.s.client, req)
-}
-
-// Do executes the "gamesConfiguration.leaderboardConfigurations.patch" call.
-// Exactly one of *LeaderboardConfiguration or error will be non-nil.
-// Any non-2xx status code is an error. Response headers are in either
-// *LeaderboardConfiguration.ServerResponse.Header or (if a response was
-// returned at all) in error.(*googleapi.Error).Header. Use
-// googleapi.IsNotModified to check whether the returned error was
-// because http.StatusNotModified was returned.
-func (c *LeaderboardConfigurationsPatchCall) Do(opts ...googleapi.CallOption) (*LeaderboardConfiguration, error) {
-	gensupport.SetOptions(c.urlParams_, opts...)
-	res, err := c.doRequest("json")
-	if res != nil && res.StatusCode == http.StatusNotModified {
-		if res.Body != nil {
-			res.Body.Close()
-		}
-		return nil, &googleapi.Error{
-			Code:   res.StatusCode,
-			Header: res.Header,
-		}
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer googleapi.CloseBody(res)
-	if err := googleapi.CheckResponse(res); err != nil {
-		return nil, err
-	}
-	ret := &LeaderboardConfiguration{
-		ServerResponse: googleapi.ServerResponse{
-			Header:         res.Header,
-			HTTPStatusCode: res.StatusCode,
-		},
-	}
-	target := &ret
-	if err := gensupport.DecodeResponse(target, res); err != nil {
-		return nil, err
-	}
-	return ret, nil
-	// {
-	//   "description": "Update the metadata of the leaderboard configuration with the given ID. This method supports patch semantics.",
-	//   "httpMethod": "PATCH",
-	//   "id": "gamesConfiguration.leaderboardConfigurations.patch",
-	//   "parameterOrder": [
-	//     "leaderboardId"
-	//   ],
-	//   "parameters": {
-	//     "leaderboardId": {
-	//       "description": "The ID of the leaderboard.",
-	//       "location": "path",
-	//       "required": true,
-	//       "type": "string"
-	//     }
-	//   },
-	//   "path": "leaderboards/{leaderboardId}",
-	//   "request": {
-	//     "$ref": "LeaderboardConfiguration"
-	//   },
-	//   "response": {
-	//     "$ref": "LeaderboardConfiguration"
-	//   },
-	//   "scopes": [
-	//     "https://www.googleapis.com/auth/androidpublisher"
-	//   ]
-	// }
-
 }
 
 // method id "gamesConfiguration.leaderboardConfigurations.update":
@@ -2515,7 +2268,7 @@ func (c *LeaderboardConfigurationsUpdateCall) Header() http.Header {
 
 func (c *LeaderboardConfigurationsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2528,7 +2281,7 @@ func (c *LeaderboardConfigurationsUpdateCall) doRequest(alt string) (*http.Respo
 	reqHeaders.Set("Content-Type", "application/json")
 	c.urlParams_.Set("alt", alt)
 	c.urlParams_.Set("prettyPrint", "false")
-	urls := googleapi.ResolveRelative(c.s.BasePath, "leaderboards/{leaderboardId}")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "games/v1configuration/leaderboards/{leaderboardId}")
 	urls += "?" + c.urlParams_.Encode()
 	req, err := http.NewRequest("PUT", urls, body)
 	if err != nil {
@@ -2580,6 +2333,7 @@ func (c *LeaderboardConfigurationsUpdateCall) Do(opts ...googleapi.CallOption) (
 	return ret, nil
 	// {
 	//   "description": "Update the metadata of the leaderboard configuration with the given ID.",
+	//   "flatPath": "games/v1configuration/leaderboards/{leaderboardId}",
 	//   "httpMethod": "PUT",
 	//   "id": "gamesConfiguration.leaderboardConfigurations.update",
 	//   "parameterOrder": [
@@ -2593,7 +2347,7 @@ func (c *LeaderboardConfigurationsUpdateCall) Do(opts ...googleapi.CallOption) (
 	//       "type": "string"
 	//     }
 	//   },
-	//   "path": "leaderboards/{leaderboardId}",
+	//   "path": "games/v1configuration/leaderboards/{leaderboardId}",
 	//   "request": {
 	//     "$ref": "LeaderboardConfiguration"
 	//   },

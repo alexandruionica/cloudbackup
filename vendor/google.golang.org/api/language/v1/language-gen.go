@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -58,6 +58,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -74,6 +75,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "language:v1"
 const apiName = "language"
@@ -98,6 +100,7 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -652,7 +655,8 @@ type ClassificationCategory struct {
 
 	// Name: The name of the category representing the document, from the
 	// [predefined
-	// taxonomy](/natural-language/docs/categories).
+	// taxonomy](https://cloud.google.com/natural-language/docs/c
+	// ategories).
 	Name string `json:"name,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Confidence") to
@@ -907,13 +911,14 @@ type Document struct {
 	// automatically detected). Both ISO and BCP-47 language codes
 	// are
 	// accepted.<br>
-	// [Language Support](/natural-language/docs/languages)
-	// lists currently supported languages for each API method.
-	// If the language (either specified by the caller or automatically
-	// detected)
-	// is not supported by the called API method, an `INVALID_ARGUMENT`
-	// error
-	// is returned.
+	// [Language
+	// Support](https://cloud.google.com/natural-
+	// language/docs/languages) lists
+	// currently supported languages for each API method. If the language
+	// (either
+	// specified by the caller or automatically detected) is not supported
+	// by the
+	// called API method, an `INVALID_ARGUMENT` error is returned.
 	Language string `json:"language,omitempty"`
 
 	// Type: Required. If the type is not set or is
@@ -1623,7 +1628,7 @@ func (c *DocumentsAnalyzeEntitiesCall) Header() http.Header {
 
 func (c *DocumentsAnalyzeEntitiesCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1751,7 +1756,7 @@ func (c *DocumentsAnalyzeEntitySentimentCall) Header() http.Header {
 
 func (c *DocumentsAnalyzeEntitySentimentCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1877,7 +1882,7 @@ func (c *DocumentsAnalyzeSentimentCall) Header() http.Header {
 
 func (c *DocumentsAnalyzeSentimentCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2007,7 +2012,7 @@ func (c *DocumentsAnalyzeSyntaxCall) Header() http.Header {
 
 func (c *DocumentsAnalyzeSyntaxCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2135,7 +2140,7 @@ func (c *DocumentsAnnotateTextCall) Header() http.Header {
 
 func (c *DocumentsAnnotateTextCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2261,7 +2266,7 @@ func (c *DocumentsClassifyTextCall) Header() http.Header {
 
 func (c *DocumentsClassifyTextCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

@@ -108,6 +108,10 @@ type EMRAPI interface {
 	GetBlockPublicAccessConfigurationWithContext(aws.Context, *emr.GetBlockPublicAccessConfigurationInput, ...request.Option) (*emr.GetBlockPublicAccessConfigurationOutput, error)
 	GetBlockPublicAccessConfigurationRequest(*emr.GetBlockPublicAccessConfigurationInput) (*request.Request, *emr.GetBlockPublicAccessConfigurationOutput)
 
+	GetManagedScalingPolicy(*emr.GetManagedScalingPolicyInput) (*emr.GetManagedScalingPolicyOutput, error)
+	GetManagedScalingPolicyWithContext(aws.Context, *emr.GetManagedScalingPolicyInput, ...request.Option) (*emr.GetManagedScalingPolicyOutput, error)
+	GetManagedScalingPolicyRequest(*emr.GetManagedScalingPolicyInput) (*request.Request, *emr.GetManagedScalingPolicyOutput)
+
 	ListBootstrapActions(*emr.ListBootstrapActionsInput) (*emr.ListBootstrapActionsOutput, error)
 	ListBootstrapActionsWithContext(aws.Context, *emr.ListBootstrapActionsInput, ...request.Option) (*emr.ListBootstrapActionsOutput, error)
 	ListBootstrapActionsRequest(*emr.ListBootstrapActionsInput) (*request.Request, *emr.ListBootstrapActionsOutput)
@@ -157,6 +161,10 @@ type EMRAPI interface {
 	ListStepsPages(*emr.ListStepsInput, func(*emr.ListStepsOutput, bool) bool) error
 	ListStepsPagesWithContext(aws.Context, *emr.ListStepsInput, func(*emr.ListStepsOutput, bool) bool, ...request.Option) error
 
+	ModifyCluster(*emr.ModifyClusterInput) (*emr.ModifyClusterOutput, error)
+	ModifyClusterWithContext(aws.Context, *emr.ModifyClusterInput, ...request.Option) (*emr.ModifyClusterOutput, error)
+	ModifyClusterRequest(*emr.ModifyClusterInput) (*request.Request, *emr.ModifyClusterOutput)
+
 	ModifyInstanceFleet(*emr.ModifyInstanceFleetInput) (*emr.ModifyInstanceFleetOutput, error)
 	ModifyInstanceFleetWithContext(aws.Context, *emr.ModifyInstanceFleetInput, ...request.Option) (*emr.ModifyInstanceFleetOutput, error)
 	ModifyInstanceFleetRequest(*emr.ModifyInstanceFleetInput) (*request.Request, *emr.ModifyInstanceFleetOutput)
@@ -173,9 +181,17 @@ type EMRAPI interface {
 	PutBlockPublicAccessConfigurationWithContext(aws.Context, *emr.PutBlockPublicAccessConfigurationInput, ...request.Option) (*emr.PutBlockPublicAccessConfigurationOutput, error)
 	PutBlockPublicAccessConfigurationRequest(*emr.PutBlockPublicAccessConfigurationInput) (*request.Request, *emr.PutBlockPublicAccessConfigurationOutput)
 
+	PutManagedScalingPolicy(*emr.PutManagedScalingPolicyInput) (*emr.PutManagedScalingPolicyOutput, error)
+	PutManagedScalingPolicyWithContext(aws.Context, *emr.PutManagedScalingPolicyInput, ...request.Option) (*emr.PutManagedScalingPolicyOutput, error)
+	PutManagedScalingPolicyRequest(*emr.PutManagedScalingPolicyInput) (*request.Request, *emr.PutManagedScalingPolicyOutput)
+
 	RemoveAutoScalingPolicy(*emr.RemoveAutoScalingPolicyInput) (*emr.RemoveAutoScalingPolicyOutput, error)
 	RemoveAutoScalingPolicyWithContext(aws.Context, *emr.RemoveAutoScalingPolicyInput, ...request.Option) (*emr.RemoveAutoScalingPolicyOutput, error)
 	RemoveAutoScalingPolicyRequest(*emr.RemoveAutoScalingPolicyInput) (*request.Request, *emr.RemoveAutoScalingPolicyOutput)
+
+	RemoveManagedScalingPolicy(*emr.RemoveManagedScalingPolicyInput) (*emr.RemoveManagedScalingPolicyOutput, error)
+	RemoveManagedScalingPolicyWithContext(aws.Context, *emr.RemoveManagedScalingPolicyInput, ...request.Option) (*emr.RemoveManagedScalingPolicyOutput, error)
+	RemoveManagedScalingPolicyRequest(*emr.RemoveManagedScalingPolicyInput) (*request.Request, *emr.RemoveManagedScalingPolicyOutput)
 
 	RemoveTags(*emr.RemoveTagsInput) (*emr.RemoveTagsOutput, error)
 	RemoveTagsWithContext(aws.Context, *emr.RemoveTagsInput, ...request.Option) (*emr.RemoveTagsOutput, error)

@@ -5,6 +5,9 @@
         "https://www.googleapis.com/auth/youtube": {
           "description": "Manage your YouTube account"
         },
+        "https://www.googleapis.com/auth/youtube.channel-memberships.creator": {
+          "description": "See a list of your current active channel members, their current level, and when they became a member"
+        },
         "https://www.googleapis.com/auth/youtube.force-ssl": {
           "description": "See, edit, and permanently delete your YouTube videos, ratings, comments and captions"
         },
@@ -30,7 +33,7 @@
   "description": "Supports core YouTube features, such as uploading videos, creating and managing playlists, searching for content, and much more.",
   "discoveryVersion": "v1",
   "documentationLink": "https://developers.google.com/youtube/v3",
-  "etag": "\"9eZ1uxVRThTDhLJCZHhqs3eQWz4/yXw94x0FfH9hsuVdo84XOMLmCno\"",
+  "etag": "\"u9GIe6H63LSGq-9_t39K2Zx_EAc/VfSXoeTZJSDEPlJ9LkqjGCjn5wo\"",
   "icons": {
     "x16": "https://www.google.com/images/icons/product/youtube-16.png",
     "x32": "https://www.google.com/images/icons/product/youtube-32.png"
@@ -2053,6 +2056,11 @@
             "part"
           ],
           "parameters": {
+            "filterByMemberChannelId": {
+              "description": "The filterByMemberChannelId parameter represents a comma separated list of channel IDs. Only data about members that are part of this list will be included in the response. It can be used to efficiently check whether specific users are entitled to perks offered via third parties.",
+              "location": "query",
+              "type": "string"
+            },
             "hasAccessToLevel": {
               "description": "The hasAccessToLevel parameter specifies, when set, the ID of a pricing level that members from the results set should have access to. When not set, all members will be considered, regardless of their active pricing level.",
               "location": "query",
@@ -2063,7 +2071,7 @@
               "description": "The maxResults parameter specifies the maximum number of items that should be returned in the result set.",
               "format": "uint32",
               "location": "query",
-              "maximum": "50",
+              "maximum": "1000",
               "minimum": "0",
               "type": "integer"
             },
@@ -2087,7 +2095,7 @@
               "type": "string"
             },
             "part": {
-              "description": "The part parameter specifies the member resource parts that the API response will include. Supported values are id and snippet.",
+              "description": "The part parameter specifies the member resource parts that the API response will include. Set the parameter value to snippet.",
               "location": "query",
               "required": true,
               "type": "string"
@@ -2099,6 +2107,7 @@
           },
           "scopes": [
             "https://www.googleapis.com/auth/youtube",
+            "https://www.googleapis.com/auth/youtube.channel-memberships.creator",
             "https://www.googleapis.com/auth/youtube.force-ssl",
             "https://www.googleapis.com/auth/youtube.readonly",
             "https://www.googleapis.com/auth/youtubepartner"
@@ -2129,6 +2138,7 @@
           },
           "scopes": [
             "https://www.googleapis.com/auth/youtube",
+            "https://www.googleapis.com/auth/youtube.channel-memberships.creator",
             "https://www.googleapis.com/auth/youtube.force-ssl",
             "https://www.googleapis.com/auth/youtube.readonly",
             "https://www.googleapis.com/auth/youtubepartner"
@@ -2614,6 +2624,7 @@
               "type": "string"
             },
             "safeSearch": {
+              "default": "SAFE_SEARCH_MODERATE_FILTERING",
               "description": "The safeSearch parameter indicates whether the search results should include restricted content as well as standard content.",
               "enum": [
                 "moderate",
@@ -3586,7 +3597,7 @@
       }
     }
   },
-  "revision": "20190827",
+  "revision": "20200402",
   "rootUrl": "https://www.googleapis.com/",
   "schemas": {
     "AccessPolicy": {
@@ -4959,6 +4970,9 @@
           ],
           "type": "string"
         },
+        "madeForKids": {
+          "type": "boolean"
+        },
         "privacyStatus": {
           "description": "Privacy status of the channel.",
           "enum": [
@@ -4972,6 +4986,9 @@
             ""
           ],
           "type": "string"
+        },
+        "selfDeclaredMadeForKids": {
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -7417,6 +7434,9 @@
           "description": "This setting indicates whether auto start is enabled for this broadcast.",
           "type": "boolean"
         },
+        "enableAutoStop": {
+          "type": "boolean"
+        },
         "enableClosedCaptions": {
           "description": "This setting indicates whether HTTP POST closed captioning is enabled for this broadcast. The ingestion URL of the closed captions is returned through the liveStreams API. This is mutually exclusive with using the closed_captions_type property, and is equivalent to setting closed_captions_type to CLOSED_CAPTIONS_HTTP_POST.",
           "type": "boolean"
@@ -7467,6 +7487,7 @@
           "type": "string"
         },
         "mesh": {
+          "description": "The mesh for projecting the video if projection is mesh. The mesh value must be a UTF-8 string containing the base-64 encoding of 3D mesh data that follows the  Spherical Video V2 RFC specification for an mshp box, excluding the box size and type but including the following four reserved zero bytes for the version and flags.",
           "format": "byte",
           "type": "string"
         },
@@ -7717,6 +7738,9 @@
           ],
           "type": "string"
         },
+        "madeForKids": {
+          "type": "boolean"
+        },
         "privacyStatus": {
           "annotations": {
             "required": [
@@ -7750,6 +7774,9 @@
             ""
           ],
           "type": "string"
+        },
+        "selfDeclaredMadeForKids": {
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -8655,10 +8682,6 @@
           "description": "Etag of this resource.",
           "type": "string"
         },
-        "id": {
-          "description": "The ID that YouTube assigns to uniquely identify the member.",
-          "type": "string"
-        },
         "kind": {
           "default": "youtube#member",
           "description": "Identifies what kind of resource this is. Value: the fixed string \"youtube#member\".",
@@ -8733,33 +8756,64 @@
       "id": "MembershipsDetails",
       "properties": {
         "accessibleLevels": {
-          "description": "All levels that the user has access to. This includes the purchased level and all other levels that are included because of a higher purchase.",
+          "description": "Ids of all levels that the user has access to. This includes the currently active level and all other levels that are included because of a higher purchase.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
+        "highestAccessibleLevel": {
+          "description": "Id of the highest level that the user has access to at the moment.",
+          "type": "string"
+        },
+        "highestAccessibleLevelDisplayName": {
+          "description": "Display name of the highest level that the user has access to at the moment.",
+          "type": "string"
+        },
+        "membershipsDuration": {
+          "$ref": "MembershipsDuration",
+          "description": "Data about memberships duration without taking into consideration pricing levels."
+        },
+        "membershipsDurationAtLevels": {
+          "description": "Data about memberships duration on particular pricing levels.",
+          "items": {
+            "$ref": "MembershipsDurationAtLevel"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "MembershipsDuration": {
+      "id": "MembershipsDuration",
+      "properties": {
         "memberSince": {
           "description": "The date and time when the user became a continuous member across all levels.",
           "type": "string"
         },
-        "memberSinceCurrentLevel": {
-          "description": "The date and time when the user started to continuously have access to the currently highest level.",
-          "type": "string"
-        },
-        "memberTotalDuration": {
+        "memberTotalDurationMonths": {
           "description": "The cumulative time the user has been a member across all levels in complete months (the time is rounded down to the nearest integer).",
           "format": "int32",
           "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "MembershipsDurationAtLevel": {
+      "id": "MembershipsDurationAtLevel",
+      "properties": {
+        "level": {
+          "description": "Pricing level id.",
+          "type": "string"
         },
-        "memberTotalDurationCurrentLevel": {
-          "description": "The cumulative time the user has had access to the currently highest level in complete months (the time is rounded down to the nearest integer).",
+        "memberSince": {
+          "description": "The date and time when the user became a continuous member for the given level.",
+          "type": "string"
+        },
+        "memberTotalDurationMonths": {
+          "description": "The cumulative time the user has been a member for the given level in complete months (the time is rounded down to the nearest integer).",
           "format": "int32",
           "type": "integer"
-        },
-        "purchasedLevel": {
-          "description": "The highest level the user has access to at the moment.",
-          "type": "string"
         }
       },
       "type": "object"
@@ -10969,6 +11023,9 @@
           ],
           "type": "string"
         },
+        "madeForKids": {
+          "type": "boolean"
+        },
         "privacyStatus": {
           "description": "The video's privacy status.",
           "enum": [
@@ -11019,6 +11076,9 @@
             ""
           ],
           "type": "string"
+        },
+        "selfDeclaredMadeForKids": {
+          "type": "boolean"
         },
         "uploadStatus": {
           "description": "The status of the uploaded video.",

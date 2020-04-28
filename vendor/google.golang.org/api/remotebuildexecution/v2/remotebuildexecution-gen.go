@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -52,6 +52,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -68,6 +69,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "remotebuildexecution:v2"
 const apiName = "remotebuildexecution"
@@ -87,6 +89,7 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -241,6 +244,21 @@ type BuildBazelRemoteExecutionV2Action struct {
 	// ContentAddressableStorage.
 	InputRootDigest *BuildBazelRemoteExecutionV2Digest `json:"inputRootDigest,omitempty"`
 
+	// OutputNodeProperties: List of required supported NodeProperty
+	// keys. In order to ensure that equivalent `Action`s always hash to the
+	// same
+	// value, the supported node properties MUST be lexicographically sorted
+	// by name.
+	// Sorting of strings is done by code point, equivalently, by the UTF-8
+	// bytes.
+	//
+	// The interpretation of these properties is server-dependent. If a
+	// property is
+	// not recognized by the server, the server will return an
+	// `INVALID_ARGUMENT`
+	// error.
+	OutputNodeProperties []string `json:"outputNodeProperties,omitempty"`
+
 	// Timeout: A timeout after which the execution should be killed. If the
 	// timeout is
 	// absent, then the client is specifying that the execution should
@@ -334,11 +352,12 @@ type BuildBazelRemoteExecutionV2ActionResult struct {
 
 	// OutputDirectories: The output directories of the action. For each
 	// output directory requested
-	// in the `output_directories` field of the Action, if the
-	// corresponding
-	// directory existed after the action completed, a single entry will
-	// be
-	// present in the output list, which will contain the digest of a
+	// in the `output_directories` or `output_paths` field of the Action, if
+	// the
+	// corresponding directory existed after the action completed, a single
+	// entry
+	// will be present in the output list, which will contain the digest of
+	// a
 	// Tree message containing the
 	// directory tree, and the path equal exactly to the corresponding
 	// Action
@@ -399,8 +418,9 @@ type BuildBazelRemoteExecutionV2ActionResult struct {
 	//   }
 	// }
 	// ```
-	// If an output of the same name was found, but was not a directory,
-	// the
+	// If an output of the same name as listed in `output_files` of
+	// the Command was found in `output_directories`, but was not a
+	// directory, the
 	// server will return a FAILED_PRECONDITION.
 	OutputDirectories []*BuildBazelRemoteExecutionV2OutputDirectory `json:"outputDirectories,omitempty"`
 
@@ -431,6 +451,10 @@ type BuildBazelRemoteExecutionV2ActionResult struct {
 	// output
 	// list as desired; clients MUST NOT assume that the output list is
 	// sorted.
+	//
+	// DEPRECATED as of v2.1. Servers that wish to be compatible with v2.0
+	// API
+	// should still populate this field in addition to `output_symlinks`.
 	OutputDirectorySymlinks []*BuildBazelRemoteExecutionV2OutputSymlink `json:"outputDirectorySymlinks,omitempty"`
 
 	// OutputFileSymlinks: The output files of the action that are symbolic
@@ -440,37 +464,43 @@ type BuildBazelRemoteExecutionV2ActionResult struct {
 	// outside of the working directory, if the server
 	// supports
 	// SymlinkAbsolutePathStrategy.ALLOWED.
-	// For each output file requested in the `output_files` field of the
-	// Action,
-	// if the corresponding file existed after
+	// For each output file requested in the `output_files` or
+	// `output_paths`
+	// field of the Action, if the corresponding file existed after
 	// the action completed, a single entry will be present either in this
 	// field,
 	// or in the `output_files` field, if the file was not a symbolic
 	// link.
 	//
-	// If an output symbolic link of the same name was found, but its
-	// target
-	// type was not a regular file, the server will return a
-	// FAILED_PRECONDITION.
+	// If an output symbolic link of the same name as listed in
+	// `output_files` of
+	// the Command was found, but its target type was not a regular file,
+	// the
+	// server will return a FAILED_PRECONDITION.
 	// If the action does not produce the requested output, then that
 	// output
 	// will be omitted from the list. The server is free to arrange the
 	// output
 	// list as desired; clients MUST NOT assume that the output list is
 	// sorted.
+	//
+	// DEPRECATED as of v2.1. Servers that wish to be compatible with v2.0
+	// API
+	// should still populate this field in addition to `output_symlinks`.
 	OutputFileSymlinks []*BuildBazelRemoteExecutionV2OutputSymlink `json:"outputFileSymlinks,omitempty"`
 
 	// OutputFiles: The output files of the action. For each output file
 	// requested in the
-	// `output_files` field of the Action, if the corresponding file existed
-	// after
-	// the action completed, a single entry will be present either in this
-	// field,
-	// or the `output_file_symlinks` field if the file was a symbolic link
-	// to
-	// another file.
+	// `output_files` or `output_paths` field of the Action, if the
+	// corresponding
+	// file existed after the action completed, a single entry will be
+	// present
+	// either in this field, or the `output_file_symlinks` field if the file
+	// was
+	// a symbolic link to another file (`output_symlinks` field after
+	// v2.1).
 	//
-	// If an output of the same name was found, but was a directory
+	// If an output listed in `output_files` was found, but was a directory
 	// rather
 	// than a regular file, the server will return a FAILED_PRECONDITION.
 	// If the action does not produce the requested output, then that
@@ -480,6 +510,30 @@ type BuildBazelRemoteExecutionV2ActionResult struct {
 	// list as desired; clients MUST NOT assume that the output list is
 	// sorted.
 	OutputFiles []*BuildBazelRemoteExecutionV2OutputFile `json:"outputFiles,omitempty"`
+
+	// OutputSymlinks: New in v2.1: this field will only be populated if the
+	// command
+	// `output_paths` field was used, and not the pre v2.1 `output_files`
+	// or
+	// `output_directories` fields.
+	// The output paths of the action that are symbolic links to other
+	// paths. Those
+	// may be links to other outputs, or inputs, or even absolute
+	// paths
+	// outside of the working directory, if the server
+	// supports
+	// SymlinkAbsolutePathStrategy.ALLOWED.
+	// A single entry for each output requested in `output_paths`
+	// field of the Action, if the corresponding path existed after
+	// the action completed and was a symbolic link.
+	//
+	// If the action does not produce a requested output, then that
+	// output
+	// will be omitted from the list. The server is free to arrange the
+	// output
+	// list as desired; clients MUST NOT assume that the output list is
+	// sorted.
+	OutputSymlinks []*BuildBazelRemoteExecutionV2OutputSymlink `json:"outputSymlinks,omitempty"`
 
 	// StderrDigest: The digest for a blob containing the standard error of
 	// the action, which
@@ -786,13 +840,15 @@ type BuildBazelRemoteExecutionV2CacheCapabilities struct {
 	//
 	// Possible values:
 	//   "UNKNOWN" - It is an error for the server to return this value.
-	//   "SHA256" - The Sha-256 digest function.
-	//   "SHA1" - The Sha-1 digest function.
+	//   "SHA256" - The SHA-256 digest function.
+	//   "SHA1" - The SHA-1 digest function.
 	//   "MD5" - The MD5 digest function.
 	//   "VSO" - The Microsoft "VSO-Hash" paged SHA256 digest function.
 	// See
 	// https://github.com/microsoft/BuildXL/blob/master/Documentation/Specs/PagedHash.md
 	// .
+	//   "SHA384" - The SHA-384 digest function.
+	//   "SHA512" - The SHA-512 digest function.
 	DigestFunction []string `json:"digestFunction,omitempty"`
 
 	// MaxBatchTotalSizeBytes: Maximum total size of blobs to be
@@ -919,6 +975,8 @@ type BuildBazelRemoteExecutionV2Command struct {
 	// directories themselves) are created by the worker prior to execution,
 	// even
 	// if they are not explicitly part of the input root.
+	//
+	// DEPRECATED since 2.1: Use `output_paths` instead.
 	OutputDirectories []string `json:"outputDirectories,omitempty"`
 
 	// OutputFiles: A list of the output files that the client expects to
@@ -953,8 +1011,57 @@ type BuildBazelRemoteExecutionV2Command struct {
 	//
 	// Directories leading up to the output files are created by the worker
 	// prior
-	// to execution, even if they are not explicitly part of the input root.
+	// to execution, even if they are not explicitly part of the input
+	// root.
+	//
+	// DEPRECATED since v2.1: Use `output_paths` instead.
 	OutputFiles []string `json:"outputFiles,omitempty"`
+
+	// OutputPaths: A list of the output paths that the client expects to
+	// retrieve from the
+	// action. Only the listed paths will be returned to the client as
+	// output.
+	// The type of the output (file or directory) is not specified, and will
+	// be
+	// determined by the server after action execution. If the resulting
+	// path is
+	// a file, it will be returned in an
+	// OutputFile) typed field.
+	// If the path is a directory, the entire directory structure will be
+	// returned
+	// as a Tree message digest, see
+	// OutputDirectory)
+	// Other files or directories that may be created during command
+	// execution
+	// are discarded.
+	//
+	// The paths are relative to the working directory of the action
+	// execution.
+	// The paths are specified using a single forward slash (`/`) as a
+	// path
+	// separator, even if the execution platform natively uses a
+	// different
+	// separator. The path MUST NOT include a trailing slash, nor a leading
+	// slash,
+	// being a relative path.
+	//
+	// In order to ensure consistent hashing of the same Action, the output
+	// paths
+	// MUST be deduplicated and sorted lexicographically by code point
+	// (or,
+	// equivalently, by UTF-8 bytes).
+	//
+	// Directories leading up to the output paths are created by the worker
+	// prior
+	// to execution, even if they are not explicitly part of the input
+	// root.
+	//
+	// New in v2.1: this field supersedes the DEPRECATED `output_files`
+	// and
+	// `output_directories` fields. If `output_paths` is used,
+	// `output_files` and
+	// `output_directories` will be ignored!
+	OutputPaths []string `json:"outputPaths,omitempty"`
 
 	// Platform: The platform requirements for the execution environment.
 	// The server MAY
@@ -1033,9 +1140,8 @@ func (s *BuildBazelRemoteExecutionV2CommandEnvironmentVariable) MarshalJSON() ([
 
 // BuildBazelRemoteExecutionV2Digest: A content digest. A digest for a
 // given blob consists of the size of the blob
-// and its hash. The hash algorithm to use is defined by the server, but
-// servers
-// SHOULD use SHA-256.
+// and its hash. The hash algorithm to use is defined by the
+// server.
 //
 // The size is considered to be an integral part of the digest and
 // cannot be
@@ -1151,6 +1257,10 @@ func (s *BuildBazelRemoteExecutionV2Digest) MarshalJSON() ([]byte, error) {
 //   in lexicographical order by path. The path strings must be sorted
 // by code
 //   point, equivalently, by UTF-8 bytes.
+// * The NodeProperties of files,
+//   directories, and symlinks must be sorted in lexicographical order
+// by
+//   property name.
 //
 // A `Directory` that obeys the restrictions is said to be in canonical
 // form.
@@ -1170,7 +1280,13 @@ func (s *BuildBazelRemoteExecutionV2Digest) MarshalJSON() ([]byte, error) {
 //       digest: {
 //         hash: "4a73bc9d03...",
 //         size: 65534
-//       }
+//       },
+//       node_properties: [
+//         {
+//           "name": "MTime",
+//           "value": "2017-01-15T01:30:15.01Z"
+//         }
+//       ]
 //     }
 //   ],
 //   directories: [
@@ -1204,6 +1320,9 @@ type BuildBazelRemoteExecutionV2Directory struct {
 
 	// Files: The files in the directory.
 	Files []*BuildBazelRemoteExecutionV2FileNode `json:"files,omitempty"`
+
+	// NodeProperties: The node properties of the Directory.
+	NodeProperties []*BuildBazelRemoteExecutionV2NodeProperty `json:"nodeProperties,omitempty"`
 
 	// Symlinks: The symlinks in the directory.
 	Symlinks []*BuildBazelRemoteExecutionV2SymlinkNode `json:"symlinks,omitempty"`
@@ -1541,13 +1660,15 @@ type BuildBazelRemoteExecutionV2ExecutionCapabilities struct {
 	//
 	// Possible values:
 	//   "UNKNOWN" - It is an error for the server to return this value.
-	//   "SHA256" - The Sha-256 digest function.
-	//   "SHA1" - The Sha-1 digest function.
+	//   "SHA256" - The SHA-256 digest function.
+	//   "SHA1" - The SHA-1 digest function.
 	//   "MD5" - The MD5 digest function.
 	//   "VSO" - The Microsoft "VSO-Hash" paged SHA256 digest function.
 	// See
 	// https://github.com/microsoft/BuildXL/blob/master/Documentation/Specs/PagedHash.md
 	// .
+	//   "SHA384" - The SHA-384 digest function.
+	//   "SHA512" - The SHA-512 digest function.
 	DigestFunction string `json:"digestFunction,omitempty"`
 
 	// ExecEnabled: Whether remote execution is enabled for the particular
@@ -1556,6 +1677,9 @@ type BuildBazelRemoteExecutionV2ExecutionCapabilities struct {
 
 	// ExecutionPriorityCapabilities: Supported execution priority range.
 	ExecutionPriorityCapabilities *BuildBazelRemoteExecutionV2PriorityCapabilities `json:"executionPriorityCapabilities,omitempty"`
+
+	// SupportedNodeProperties: Supported node properties.
+	SupportedNodeProperties []string `json:"supportedNodeProperties,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "DigestFunction") to
 	// unconditionally include in API requests. By default, fields with
@@ -1637,6 +1761,9 @@ type BuildBazelRemoteExecutionV2FileNode struct {
 
 	// Name: The name of the file.
 	Name string `json:"name,omitempty"`
+
+	// NodeProperties: The node properties of the FileNode.
+	NodeProperties []*BuildBazelRemoteExecutionV2NodeProperty `json:"nodeProperties,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Digest") to
 	// unconditionally include in API requests. By default, fields with
@@ -1809,6 +1936,43 @@ func (s *BuildBazelRemoteExecutionV2LogFile) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// BuildBazelRemoteExecutionV2NodeProperty: A single property for
+// FileNodes,
+// DirectoryNodes, and
+// SymlinkNodes. The server is
+// responsible for specifying the property `name`s that it accepts.
+// If
+// permitted by the server, the same `name` may occur multiple times.
+type BuildBazelRemoteExecutionV2NodeProperty struct {
+	// Name: The property name.
+	Name string `json:"name,omitempty"`
+
+	// Value: The property value.
+	Value string `json:"value,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Name") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Name") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *BuildBazelRemoteExecutionV2NodeProperty) MarshalJSON() ([]byte, error) {
+	type NoMethod BuildBazelRemoteExecutionV2NodeProperty
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // BuildBazelRemoteExecutionV2OutputDirectory: An `OutputDirectory` is
 // the output in an `ActionResult` corresponding to a
 // directory's full contents rather than a single file.
@@ -1873,6 +2037,10 @@ type BuildBazelRemoteExecutionV2OutputFile struct {
 	// IsExecutable: True if file is executable, false otherwise.
 	IsExecutable bool `json:"isExecutable,omitempty"`
 
+	// NodeProperties: The supported node properties of the OutputFile, if
+	// requested by the Action.
+	NodeProperties []*BuildBazelRemoteExecutionV2NodeProperty `json:"nodeProperties,omitempty"`
+
 	// Path: The full path of the file relative to the working directory,
 	// including the
 	// filename. The path separator is a forward slash `/`. Since this is
@@ -1910,6 +2078,11 @@ func (s *BuildBazelRemoteExecutionV2OutputFile) MarshalJSON() ([]byte, error) {
 //
 // `OutputSymlink` is binary-compatible with `SymlinkNode`.
 type BuildBazelRemoteExecutionV2OutputSymlink struct {
+	// NodeProperties: The supported node properties of the OutputSymlink,
+	// if requested by the
+	// Action.
+	NodeProperties []*BuildBazelRemoteExecutionV2NodeProperty `json:"nodeProperties,omitempty"`
+
 	// Path: The full path of the symlink relative to the working directory,
 	// including the
 	// filename. The path separator is a forward slash `/`. Since this is
@@ -1929,7 +2102,7 @@ type BuildBazelRemoteExecutionV2OutputSymlink struct {
 	// path. `..` components are allowed anywhere in the target path.
 	Target string `json:"target,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "Path") to
+	// ForceSendFields is a list of field names (e.g. "NodeProperties") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -1937,12 +2110,13 @@ type BuildBazelRemoteExecutionV2OutputSymlink struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "Path") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
+	// NullFields is a list of field names (e.g. "NodeProperties") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
 	NullFields []string `json:"-"`
 }
 
@@ -2271,6 +2445,9 @@ type BuildBazelRemoteExecutionV2SymlinkNode struct {
 	// Name: The name of the symlink.
 	Name string `json:"name,omitempty"`
 
+	// NodeProperties: The node properties of the SymlinkNode.
+	NodeProperties []*BuildBazelRemoteExecutionV2NodeProperty `json:"nodeProperties,omitempty"`
+
 	// Target: The target path of the symlink. The path separator is a
 	// forward slash `/`.
 	// The target path can be relative to the parent directory of the
@@ -2433,10 +2610,20 @@ type GoogleDevtoolsRemotebuildbotCommandDurations struct {
 	// (includes pulling the Docker image, if necessary).
 	DockerPrep string `json:"dockerPrep,omitempty"`
 
+	// DockerPrepStartTime: The timestamp when docker preparation begins.
+	DockerPrepStartTime string `json:"dockerPrepStartTime,omitempty"`
+
 	// Download: The time spent downloading the input files and constructing
 	// the working
 	// directory.
 	Download string `json:"download,omitempty"`
+
+	// DownloadStartTime: The timestamp when downloading the input files
+	// begins.
+	DownloadStartTime string `json:"downloadStartTime,omitempty"`
+
+	// ExecStartTime: The timestamp when execution begins.
+	ExecStartTime string `json:"execStartTime,omitempty"`
 
 	// Execution: The time spent executing the command (i.e., doing useful
 	// work).
@@ -2454,6 +2641,10 @@ type GoogleDevtoolsRemotebuildbotCommandDurations struct {
 
 	// Upload: The time spent uploading the output files.
 	Upload string `json:"upload,omitempty"`
+
+	// UploadStartTime: The timestamp when uploading the output files
+	// begins.
+	UploadStartTime string `json:"uploadStartTime,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "DockerPrep") to
 	// unconditionally include in API requests. By default, fields with
@@ -2569,6 +2760,28 @@ type GoogleDevtoolsRemotebuildbotCommandStatus struct {
 	// base directory
 	//   "DOCKER_UNAVAILABLE" - There are issues with docker
 	// service/runtime.
+	//   "NO_CUDA_CAPABLE_DEVICE" - The command failed with "no cuda-capable
+	// device is detected" error.
+	//   "REMOTE_CAS_DOWNLOAD_ERROR" - The bot encountered errors from
+	// remote CAS when downloading blobs.
+	//   "REMOTE_CAS_UPLOAD_ERROR" - The bot encountered errors from remote
+	// CAS when uploading blobs.
+	//   "LOCAL_CASPROXY_NOT_RUNNING" - The local casproxy is not running.
+	//   "DOCKER_CREATE_CONTAINER_ERROR" - The bot couldn't start the
+	// container.
+	//   "DOCKER_INVALID_ULIMIT" - The docker ulimit is not valid.
+	//   "DOCKER_UNKNOWN_RUNTIME" - The docker runtime is unknown.
+	//   "DOCKER_UNKNOWN_CAPABILITY" - The docker capability is unknown.
+	//   "DOCKER_UNKNOWN_ERROR" - The command failed with unknown docker
+	// errors.
+	//   "DOCKER_CREATE_COMPUTE_SYSTEM_ERROR" - Docker failed to run
+	// containers with CreateComputeSystem error.
+	//   "DOCKER_PREPARELAYER_ERROR" - Docker failed to run containers with
+	// hcsshim::PrepareLayer error.
+	//   "DOCKER_INCOMPATIBLE_OS_ERROR" - Docker incompatible operating
+	// system error.
+	//   "DOCKER_CREATE_RUNTIME_FILE_NOT_FOUND" - Docker failed to create
+	// OCI runtime because of file not found.
 	Code string `json:"code,omitempty"`
 
 	// Message: The error message.
@@ -2593,6 +2806,81 @@ type GoogleDevtoolsRemotebuildbotCommandStatus struct {
 
 func (s *GoogleDevtoolsRemotebuildbotCommandStatus) MarshalJSON() ([]byte, error) {
 	type NoMethod GoogleDevtoolsRemotebuildbotCommandStatus
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// GoogleDevtoolsRemotebuildbotResourceUsage: ResourceUsage is the
+// system resource usage of the host machine.
+type GoogleDevtoolsRemotebuildbotResourceUsage struct {
+	CpuUsedPercent float64 `json:"cpuUsedPercent,omitempty"`
+
+	DiskUsage *GoogleDevtoolsRemotebuildbotResourceUsageStat `json:"diskUsage,omitempty"`
+
+	MemoryUsage *GoogleDevtoolsRemotebuildbotResourceUsageStat `json:"memoryUsage,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "CpuUsedPercent") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "CpuUsedPercent") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GoogleDevtoolsRemotebuildbotResourceUsage) MarshalJSON() ([]byte, error) {
+	type NoMethod GoogleDevtoolsRemotebuildbotResourceUsage
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+func (s *GoogleDevtoolsRemotebuildbotResourceUsage) UnmarshalJSON(data []byte) error {
+	type NoMethod GoogleDevtoolsRemotebuildbotResourceUsage
+	var s1 struct {
+		CpuUsedPercent gensupport.JSONFloat64 `json:"cpuUsedPercent"`
+		*NoMethod
+	}
+	s1.NoMethod = (*NoMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.CpuUsedPercent = float64(s1.CpuUsedPercent)
+	return nil
+}
+
+type GoogleDevtoolsRemotebuildbotResourceUsageStat struct {
+	Total uint64 `json:"total,omitempty,string"`
+
+	Used uint64 `json:"used,omitempty,string"`
+
+	// ForceSendFields is a list of field names (e.g. "Total") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Total") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GoogleDevtoolsRemotebuildbotResourceUsageStat) MarshalJSON() ([]byte, error) {
+	type NoMethod GoogleDevtoolsRemotebuildbotResourceUsageStat
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -2629,6 +2917,39 @@ type GoogleDevtoolsRemotebuildexecutionAdminV1alphaAcceleratorConfig struct {
 
 func (s *GoogleDevtoolsRemotebuildexecutionAdminV1alphaAcceleratorConfig) MarshalJSON() ([]byte, error) {
 	type NoMethod GoogleDevtoolsRemotebuildexecutionAdminV1alphaAcceleratorConfig
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// GoogleDevtoolsRemotebuildexecutionAdminV1alphaAutoscale: Autoscale
+// defines the autoscaling policy of a worker pool.
+type GoogleDevtoolsRemotebuildexecutionAdminV1alphaAutoscale struct {
+	// MaxSize: The maximal number of workers. Must be equal to or greater
+	// than min_size.
+	MaxSize int64 `json:"maxSize,omitempty,string"`
+
+	// MinSize: The minimal number of workers. Must be greater than 0.
+	MinSize int64 `json:"minSize,omitempty,string"`
+
+	// ForceSendFields is a list of field names (e.g. "MaxSize") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "MaxSize") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GoogleDevtoolsRemotebuildexecutionAdminV1alphaAutoscale) MarshalJSON() ([]byte, error) {
+	type NoMethod GoogleDevtoolsRemotebuildexecutionAdminV1alphaAutoscale
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -3063,6 +3384,59 @@ func (s *GoogleDevtoolsRemotebuildexecutionAdminV1alphaListWorkerPoolsResponse) 
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// GoogleDevtoolsRemotebuildexecutionAdminV1alphaUpdateInstanceRequest:
+// The request used for `UpdateInstance`.
+type GoogleDevtoolsRemotebuildexecutionAdminV1alphaUpdateInstanceRequest struct {
+	// Instance: Specifies the instance to update.
+	Instance *GoogleDevtoolsRemotebuildexecutionAdminV1alphaInstance `json:"instance,omitempty"`
+
+	// LoggingEnabled: Deprecated, use instance.logging_enabled
+	// instead.
+	// Whether to enable Stackdriver logging for this instance.
+	LoggingEnabled bool `json:"loggingEnabled,omitempty"`
+
+	// Name: Deprecated, use instance.Name instead.
+	// Name of the instance to update.
+	// Format: `projects/[PROJECT_ID]/instances/[INSTANCE_ID]`.
+	Name string `json:"name,omitempty"`
+
+	// UpdateMask: The update mask applies to instance. For the `FieldMask`
+	// definition,
+	// see
+	// https://developers.google.com/protocol-buffers/docs/reference/goog
+	// le.protobuf#fieldmask
+	// If an empty update_mask is provided, only the non-default valued
+	// field in
+	// the worker pool field will be updated. Note that in order to update a
+	// field
+	// to the default value (zero, false, empty string) an explicit
+	// update_mask
+	// must be provided.
+	UpdateMask string `json:"updateMask,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Instance") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Instance") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GoogleDevtoolsRemotebuildexecutionAdminV1alphaUpdateInstanceRequest) MarshalJSON() ([]byte, error) {
+	type NoMethod GoogleDevtoolsRemotebuildexecutionAdminV1alphaUpdateInstanceRequest
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // GoogleDevtoolsRemotebuildexecutionAdminV1alphaUpdateWorkerPoolRequest:
 //  The request used for UpdateWorkerPool.
 type GoogleDevtoolsRemotebuildexecutionAdminV1alphaUpdateWorkerPoolRequest struct {
@@ -3124,7 +3498,7 @@ type GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerConfig struct {
 	// [Storage
 	// options](https://cloud.google.com/compute/docs/disks/#introdu
 	// ction).
-	// Currently only `pd-standard` is supported.
+	// Currently only `pd-standard` and `pd-ssd` are supported.
 	DiskType string `json:"diskType,omitempty"`
 
 	// Labels: Labels associated with the workers.
@@ -3146,6 +3520,10 @@ type GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerConfig struct {
 	// yet
 	// supported.
 	MachineType string `json:"machineType,omitempty"`
+
+	// MaxConcurrentActions: The maximum number of actions a worker can
+	// execute concurrently.
+	MaxConcurrentActions int64 `json:"maxConcurrentActions,omitempty,string"`
 
 	// MinCpuPlatform: Minimum CPU platform to use when creating the
 	// worker.
@@ -3197,6 +3575,9 @@ func (s *GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerConfig) MarshalJSON
 // GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerPool: A worker
 // pool resource in the Remote Build Execution API.
 type GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerPool struct {
+	// Autoscale: The autoscale policy to apply on a pool.
+	Autoscale *GoogleDevtoolsRemotebuildexecutionAdminV1alphaAutoscale `json:"autoscale,omitempty"`
+
 	// Name: WorkerPool resource name formatted
 	// as:
 	// `projects/[PROJECT_ID]/instances/[INSTANCE_ID]/workerpools/[POOL_I
@@ -3239,10 +3620,10 @@ type GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerPool struct {
 
 	// WorkerCount: The desired number of workers in the worker pool. Must
 	// be a value between
-	// 0 and 1000.
+	// 0 and 15000.
 	WorkerCount int64 `json:"workerCount,omitempty,string"`
 
-	// ForceSendFields is a list of field names (e.g. "Name") to
+	// ForceSendFields is a list of field names (e.g. "Autoscale") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -3250,8 +3631,8 @@ type GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerPool struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "Name") to include in API
-	// requests with the JSON null value. By default, fields with empty
+	// NullFields is a list of field names (e.g. "Autoscale") to include in
+	// API requests with the JSON null value. By default, fields with empty
 	// values are omitted from API requests. However, any field with an
 	// empty value appearing in NullFields will be sent to the server as
 	// null. It is an error if a field in this list has a non-empty value.
@@ -3261,912 +3642,6 @@ type GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerPool struct {
 
 func (s *GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerPool) MarshalJSON() ([]byte, error) {
 	type NoMethod GoogleDevtoolsRemotebuildexecutionAdminV1alphaWorkerPool
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testActionResult: An ActionResult
-// represents the result of an
-// Action being run.
-type GoogleDevtoolsRemoteexecutionV1testActionResult struct {
-	// ExitCode: The exit code of the command.
-	ExitCode int64 `json:"exitCode,omitempty"`
-
-	// OutputDirectories: The output directories of the action. For each
-	// output directory requested
-	// in the `output_directories` field of the Action, if the
-	// corresponding
-	// directory existed after the action completed, a single entry will
-	// be
-	// present in the output list, which will contain the digest of
-	// a Tree message containing
-	// the directory tree, and the path equal exactly to the corresponding
-	// Action
-	// output_directories member.
-	// As an example, suppose the Action had an output directory `a/b/dir`
-	// and the
-	// execution produced the following contents in `a/b/dir`: a file named
-	// `bar`
-	// and a directory named `foo` with an executable file named `baz`.
-	// Then,
-	// output_directory will contain (hashes shortened for
-	// readability):
-	//
-	// ```json
-	// // OutputDirectory proto:
-	// {
-	//   path: "a/b/dir"
-	//   tree_digest: {
-	//     hash: "4a73bc9d03...",
-	//     size: 55
-	//   }
-	// }
-	// // Tree proto with hash "4a73bc9d03..." and size 55:
-	// {
-	//   root: {
-	//     files: [
-	//       {
-	//         name: "bar",
-	//         digest: {
-	//           hash: "4a73bc9d03...",
-	//           size: 65534
-	//         }
-	//       }
-	//     ],
-	//     directories: [
-	//       {
-	//         name: "foo",
-	//         digest: {
-	//           hash: "4cf2eda940...",
-	//           size: 43
-	//         }
-	//       }
-	//     ]
-	//   }
-	//   children : {
-	//     // (Directory proto with hash "4cf2eda940..." and size 43)
-	//     files: [
-	//       {
-	//         name: "baz",
-	//         digest: {
-	//           hash: "b2c941073e...",
-	//           size: 1294,
-	//         },
-	//         is_executable: true
-	//       }
-	//     ]
-	//   }
-	// }
-	// ```
-	OutputDirectories []*GoogleDevtoolsRemoteexecutionV1testOutputDirectory `json:"outputDirectories,omitempty"`
-
-	// OutputFiles: The output files of the action. For each output file
-	// requested in the
-	// `output_files` field of the Action, if the corresponding file existed
-	// after
-	// the action completed, a single entry will be present in the output
-	// list.
-	//
-	// If the action does not produce the requested output, or produces
-	// a
-	// directory where a regular file is expected or vice versa, then that
-	// output
-	// will be omitted from the list. The server is free to arrange the
-	// output
-	// list as desired; clients MUST NOT assume that the output list is
-	// sorted.
-	OutputFiles []*GoogleDevtoolsRemoteexecutionV1testOutputFile `json:"outputFiles,omitempty"`
-
-	// StderrDigest: The digest for a blob containing the standard error of
-	// the action, which
-	// can be retrieved from the
-	// ContentAddressableStorage.
-	// See `stderr_raw` for when this will be set.
-	StderrDigest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"stderrDigest,omitempty"`
-
-	// StderrRaw: The standard error buffer of the action. The server will
-	// determine, based
-	// on the size of the buffer, whether to return it in raw form or to
-	// return
-	// a digest in `stderr_digest` that points to the buffer. If neither is
-	// set,
-	// then the buffer is empty. The client SHOULD NOT assume it will get
-	// one of
-	// the raw buffer or a digest on any given request and should be
-	// prepared to
-	// handle either.
-	StderrRaw string `json:"stderrRaw,omitempty"`
-
-	// StdoutDigest: The digest for a blob containing the standard output of
-	// the action, which
-	// can be retrieved from the
-	// ContentAddressableStorage.
-	// See `stdout_raw` for when this will be set.
-	StdoutDigest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"stdoutDigest,omitempty"`
-
-	// StdoutRaw: The standard output buffer of the action. The server will
-	// determine, based
-	// on the size of the buffer, whether to return it in raw form or to
-	// return
-	// a digest in `stdout_digest` that points to the buffer. If neither is
-	// set,
-	// then the buffer is empty. The client SHOULD NOT assume it will get
-	// one of
-	// the raw buffer or a digest on any given request and should be
-	// prepared to
-	// handle either.
-	StdoutRaw string `json:"stdoutRaw,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "ExitCode") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "ExitCode") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testActionResult) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testActionResult
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testCommand: A `Command` is the actual
-// command executed by a worker running an
-// Action.
-//
-// Except as otherwise required, the environment (such as which
-// system
-// libraries or binaries are available, and what filesystems are mounted
-// where)
-// is defined by and specific to the implementation of the remote
-// execution API.
-type GoogleDevtoolsRemoteexecutionV1testCommand struct {
-	// Arguments: The arguments to the command. The first argument must be
-	// the path to the
-	// executable, which must be either a relative path, in which case it
-	// is
-	// evaluated with respect to the input root, or an absolute path.
-	//
-	// The working directory will always be the input root.
-	Arguments []string `json:"arguments,omitempty"`
-
-	// EnvironmentVariables: The environment variables to set when running
-	// the program. The worker may
-	// provide its own default environment variables; these defaults can
-	// be
-	// overridden using this field. Additional variables can also be
-	// specified.
-	//
-	// In order to ensure that equivalent `Command`s always hash to the
-	// same
-	// value, the environment variables MUST be lexicographically sorted by
-	// name.
-	// Sorting of strings is done by code point, equivalently, by the UTF-8
-	// bytes.
-	EnvironmentVariables []*GoogleDevtoolsRemoteexecutionV1testCommandEnvironmentVariable `json:"environmentVariables,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Arguments") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Arguments") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testCommand) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testCommand
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testCommandEnvironmentVariable: An
-// `EnvironmentVariable` is one variable to set in the running
-// program's
-// environment.
-type GoogleDevtoolsRemoteexecutionV1testCommandEnvironmentVariable struct {
-	// Name: The variable name.
-	Name string `json:"name,omitempty"`
-
-	// Value: The variable value.
-	Value string `json:"value,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Name") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Name") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testCommandEnvironmentVariable) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testCommandEnvironmentVariable
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testDigest: A content digest. A digest
-// for a given blob consists of the size of the blob
-// and its hash. The hash algorithm to use is defined by the server, but
-// servers
-// SHOULD use SHA-256.
-//
-// The size is considered to be an integral part of the digest and
-// cannot be
-// separated. That is, even if the `hash` field is correctly specified
-// but
-// `size_bytes` is not, the server MUST reject the request.
-//
-// The reason for including the size in the digest is as follows: in a
-// great
-// many cases, the server needs to know the size of the blob it is about
-// to work
-// with prior to starting an operation with it, such as flattening
-// Merkle tree
-// structures or streaming it to a worker. Technically, the server
-// could
-// implement a separate metadata store, but this results in a
-// significantly more
-// complicated implementation as opposed to having the client specify
-// the size
-// up-front (or storing the size along with the digest in every message
-// where
-// digests are embedded). This does mean that the API leaks some
-// implementation
-// details of (what we consider to be) a reasonable server
-// implementation, but
-// we consider this to be a worthwhile tradeoff.
-//
-// When a `Digest` is used to refer to a proto message, it always refers
-// to the
-// message in binary encoded form. To ensure consistent hashing, clients
-// and
-// servers MUST ensure that they serialize messages according to the
-// following
-// rules, even if there are alternate valid encodings for the same
-// message.
-// - Fields are serialized in tag order.
-// - There are no unknown fields.
-// - There are no duplicate fields.
-// - Fields are serialized according to the default semantics for their
-// type.
-//
-// Most protocol buffer implementations will always follow these rules
-// when
-// serializing, but care should be taken to avoid shortcuts. For
-// instance,
-// concatenating two messages to merge them may produce duplicate
-// fields.
-type GoogleDevtoolsRemoteexecutionV1testDigest struct {
-	// Hash: The hash. In the case of SHA-256, it will always be a lowercase
-	// hex string
-	// exactly 64 characters long.
-	Hash string `json:"hash,omitempty"`
-
-	// SizeBytes: The size of the blob, in bytes.
-	SizeBytes int64 `json:"sizeBytes,omitempty,string"`
-
-	// ForceSendFields is a list of field names (e.g. "Hash") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Hash") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testDigest) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testDigest
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testDirectory: A `Directory`
-// represents a directory node in a file tree, containing zero or
-// more children FileNodes
-// and DirectoryNodes.
-// Each `Node` contains its name in the directory, the digest of its
-// content
-// (either a file blob or a `Directory` proto), as well as possibly
-// some
-// metadata about the file or directory.
-//
-// In order to ensure that two equivalent directory trees hash to the
-// same
-// value, the following restrictions MUST be obeyed when constructing
-// a
-// a `Directory`:
-//   - Every child in the directory must have a path of exactly one
-// segment.
-//     Multiple levels of directory hierarchy may not be collapsed.
-//   - Each child in the directory must have a unique path segment (file
-// name).
-//   - The files and directories in the directory must each be sorted
-// in
-//     lexicographical order by path. The path strings must be sorted by
-// code
-//     point, equivalently, by UTF-8 bytes.
-//
-// A `Directory` that obeys the restrictions is said to be in canonical
-// form.
-//
-// As an example, the following could be used for a file named `bar` and
-// a
-// directory named `foo` with an executable file named `baz` (hashes
-// shortened
-// for readability):
-//
-// ```json
-// // (Directory proto)
-// {
-//   files: [
-//     {
-//       name: "bar",
-//       digest: {
-//         hash: "4a73bc9d03...",
-//         size: 65534
-//       }
-//     }
-//   ],
-//   directories: [
-//     {
-//       name: "foo",
-//       digest: {
-//         hash: "4cf2eda940...",
-//         size: 43
-//       }
-//     }
-//   ]
-// }
-//
-// // (Directory proto with hash "4cf2eda940..." and size 43)
-// {
-//   files: [
-//     {
-//       name: "baz",
-//       digest: {
-//         hash: "b2c941073e...",
-//         size: 1294,
-//       },
-//       is_executable: true
-//     }
-//   ]
-// }
-// ```
-type GoogleDevtoolsRemoteexecutionV1testDirectory struct {
-	// Directories: The subdirectories in the directory.
-	Directories []*GoogleDevtoolsRemoteexecutionV1testDirectoryNode `json:"directories,omitempty"`
-
-	// Files: The files in the directory.
-	Files []*GoogleDevtoolsRemoteexecutionV1testFileNode `json:"files,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Directories") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Directories") to include
-	// in API requests with the JSON null value. By default, fields with
-	// empty values are omitted from API requests. However, any field with
-	// an empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testDirectory) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testDirectory
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testDirectoryNode: A `DirectoryNode`
-// represents a child of a
-// Directory which is itself
-// a `Directory` and its associated metadata.
-type GoogleDevtoolsRemoteexecutionV1testDirectoryNode struct {
-	// Digest: The digest of the
-	// Directory object
-	// represented. See Digest
-	// for information about how to take the digest of a proto message.
-	Digest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"digest,omitempty"`
-
-	// Name: The name of the directory.
-	Name string `json:"name,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Digest") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Digest") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testDirectoryNode) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testDirectoryNode
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testExecuteOperationMetadata: Metadata
-// about an ongoing
-// execution, which
-// will be contained in the metadata
-// field of the
-// Operation.
-type GoogleDevtoolsRemoteexecutionV1testExecuteOperationMetadata struct {
-	// ActionDigest: The digest of the Action
-	// being executed.
-	ActionDigest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"actionDigest,omitempty"`
-
-	// Possible values:
-	//   "UNKNOWN"
-	//   "CACHE_CHECK" - Checking the result against the cache.
-	//   "QUEUED" - Currently idle, awaiting a free machine to execute.
-	//   "EXECUTING" - Currently being executed by a worker.
-	//   "COMPLETED" - Finished execution.
-	Stage string `json:"stage,omitempty"`
-
-	// StderrStreamName: If set, the client can use this name
-	// with
-	// ByteStream.Read to stream the
-	// standard error.
-	StderrStreamName string `json:"stderrStreamName,omitempty"`
-
-	// StdoutStreamName: If set, the client can use this name
-	// with
-	// ByteStream.Read to stream the
-	// standard output.
-	StdoutStreamName string `json:"stdoutStreamName,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "ActionDigest") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "ActionDigest") to include
-	// in API requests with the JSON null value. By default, fields with
-	// empty values are omitted from API requests. However, any field with
-	// an empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testExecuteOperationMetadata) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testExecuteOperationMetadata
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testExecuteResponse: The response
-// message for
-// Execution.Execute,
-// which will be contained in the response
-// field of the
-// Operation.
-type GoogleDevtoolsRemoteexecutionV1testExecuteResponse struct {
-	// CachedResult: True if the result was served from cache, false if it
-	// was executed.
-	CachedResult bool `json:"cachedResult,omitempty"`
-
-	// Result: The result of the action.
-	Result *GoogleDevtoolsRemoteexecutionV1testActionResult `json:"result,omitempty"`
-
-	// ServerLogs: An optional list of additional log outputs the server
-	// wishes to provide. A
-	// server can use this to return execution-specific logs however it
-	// wishes.
-	// This is intended primarily to make it easier for users to debug
-	// issues that
-	// may be outside of the actual job execution, such as by identifying
-	// the
-	// worker executing the action or by providing logs from the worker's
-	// setup
-	// phase. The keys SHOULD be human readable so that a client can display
-	// them
-	// to a user.
-	ServerLogs map[string]GoogleDevtoolsRemoteexecutionV1testLogFile `json:"serverLogs,omitempty"`
-
-	// Status: If the status has a code other than `OK`, it indicates that
-	// the action did
-	// not finish execution. For example, if the operation times out
-	// during
-	// execution, the status will have a `DEADLINE_EXCEEDED` code. Servers
-	// MUST
-	// use this field for errors in execution, rather than the error field
-	// on the
-	// `Operation` object.
-	//
-	// If the status code is other than `OK`, then the result MUST NOT be
-	// cached.
-	// For an error status, the `result` field is optional; the server
-	// may
-	// populate the output-, stdout-, and stderr-related fields if it has
-	// any
-	// information available, such as the stdout and stderr of a timed-out
-	// action.
-	Status *GoogleRpcStatus `json:"status,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "CachedResult") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "CachedResult") to include
-	// in API requests with the JSON null value. By default, fields with
-	// empty values are omitted from API requests. However, any field with
-	// an empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testExecuteResponse) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testExecuteResponse
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testFileNode: A `FileNode` represents
-// a single file and associated metadata.
-type GoogleDevtoolsRemoteexecutionV1testFileNode struct {
-	// Digest: The digest of the file's content.
-	Digest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"digest,omitempty"`
-
-	// IsExecutable: True if file is executable, false otherwise.
-	IsExecutable bool `json:"isExecutable,omitempty"`
-
-	// Name: The name of the file.
-	Name string `json:"name,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Digest") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Digest") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testFileNode) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testFileNode
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testLogFile: A `LogFile` is a log
-// stored in the CAS.
-type GoogleDevtoolsRemoteexecutionV1testLogFile struct {
-	// Digest: The digest of the log contents.
-	Digest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"digest,omitempty"`
-
-	// HumanReadable: This is a hint as to the purpose of the log, and is
-	// set to true if the log
-	// is human-readable text that can be usefully displayed to a user, and
-	// false
-	// otherwise. For instance, if a command-line client wishes to print
-	// the
-	// server logs to the terminal for a failed action, this allows it to
-	// avoid
-	// displaying a binary file.
-	HumanReadable bool `json:"humanReadable,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Digest") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Digest") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testLogFile) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testLogFile
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testOutputDirectory: An
-// `OutputDirectory` is the output in an `ActionResult` corresponding to
-// a
-// directory's full contents rather than a single file.
-type GoogleDevtoolsRemoteexecutionV1testOutputDirectory struct {
-	// Digest: DEPRECATED: This field is deprecated and should no longer be
-	// used.
-	Digest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"digest,omitempty"`
-
-	// Path: The full path of the directory relative to the working
-	// directory. The path
-	// separator is a forward slash `/`. Since this is a relative path, it
-	// MUST
-	// NOT begin with a leading forward slash. The empty string value is
-	// allowed,
-	// and it denotes the entire working directory.
-	Path string `json:"path,omitempty"`
-
-	// TreeDigest: The digest of the encoded
-	// Tree proto containing the
-	// directory's contents.
-	TreeDigest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"treeDigest,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Digest") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Digest") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testOutputDirectory) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testOutputDirectory
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testOutputFile: An `OutputFile` is
-// similar to a
-// FileNode, but it is
-// tailored for output as part of an `ActionResult`. It allows a full
-// file path
-// rather than only a name, and allows the server to include content
-// inline.
-//
-// `OutputFile` is binary-compatible with `FileNode`.
-type GoogleDevtoolsRemoteexecutionV1testOutputFile struct {
-	// Content: The raw content of the file.
-	//
-	// This field may be used by the server to provide the content of a
-	// file
-	// inline in an
-	// ActionResult and
-	// avoid requiring that the client make a separate call
-	// to
-	// [ContentAddressableStorage.GetBlob] to retrieve it.
-	//
-	// The client SHOULD NOT assume that it will get raw content with any
-	// request,
-	// and always be prepared to retrieve it via `digest`.
-	Content string `json:"content,omitempty"`
-
-	// Digest: The digest of the file's content.
-	Digest *GoogleDevtoolsRemoteexecutionV1testDigest `json:"digest,omitempty"`
-
-	// IsExecutable: True if file is executable, false otherwise.
-	IsExecutable bool `json:"isExecutable,omitempty"`
-
-	// Path: The full path of the file relative to the input root, including
-	// the
-	// filename. The path separator is a forward slash `/`. Since this is
-	// a
-	// relative path, it MUST NOT begin with a leading forward slash.
-	Path string `json:"path,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Content") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Content") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testOutputFile) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testOutputFile
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testRequestMetadata: An optional
-// Metadata to attach to any RPC request to tell the server about
-// an
-// external context of the request. The server may use this for logging
-// or other
-// purposes. To use it, the client attaches the header to the call using
-// the
-// canonical proto serialization:
-// name:
-// google.devtools.remoteexecution.v1test.requestmetadata-bin
-// contents: the base64 encoded binary RequestMetadata message.
-type GoogleDevtoolsRemoteexecutionV1testRequestMetadata struct {
-	// ActionId: An identifier that ties multiple requests to the same
-	// action.
-	// For example, multiple requests to the CAS, Action Cache, and
-	// Execution
-	// API are used in order to compile foo.cc.
-	ActionId string `json:"actionId,omitempty"`
-
-	// CorrelatedInvocationsId: An identifier to tie multiple tool
-	// invocations together. For example,
-	// runs of foo_test, bar_test and baz_test on a post-submit of a given
-	// patch.
-	CorrelatedInvocationsId string `json:"correlatedInvocationsId,omitempty"`
-
-	// ToolDetails: The details for the tool invoking the requests.
-	ToolDetails *GoogleDevtoolsRemoteexecutionV1testToolDetails `json:"toolDetails,omitempty"`
-
-	// ToolInvocationId: An identifier that ties multiple actions together
-	// to a final result.
-	// For example, multiple actions are required to build and run foo_test.
-	ToolInvocationId string `json:"toolInvocationId,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "ActionId") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "ActionId") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testRequestMetadata) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testRequestMetadata
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testToolDetails: Details for the tool
-// used to call the API.
-type GoogleDevtoolsRemoteexecutionV1testToolDetails struct {
-	// ToolName: Name of the tool, e.g. bazel.
-	ToolName string `json:"toolName,omitempty"`
-
-	// ToolVersion: Version of the tool used for the request, e.g. 5.0.3.
-	ToolVersion string `json:"toolVersion,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "ToolName") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "ToolName") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testToolDetails) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testToolDetails
-	raw := NoMethod(*s)
-	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
-}
-
-// GoogleDevtoolsRemoteexecutionV1testTree: A `Tree` contains all
-// the
-// Directory protos in a
-// single directory Merkle tree, compressed into one message.
-type GoogleDevtoolsRemoteexecutionV1testTree struct {
-	// Children: All the child directories: the directories referred to by
-	// the root and,
-	// recursively, all its children. In order to reconstruct the directory
-	// tree,
-	// the client must take the digests of each of the child directories and
-	// then
-	// build up a tree starting from the `root`.
-	Children []*GoogleDevtoolsRemoteexecutionV1testDirectory `json:"children,omitempty"`
-
-	// Root: The root directory in the tree.
-	Root *GoogleDevtoolsRemoteexecutionV1testDirectory `json:"root,omitempty"`
-
-	// ForceSendFields is a list of field names (e.g. "Children") to
-	// unconditionally include in API requests. By default, fields with
-	// empty values are omitted from API requests. However, any non-pointer,
-	// non-interface field appearing in ForceSendFields will be sent to the
-	// server regardless of whether the field is empty or not. This may be
-	// used to include empty fields in Patch requests.
-	ForceSendFields []string `json:"-"`
-
-	// NullFields is a list of field names (e.g. "Children") to include in
-	// API requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
-	NullFields []string `json:"-"`
-}
-
-func (s *GoogleDevtoolsRemoteexecutionV1testTree) MarshalJSON() ([]byte, error) {
-	type NoMethod GoogleDevtoolsRemoteexecutionV1testTree
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -5093,7 +4568,7 @@ func (c *ActionResultsGetCall) Header() http.Header {
 
 func (c *ActionResultsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5193,7 +4668,7 @@ func (c *ActionResultsGetCall) Do(opts ...googleapi.CallOption) (*BuildBazelRemo
 	//     "instanceName": {
 	//       "description": "The instance of the execution system to operate against. A server may\nsupport multiple instances of the execution system (with their own workers,\nstorage, caches, etc.). The server MAY require use of this field to select\nbetween them in an implementation-defined fashion, otherwise it can be\nomitted.",
 	//       "location": "path",
-	//       "pattern": "^.+$",
+	//       "pattern": "^.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     },
@@ -5303,7 +4778,7 @@ func (c *ActionResultsUpdateCall) Header() http.Header {
 
 func (c *ActionResultsUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5389,7 +4864,7 @@ func (c *ActionResultsUpdateCall) Do(opts ...googleapi.CallOption) (*BuildBazelR
 	//     "instanceName": {
 	//       "description": "The instance of the execution system to operate against. A server may\nsupport multiple instances of the execution system (with their own workers,\nstorage, caches, etc.). The server MAY require use of this field to select\nbetween them in an implementation-defined fashion, otherwise it can be\nomitted.",
 	//       "location": "path",
-	//       "pattern": "^.+$",
+	//       "pattern": "^.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     },
@@ -5558,7 +5033,7 @@ func (c *ActionsExecuteCall) Header() http.Header {
 
 func (c *ActionsExecuteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5633,7 +5108,7 @@ func (c *ActionsExecuteCall) Do(opts ...googleapi.CallOption) (*GoogleLongrunnin
 	//     "instanceName": {
 	//       "description": "The instance of the execution system to operate against. A server may\nsupport multiple instances of the execution system (with their own workers,\nstorage, caches, etc.). The server MAY require use of this field to select\nbetween them in an implementation-defined fashion, otherwise it can be\nomitted.",
 	//       "location": "path",
-	//       "pattern": "^.+$",
+	//       "pattern": "^.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     }
@@ -5721,7 +5196,7 @@ func (c *BlobsBatchReadCall) Header() http.Header {
 
 func (c *BlobsBatchReadCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5798,7 +5273,7 @@ func (c *BlobsBatchReadCall) Do(opts ...googleapi.CallOption) (*BuildBazelRemote
 	//     "instanceName": {
 	//       "description": "The instance of the execution system to operate against. A server may\nsupport multiple instances of the execution system (with their own workers,\nstorage, caches, etc.). The server MAY require use of this field to select\nbetween them in an implementation-defined fashion, otherwise it can be\nomitted.",
 	//       "location": "path",
-	//       "pattern": "^.+$",
+	//       "pattern": "^.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     }
@@ -5890,7 +5365,7 @@ func (c *BlobsBatchUpdateCall) Header() http.Header {
 
 func (c *BlobsBatchUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5967,7 +5442,7 @@ func (c *BlobsBatchUpdateCall) Do(opts ...googleapi.CallOption) (*BuildBazelRemo
 	//     "instanceName": {
 	//       "description": "The instance of the execution system to operate against. A server may\nsupport multiple instances of the execution system (with their own workers,\nstorage, caches, etc.). The server MAY require use of this field to select\nbetween them in an implementation-defined fashion, otherwise it can be\nomitted.",
 	//       "location": "path",
-	//       "pattern": "^.+$",
+	//       "pattern": "^.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     }
@@ -6004,6 +5479,10 @@ type BlobsFindMissingCall struct {
 // already present in the CAS and do not need to be uploaded
 // again.
 //
+// Servers SHOULD increase the TTLs of the referenced blobs if necessary
+// and
+// applicable.
+//
 // There are no method-specific errors.
 func (r *BlobsService) FindMissing(instanceName string, buildbazelremoteexecutionv2findmissingblobsrequest *BuildBazelRemoteExecutionV2FindMissingBlobsRequest) *BlobsFindMissingCall {
 	c := &BlobsFindMissingCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -6039,7 +5518,7 @@ func (c *BlobsFindMissingCall) Header() http.Header {
 
 func (c *BlobsFindMissingCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6105,7 +5584,7 @@ func (c *BlobsFindMissingCall) Do(opts ...googleapi.CallOption) (*BuildBazelRemo
 	}
 	return ret, nil
 	// {
-	//   "description": "Determine if blobs are present in the CAS.\n\nClients can use this API before uploading blobs to determine which ones are\nalready present in the CAS and do not need to be uploaded again.\n\nThere are no method-specific errors.",
+	//   "description": "Determine if blobs are present in the CAS.\n\nClients can use this API before uploading blobs to determine which ones are\nalready present in the CAS and do not need to be uploaded again.\n\nServers SHOULD increase the TTLs of the referenced blobs if necessary and\napplicable.\n\nThere are no method-specific errors.",
 	//   "flatPath": "v2/{v2Id}/blobs:findMissing",
 	//   "httpMethod": "POST",
 	//   "id": "remotebuildexecution.blobs.findMissing",
@@ -6116,7 +5595,7 @@ func (c *BlobsFindMissingCall) Do(opts ...googleapi.CallOption) (*BuildBazelRemo
 	//     "instanceName": {
 	//       "description": "The instance of the execution system to operate against. A server may\nsupport multiple instances of the execution system (with their own workers,\nstorage, caches, etc.). The server MAY require use of this field to select\nbetween them in an implementation-defined fashion, otherwise it can be\nomitted.",
 	//       "location": "path",
-	//       "pattern": "^.+$",
+	//       "pattern": "^.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     }
@@ -6175,6 +5654,8 @@ type BlobsGetTreeCall struct {
 // the
 // portion present and omit the rest.
 //
+// Errors:
+//
 // * `NOT_FOUND`: The requested tree root is not present in the CAS.
 func (r *BlobsService) GetTree(instanceName string, hash string, sizeBytes int64) *BlobsGetTreeCall {
 	c := &BlobsGetTreeCall{s: r.s, urlParams_: make(gensupport.URLParams)}
@@ -6199,8 +5680,9 @@ func (c *BlobsGetTreeCall) PageSize(pageSize int64) *BlobsGetTreeCall {
 // PageToken sets the optional parameter "pageToken": A page token,
 // which must be a value received in a previous
 // GetTreeResponse.
-// If present, the server will use it to return the following page of
-// results.
+// If present, the server will use that token as an offset, returning
+// only
+// that page and the ones that succeed it.
 func (c *BlobsGetTreeCall) PageToken(pageToken string) *BlobsGetTreeCall {
 	c.urlParams_.Set("pageToken", pageToken)
 	return c
@@ -6243,7 +5725,7 @@ func (c *BlobsGetTreeCall) Header() http.Header {
 
 func (c *BlobsGetTreeCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6309,7 +5791,7 @@ func (c *BlobsGetTreeCall) Do(opts ...googleapi.CallOption) (*BuildBazelRemoteEx
 	}
 	return ret, nil
 	// {
-	//   "description": "Fetch the entire directory tree rooted at a node.\n\nThis request must be targeted at a\nDirectory stored in the\nContentAddressableStorage\n(CAS). The server will enumerate the `Directory` tree recursively and\nreturn every node descended from the root.\n\nThe GetTreeRequest.page_token parameter can be used to skip ahead in\nthe stream (e.g. when retrying a partially completed and aborted request),\nby setting it to a value taken from GetTreeResponse.next_page_token of the\nlast successfully processed GetTreeResponse).\n\nThe exact traversal order is unspecified and, unless retrieving subsequent\npages from an earlier request, is not guaranteed to be stable across\nmultiple invocations of `GetTree`.\n\nIf part of the tree is missing from the CAS, the server will return the\nportion present and omit the rest.\n\n* `NOT_FOUND`: The requested tree root is not present in the CAS.",
+	//   "description": "Fetch the entire directory tree rooted at a node.\n\nThis request must be targeted at a\nDirectory stored in the\nContentAddressableStorage\n(CAS). The server will enumerate the `Directory` tree recursively and\nreturn every node descended from the root.\n\nThe GetTreeRequest.page_token parameter can be used to skip ahead in\nthe stream (e.g. when retrying a partially completed and aborted request),\nby setting it to a value taken from GetTreeResponse.next_page_token of the\nlast successfully processed GetTreeResponse).\n\nThe exact traversal order is unspecified and, unless retrieving subsequent\npages from an earlier request, is not guaranteed to be stable across\nmultiple invocations of `GetTree`.\n\nIf part of the tree is missing from the CAS, the server will return the\nportion present and omit the rest.\n\nErrors:\n\n* `NOT_FOUND`: The requested tree root is not present in the CAS.",
 	//   "flatPath": "v2/{v2Id}/blobs/{hash}/{sizeBytes}:getTree",
 	//   "httpMethod": "GET",
 	//   "id": "remotebuildexecution.blobs.getTree",
@@ -6328,7 +5810,7 @@ func (c *BlobsGetTreeCall) Do(opts ...googleapi.CallOption) (*BuildBazelRemoteEx
 	//     "instanceName": {
 	//       "description": "The instance of the execution system to operate against. A server may\nsupport multiple instances of the execution system (with their own workers,\nstorage, caches, etc.). The server MAY require use of this field to select\nbetween them in an implementation-defined fashion, otherwise it can be\nomitted.",
 	//       "location": "path",
-	//       "pattern": "^.+$",
+	//       "pattern": "^.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     },
@@ -6339,7 +5821,7 @@ func (c *BlobsGetTreeCall) Do(opts ...googleapi.CallOption) (*BuildBazelRemoteEx
 	//       "type": "integer"
 	//     },
 	//     "pageToken": {
-	//       "description": "A page token, which must be a value received in a previous\nGetTreeResponse.\nIf present, the server will use it to return the following page of results.",
+	//       "description": "A page token, which must be a value received in a previous\nGetTreeResponse.\nIf present, the server will use that token as an offset, returning only\nthat page and the ones that succeed it.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
@@ -6439,7 +5921,7 @@ func (c *OperationsWaitExecutionCall) Header() http.Header {
 
 func (c *OperationsWaitExecutionCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6514,7 +5996,7 @@ func (c *OperationsWaitExecutionCall) Do(opts ...googleapi.CallOption) (*GoogleL
 	//     "name": {
 	//       "description": "The name of the Operation\nreturned by Execute.",
 	//       "location": "path",
-	//       "pattern": "^operations/.+$",
+	//       "pattern": "^operations/.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     }
@@ -6597,7 +6079,7 @@ func (c *V2GetCapabilitiesCall) Header() http.Header {
 
 func (c *V2GetCapabilitiesCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6672,7 +6154,7 @@ func (c *V2GetCapabilitiesCall) Do(opts ...googleapi.CallOption) (*BuildBazelRem
 	//     "instanceName": {
 	//       "description": "The instance of the execution system to operate against. A server may\nsupport multiple instances of the execution system (with their own workers,\nstorage, caches, etc.). The server MAY require use of this field to select\nbetween them in an implementation-defined fashion, otherwise it can be\nomitted.",
 	//       "location": "path",
-	//       "pattern": "^.+$",
+	//       "pattern": "^.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     }

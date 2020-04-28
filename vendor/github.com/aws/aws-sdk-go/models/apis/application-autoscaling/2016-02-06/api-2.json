@@ -2,7 +2,7 @@
   "version":"2.0",
   "metadata":{
     "apiVersion":"2016-02-06",
-    "endpointPrefix":"autoscaling",
+    "endpointPrefix":"application-autoscaling",
     "jsonVersion":"1.1",
     "protocol":"json",
     "serviceFullName":"Application Auto Scaling",
@@ -429,7 +429,12 @@
         "EC2SpotFleetRequestAverageNetworkOut",
         "SageMakerVariantInvocationsPerInstance",
         "ECSServiceAverageCPUUtilization",
-        "ECSServiceAverageMemoryUtilization"
+        "ECSServiceAverageMemoryUtilization",
+        "AppStreamAverageCapacityUtilization",
+        "ComprehendInferenceUtilization",
+        "LambdaProvisionedConcurrencyUtilization",
+        "CassandraReadCapacityUtilization",
+        "CassandraWriteCapacityUtilization"
       ]
     },
     "MetricUnit":{"type":"string"},
@@ -567,7 +572,11 @@
         "dynamodb:index:WriteCapacityUnits",
         "rds:cluster:ReadReplicaCount",
         "sagemaker:variant:DesiredInstanceCount",
-        "custom-resource:ResourceType:Property"
+        "custom-resource:ResourceType:Property",
+        "comprehend:document-classifier-endpoint:DesiredInferenceUnits",
+        "lambda:function:ProvisionedConcurrency",
+        "cassandra:table:ReadCapacityUnits",
+        "cassandra:table:WriteCapacityUnits"
       ]
     },
     "ScalableTarget":{
@@ -717,7 +726,10 @@
         "dynamodb",
         "rds",
         "sagemaker",
-        "custom-resource"
+        "custom-resource",
+        "comprehend",
+        "lambda",
+        "cassandra"
       ]
     },
     "StepAdjustment":{

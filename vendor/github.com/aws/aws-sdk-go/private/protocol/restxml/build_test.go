@@ -61,6 +61,8 @@ type InputService1ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService1ProtocolTest client from just a session.
 //     svc := inputservice1protocoltest.New(mySession)
 //
@@ -68,11 +70,11 @@ type InputService1ProtocolTest struct {
 //     svc := inputservice1protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService1ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService1ProtocolTest {
 	c := p.ClientConfig("inputservice1protocoltest", cfgs...)
-	return newInputService1ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService1ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService1ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService1ProtocolTest {
+func newInputService1ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService1ProtocolTest {
 	svc := &InputService1ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -81,6 +83,7 @@ func newInputService1ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService1ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -387,6 +390,8 @@ type InputService2ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService2ProtocolTest client from just a session.
 //     svc := inputservice2protocoltest.New(mySession)
 //
@@ -394,11 +399,11 @@ type InputService2ProtocolTest struct {
 //     svc := inputservice2protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService2ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService2ProtocolTest {
 	c := p.ClientConfig("inputservice2protocoltest", cfgs...)
-	return newInputService2ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService2ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService2ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService2ProtocolTest {
+func newInputService2ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService2ProtocolTest {
 	svc := &InputService2ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -407,6 +412,7 @@ func newInputService2ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService2ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -557,6 +563,8 @@ type InputService3ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService3ProtocolTest client from just a session.
 //     svc := inputservice3protocoltest.New(mySession)
 //
@@ -564,11 +572,11 @@ type InputService3ProtocolTest struct {
 //     svc := inputservice3protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService3ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService3ProtocolTest {
 	c := p.ClientConfig("inputservice3protocoltest", cfgs...)
-	return newInputService3ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService3ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService3ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService3ProtocolTest {
+func newInputService3ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService3ProtocolTest {
 	svc := &InputService3ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -577,6 +585,7 @@ func newInputService3ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService3ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -825,6 +834,8 @@ type InputService4ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService4ProtocolTest client from just a session.
 //     svc := inputservice4protocoltest.New(mySession)
 //
@@ -832,11 +843,11 @@ type InputService4ProtocolTest struct {
 //     svc := inputservice4protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService4ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService4ProtocolTest {
 	c := p.ClientConfig("inputservice4protocoltest", cfgs...)
-	return newInputService4ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService4ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService4ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService4ProtocolTest {
+func newInputService4ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService4ProtocolTest {
 	svc := &InputService4ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -845,6 +856,7 @@ func newInputService4ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService4ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -999,6 +1011,8 @@ type InputService5ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService5ProtocolTest client from just a session.
 //     svc := inputservice5protocoltest.New(mySession)
 //
@@ -1006,11 +1020,11 @@ type InputService5ProtocolTest struct {
 //     svc := inputservice5protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService5ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService5ProtocolTest {
 	c := p.ClientConfig("inputservice5protocoltest", cfgs...)
-	return newInputService5ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService5ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService5ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService5ProtocolTest {
+func newInputService5ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService5ProtocolTest {
 	svc := &InputService5ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -1019,6 +1033,7 @@ func newInputService5ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService5ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -1145,6 +1160,8 @@ type InputService6ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService6ProtocolTest client from just a session.
 //     svc := inputservice6protocoltest.New(mySession)
 //
@@ -1152,11 +1169,11 @@ type InputService6ProtocolTest struct {
 //     svc := inputservice6protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService6ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService6ProtocolTest {
 	c := p.ClientConfig("inputservice6protocoltest", cfgs...)
-	return newInputService6ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService6ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService6ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService6ProtocolTest {
+func newInputService6ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService6ProtocolTest {
 	svc := &InputService6ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -1165,6 +1182,7 @@ func newInputService6ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService6ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -1291,6 +1309,8 @@ type InputService7ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService7ProtocolTest client from just a session.
 //     svc := inputservice7protocoltest.New(mySession)
 //
@@ -1298,11 +1318,11 @@ type InputService7ProtocolTest struct {
 //     svc := inputservice7protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService7ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService7ProtocolTest {
 	c := p.ClientConfig("inputservice7protocoltest", cfgs...)
-	return newInputService7ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService7ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService7ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService7ProtocolTest {
+func newInputService7ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService7ProtocolTest {
 	svc := &InputService7ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -1311,6 +1331,7 @@ func newInputService7ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService7ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -1437,6 +1458,8 @@ type InputService8ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService8ProtocolTest client from just a session.
 //     svc := inputservice8protocoltest.New(mySession)
 //
@@ -1444,11 +1467,11 @@ type InputService8ProtocolTest struct {
 //     svc := inputservice8protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService8ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService8ProtocolTest {
 	c := p.ClientConfig("inputservice8protocoltest", cfgs...)
-	return newInputService8ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService8ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService8ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService8ProtocolTest {
+func newInputService8ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService8ProtocolTest {
 	svc := &InputService8ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -1457,6 +1480,7 @@ func newInputService8ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService8ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -1583,6 +1607,8 @@ type InputService9ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService9ProtocolTest client from just a session.
 //     svc := inputservice9protocoltest.New(mySession)
 //
@@ -1590,11 +1616,11 @@ type InputService9ProtocolTest struct {
 //     svc := inputservice9protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService9ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService9ProtocolTest {
 	c := p.ClientConfig("inputservice9protocoltest", cfgs...)
-	return newInputService9ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService9ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService9ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService9ProtocolTest {
+func newInputService9ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService9ProtocolTest {
 	svc := &InputService9ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -1603,6 +1629,7 @@ func newInputService9ProtocolTestClient(cfg aws.Config, handlers request.Handler
 				ServiceID:     "InputService9ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -1741,6 +1768,8 @@ type InputService10ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService10ProtocolTest client from just a session.
 //     svc := inputservice10protocoltest.New(mySession)
 //
@@ -1748,11 +1777,11 @@ type InputService10ProtocolTest struct {
 //     svc := inputservice10protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService10ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService10ProtocolTest {
 	c := p.ClientConfig("inputservice10protocoltest", cfgs...)
-	return newInputService10ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService10ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService10ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService10ProtocolTest {
+func newInputService10ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService10ProtocolTest {
 	svc := &InputService10ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -1761,6 +1790,7 @@ func newInputService10ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService10ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -1900,6 +1930,8 @@ type InputService11ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService11ProtocolTest client from just a session.
 //     svc := inputservice11protocoltest.New(mySession)
 //
@@ -1907,11 +1939,11 @@ type InputService11ProtocolTest struct {
 //     svc := inputservice11protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService11ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService11ProtocolTest {
 	c := p.ClientConfig("inputservice11protocoltest", cfgs...)
-	return newInputService11ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService11ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService11ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService11ProtocolTest {
+func newInputService11ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService11ProtocolTest {
 	svc := &InputService11ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -1920,6 +1952,7 @@ func newInputService11ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService11ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -2110,6 +2143,8 @@ type InputService12ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService12ProtocolTest client from just a session.
 //     svc := inputservice12protocoltest.New(mySession)
 //
@@ -2117,11 +2152,11 @@ type InputService12ProtocolTest struct {
 //     svc := inputservice12protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService12ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService12ProtocolTest {
 	c := p.ClientConfig("inputservice12protocoltest", cfgs...)
-	return newInputService12ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService12ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService12ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService12ProtocolTest {
+func newInputService12ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService12ProtocolTest {
 	svc := &InputService12ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -2130,6 +2165,7 @@ func newInputService12ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService12ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -2256,6 +2292,8 @@ type InputService13ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService13ProtocolTest client from just a session.
 //     svc := inputservice13protocoltest.New(mySession)
 //
@@ -2263,11 +2301,11 @@ type InputService13ProtocolTest struct {
 //     svc := inputservice13protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService13ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService13ProtocolTest {
 	c := p.ClientConfig("inputservice13protocoltest", cfgs...)
-	return newInputService13ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService13ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService13ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService13ProtocolTest {
+func newInputService13ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService13ProtocolTest {
 	svc := &InputService13ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -2276,6 +2314,7 @@ func newInputService13ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService13ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -2372,7 +2411,7 @@ func (c *InputService13ProtocolTest) InputService13TestCaseOperation1WithContext
 }
 
 type InputService13TestShapeInputService13TestCaseOperation1Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	Items []*string `location:"querystring" locationName:"item" type:"list"`
 }
@@ -2402,6 +2441,8 @@ type InputService14ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService14ProtocolTest client from just a session.
 //     svc := inputservice14protocoltest.New(mySession)
 //
@@ -2409,11 +2450,11 @@ type InputService14ProtocolTest struct {
 //     svc := inputservice14protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService14ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService14ProtocolTest {
 	c := p.ClientConfig("inputservice14protocoltest", cfgs...)
-	return newInputService14ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService14ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService14ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService14ProtocolTest {
+func newInputService14ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService14ProtocolTest {
 	svc := &InputService14ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -2422,6 +2463,7 @@ func newInputService14ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService14ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -2518,7 +2560,7 @@ func (c *InputService14ProtocolTest) InputService14TestCaseOperation1WithContext
 }
 
 type InputService14TestShapeInputService14TestCaseOperation1Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	// PipelineId is a required field
 	PipelineId *string `location:"uri" type:"string" required:"true"`
@@ -2573,6 +2615,8 @@ type InputService15ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService15ProtocolTest client from just a session.
 //     svc := inputservice15protocoltest.New(mySession)
 //
@@ -2580,11 +2624,11 @@ type InputService15ProtocolTest struct {
 //     svc := inputservice15protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService15ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService15ProtocolTest {
 	c := p.ClientConfig("inputservice15protocoltest", cfgs...)
-	return newInputService15ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService15ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService15ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService15ProtocolTest {
+func newInputService15ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService15ProtocolTest {
 	svc := &InputService15ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -2593,6 +2637,7 @@ func newInputService15ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService15ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -2689,7 +2734,7 @@ func (c *InputService15ProtocolTest) InputService15TestCaseOperation1WithContext
 }
 
 type InputService15TestShapeInputService15TestCaseOperation1Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	// PipelineId is a required field
 	PipelineId *string `location:"uri" type:"string" required:"true"`
@@ -2744,6 +2789,8 @@ type InputService16ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService16ProtocolTest client from just a session.
 //     svc := inputservice16protocoltest.New(mySession)
 //
@@ -2751,11 +2798,11 @@ type InputService16ProtocolTest struct {
 //     svc := inputservice16protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService16ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService16ProtocolTest {
 	c := p.ClientConfig("inputservice16protocoltest", cfgs...)
-	return newInputService16ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService16ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService16ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService16ProtocolTest {
+func newInputService16ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService16ProtocolTest {
 	svc := &InputService16ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -2764,6 +2811,7 @@ func newInputService16ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService16ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -2930,7 +2978,7 @@ func (c *InputService16ProtocolTest) InputService16TestCaseOperation2WithContext
 }
 
 type InputService16TestShapeInputService16TestCaseOperation1Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	BoolQuery *bool `location:"querystring" locationName:"bool-query" type:"boolean"`
 }
@@ -2946,7 +2994,7 @@ type InputService16TestShapeInputService16TestCaseOperation1Output struct {
 }
 
 type InputService16TestShapeInputService16TestCaseOperation2Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	BoolQuery *bool `location:"querystring" locationName:"bool-query" type:"boolean"`
 }
@@ -2976,6 +3024,8 @@ type InputService17ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService17ProtocolTest client from just a session.
 //     svc := inputservice17protocoltest.New(mySession)
 //
@@ -2983,11 +3033,11 @@ type InputService17ProtocolTest struct {
 //     svc := inputservice17protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService17ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService17ProtocolTest {
 	c := p.ClientConfig("inputservice17protocoltest", cfgs...)
-	return newInputService17ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService17ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService17ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService17ProtocolTest {
+func newInputService17ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService17ProtocolTest {
 	svc := &InputService17ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -2996,6 +3046,7 @@ func newInputService17ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService17ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -3092,7 +3143,7 @@ func (c *InputService17ProtocolTest) InputService17TestCaseOperation1WithContext
 }
 
 type InputService17TestShapeInputService17TestCaseOperation1Input struct {
-	_ struct{} `type:"structure" payload:"Foo"`
+	_ struct{} `locationName:"InputShape" type:"structure" payload:"Foo"`
 
 	Foo *string `locationName:"foo" type:"string"`
 }
@@ -3122,6 +3173,8 @@ type InputService18ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService18ProtocolTest client from just a session.
 //     svc := inputservice18protocoltest.New(mySession)
 //
@@ -3129,11 +3182,11 @@ type InputService18ProtocolTest struct {
 //     svc := inputservice18protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService18ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService18ProtocolTest {
 	c := p.ClientConfig("inputservice18protocoltest", cfgs...)
-	return newInputService18ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService18ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService18ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService18ProtocolTest {
+func newInputService18ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService18ProtocolTest {
 	svc := &InputService18ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -3142,6 +3195,7 @@ func newInputService18ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService18ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -3308,7 +3362,7 @@ func (c *InputService18ProtocolTest) InputService18TestCaseOperation2WithContext
 }
 
 type InputService18TestShapeInputService18TestCaseOperation1Input struct {
-	_ struct{} `type:"structure" payload:"Foo"`
+	_ struct{} `locationName:"InputShape" type:"structure" payload:"Foo"`
 
 	Foo []byte `locationName:"foo" type:"blob"`
 }
@@ -3324,7 +3378,7 @@ type InputService18TestShapeInputService18TestCaseOperation1Output struct {
 }
 
 type InputService18TestShapeInputService18TestCaseOperation2Input struct {
-	_ struct{} `type:"structure" payload:"Foo"`
+	_ struct{} `locationName:"InputShape" type:"structure" payload:"Foo"`
 
 	Foo []byte `locationName:"foo" type:"blob"`
 }
@@ -3354,6 +3408,8 @@ type InputService19ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService19ProtocolTest client from just a session.
 //     svc := inputservice19protocoltest.New(mySession)
 //
@@ -3361,11 +3417,11 @@ type InputService19ProtocolTest struct {
 //     svc := inputservice19protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService19ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService19ProtocolTest {
 	c := p.ClientConfig("inputservice19protocoltest", cfgs...)
-	return newInputService19ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService19ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService19ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService19ProtocolTest {
+func newInputService19ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService19ProtocolTest {
 	svc := &InputService19ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -3374,6 +3430,7 @@ func newInputService19ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService19ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -3692,7 +3749,7 @@ func (s *InputService19TestShapeFooShape) SetBaz(v string) *InputService19TestSh
 }
 
 type InputService19TestShapeInputService19TestCaseOperation1Input struct {
-	_ struct{} `type:"structure" payload:"Foo"`
+	_ struct{} `locationName:"InputShape" type:"structure" payload:"Foo"`
 
 	Foo *InputService19TestShapeFooShape `locationName:"foo" type:"structure"`
 }
@@ -3708,7 +3765,7 @@ type InputService19TestShapeInputService19TestCaseOperation1Output struct {
 }
 
 type InputService19TestShapeInputService19TestCaseOperation2Input struct {
-	_ struct{} `type:"structure" payload:"Foo"`
+	_ struct{} `locationName:"InputShape" type:"structure" payload:"Foo"`
 
 	Foo *InputService19TestShapeFooShape `locationName:"foo" type:"structure"`
 }
@@ -3724,7 +3781,7 @@ type InputService19TestShapeInputService19TestCaseOperation2Output struct {
 }
 
 type InputService19TestShapeInputService19TestCaseOperation3Input struct {
-	_ struct{} `type:"structure" payload:"Foo"`
+	_ struct{} `locationName:"InputShape" type:"structure" payload:"Foo"`
 
 	Foo *InputService19TestShapeFooShape `locationName:"foo" type:"structure"`
 }
@@ -3740,7 +3797,7 @@ type InputService19TestShapeInputService19TestCaseOperation3Output struct {
 }
 
 type InputService19TestShapeInputService19TestCaseOperation4Input struct {
-	_ struct{} `type:"structure" payload:"Foo"`
+	_ struct{} `locationName:"InputShape" type:"structure" payload:"Foo"`
 
 	Foo *InputService19TestShapeFooShape `locationName:"foo" type:"structure"`
 }
@@ -3770,6 +3827,8 @@ type InputService20ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService20ProtocolTest client from just a session.
 //     svc := inputservice20protocoltest.New(mySession)
 //
@@ -3777,11 +3836,11 @@ type InputService20ProtocolTest struct {
 //     svc := inputservice20protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService20ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService20ProtocolTest {
 	c := p.ClientConfig("inputservice20protocoltest", cfgs...)
-	return newInputService20ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService20ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService20ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService20ProtocolTest {
+func newInputService20ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService20ProtocolTest {
 	svc := &InputService20ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -3790,6 +3849,7 @@ func newInputService20ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService20ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -3918,7 +3978,7 @@ func (s *InputService20TestShapeGrantee) SetType(v string) *InputService20TestSh
 }
 
 type InputService20TestShapeInputService20TestCaseOperation1Input struct {
-	_ struct{} `type:"structure" payload:"Grant"`
+	_ struct{} `locationName:"InputShape" type:"structure" payload:"Grant"`
 
 	Grant *InputService20TestShapeGrant `locationName:"Grant" type:"structure"`
 }
@@ -3948,6 +4008,8 @@ type InputService21ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService21ProtocolTest client from just a session.
 //     svc := inputservice21protocoltest.New(mySession)
 //
@@ -3955,11 +4017,11 @@ type InputService21ProtocolTest struct {
 //     svc := inputservice21protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService21ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService21ProtocolTest {
 	c := p.ClientConfig("inputservice21protocoltest", cfgs...)
-	return newInputService21ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService21ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService21ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService21ProtocolTest {
+func newInputService21ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService21ProtocolTest {
 	svc := &InputService21ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -3968,6 +4030,7 @@ func newInputService21ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService21ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -4064,7 +4127,7 @@ func (c *InputService21ProtocolTest) InputService21TestCaseOperation1WithContext
 }
 
 type InputService21TestShapeInputService21TestCaseOperation1Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	// Bucket is a required field
 	Bucket *string `location:"uri" type:"string" required:"true"`
@@ -4126,6 +4189,8 @@ type InputService22ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService22ProtocolTest client from just a session.
 //     svc := inputservice22protocoltest.New(mySession)
 //
@@ -4133,11 +4198,11 @@ type InputService22ProtocolTest struct {
 //     svc := inputservice22protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService22ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService22ProtocolTest {
 	c := p.ClientConfig("inputservice22protocoltest", cfgs...)
-	return newInputService22ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService22ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService22ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService22ProtocolTest {
+func newInputService22ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService22ProtocolTest {
 	svc := &InputService22ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -4146,6 +4211,7 @@ func newInputService22ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService22ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -4312,7 +4378,7 @@ func (c *InputService22ProtocolTest) InputService22TestCaseOperation2WithContext
 }
 
 type InputService22TestShapeInputService22TestCaseOperation1Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	Foo *string `location:"querystring" locationName:"param-name" type:"string"`
 }
@@ -4328,7 +4394,7 @@ type InputService22TestShapeInputService22TestCaseOperation1Output struct {
 }
 
 type InputService22TestShapeInputService22TestCaseOperation2Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	Foo *string `location:"querystring" locationName:"param-name" type:"string"`
 }
@@ -4358,6 +4424,8 @@ type InputService23ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService23ProtocolTest client from just a session.
 //     svc := inputservice23protocoltest.New(mySession)
 //
@@ -4365,11 +4433,11 @@ type InputService23ProtocolTest struct {
 //     svc := inputservice23protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService23ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService23ProtocolTest {
 	c := p.ClientConfig("inputservice23protocoltest", cfgs...)
-	return newInputService23ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService23ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService23ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService23ProtocolTest {
+func newInputService23ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService23ProtocolTest {
 	svc := &InputService23ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -4378,6 +4446,7 @@ func newInputService23ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService23ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -4970,6 +5039,8 @@ type InputService24ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService24ProtocolTest client from just a session.
 //     svc := inputservice24protocoltest.New(mySession)
 //
@@ -4977,11 +5048,11 @@ type InputService24ProtocolTest struct {
 //     svc := inputservice24protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService24ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService24ProtocolTest {
 	c := p.ClientConfig("inputservice24protocoltest", cfgs...)
-	return newInputService24ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService24ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService24ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService24ProtocolTest {
+func newInputService24ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService24ProtocolTest {
 	svc := &InputService24ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -4990,6 +5061,7 @@ func newInputService24ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService24ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -5156,7 +5228,7 @@ func (c *InputService24ProtocolTest) InputService24TestCaseOperation2WithContext
 }
 
 type InputService24TestShapeInputService24TestCaseOperation1Input struct {
-	_ struct{} `locationName:"OperationRequest" type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	Token *string `type:"string" idempotencyToken:"true"`
 }
@@ -5172,7 +5244,7 @@ type InputService24TestShapeInputService24TestCaseOperation1Output struct {
 }
 
 type InputService24TestShapeInputService24TestCaseOperation2Input struct {
-	_ struct{} `locationName:"OperationRequest" type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	Token *string `type:"string" idempotencyToken:"true"`
 }
@@ -5202,6 +5274,8 @@ type InputService25ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService25ProtocolTest client from just a session.
 //     svc := inputservice25protocoltest.New(mySession)
 //
@@ -5209,11 +5283,11 @@ type InputService25ProtocolTest struct {
 //     svc := inputservice25protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService25ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService25ProtocolTest {
 	c := p.ClientConfig("inputservice25protocoltest", cfgs...)
-	return newInputService25ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService25ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService25ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService25ProtocolTest {
+func newInputService25ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService25ProtocolTest {
 	svc := &InputService25ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -5222,6 +5296,7 @@ func newInputService25ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService25ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -5388,7 +5463,7 @@ func (c *InputService25ProtocolTest) InputService25TestCaseOperation2WithContext
 }
 
 type InputService25TestShapeInputService25TestCaseOperation1Input struct {
-	_ struct{} `locationName:"OperationRequest" type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	FooEnum *string `type:"string" enum:"InputService25TestShapeEnumType"`
 
@@ -5453,7 +5528,7 @@ type InputService25TestShapeInputService25TestCaseOperation1Output struct {
 }
 
 type InputService25TestShapeInputService25TestCaseOperation2Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	FooEnum *string `type:"string" enum:"InputService25TestShapeEnumType"`
 
@@ -5546,6 +5621,8 @@ type InputService26ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService26ProtocolTest client from just a session.
 //     svc := inputservice26protocoltest.New(mySession)
 //
@@ -5553,11 +5630,11 @@ type InputService26ProtocolTest struct {
 //     svc := inputservice26protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService26ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService26ProtocolTest {
 	c := p.ClientConfig("inputservice26protocoltest", cfgs...)
-	return newInputService26ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService26ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService26ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService26ProtocolTest {
+func newInputService26ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService26ProtocolTest {
 	svc := &InputService26ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -5566,6 +5643,7 @@ func newInputService26ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService26ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -5805,6 +5883,8 @@ type InputService27ProtocolTest struct {
 // aws.Config parameter to add your extra config.
 //
 // Example:
+//     mySession := session.Must(session.NewSession())
+//
 //     // Create a InputService27ProtocolTest client from just a session.
 //     svc := inputservice27protocoltest.New(mySession)
 //
@@ -5812,11 +5892,11 @@ type InputService27ProtocolTest struct {
 //     svc := inputservice27protocoltest.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func NewInputService27ProtocolTest(p client.ConfigProvider, cfgs ...*aws.Config) *InputService27ProtocolTest {
 	c := p.ClientConfig("inputservice27protocoltest", cfgs...)
-	return newInputService27ProtocolTestClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
+	return newInputService27ProtocolTestClient(*c.Config, c.Handlers, c.PartitionID, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
-func newInputService27ProtocolTestClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *InputService27ProtocolTest {
+func newInputService27ProtocolTestClient(cfg aws.Config, handlers request.Handlers, partitionID, endpoint, signingRegion, signingName string) *InputService27ProtocolTest {
 	svc := &InputService27ProtocolTest{
 		Client: client.New(
 			cfg,
@@ -5825,6 +5905,7 @@ func newInputService27ProtocolTestClient(cfg aws.Config, handlers request.Handle
 				ServiceID:     "InputService27ProtocolTest",
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
+				PartitionID:   partitionID,
 				Endpoint:      endpoint,
 				APIVersion:    "2014-01-01",
 			},
@@ -5921,7 +6002,7 @@ func (c *InputService27ProtocolTest) InputService27TestCaseOperation1WithContext
 }
 
 type InputService27TestShapeInputService27TestCaseOperation1Input struct {
-	_ struct{} `type:"structure"`
+	_ struct{} `locationName:"InputShape" type:"structure"`
 
 	Header1 *string `location:"header" type:"string"`
 
@@ -6740,7 +6821,7 @@ func TestInputService20ProtocolTestXMLAttributeCase1(t *testing.T) {
 		t.Errorf("expect body not to be nil")
 	}
 	body := util.SortXML(r.Body)
-	awstesting.AssertXML(t, `<Grant xmlns:_xmlns="xmlns" _xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="CanonicalUser"><Grantee><EmailAddress>foo@example.com</EmailAddress></Grantee></Grant>`, util.Trim(body))
+	awstesting.AssertXML(t, `<Grant xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="CanonicalUser" xmlns:_xmlns="xmlns" _xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><Grantee><EmailAddress>foo@example.com</EmailAddress></Grantee></Grant>`, util.Trim(body))
 
 	// assert URL
 	awstesting.AssertURL(t, "https://test/", r.URL.String())
@@ -7041,7 +7122,7 @@ func TestInputService24ProtocolTestIdempotencyTokenAutoFillCase1(t *testing.T) {
 		t.Errorf("expect body not to be nil")
 	}
 	body := util.SortXML(r.Body)
-	awstesting.AssertXML(t, `<OperationRequest><Token>abc123</Token></OperationRequest>`, util.Trim(body))
+	awstesting.AssertXML(t, `<InputShape><Token>abc123</Token></InputShape>`, util.Trim(body))
 
 	// assert URL
 	awstesting.AssertURL(t, "https://test/path", r.URL.String())
@@ -7067,7 +7148,7 @@ func TestInputService24ProtocolTestIdempotencyTokenAutoFillCase2(t *testing.T) {
 		t.Errorf("expect body not to be nil")
 	}
 	body := util.SortXML(r.Body)
-	awstesting.AssertXML(t, `<OperationRequest><Token>00000000-0000-4000-8000-000000000000</Token></OperationRequest>`, util.Trim(body))
+	awstesting.AssertXML(t, `<InputShape><Token>00000000-0000-4000-8000-000000000000</Token></InputShape>`, util.Trim(body))
 
 	// assert URL
 	awstesting.AssertURL(t, "https://test/path", r.URL.String())
@@ -7107,7 +7188,7 @@ func TestInputService25ProtocolTestEnumCase1(t *testing.T) {
 		t.Errorf("expect body not to be nil")
 	}
 	body := util.SortXML(r.Body)
-	awstesting.AssertXML(t, `<OperationRequest><FooEnum>foo</FooEnum><ListEnums><member>foo</member><member></member><member>bar</member></ListEnums></OperationRequest>`, util.Trim(body))
+	awstesting.AssertXML(t, `<InputShape><FooEnum>foo</FooEnum><ListEnums><member>foo</member><member></member><member>bar</member></ListEnums></InputShape>`, util.Trim(body))
 
 	// assert URL
 	awstesting.AssertURL(t, "https://test/Enum/bar?ListEnums=0&ListEnums=&ListEnums=1", r.URL.String())

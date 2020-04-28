@@ -1,8 +1,8 @@
 hash: 49c2702ee5cc3781711200a9b8c050f58d7874cf0c909761a8cb1948ad226641
-updated: 2019-09-25T22:36:41.891012311+10:00
+updated: 2020-04-28T21:46:38.400214829+10:00
 imports:
 - name: cloud.google.com/go
-  version: 264def2dd949cdb8a803bb9f50fa29a67b798a6a
+  version: 69e77e66e59741e053c986d469791a983ee1d6a5
   subpackages:
   - compute/metadata
   - iam
@@ -12,9 +12,10 @@ imports:
   - internal/version
   - storage
 - name: github.com/aws/aws-sdk-go
-  version: b7eee50b85eaaf44dc40b5676d7035d6909c042e
+  version: 41c1f8ff3a97cdf5a486987a0674dbf52eeb95ac
   subpackages:
   - aws
+  - aws/arn
   - aws/awserr
   - aws/awsutil
   - aws/client
@@ -32,6 +33,7 @@ imports:
   - aws/request
   - aws/session
   - aws/signer/v4
+  - internal/context
   - internal/ini
   - internal/s3err
   - internal/sdkio
@@ -39,6 +41,8 @@ imports:
   - internal/sdkrand
   - internal/sdkuri
   - internal/shareddefaults
+  - internal/strings
+  - internal/sync/singleflight
   - private/protocol
   - private/protocol/eventstream
   - private/protocol/eventstream/eventstreamapi
@@ -49,6 +53,7 @@ imports:
   - private/protocol/restxml
   - private/protocol/xml/xmlutil
   - service/s3
+  - service/s3/internal/arn
   - service/s3/s3iface
   - service/s3/s3manager
   - service/sts
@@ -66,7 +71,7 @@ imports:
   subpackages:
   - api
 - name: github.com/bmatcuk/doublestar
-  version: 2437321e1473408f122a95f65df3d8841fec4fba
+  version: 39df92f7399bdaa74c821d606e9322dd1332074a
 - name: github.com/BurntSushi/toml
   version: 3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005
 - name: github.com/djherbis/times
@@ -76,25 +81,22 @@ imports:
 - name: github.com/gofrs/uuid
   version: 6b08a5c5172ba18946672b49749cde22873dd7c2
 - name: github.com/golang/groupcache
-  version: 869f871628b6baa9cfbc11732cdf6546b17c1298
+  version: 8c9f03a8e57eb486e42badaed3fb287da51807ba
   subpackages:
   - lru
 - name: github.com/golang/protobuf
-  version: 1680a479a2cfb3fa22b972af7e36d0a0fde47bf8
+  version: fa093f59480c0adaaabf88a72a0b0e48b95aec25
   subpackages:
+  - internal/gengogrpc
   - proto
   - protoc-gen-go
   - protoc-gen-go/descriptor
-  - protoc-gen-go/generator
-  - protoc-gen-go/generator/internal/remap
-  - protoc-gen-go/grpc
-  - protoc-gen-go/plugin
   - ptypes
   - ptypes/any
   - ptypes/duration
   - ptypes/timestamp
 - name: github.com/googleapis/gax-go
-  version: 7cb21a99a18735dde62f5d3cc0244f3f35bd9515
+  version: be11bb253a768098254dc71e95d1a81ced778de3
   subpackages:
   - v2
 - name: github.com/howeyc/gopass
@@ -104,18 +106,18 @@ imports:
 - name: github.com/jinzhu/configor
   version: 01f68ce1891676869e16fce850fd4779ac681a45
 - name: github.com/jmespath/go-jmespath
-  version: c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5
+  version: 2437e8417af5203cd4f1f97f99fc289bdeea1360
 - name: github.com/jordan-wright/email
   version: 94ae17dedda217a49e3b47d68f1b54b3c946e16b
 - name: github.com/jstemmer/go-junit-report
-  version: af01ea7f8024089b458d804d5cdf190f962a9a0c
+  version: 984a47ca6b0a7d704c4b589852051b4d7865aa17
   subpackages:
   - formatter
   - parser
 - name: github.com/julienschmidt/httprouter
-  version: 667c1dbb44f3b5528b874c3c9071b23702e3dd0f
+  version: 8c9f31f047a304abedb5614d4a18a843cd5f4a40
 - name: github.com/mattn/go-ieproxy
-  version: f9202b1cfdeb0c82ddd3dc1e8e9cd94b3c0c1b13
+  version: 439dd0581a2a03b415673a2462ad5c21eaabc588
 - name: github.com/mattn/go-sqlite3
   version: 25ecb14adfc7543176f7d85291ec7dba82c6f7e4
 - name: github.com/paulbellamy/ratecounter
@@ -125,7 +127,7 @@ imports:
   subpackages:
   - hooks/test
 - name: go.opencensus.io
-  version: df0549d970e2a64236cca48fa6a76f0d321c8254
+  version: 46dfec7deb6e8c5d4a46f355c0da7c6d6dc59ba4
   subpackages:
   - internal
   - internal/tagencoding
@@ -143,23 +145,26 @@ imports:
   - trace/propagation
   - trace/tracestate
 - name: golang.org/x/crypto
-  version: 9ee001bba392397c76f100a2d5b13afc86f167f1
+  version: 729f1e841bcca28c2cd9f4034d6f7672604dbeda
   subpackages:
   - bcrypt
   - blowfish
   - ssh/terminal
 - name: golang.org/x/exp
-  version: 81c71964d733d2e3e2375a315c0e2fd4d162adc4
+  version: e8c3332aa8e5b8e6acb4707c3a7e5979052b20aa
   subpackages:
-  - apidiff
-  - cmd/apidiff
   - utf8string
 - name: golang.org/x/lint
-  version: 414d861bb4acf565ff8cb05f9906a2283b7dc75a
+  version: 738671d3881b9731cc63024d5d88cf28db875626
   subpackages:
   - golint
+- name: golang.org/x/mod
+  version: 2addee1ccfb22349ab47953a3046338e461eb4d1
+  subpackages:
+  - module
+  - semver
 - name: golang.org/x/net
-  version: aa69164e4478b84860dc6769c710c699c67058a3
+  version: ff2c4b7c35a07b0c1e90ce72aa7bfe41bb66a3cb
   subpackages:
   - context
   - context/ctxhttp
@@ -171,31 +176,31 @@ imports:
   - internal/timeseries
   - trace
 - name: golang.org/x/oauth2
-  version: 0f29369cfe4552d0e4bcddc57cc75f4d7e672a33
+  version: bf48bf16ab8d622ce64ec6ce98d2c98f916b6303
   subpackages:
   - google
   - internal
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 2837fb4f24fee082b8c39b1a6dc9e0ed9f3fbd4f
+  version: 29b57079015a5bb5f6b6f0c01679754e4bd75916
   subpackages:
   - unix
   - windows
   - windows/registry
 - name: golang.org/x/text
-  version: 3d0f7978add91030e5e8976ff65ccdd828286cba
+  version: 6ca2caf96f159660c33dae334f64e31e5da91752
   subpackages:
   - secure/bidirule
   - transform
   - unicode/bidi
   - unicode/norm
 - name: golang.org/x/time
-  version: c4c64cad1fd0a1a8dab2523e04e61d35308e131e
+  version: 89c76fbcd5d1cd4969e5d2fe19d48b19d5ad94a0
   subpackages:
   - rate
 - name: golang.org/x/tools
-  version: 22afafe3322a860fcd3d88448768f9db36f8bc5f
+  version: 7ae4988eb4d97c49ed0a632032fed8a8d41a2a3d
   subpackages:
   - cmd/goimports
   - go/analysis
@@ -204,31 +209,44 @@ imports:
   - go/ast/inspector
   - go/buildutil
   - go/gcexportdata
+  - go/internal/cgo
   - go/internal/gcimporter
   - go/internal/packagesdriver
+  - go/loader
   - go/packages
   - go/types/objectpath
   - go/types/typeutil
+  - internal/analysisinternal
+  - internal/event
+  - internal/event/core
+  - internal/event/keys
+  - internal/event/label
   - internal/fastwalk
+  - internal/gocommand
   - internal/gopathwalk
   - internal/imports
-  - internal/module
-  - internal/semver
+  - internal/packagesinternal
+- name: golang.org/x/xerrors
+  version: 9bdfabe68543c54f90421aeb9a60ef8061b5b544
+  subpackages:
+  - internal
 - name: google.golang.org/api
-  version: 99d61c9f5f95c5dcbb08242b071a810d541c1c1f
+  version: 429e7e93c77a1a848a951c9335fd89c230c79f2f
   subpackages:
   - googleapi
-  - googleapi/internal/uritemplates
   - googleapi/transport
   - internal
   - internal/gensupport
+  - internal/third_party/uritemplates
   - iterator
   - option
+  - option/internaloption
   - storage/v1
+  - transport/cert
   - transport/http
   - transport/http/internal/propagation
 - name: google.golang.org/appengine
-  version: c71d63e301d75423acb410203c747cad31e9a5e7
+  version: 553959209a20f3be281c16dd5be5c740a893978f
   subpackages:
   - internal
   - internal/app_identity
@@ -240,7 +258,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: f660b865573183437d2d868f703fe88bb8af0b55
+  version: bca184e23272c97429f0cb78a825f71ede0635fc
   subpackages:
   - googleapis/api/annotations
   - googleapis/iam/v1
@@ -248,8 +266,10 @@ imports:
   - googleapis/rpc/status
   - googleapis/type/expr
 - name: google.golang.org/grpc
-  version: 230def769105c46b2e597578b23002a6ac159dde
+  version: b2df44eac8b1ffedf1ec721a1b7d706293e7abd7
   subpackages:
+  - attributes
+  - backoff
   - balancer
   - balancer/base
   - balancer/roundrobin
@@ -265,10 +285,17 @@ imports:
   - internal/backoff
   - internal/balancerload
   - internal/binarylog
+  - internal/buffer
   - internal/channelz
   - internal/envconfig
+  - internal/grpclog
   - internal/grpcrand
   - internal/grpcsync
+  - internal/grpcutil
+  - internal/resolver/dns
+  - internal/resolver/passthrough
+  - internal/serviceconfig
+  - internal/status
   - internal/syscall
   - internal/transport
   - keepalive
@@ -276,29 +303,69 @@ imports:
   - naming
   - peer
   - resolver
-  - resolver/dns
-  - resolver/passthrough
   - serviceconfig
   - stats
   - status
   - tap
+- name: google.golang.org/protobuf
+  version: b57aae9defbc3e3ce7daed74b0c4d7a57550c933
+  subpackages:
+  - cmd/protoc-gen-go/internal_gengo
+  - compiler/protogen
+  - encoding/prototext
+  - encoding/protowire
+  - internal/descfmt
+  - internal/descopts
+  - internal/detrand
+  - internal/encoding/defval
+  - internal/encoding/messageset
+  - internal/encoding/tag
+  - internal/encoding/text
+  - internal/errors
+  - internal/fieldnum
+  - internal/fieldsort
+  - internal/filedesc
+  - internal/filetype
+  - internal/flags
+  - internal/genname
+  - internal/impl
+  - internal/mapsort
+  - internal/pragma
+  - internal/set
+  - internal/strs
+  - internal/version
+  - proto
+  - reflect/protodesc
+  - reflect/protoreflect
+  - reflect/protoregistry
+  - runtime/protoiface
+  - runtime/protoimpl
+  - types/descriptorpb
+  - types/known/anypb
+  - types/known/durationpb
+  - types/known/timestamppb
+  - types/pluginpb
 - name: gopkg.in/yaml.v2
-  version: 51d6538a90f86fe93ac480b35f37b2be17fef232
+  version: 53403b58ad1b561927d19068c655246f2db79d48
 - name: honnef.co/go/tools
-  version: 4c0a318d638eb5e21ccbc2844c31f4e766350b49
+  version: cd1ad299aeab34165b1db4678cc0e68b1e77e523
   subpackages:
   - arg
   - cmd/staticcheck
+  - code
   - config
   - deprecated
+  - edit
   - facts
   - functions
   - go/types/typeutil
   - internal/cache
-  - internal/passes/buildssa
+  - internal/passes/buildir
   - internal/renameio
   - internal/robustio
   - internal/sharedcheck
+  - ir
+  - ir/irutil
   - lint
   - lint/lintdsl
   - lint/lintutil
@@ -306,11 +373,9 @@ imports:
   - loader
   - pattern
   - printf
+  - report
   - simple
-  - ssa
-  - ssautil
   - staticcheck
-  - staticcheck/vrp
   - stylecheck
   - unused
   - version

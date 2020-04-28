@@ -25,10 +25,10 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/spanner/internal/backoff"
 	. "cloud.google.com/go/spanner/internal/testutil"
 	"github.com/golang/protobuf/proto"
 	proto3 "github.com/golang/protobuf/ptypes/struct"
+	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/iterator"
 	sppb "google.golang.org/genproto/googleapis/spanner/v1"
 	"google.golang.org/grpc"
@@ -809,7 +809,9 @@ func TestRsdNonblockingStates(t *testing.T) {
 			defer cancel()
 			r := newResumableStreamDecoder(
 				ctx,
+				nil,
 				test.rpc,
+				nil,
 			)
 			st := []resumableStreamDecoderState{}
 			var lastErr error
@@ -1077,12 +1079,15 @@ func TestRsdBlockingStates(t *testing.T) {
 			defer cancel()
 			r := newResumableStreamDecoder(
 				ctx,
+				nil,
 				test.rpc,
+				nil,
 			)
 			// Override backoff to make the test run faster.
-			r.backoff = backoff.ExponentialBackoff{
-				Min: 1 * time.Nanosecond,
-				Max: 1 * time.Nanosecond,
+			r.backoff = gax.Backoff{
+				Initial:    1 * time.Nanosecond,
+				Max:        1 * time.Nanosecond,
+				Multiplier: 1.3,
 			}
 			// st is the set of observed state transitions.
 			st := []resumableStreamDecoderState{}
@@ -1208,6 +1213,7 @@ func TestQueueBytes(t *testing.T) {
 	defer cancel()
 	r := newResumableStreamDecoder(
 		ctx,
+		nil,
 		func(ct context.Context, resumeToken []byte) (streamingReceiver, error) {
 			r, err := mc.ExecuteStreamingSql(ct, &sppb.ExecuteSqlRequest{
 				Sql:         "SELECT t.key key, t.value value FROM t_mock t",
@@ -1216,6 +1222,7 @@ func TestQueueBytes(t *testing.T) {
 			sr.rpcReceiver = r
 			return sr, err
 		},
+		nil,
 	)
 	go func() {
 		for r.next() {
@@ -1292,7 +1299,7 @@ func TestResumeToken(t *testing.T) {
 	done := make(chan error)
 	streaming := func() {
 		// Establish a stream to mock cloud spanner server.
-		iter := stream(context.Background(),
+		iter := stream(context.Background(), nil,
 			func(ct context.Context, resumeToken []byte) (streamingReceiver, error) {
 				r, err := mc.ExecuteStreamingSql(ct, &sppb.ExecuteSqlRequest{
 					Sql:         "SELECT t.key key, t.value value FROM t_mock t",
@@ -1422,7 +1429,7 @@ func TestResumeToken(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatalf("timeout in waiting for failed query to return.")
 	}
-	if wantErr := toSpannerError(status.Errorf(codes.Unavailable, "mock server wants some sleep")); !testEqual(gotErr, wantErr) {
+	if wantErr := spannerErrorf(codes.Unavailable, "mock server wants some sleep"); !testEqual(gotErr, wantErr) {
 		t.Fatalf("stream() returns error: %v, but want error: %v", gotErr, wantErr)
 	}
 
@@ -1488,7 +1495,7 @@ func TestGrpcReconnect(t *testing.T) {
 	go func() {
 		r := 0
 		// Establish a stream to mock cloud spanner server.
-		iter := stream(context.Background(),
+		iter := stream(context.Background(), nil,
 			func(ct context.Context, resumeToken []byte) (streamingReceiver, error) {
 				if r > 0 {
 					// This RPC attempt is a retry, signal it.
@@ -1560,7 +1567,7 @@ func TestCancelTimeout(t *testing.T) {
 	var err error
 	go func() {
 		// Establish a stream to mock cloud spanner server.
-		iter := stream(ctx,
+		iter := stream(ctx, nil,
 			func(ct context.Context, resumeToken []byte) (streamingReceiver, error) {
 				return mc.ExecuteStreamingSql(ct, &sppb.ExecuteSqlRequest{
 					Sql:         "SELECT t.key key, t.value value FROM t_mock t",
@@ -1595,7 +1602,7 @@ func TestCancelTimeout(t *testing.T) {
 	defer cancel()
 	go func() {
 		// Establish a stream to mock cloud spanner server.
-		iter := stream(ctx,
+		iter := stream(ctx, nil,
 			func(ct context.Context, resumeToken []byte) (streamingReceiver, error) {
 				return mc.ExecuteStreamingSql(ct, &sppb.ExecuteSqlRequest{
 					Sql:         "SELECT t.key key, t.value value FROM t_mock t",
@@ -1642,7 +1649,7 @@ func TestRowIteratorDo(t *testing.T) {
 	}
 	ms.AddMsg(io.EOF, true)
 	nRows := 0
-	iter := stream(context.Background(),
+	iter := stream(context.Background(), nil,
 		func(ct context.Context, resumeToken []byte) (streamingReceiver, error) {
 			return mc.ExecuteStreamingSql(ct, &sppb.ExecuteSqlRequest{
 				Sql:         "SELECT t.key key, t.value value FROM t_mock t",
@@ -1674,7 +1681,7 @@ func TestRowIteratorDoWithError(t *testing.T) {
 		ms.AddMsg(nil, false)
 	}
 	ms.AddMsg(io.EOF, true)
-	iter := stream(context.Background(),
+	iter := stream(context.Background(), nil,
 		func(ct context.Context, resumeToken []byte) (streamingReceiver, error) {
 			return mc.ExecuteStreamingSql(ct, &sppb.ExecuteSqlRequest{
 				Sql:         "SELECT t.key key, t.value value FROM t_mock t",
@@ -1705,7 +1712,7 @@ func TestIteratorStopEarly(t *testing.T) {
 	ms.AddMsg(nil, false)
 	ms.AddMsg(io.EOF, true)
 
-	iter := stream(ctx,
+	iter := stream(ctx, nil,
 		func(ct context.Context, resumeToken []byte) (streamingReceiver, error) {
 			return mc.ExecuteStreamingSql(ct, &sppb.ExecuteSqlRequest{
 				Sql:         "SELECT t.key key, t.value value FROM t_mock t",
@@ -1720,12 +1727,9 @@ func TestIteratorStopEarly(t *testing.T) {
 	}
 	iter.Stop()
 	// Stop sets r.err to the FailedPrecondition error "Next called after Stop".
-	// Override that here so this test can observe the Canceled error from the
-	// stream.
-	iter.err = nil
-	iter.Next()
-	if ErrCode(iter.streamd.lastErr()) != codes.Canceled {
-		t.Errorf("after Stop: got %v, wanted Canceled", err)
+	_, err = iter.Next()
+	if g, w := ErrCode(err), codes.FailedPrecondition; g != w {
+		t.Errorf("after Stop: got: %v, want: %v", g, w)
 	}
 }
 

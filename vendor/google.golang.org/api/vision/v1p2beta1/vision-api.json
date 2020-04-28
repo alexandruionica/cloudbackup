@@ -25,6 +25,7 @@
   },
   "id": "vision:v1p2beta1",
   "kind": "discovery#restDescription",
+  "mtlsRootUrl": "https://vision.mtls.googleapis.com/",
   "name": "vision",
   "ownerDomain": "google.com",
   "ownerName": "Google",
@@ -448,7 +449,7 @@
       }
     }
   },
-  "revision": "20190913",
+  "revision": "20200407",
   "rootUrl": "https://vision.googleapis.com/",
   "schemas": {
     "AnnotateFileResponse": {
@@ -3435,7 +3436,7 @@
           "description": "Parameters for crop hints annotation request."
         },
         "languageHints": {
-          "description": "List of languages to use for TEXT_DETECTION. In most cases, an empty value\nyields the best results since it enables automatic language detection. For\nlanguages based on the Latin alphabet, setting `language_hints` is not\nneeded. In rare cases, when the language of the text in the image is known,\nsetting a hint will help get better results (although it will be a\nsignificant hindrance if the hint is wrong). Text detection returns an\nerror if one or more of the specified languages is not one of the\n[supported languages](/vision/docs/languages).",
+          "description": "List of languages to use for TEXT_DETECTION. In most cases, an empty value\nyields the best results since it enables automatic language detection. For\nlanguages based on the Latin alphabet, setting `language_hints` is not\nneeded. In rare cases, when the language of the text in the image is known,\nsetting a hint will help get better results (although it will be a\nsignificant hindrance if the hint is wrong). Text detection returns an\nerror if one or more of the specified languages is not one of the\n[supported languages](https://cloud.google.com/vision/docs/languages).",
           "items": {
             "type": "string"
           },
@@ -3757,7 +3758,7 @@
       "properties": {
         "boundingPoly": {
           "$ref": "GoogleCloudVisionV1p2beta1BoundingPoly",
-          "description": "The bounding polygon around the area of interest in the image.\nOptional. If it is not specified, system discretion will be applied."
+          "description": "The bounding polygon around the area of interest in the image.\nIf it is not specified, system discretion will be applied."
         },
         "filter": {
           "description": "The filtering expression. This can be used to restrict search results based\non Product labels. We currently support an AND of OR of key-value\nexpressions, where each expression within an OR must have the same key. An\n'=' should be used to connect the key and value.\n\nFor example, \"(color = red OR color = blue) AND brand = Google\" is\nacceptable, but \"(color = red OR brand = Google)\" is not acceptable.\n\"color: red\" is not acceptable because it uses a ':' instead of an '='.",
@@ -5840,10 +5841,6 @@
           "$ref": "GoogleCloudVisionV1p4beta1ImageProperties",
           "description": "If present, image properties were extracted successfully."
         },
-        "imageQualityAnnotation": {
-          "$ref": "GoogleCloudVisionV1p4beta1ImageQuality",
-          "description": "If present, image quality calculation has completed successfully."
-        },
         "labelAnnotations": {
           "description": "If present, label detection has completed successfully.",
           "items": {
@@ -5875,10 +5872,6 @@
         "productSearchResults": {
           "$ref": "GoogleCloudVisionV1p4beta1ProductSearchResults",
           "description": "If present, product search has completed successfully."
-        },
-        "qualityOptimizationResult": {
-          "$ref": "GoogleCloudVisionV1p4beta1QualityOptimizationResult",
-          "description": "If present, image quality optimization has completed successfully."
         },
         "safeSearchAnnotation": {
           "$ref": "GoogleCloudVisionV1p4beta1SafeSearchAnnotation",
@@ -6047,6 +6040,25 @@
             "$ref": "GoogleCloudVisionV1p4beta1Vertex"
           },
           "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "GoogleCloudVisionV1p4beta1Celebrity": {
+      "description": "A Celebrity is a group of Faces with an identity.",
+      "id": "GoogleCloudVisionV1p4beta1Celebrity",
+      "properties": {
+        "description": {
+          "description": "The Celebrity's description.",
+          "type": "string"
+        },
+        "displayName": {
+          "description": "The Celebrity's display name.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The resource name of the preloaded Celebrity. Has the format\n`builtin/{mid}`.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -6287,6 +6299,13 @@
           "format": "float",
           "type": "number"
         },
+        "recognitionResult": {
+          "description": "Additional recognition information. Only computed if\nimage_context.face_recognition_params is provided, **and** a match is found\nto a Celebrity in the input CelebritySet. This field is\nsorted in order of decreasing confidence values.",
+          "items": {
+            "$ref": "GoogleCloudVisionV1p4beta1FaceRecognitionResult"
+          },
+          "type": "array"
+        },
         "rollAngle": {
           "description": "Roll angle, which indicates the amount of clockwise/anti-clockwise rotation\nof the face relative to the image vertical about the axis perpendicular to\nthe face. Range [-180,180].",
           "format": "float",
@@ -6449,6 +6468,22 @@
       },
       "type": "object"
     },
+    "GoogleCloudVisionV1p4beta1FaceRecognitionResult": {
+      "description": "Information about a face's identity.",
+      "id": "GoogleCloudVisionV1p4beta1FaceRecognitionResult",
+      "properties": {
+        "celebrity": {
+          "$ref": "GoogleCloudVisionV1p4beta1Celebrity",
+          "description": "The Celebrity that this face was matched to."
+        },
+        "confidence": {
+          "description": "Recognition confidence. Range [0, 1].",
+          "format": "float",
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
     "GoogleCloudVisionV1p4beta1GcsDestination": {
       "description": "The Google Cloud Storage location where the output will be written to.",
       "id": "GoogleCloudVisionV1p4beta1GcsDestination",
@@ -6494,18 +6529,6 @@
         "dominantColors": {
           "$ref": "GoogleCloudVisionV1p4beta1DominantColorsAnnotation",
           "description": "If present, dominant colors completed successfully."
-        }
-      },
-      "type": "object"
-    },
-    "GoogleCloudVisionV1p4beta1ImageQuality": {
-      "description": "Stores image quality scores, could be aesthetic quality or technical quality.",
-      "id": "GoogleCloudVisionV1p4beta1ImageQuality",
-      "properties": {
-        "qualityScore": {
-          "description": "A score representing the aesthetic/technical quality of the image. The\nscore is in range [0, 1]. Higher value corresponds to more professional\nlooking photos. 0 means the image looks very bad, 1 means the image with\nvery high quality.",
-          "format": "float",
-          "type": "number"
         }
       },
       "type": "object"
@@ -6900,38 +6923,6 @@
       },
       "type": "object"
     },
-    "GoogleCloudVisionV1p4beta1QualityOptimizationResult": {
-      "description": "Stores enhanced image bytes.",
-      "id": "GoogleCloudVisionV1p4beta1QualityOptimizationResult",
-      "properties": {
-        "image": {
-          "description": "Optimized image bytes.",
-          "format": "byte",
-          "type": "string"
-        },
-        "mimeType": {
-          "description": "Mime type of the output image.",
-          "type": "string"
-        },
-        "qualityOptimizationType": {
-          "description": "Required optimization type.",
-          "enum": [
-            "TYPE_UNSPECIFIED",
-            "COMPRESSION",
-            "ENHANCEMENT",
-            "QUALITY_SCORE"
-          ],
-          "enumDescriptions": [
-            "Invalid. Customer must select one Type.",
-            "Reduce image file size. Detailed params specified in CompressionConfig.\nIf customer do not specify CompressionConfig, it will reduce image file\nsize while not reducing image quality. If customer specify\nCompressionConfig, we will reduce file size while keeping\nCompressionParams.target_quality.",
-            "Denoise, sharpening, HDR and upscaling. Detailed params specified in\nEnhancementConfig. If customer do not specify EnhancmentConfig, it will\ndo image enhancement using default values. If upscale_ratio not\nspecified, the output image will have the same resolution as input image.",
-            "Query quality score for an image. Detailed params specified in\nQualityScoreConfig. If customer does not specify QualityScoreConfig,\naesthetic score of image will be returned."
-          ],
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
     "GoogleCloudVisionV1p4beta1ReferenceImage": {
       "description": "A `ReferenceImage` represents a product image and its associated metadata,\nsuch as bounding boxes.",
       "id": "GoogleCloudVisionV1p4beta1ReferenceImage",
@@ -6978,11 +6969,6 @@
           ],
           "type": "string"
         },
-        "adultConfidence": {
-          "description": "Confidence of adult_score. Range [0, 1]. 0 means not confident, 1 means\nvery confident.",
-          "format": "float",
-          "type": "number"
-        },
         "medical": {
           "description": "Likelihood that this is a medical image.",
           "enum": [
@@ -7002,16 +6988,6 @@
             "It is very likely."
           ],
           "type": "string"
-        },
-        "medicalConfidence": {
-          "description": "Confidence of medical_score. Range [0, 1]. 0 means not confident, 1 means\nvery confident.",
-          "format": "float",
-          "type": "number"
-        },
-        "nsfwConfidence": {
-          "description": "Confidence of nsfw_score. Range [0, 1]. 0 means not confident, 1 means very\nconfident.",
-          "format": "float",
-          "type": "number"
         },
         "racy": {
           "description": "Likelihood that the request image contains racy content. Racy content may\ninclude (but is not limited to) skimpy or sheer clothing, strategically\ncovered nudity, lewd or provocative poses, or close-ups of sensitive\nbody areas.",
@@ -7033,11 +7009,6 @@
           ],
           "type": "string"
         },
-        "racyConfidence": {
-          "description": "Confidence of racy_score. Range [0, 1]. 0 means not confident, 1 means very\nconfident.",
-          "format": "float",
-          "type": "number"
-        },
         "spoof": {
           "description": "Spoof likelihood. The likelihood that an modification\nwas made to the image's canonical version to make it appear\nfunny or offensive.",
           "enum": [
@@ -7058,11 +7029,6 @@
           ],
           "type": "string"
         },
-        "spoofConfidence": {
-          "description": "Confidence of spoof_score. Range [0, 1]. 0 means not confident, 1 means\nvery confident.",
-          "format": "float",
-          "type": "number"
-        },
         "violence": {
           "description": "Likelihood that this image contains violent content.",
           "enum": [
@@ -7082,11 +7048,6 @@
             "It is very likely."
           ],
           "type": "string"
-        },
-        "violenceConfidence": {
-          "description": "Confidence of violence_score. Range [0, 1]. 0 means not confident, 1 means\nvery confident.",
-          "format": "float",
-          "type": "number"
         }
       },
       "type": "object"
@@ -7980,11 +7941,6 @@
           ],
           "type": "string"
         },
-        "adultConfidence": {
-          "description": "Confidence of adult_score. Range [0, 1]. 0 means not confident, 1 means\nvery confident.",
-          "format": "float",
-          "type": "number"
-        },
         "medical": {
           "description": "Likelihood that this is a medical image.",
           "enum": [
@@ -8004,16 +7960,6 @@
             "It is very likely."
           ],
           "type": "string"
-        },
-        "medicalConfidence": {
-          "description": "Confidence of medical_score. Range [0, 1]. 0 means not confident, 1 means\nvery confident.",
-          "format": "float",
-          "type": "number"
-        },
-        "nsfwConfidence": {
-          "description": "Confidence of nsfw_score. Range [0, 1]. 0 means not confident, 1 means very\nconfident.",
-          "format": "float",
-          "type": "number"
         },
         "racy": {
           "description": "Likelihood that the request image contains racy content. Racy content may\ninclude (but is not limited to) skimpy or sheer clothing, strategically\ncovered nudity, lewd or provocative poses, or close-ups of sensitive\nbody areas.",
@@ -8035,11 +7981,6 @@
           ],
           "type": "string"
         },
-        "racyConfidence": {
-          "description": "Confidence of racy_score. Range [0, 1]. 0 means not confident, 1 means very\nconfident.",
-          "format": "float",
-          "type": "number"
-        },
         "spoof": {
           "description": "Spoof likelihood. The likelihood that an modification\nwas made to the image's canonical version to make it appear\nfunny or offensive.",
           "enum": [
@@ -8060,11 +8001,6 @@
           ],
           "type": "string"
         },
-        "spoofConfidence": {
-          "description": "Confidence of spoof_score. Range [0, 1]. 0 means not confident, 1 means\nvery confident.",
-          "format": "float",
-          "type": "number"
-        },
         "violence": {
           "description": "Likelihood that this image contains violent content.",
           "enum": [
@@ -8084,11 +8020,6 @@
             "It is very likely."
           ],
           "type": "string"
-        },
-        "violenceConfidence": {
-          "description": "Confidence of violence_score. Range [0, 1]. 0 means not confident, 1 means\nvery confident.",
-          "format": "float",
-          "type": "number"
         }
       },
       "type": "object"

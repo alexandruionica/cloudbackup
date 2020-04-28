@@ -372,6 +372,7 @@ func testGetCertificate_tokenCache(t *testing.T, tokenAlg algorithmSupport) {
 	url, finish := startACMEServerStub(t, tokenCertFn(man2, tokenAlg), "example.org")
 	defer finish()
 	man1.Client = &acme.Client{DirectoryURL: url}
+	man2.Client = &acme.Client{DirectoryURL: url}
 	hello := clientHelloInfo("example.org", algECDSA)
 	if _, err := man1.GetCertificate(hello); err != nil {
 		t.Error(err)
@@ -400,7 +401,7 @@ func TestGetCertificate_ecdsaVsRSA(t *testing.T) {
 
 	cert, err := man.GetCertificate(clientHelloInfo("example.org", algECDSA))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if _, ok := cert.Leaf.PublicKey.(*ecdsa.PublicKey); !ok {
 		t.Error("an ECDSA client was served a non-ECDSA certificate")
@@ -408,7 +409,7 @@ func TestGetCertificate_ecdsaVsRSA(t *testing.T) {
 
 	cert, err = man.GetCertificate(clientHelloInfo("example.org", algRSA))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if _, ok := cert.Leaf.PublicKey.(*rsa.PublicKey); !ok {
 		t.Error("a RSA client was served a non-RSA certificate")
@@ -458,7 +459,7 @@ func TestGetCertificate_wrongCacheKeyType(t *testing.T) {
 	// The RSA cached cert should be silently ignored and replaced.
 	cert, err := man.GetCertificate(clientHelloInfo(exampleDomain, algECDSA))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if _, ok := cert.Leaf.PublicKey.(*ecdsa.PublicKey); !ok {
 		t.Error("an ECDSA client was served a non-ECDSA certificate")
@@ -487,9 +488,8 @@ func startACMEServerStub(t *testing.T, tokenCert getCertificateFunc, domain stri
 		if err := crt.VerifyHostname(domain); err != nil {
 			t.Errorf("verifyTokenCert: %v", err)
 		}
-		// TODO: Update OID to the latest value 1.3.6.1.5.5.7.1.31
 		// See https://tools.ietf.org/html/draft-ietf-acme-tls-alpn-05#section-5.1
-		oid := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 30, 1}
+		oid := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 1, 31}
 		for _, x := range crt.Extensions {
 			if x.Id.Equal(oid) {
 				// No need to check the extension value here.
@@ -778,8 +778,9 @@ func TestRevokeFailedAuthz(t *testing.T) {
 			http.Error(w, "won't accept tls-alpn-01 challenge", http.StatusBadRequest)
 		// http-01 challenge "accept" request.
 		case "/challenge/http-01":
-			// Accept but the authorization will be "expired".
-			w.Write([]byte("{}"))
+			// Refuse.
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(`{"status":"invalid"}`))
 		// Authorization requests.
 		case "/authz/0", "/authz/1", "/authz/2":
 			// Revocation requests.
@@ -803,8 +804,7 @@ func TestRevokeFailedAuthz(t *testing.T) {
 				return
 			}
 			// Authorization status requests.
-			// Simulate abandoned authorization, deleted by the CA.
-			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"status":"pending"}`))
 		default:
 			http.NotFound(w, r)
 			t.Errorf("unrecognized r.URL.Path: %s", r.URL.Path)
@@ -1219,7 +1219,6 @@ func TestEndToEnd(t *testing.T) {
 	client := &http.Client{Transport: tr}
 	res, err := client.Get(us.URL)
 	if err != nil {
-		t.Logf("CA errors: %v", ca.Errors())
 		t.Fatal(err)
 	}
 	defer res.Body.Close()

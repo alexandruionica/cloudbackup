@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -56,6 +56,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -72,6 +73,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "genomics:v2alpha1"
 const apiName = "genomics"
@@ -95,6 +97,7 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -156,6 +159,7 @@ type PipelinesService struct {
 func NewProjectsService(s *Service) *ProjectsService {
 	rs := &ProjectsService{s: s}
 	rs.Operations = NewProjectsOperationsService(s)
+	rs.Workers = NewProjectsWorkersService(s)
 	return rs
 }
 
@@ -163,6 +167,8 @@ type ProjectsService struct {
 	s *Service
 
 	Operations *ProjectsOperationsService
+
+	Workers *ProjectsWorkersService
 }
 
 func NewProjectsOperationsService(s *Service) *ProjectsOperationsService {
@@ -171,6 +177,15 @@ func NewProjectsOperationsService(s *Service) *ProjectsOperationsService {
 }
 
 type ProjectsOperationsService struct {
+	s *Service
+}
+
+func NewProjectsWorkersService(s *Service) *ProjectsWorkersService {
+	rs := &ProjectsWorkersService{s: s}
+	return rs
+}
+
+type ProjectsWorkersService struct {
 	s *Service
 }
 
@@ -301,7 +316,9 @@ type Action struct {
 	// already
 	// failed. This is useful for actions that copy output files off of the
 	// VM
-	// or for debugging.
+	// or for debugging. Note that no actions will be run if
+	// image
+	// prefetching fails.
 	//   "ENABLE_FUSE" - Enable access to the FUSE device for this action.
 	// Filesystems can then
 	// be mounted into disks shared with other actions. The other actions
@@ -470,6 +487,9 @@ type CheckInRequest struct {
 
 	// Event: A workflow specific event occurred.
 	Event googleapi.RawMessage `json:"event,omitempty"`
+
+	// Events: A list of timestamped events.
+	Events []*TimestampedEvent `json:"events,omitempty"`
 
 	// Result: The operation has finished with the given result.
 	Result *Status `json:"result,omitempty"`
@@ -1789,6 +1809,39 @@ func (s *Status) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// TimestampedEvent: An event that occured in the operation assigned to
+// the
+// worker and the time of occurance.
+type TimestampedEvent struct {
+	// Data: The event data.
+	Data googleapi.RawMessage `json:"data,omitempty"`
+
+	// Timestamp: The time when the event happened.
+	Timestamp string `json:"timestamp,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Data") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Data") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *TimestampedEvent) MarshalJSON() ([]byte, error) {
+	type NoMethod TimestampedEvent
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // UnexpectedExitStatusEvent: An event generated when the execution of a
 // container results in a
 // non-zero exit status that was not otherwise ignored. Execution
@@ -2138,7 +2191,7 @@ func (c *PipelinesRunCall) Header() http.Header {
 
 func (c *PipelinesRunCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2278,7 +2331,7 @@ func (c *ProjectsOperationsCancelCall) Header() http.Header {
 
 func (c *ProjectsOperationsCancelCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2435,7 +2488,7 @@ func (c *ProjectsOperationsGetCall) Header() http.Header {
 
 func (c *ProjectsOperationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2641,7 +2694,7 @@ func (c *ProjectsOperationsListCall) Header() http.Header {
 
 func (c *ProjectsOperationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2768,6 +2821,149 @@ func (c *ProjectsOperationsListCall) Pages(ctx context.Context, f func(*ListOper
 	}
 }
 
+// method id "genomics.projects.workers.checkIn":
+
+type ProjectsWorkersCheckInCall struct {
+	s              *Service
+	id             string
+	checkinrequest *CheckInRequest
+	urlParams_     gensupport.URLParams
+	ctx_           context.Context
+	header_        http.Header
+}
+
+// CheckIn: The worker uses this method to retrieve the assigned
+// operation and
+// provide periodic status updates.
+func (r *ProjectsWorkersService) CheckIn(id string, checkinrequest *CheckInRequest) *ProjectsWorkersCheckInCall {
+	c := &ProjectsWorkersCheckInCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.id = id
+	c.checkinrequest = checkinrequest
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *ProjectsWorkersCheckInCall) Fields(s ...googleapi.Field) *ProjectsWorkersCheckInCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *ProjectsWorkersCheckInCall) Context(ctx context.Context) *ProjectsWorkersCheckInCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *ProjectsWorkersCheckInCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *ProjectsWorkersCheckInCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.checkinrequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "v2alpha1/{+id}:checkIn")
+	urls += "?" + c.urlParams_.Encode()
+	req, err := http.NewRequest("POST", urls, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"id": c.id,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "genomics.projects.workers.checkIn" call.
+// Exactly one of *CheckInResponse or error will be non-nil. Any non-2xx
+// status code is an error. Response headers are in either
+// *CheckInResponse.ServerResponse.Header or (if a response was returned
+// at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *ProjectsWorkersCheckInCall) Do(opts ...googleapi.CallOption) (*CheckInResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &CheckInResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "The worker uses this method to retrieve the assigned operation and\nprovide periodic status updates.",
+	//   "flatPath": "v2alpha1/projects/{projectsId}/workers/{workersId}:checkIn",
+	//   "httpMethod": "POST",
+	//   "id": "genomics.projects.workers.checkIn",
+	//   "parameterOrder": [
+	//     "id"
+	//   ],
+	//   "parameters": {
+	//     "id": {
+	//       "description": "The worker id, assigned when it was created.",
+	//       "location": "path",
+	//       "pattern": "^projects/[^/]+/workers/[^/]+$",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "v2alpha1/{+id}:checkIn",
+	//   "request": {
+	//     "$ref": "CheckInRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "CheckInResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/genomics"
+	//   ]
+	// }
+
+}
+
 // method id "genomics.workers.checkIn":
 
 type WorkersCheckInCall struct {
@@ -2816,7 +3012,7 @@ func (c *WorkersCheckInCall) Header() http.Header {
 
 func (c *WorkersCheckInCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

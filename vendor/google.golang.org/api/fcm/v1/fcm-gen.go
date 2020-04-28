@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -52,6 +52,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -68,6 +69,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "fcm:v1"
 const apiName = "fcm"
@@ -87,6 +89,7 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -166,6 +169,14 @@ type AndroidConfig struct {
 	// override
 	// google.firebase.fcm.v1.Message.data.
 	Data map[string]string `json:"data,omitempty"`
+
+	// DirectBootOk: If set to true, messages will be allowed to be
+	// delivered to the app while
+	// the device is in direct boot mode. See [Support Direct
+	// Boot
+	// mode](https://developer.android.com/training/articles/direct-boot
+	// ).
+	DirectBootOk bool `json:"directBootOk,omitempty"`
 
 	// FcmOptions: Options for features provided by the FCM SDK for Android.
 	FcmOptions *AndroidFcmOptions `json:"fcmOptions,omitempty"`
@@ -594,13 +605,21 @@ type ApnsConfig struct {
 
 	// Headers: HTTP request headers defined in Apple Push Notification
 	// Service. Refer to
-	// [APNs request headers](https://goo.gl/C6Yhia) for
-	// supported headers, e.g. "apns-priority": "10".
+	// [APNs
+	// request
+	// headers](https://developer.apple.com/documentation/usernotific
+	// ations/setting_up_a_remote_notification_server/sending_notification_re
+	// quests_to_apns)
+	// for supported headers, e.g. "apns-priority": "10".
 	Headers map[string]string `json:"headers,omitempty"`
 
 	// Payload: APNs payload as a JSON object, including both `aps`
 	// dictionary and custom
-	// payload. See [Payload Key Reference](https://goo.gl/32Pl5W).
+	// payload. See [Payload
+	// Key
+	// Reference](https://developer.apple.com/documentation/usernotificat
+	// ions/setting_up_a_remote_notification_server/generating_a_remote_notif
+	// ication).
 	// If present, it overrides
 	// google.firebase.fcm.v1.Notification.title
 	// and google.firebase.fcm.v1.Notification.body.
@@ -964,7 +983,10 @@ type Message struct {
 	// e.g. "'foo' in topics && 'bar' in topics".
 	Condition string `json:"condition,omitempty"`
 
-	// Data: Input only. Arbitrary key/value payload.
+	// Data: Input only. Arbitrary key/value payload. The key should not be
+	// a reserved
+	// word ("from", "message_type", or any word starting with "google" or
+	// "gcm").
 	Data map[string]string `json:"data,omitempty"`
 
 	// FcmOptions: Input only. Template for FCM SDK feature options to use
@@ -1154,11 +1176,14 @@ func (s *WebpushConfig) MarshalJSON() ([]byte, error) {
 // WebpushFcmOptions: Options for features provided by the FCM SDK for
 // Web.
 type WebpushFcmOptions struct {
+	// AnalyticsLabel: Label associated with the message's analytics data.
+	AnalyticsLabel string `json:"analyticsLabel,omitempty"`
+
 	// Link: The link to open when the user clicks on the notification.
 	// For all URL values, HTTPS is required.
 	Link string `json:"link,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "Link") to
+	// ForceSendFields is a list of field names (e.g. "AnalyticsLabel") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -1166,12 +1191,13 @@ type WebpushFcmOptions struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "Link") to include in API
-	// requests with the JSON null value. By default, fields with empty
-	// values are omitted from API requests. However, any field with an
-	// empty value appearing in NullFields will be sent to the server as
-	// null. It is an error if a field in this list has a non-empty value.
-	// This may be used to include null fields in Patch requests.
+	// NullFields is a list of field names (e.g. "AnalyticsLabel") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
 	NullFields []string `json:"-"`
 }
 
@@ -1229,7 +1255,7 @@ func (c *ProjectsMessagesSendCall) Header() http.Header {
 
 func (c *ProjectsMessagesSendCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

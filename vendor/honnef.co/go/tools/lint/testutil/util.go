@@ -27,7 +27,7 @@ func Run(t *testing.T, analyzers map[string]*analysis.Analyzer, tests map[string
 						t.Fatal(err)
 					}
 				}
-				analysistest.Run(t, analysistest.TestData(), a, test.Dir)
+				analysistest.RunWithSuggestedFixes(t, analysistest.TestData(), a, test.Dir)
 			}
 		})
 	}
