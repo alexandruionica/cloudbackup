@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -52,6 +52,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -68,6 +69,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "bigtableadmin:v1"
 const apiName = "bigtableadmin"
@@ -76,6 +78,7 @@ const basePath = "https://bigtableadmin.googleapis.com/"
 
 // NewService creates a new Service.
 func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, error) {
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -139,17 +142,17 @@ type Cluster struct {
 	// this
 	// cluster. Currently only zones are supported, so values should be of
 	// the
-	// form `projects/<project>/locations/<zone>`.
+	// form `projects/{project}/locations/{zone}`.
 	Location string `json:"location,omitempty"`
 
-	// Name: (`OutputOnly`)
+	// Name: Required. (`OutputOnly`)
 	// The unique name of the cluster. Values are of the
 	// form
-	// `projects/<project>/instances/<instance>/clusters/a-z*`.
+	// `projects/{project}/instances/{instance}/clusters/a-z*`.
 	Name string `json:"name,omitempty"`
 
-	// ServeNodes: The number of nodes allocated to this cluster. More nodes
-	// enable higher
+	// ServeNodes: Required. The number of nodes allocated to this cluster.
+	// More nodes enable higher
 	// throughput and more consistent performance.
 	ServeNodes int64 `json:"serveNodes,omitempty"`
 
@@ -257,21 +260,21 @@ func (s *CreateClusterMetadata) MarshalJSON() ([]byte, error) {
 // CreateClusterRequest: Request message for
 // BigtableInstanceAdmin.CreateCluster.
 type CreateClusterRequest struct {
-	// Cluster: The cluster to be created.
+	// Cluster: Required. The cluster to be created.
 	// Fields marked `OutputOnly` must be left blank.
 	Cluster *Cluster `json:"cluster,omitempty"`
 
-	// ClusterId: The ID to be used when referring to the new cluster within
-	// its instance,
+	// ClusterId: Required. The ID to be used when referring to the new
+	// cluster within its instance,
 	// e.g., just `mycluster` rather
 	// than
 	// `projects/myproject/instances/myinstance/clusters/mycluster`.
 	ClusterId string `json:"clusterId,omitempty"`
 
-	// Parent: The unique name of the instance in which to create the new
-	// cluster.
+	// Parent: Required. The unique name of the instance in which to create
+	// the new cluster.
 	// Values are of the form
-	// `projects/<project>/instances/<instance>`.
+	// `projects/{project}/instances/{instance}`.
 	Parent string `json:"parent,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Cluster") to
@@ -337,30 +340,30 @@ func (s *CreateInstanceMetadata) MarshalJSON() ([]byte, error) {
 // CreateInstanceRequest: Request message for
 // BigtableInstanceAdmin.CreateInstance.
 type CreateInstanceRequest struct {
-	// Clusters: The clusters to be created within the instance, mapped by
-	// desired
+	// Clusters: Required. The clusters to be created within the instance,
+	// mapped by desired
 	// cluster ID, e.g., just `mycluster` rather
 	// than
 	// `projects/myproject/instances/myinstance/clusters/mycluster`.
 	// Fie
 	// lds marked `OutputOnly` must be left blank.
-	// Currently, at most two clusters can be specified.
+	// Currently, at most four clusters can be specified.
 	Clusters map[string]Cluster `json:"clusters,omitempty"`
 
-	// Instance: The instance to create.
+	// Instance: Required. The instance to create.
 	// Fields marked `OutputOnly` must be left blank.
 	Instance *Instance `json:"instance,omitempty"`
 
-	// InstanceId: The ID to be used when referring to the new instance
-	// within its project,
+	// InstanceId: Required. The ID to be used when referring to the new
+	// instance within its project,
 	// e.g., just `myinstance` rather
 	// than
 	// `projects/myproject/instances/myinstance`.
 	InstanceId string `json:"instanceId,omitempty"`
 
-	// Parent: The unique name of the project in which to create the new
-	// instance.
-	// Values are of the form `projects/<project>`.
+	// Parent: Required. The unique name of the project in which to create
+	// the new instance.
+	// Values are of the form `projects/{project}`.
 	Parent string `json:"parent,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Clusters") to
@@ -391,13 +394,13 @@ func (s *CreateInstanceRequest) MarshalJSON() ([]byte, error) {
 // All tables in an instance are served from all
 // Clusters in the instance.
 type Instance struct {
-	// DisplayName: The descriptive name for this instance as it appears in
-	// UIs.
+	// DisplayName: Required. The descriptive name for this instance as it
+	// appears in UIs.
 	// Can be changed at any time, but should be kept globally unique
 	// to avoid confusion.
 	DisplayName string `json:"displayName,omitempty"`
 
-	// Labels: Labels are a flexible and lightweight mechanism for
+	// Labels: Required. Labels are a flexible and lightweight mechanism for
 	// organizing cloud
 	// resources into groups that reflect a customer's organizational needs
 	// and
@@ -415,10 +418,10 @@ type Instance struct {
 	// * Keys and values must both be under 128 bytes.
 	Labels map[string]string `json:"labels,omitempty"`
 
-	// Name: (`OutputOnly`)
+	// Name: Required. (`OutputOnly`)
 	// The unique name of the instance. Values are of the
 	// form
-	// `projects/<project>/instances/a-z+[a-z0-9]`.
+	// `projects/{project}/instances/a-z+[a-z0-9]`.
 	Name string `json:"name,omitempty"`
 
 	// State: (`OutputOnly`)
@@ -435,7 +438,7 @@ type Instance struct {
 	// if the creation process encounters an error.
 	State string `json:"state,omitempty"`
 
-	// Type: The type of the instance. Defaults to `PRODUCTION`.
+	// Type: Required. The type of the instance. Defaults to `PRODUCTION`.
 	//
 	// Possible values:
 	//   "TYPE_UNSPECIFIED" - The type of the instance is unspecified. If
@@ -485,11 +488,11 @@ func (s *Instance) MarshalJSON() ([]byte, error) {
 // PartialUpdateInstanceRequest: Request message for
 // BigtableInstanceAdmin.PartialUpdateInstance.
 type PartialUpdateInstanceRequest struct {
-	// Instance: The Instance which will (partially) replace the current
-	// value.
+	// Instance: Required. The Instance which will (partially) replace the
+	// current value.
 	Instance *Instance `json:"instance,omitempty"`
 
-	// UpdateMask: The subset of Instance fields which should be
+	// UpdateMask: Required. The subset of Instance fields which should be
 	// replaced.
 	// Must be explicitly set.
 	UpdateMask string `json:"updateMask,omitempty"`

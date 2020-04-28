@@ -22,6 +22,7 @@
   },
   "id": "speech:v1",
   "kind": "discovery#restDescription",
+  "mtlsRootUrl": "https://speech.mtls.googleapis.com/",
   "name": "speech",
   "ownerDomain": "google.com",
   "ownerName": "Google",
@@ -118,7 +119,7 @@
             "name": {
               "description": "The name of the operation resource.",
               "location": "path",
-              "pattern": "^.+$",
+              "pattern": "^.*$",
               "required": true,
               "type": "string"
             }
@@ -289,7 +290,7 @@
       }
     }
   },
-  "revision": "20190918",
+  "revision": "20200409",
   "rootUrl": "https://speech.googleapis.com/",
   "schemas": {
     "ListOperationsResponse": {
@@ -327,6 +328,10 @@
         "startTime": {
           "description": "Time when the request was received.",
           "format": "google-datetime",
+          "type": "string"
+        },
+        "uri": {
+          "description": "Output only. The URI of the audio file being transcribed. Empty if the audio was sent\nas byte content. ",
           "type": "string"
         }
       },
@@ -426,7 +431,7 @@
           "description": "Config to enable speaker diarization and set additional\nparameters to make diarization better suited for your application.\nNote: When this is enabled, we send all the words from the beginning of the\naudio for the top alternative in every consecutive STREAMING responses.\nThis is done in order to improve our speaker tags as our models learn to\nidentify the speakers in the conversation over time.\nFor non-streaming requests, the diarization results will be provided only\nin the top alternative of the FINAL SpeechRecognitionResult."
         },
         "enableAutomaticPunctuation": {
-          "description": "If 'true', adds punctuation to recognition result hypotheses.\nThis feature is only available in select languages. Setting this for\nrequests in other languages has no effect at all.\nThe default 'false' value does not add punctuation to result hypotheses.\nNote: This is currently offered as an experimental service, complimentary\nto all users. In the future this may be exclusively available as a\npremium feature.",
+          "description": "If 'true', adds punctuation to recognition result hypotheses.\nThis feature is only available in select languages. Setting this for\nrequests in other languages has no effect at all.\nThe default 'false' value does not add punctuation to result hypotheses.",
           "type": "boolean"
         },
         "enableSeparateRecognitionPerChannel": {
@@ -556,11 +561,6 @@
           ],
           "type": "string"
         },
-        "obfuscatedId": {
-          "description": "Obfuscated (privacy-protected) ID of the user, to identify number of\nunique users using the service.",
-          "format": "int64",
-          "type": "string"
-        },
         "originalMediaType": {
           "description": "The original media the speech was recorded on.",
           "enum": [
@@ -652,6 +652,11 @@
         },
         "minSpeakerCount": {
           "description": "Minimum number of speakers in the conversation. This range gives you more\nflexibility by allowing the system to automatically determine the correct\nnumber of speakers. If not set, the default value is 2.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "speakerTag": {
+          "description": "Output only. Unused.",
           "format": "int32",
           "type": "integer"
         }
@@ -751,7 +756,7 @@
           "type": "string"
         },
         "speakerTag": {
-          "description": "A distinct integer value is assigned for every speaker within\nthe audio. This field specifies which one of those speakers was detected to\nhave spoken this word. Value ranges from '1' to diarization_speaker_count.\nspeaker_tag is set if enable_speaker_diarization = 'true' and only in the\ntop alternative.",
+          "description": "Output only. A distinct integer value is assigned for every speaker within\nthe audio. This field specifies which one of those speakers was detected to\nhave spoken this word. Value ranges from '1' to diarization_speaker_count.\nspeaker_tag is set if enable_speaker_diarization = 'true' and only in the\ntop alternative.",
           "format": "int32",
           "type": "integer"
         },

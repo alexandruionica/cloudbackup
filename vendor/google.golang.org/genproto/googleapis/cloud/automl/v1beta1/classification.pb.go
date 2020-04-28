@@ -486,9 +486,9 @@ type ClassificationEvaluationMetrics_ConfusionMatrix struct {
 	DisplayName []string `protobuf:"bytes,3,rep,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// Output only. Rows in the confusion matrix. The number of rows is equal to
 	// the size of `annotation_spec_id`.
-	// `row[i].value[j]` is the number of examples that have ground truth of the
-	// `annotation_spec_id[i]` and are predicted as `annotation_spec_id[j]` by
-	// the model being evaluated.
+	// `row[i].example_count[j]` is the number of examples that have ground
+	// truth of the `annotation_spec_id[i]` and are predicted as
+	// `annotation_spec_id[j]` by the model being evaluated.
 	Row                  []*ClassificationEvaluationMetrics_ConfusionMatrix_Row `protobuf:"bytes,2,rep,name=row,proto3" json:"row,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                                               `json:"-"`
 	XXX_unrecognized     []byte                                                 `json:"-"`

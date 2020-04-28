@@ -5,24 +5,30 @@
 package hooks
 
 import (
-	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/internal/lsp/source"
 	"honnef.co/go/tools/simple"
 	"honnef.co/go/tools/staticcheck"
 	"honnef.co/go/tools/stylecheck"
 )
 
-func updateAnalyzers(v source.View, analyzers []*analysis.Analyzer) []*analysis.Analyzer {
-	if v.Options().StaticCheck {
+func updateAnalyzers(options *source.Options) {
+	if options.StaticCheck {
 		for _, a := range simple.Analyzers {
-			analyzers = append(analyzers, a)
+			options.AddDefaultAnalyzer(a)
 		}
 		for _, a := range staticcheck.Analyzers {
-			analyzers = append(analyzers, a)
+			switch a.Name {
+			case "SA5009":
+				// This check conflicts with the vet printf check (golang/go#34494).
+			case "SA5011":
+				// This check relies on facts from dependencies, which
+				// we don't currently compute.
+			default:
+				options.AddDefaultAnalyzer(a)
+			}
 		}
 		for _, a := range stylecheck.Analyzers {
-			analyzers = append(analyzers, a)
+			options.AddDefaultAnalyzer(a)
 		}
 	}
-	return analyzers
 }

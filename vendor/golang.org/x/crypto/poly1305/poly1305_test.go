@@ -5,6 +5,7 @@
 package poly1305
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"flag"
 	"testing"
@@ -59,6 +60,30 @@ func testSum(t *testing.T, unaligned bool, sumImpl func(tag *[TagSize]byte, msg 
 		if tag != v.Tag() {
 			t.Errorf("%d: expected %x, got %x", i, v.Tag(), tag[:])
 		}
+		if !Verify(&tag, in, &key) {
+			t.Errorf("%d: tag didn't verify", i)
+		}
+		// If the key is zero, the tag will always be zero, independent of the input.
+		if len(in) > 0 && key != [32]byte{} {
+			in[0] ^= 0xff
+			if Verify(&tag, in, &key) {
+				t.Errorf("%d: tag verified after altering the input", i)
+			}
+			in[0] ^= 0xff
+		}
+		// If the input is empty, the tag only depends on the second half of the key.
+		if len(in) > 0 {
+			key[0] ^= 0xff
+			if Verify(&tag, in, &key) {
+				t.Errorf("%d: tag verified after altering the key", i)
+			}
+			key[0] ^= 0xff
+		}
+		tag[0] ^= 0xff
+		if Verify(&tag, in, &key) {
+			t.Errorf("%d: tag verified after altering the tag", i)
+		}
+		tag[0] ^= 0xff
 	}
 }
 
@@ -115,8 +140,14 @@ func testWriteGeneric(t *testing.T, unaligned bool) {
 			input = unalignBytes(input)
 		}
 		h := newMACGeneric(&key)
-		h.Write(input[:len(input)/2])
-		h.Write(input[len(input)/2:])
+		n, err := h.Write(input[:len(input)/3])
+		if err != nil || n != len(input[:len(input)/3]) {
+			t.Errorf("#%d: unexpected Write results: n = %d, err = %v", i, n, err)
+		}
+		n, err = h.Write(input[len(input)/3:])
+		if err != nil || n != len(input[len(input)/3:]) {
+			t.Errorf("#%d: unexpected Write results: n = %d, err = %v", i, n, err)
+		}
 		h.Sum(&out)
 		if tag := v.Tag(); out != tag {
 			t.Errorf("%d: expected %x, got %x", i, tag[:], out[:])
@@ -134,11 +165,25 @@ func testWrite(t *testing.T, unaligned bool) {
 			input = unalignBytes(input)
 		}
 		h := New(&key)
-		h.Write(input[:len(input)/2])
-		h.Write(input[len(input)/2:])
+		n, err := h.Write(input[:len(input)/3])
+		if err != nil || n != len(input[:len(input)/3]) {
+			t.Errorf("#%d: unexpected Write results: n = %d, err = %v", i, n, err)
+		}
+		n, err = h.Write(input[len(input)/3:])
+		if err != nil || n != len(input[len(input)/3:]) {
+			t.Errorf("#%d: unexpected Write results: n = %d, err = %v", i, n, err)
+		}
 		h.Sum(out[:0])
-		if tag := v.Tag(); out != tag {
+		tag := v.Tag()
+		if out != tag {
 			t.Errorf("%d: expected %x, got %x", i, tag[:], out[:])
+		}
+		if !h.Verify(tag[:]) {
+			t.Errorf("%d: Verify failed", i)
+		}
+		tag[0] ^= 0xff
+		if h.Verify(tag[:]) {
+			t.Errorf("%d: Verify succeeded after modifying the tag", i)
 		}
 	}
 }
@@ -150,6 +195,7 @@ func benchmarkSum(b *testing.B, size int, unaligned bool) {
 	if unaligned {
 		in = unalignBytes(in)
 	}
+	rand.Read(in)
 	b.SetBytes(int64(len(in)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -164,6 +210,7 @@ func benchmarkWrite(b *testing.B, size int, unaligned bool) {
 	if unaligned {
 		in = unalignBytes(in)
 	}
+	rand.Read(in)
 	b.SetBytes(int64(len(in)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

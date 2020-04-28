@@ -1,4 +1,4 @@
-// Copyright 2018 Google Inc. All rights reserved.
+// Copyright 2018 Google LLC. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -9,7 +9,7 @@ import (
 	"log"
 	"net/http"
 
-	customsearch "google.golang.org/api/customsearch/v1"
+	"google.golang.org/api/customsearch/v1"
 	"google.golang.org/api/googleapi/transport"
 )
 
@@ -27,7 +27,7 @@ func customSearchMain() {
 		log.Fatal(err)
 	}
 
-	resp, err := svc.Cse.Siterestrict.List(query).Cx(cx).Do()
+	resp, err := svc.Cse.List().Q(query).Cx(cx).Do()
 	if err != nil {
 		log.Fatal(err)
 	}

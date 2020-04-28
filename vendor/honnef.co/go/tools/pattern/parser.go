@@ -14,6 +14,15 @@ type Pattern struct {
 	Relevant []reflect.Type
 }
 
+func MustParse(s string) Pattern {
+	p := &Parser{AllowTypeInfo: true}
+	pat, err := p.Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return pat
+}
+
 func roots(node Node) []reflect.Type {
 	switch node := node.(type) {
 	case Or:
@@ -298,6 +307,7 @@ func (p *Parser) populateNode(typ string, objs []Node) (Node, error) {
 
 var structNodes = map[string]reflect.Type{
 	"Any":            reflect.TypeOf(Any{}),
+	"Ellipsis":       reflect.TypeOf(Ellipsis{}),
 	"List":           reflect.TypeOf(List{}),
 	"Binding":        reflect.TypeOf(Binding{}),
 	"RangeStmt":      reflect.TypeOf(RangeStmt{}),

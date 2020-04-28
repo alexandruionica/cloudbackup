@@ -3,12 +3,14 @@
 package kinesisvideoarchivedmedia
 
 import (
+	"fmt"
 	"io"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/private/protocol"
 )
 
 const opGetDASHStreamingSessionURL = "GetDASHStreamingSessionURL"
@@ -65,9 +67,9 @@ func (c *KinesisVideoArchivedMedia) GetDASHStreamingSessionURLRequest(input *Get
 // data through MPEG-DASH:
 //
 //    * The media must contain h.264 or h.265 encoded video and, optionally,
-//    AAC or G.711 encoded audio. Specifically, the codec id of track 1 should
+//    AAC or G.711 encoded audio. Specifically, the codec ID of track 1 should
 //    be V_MPEG/ISO/AVC (for h.264) or V_MPEGH/ISO/HEVC (for H.265). Optionally,
-//    the codec id of track 2 should be A_AAC (for AAC) or A_MS/ACM (for G.711).
+//    the codec ID of track 2 should be A_AAC (for AAC) or A_MS/ACM (for G.711).
 //
 //    * Data retention must be greater than 0.
 //
@@ -102,7 +104,7 @@ func (c *KinesisVideoArchivedMedia) GetDASHStreamingSessionURLRequest(input *Get
 //
 // Provide the URL (containing the encrypted session token) for the MPEG-DASH
 // manifest to a media player that supports the MPEG-DASH protocol. Kinesis
-// Video Streams makes the initialization fragment, and media fragments available
+// Video Streams makes the initialization fragment and media fragments available
 // through the manifest URL. The initialization fragment contains the codec
 // private data for the stream, and other data needed to set up the video or
 // audio decoder and renderer. The media fragments contain encoded video frames
@@ -187,8 +189,8 @@ func (c *KinesisVideoArchivedMedia) GetDASHStreamingSessionURLRequest(input *Get
 // See the AWS API reference guide for Amazon Kinesis Video Streams Archived Media's
 // API operation GetDASHStreamingSessionURL for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+// Returned Error Types:
+//   * ResourceNotFoundException
 //   GetMedia throws this error when Kinesis Video Streams can't find the stream
 //   that you specified.
 //
@@ -198,32 +200,32 @@ func (c *KinesisVideoArchivedMedia) GetDASHStreamingSessionURLRequest(input *Get
 //   a session with a PlaybackMode of LIVE is requested for a stream that has
 //   no fragments within the last 30 seconds.
 //
-//   * ErrCodeInvalidArgumentException "InvalidArgumentException"
+//   * InvalidArgumentException
 //   A specified parameter exceeds its restrictions, is not supported, or can't
 //   be used.
 //
-//   * ErrCodeClientLimitExceededException "ClientLimitExceededException"
+//   * ClientLimitExceededException
 //   Kinesis Video Streams has throttled the request because you have exceeded
 //   the limit of allowed client calls. Try making the call later.
 //
-//   * ErrCodeNotAuthorizedException "NotAuthorizedException"
+//   * NotAuthorizedException
 //   Status Code: 403, The caller is not authorized to perform an operation on
 //   the given stream, or the token has expired.
 //
-//   * ErrCodeUnsupportedStreamMediaTypeException "UnsupportedStreamMediaTypeException"
+//   * UnsupportedStreamMediaTypeException
 //   The type of the media (for example, h.264 or h.265 video or ACC or G.711
 //   audio) could not be determined from the codec IDs of the tracks in the first
 //   fragment for a playback session. The codec ID for track 1 should be V_MPEG/ISO/AVC
 //   and, optionally, the codec ID for track 2 should be A_AAC.
 //
-//   * ErrCodeNoDataRetentionException "NoDataRetentionException"
+//   * NoDataRetentionException
 //   A streaming session was requested for a stream that does not retain data
 //   (that is, has a DataRetentionInHours of 0).
 //
-//   * ErrCodeMissingCodecPrivateDataException "MissingCodecPrivateDataException"
+//   * MissingCodecPrivateDataException
 //   No codec private data was found in at least one of tracks of the video stream.
 //
-//   * ErrCodeInvalidCodecPrivateDataException "InvalidCodecPrivateDataException"
+//   * InvalidCodecPrivateDataException
 //   The codec private data in at least one of the tracks of the video stream
 //   is not valid for this operation.
 //
@@ -303,8 +305,8 @@ func (c *KinesisVideoArchivedMedia) GetHLSStreamingSessionURLRequest(input *GetH
 // data through HLS:
 //
 //    * The media must contain h.264 or h.265 encoded video and, optionally,
-//    AAC encoded audio. Specifically, the codec id of track 1 should be V_MPEG/ISO/AVC
-//    (for h.264) or V_MPEG/ISO/HEVC (for h.265). Optionally, the codec id of
+//    AAC encoded audio. Specifically, the codec ID of track 1 should be V_MPEG/ISO/AVC
+//    (for h.264) or V_MPEG/ISO/HEVC (for h.265). Optionally, the codec ID of
 //    track 2 should be A_AAC.
 //
 //    * Data retention must be greater than 0.
@@ -447,8 +449,8 @@ func (c *KinesisVideoArchivedMedia) GetHLSStreamingSessionURLRequest(input *GetH
 // See the AWS API reference guide for Amazon Kinesis Video Streams Archived Media's
 // API operation GetHLSStreamingSessionURL for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+// Returned Error Types:
+//   * ResourceNotFoundException
 //   GetMedia throws this error when Kinesis Video Streams can't find the stream
 //   that you specified.
 //
@@ -458,32 +460,32 @@ func (c *KinesisVideoArchivedMedia) GetHLSStreamingSessionURLRequest(input *GetH
 //   a session with a PlaybackMode of LIVE is requested for a stream that has
 //   no fragments within the last 30 seconds.
 //
-//   * ErrCodeInvalidArgumentException "InvalidArgumentException"
+//   * InvalidArgumentException
 //   A specified parameter exceeds its restrictions, is not supported, or can't
 //   be used.
 //
-//   * ErrCodeClientLimitExceededException "ClientLimitExceededException"
+//   * ClientLimitExceededException
 //   Kinesis Video Streams has throttled the request because you have exceeded
 //   the limit of allowed client calls. Try making the call later.
 //
-//   * ErrCodeNotAuthorizedException "NotAuthorizedException"
+//   * NotAuthorizedException
 //   Status Code: 403, The caller is not authorized to perform an operation on
 //   the given stream, or the token has expired.
 //
-//   * ErrCodeUnsupportedStreamMediaTypeException "UnsupportedStreamMediaTypeException"
+//   * UnsupportedStreamMediaTypeException
 //   The type of the media (for example, h.264 or h.265 video or ACC or G.711
 //   audio) could not be determined from the codec IDs of the tracks in the first
 //   fragment for a playback session. The codec ID for track 1 should be V_MPEG/ISO/AVC
 //   and, optionally, the codec ID for track 2 should be A_AAC.
 //
-//   * ErrCodeNoDataRetentionException "NoDataRetentionException"
+//   * NoDataRetentionException
 //   A streaming session was requested for a stream that does not retain data
 //   (that is, has a DataRetentionInHours of 0).
 //
-//   * ErrCodeMissingCodecPrivateDataException "MissingCodecPrivateDataException"
+//   * MissingCodecPrivateDataException
 //   No codec private data was found in at least one of tracks of the video stream.
 //
-//   * ErrCodeInvalidCodecPrivateDataException "InvalidCodecPrivateDataException"
+//   * InvalidCodecPrivateDataException
 //   The codec private data in at least one of the tracks of the video stream
 //   is not valid for this operation.
 //
@@ -595,8 +597,8 @@ func (c *KinesisVideoArchivedMedia) GetMediaForFragmentListRequest(input *GetMed
 // See the AWS API reference guide for Amazon Kinesis Video Streams Archived Media's
 // API operation GetMediaForFragmentList for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+// Returned Error Types:
+//   * ResourceNotFoundException
 //   GetMedia throws this error when Kinesis Video Streams can't find the stream
 //   that you specified.
 //
@@ -606,15 +608,15 @@ func (c *KinesisVideoArchivedMedia) GetMediaForFragmentListRequest(input *GetMed
 //   a session with a PlaybackMode of LIVE is requested for a stream that has
 //   no fragments within the last 30 seconds.
 //
-//   * ErrCodeInvalidArgumentException "InvalidArgumentException"
+//   * InvalidArgumentException
 //   A specified parameter exceeds its restrictions, is not supported, or can't
 //   be used.
 //
-//   * ErrCodeClientLimitExceededException "ClientLimitExceededException"
+//   * ClientLimitExceededException
 //   Kinesis Video Streams has throttled the request because you have exceeded
 //   the limit of allowed client calls. Try making the call later.
 //
-//   * ErrCodeNotAuthorizedException "NotAuthorizedException"
+//   * NotAuthorizedException
 //   Status Code: 403, The caller is not authorized to perform an operation on
 //   the given stream, or the token has expired.
 //
@@ -728,8 +730,8 @@ func (c *KinesisVideoArchivedMedia) ListFragmentsRequest(input *ListFragmentsInp
 // See the AWS API reference guide for Amazon Kinesis Video Streams Archived Media's
 // API operation ListFragments for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeResourceNotFoundException "ResourceNotFoundException"
+// Returned Error Types:
+//   * ResourceNotFoundException
 //   GetMedia throws this error when Kinesis Video Streams can't find the stream
 //   that you specified.
 //
@@ -739,15 +741,15 @@ func (c *KinesisVideoArchivedMedia) ListFragmentsRequest(input *ListFragmentsInp
 //   a session with a PlaybackMode of LIVE is requested for a stream that has
 //   no fragments within the last 30 seconds.
 //
-//   * ErrCodeInvalidArgumentException "InvalidArgumentException"
+//   * InvalidArgumentException
 //   A specified parameter exceeds its restrictions, is not supported, or can't
 //   be used.
 //
-//   * ErrCodeClientLimitExceededException "ClientLimitExceededException"
+//   * ClientLimitExceededException
 //   Kinesis Video Streams has throttled the request because you have exceeded
 //   the limit of allowed client calls. Try making the call later.
 //
-//   * ErrCodeNotAuthorizedException "NotAuthorizedException"
+//   * NotAuthorizedException
 //   Status Code: 403, The caller is not authorized to perform an operation on
 //   the given stream, or the token has expired.
 //
@@ -816,11 +818,70 @@ func (c *KinesisVideoArchivedMedia) ListFragmentsPagesWithContext(ctx aws.Contex
 		},
 	}
 
-	cont := true
-	for p.Next() && cont {
-		cont = fn(p.Page().(*ListFragmentsOutput), !p.HasNextPage())
+	for p.Next() {
+		if !fn(p.Page().(*ListFragmentsOutput), !p.HasNextPage()) {
+			break
+		}
 	}
+
 	return p.Err()
+}
+
+// Kinesis Video Streams has throttled the request because you have exceeded
+// the limit of allowed client calls. Try making the call later.
+type ClientLimitExceededException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s ClientLimitExceededException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ClientLimitExceededException) GoString() string {
+	return s.String()
+}
+
+func newErrorClientLimitExceededException(v protocol.ResponseMetadata) error {
+	return &ClientLimitExceededException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *ClientLimitExceededException) Code() string {
+	return "ClientLimitExceededException"
+}
+
+// Message returns the exception's message.
+func (s *ClientLimitExceededException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *ClientLimitExceededException) OrigErr() error {
+	return nil
+}
+
+func (s *ClientLimitExceededException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *ClientLimitExceededException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *ClientLimitExceededException) RequestID() string {
+	return s.RespMetadata.RequestID
 }
 
 // Contains the range of timestamps for the requested media, and the source
@@ -1081,7 +1142,7 @@ func (s *FragmentSelector) SetTimestampRange(v *TimestampRange) *FragmentSelecto
 type GetDASHStreamingSessionURLInput struct {
 	_ struct{} `type:"structure"`
 
-	// The time range of the requested fragment, and the source of the timestamps.
+	// The time range of the requested fragment and the source of the timestamps.
 	//
 	// This parameter is required if PlaybackMode is ON_DEMAND or LIVE_REPLAY. This
 	// parameter is optional if PlaybackMode is LIVE. If PlaybackMode is LIVE, the
@@ -1324,21 +1385,37 @@ type GetHLSStreamingSessionURLInput struct {
 	// The default is FRAGMENTED_MP4.
 	ContainerFormat *string `type:"string" enum:"ContainerFormat"`
 
-	// Specifies when flags marking discontinuities between fragments will be added
-	// to the media playlists. The default is ALWAYS when HLSFragmentSelector is
-	// SERVER_TIMESTAMP, and NEVER when it is PRODUCER_TIMESTAMP.
+	// Specifies when flags marking discontinuities between fragments are added
+	// to the media playlists.
 	//
 	// Media players typically build a timeline of media content to play, based
 	// on the timestamps of each fragment. This means that if there is any overlap
-	// between fragments (as is typical if HLSFragmentSelector is SERVER_TIMESTAMP),
-	// the media player timeline has small gaps between fragments in some places,
-	// and overwrites frames in other places. When there are discontinuity flags
-	// between fragments, the media player is expected to reset the timeline, resulting
-	// in the fragment being played immediately after the previous fragment. We
-	// recommend that you always have discontinuity flags between fragments if the
-	// fragment timestamps are not accurate or if fragments might be missing. You
-	// should not place discontinuity flags between fragments for the player timeline
-	// to accurately map to the producer timestamps.
+	// or gap between fragments (as is typical if HLSFragmentSelector is set to
+	// SERVER_TIMESTAMP), the media player timeline will also have small gaps between
+	// fragments in some places, and will overwrite frames in other places. Gaps
+	// in the media player timeline can cause playback to stall and overlaps can
+	// cause playback to be jittery. When there are discontinuity flags between
+	// fragments, the media player is expected to reset the timeline, resulting
+	// in the next fragment being played immediately after the previous fragment.
+	//
+	// The following modes are supported:
+	//
+	//    * ALWAYS: a discontinuity marker is placed between every fragment in the
+	//    HLS media playlist. It is recommended to use a value of ALWAYS if the
+	//    fragment timestamps are not accurate.
+	//
+	//    * NEVER: no discontinuity markers are placed anywhere. It is recommended
+	//    to use a value of NEVER to ensure the media player timeline most accurately
+	//    maps to the producer timestamps.
+	//
+	//    * ON_DISCONTIUNITY: a discontinuity marker is placed between fragments
+	//    that have a gap or overlap of more than 50 milliseconds. For most playback
+	//    scenarios, it is recommended to use a value of ON_DISCONTINUITY so that
+	//    the media player timeline is only reset when there is a significant issue
+	//    with the media timeline (e.g. a missing fragment).
+	//
+	// The default is ALWAYS when HLSFragmentSelector is set to SERVER_TIMESTAMP,
+	// and NEVER when it is set to PRODUCER_TIMESTAMP.
 	DiscontinuityMode *string `type:"string" enum:"HLSDiscontinuityMode"`
 
 	// Specifies when the fragment start timestamps should be included in the HLS
@@ -1364,7 +1441,7 @@ type GetHLSStreamingSessionURLInput struct {
 	// The default is 300 (5 minutes).
 	Expires *int64 `min:"300" type:"integer"`
 
-	// The time range of the requested fragment, and the source of the timestamps.
+	// The time range of the requested fragment and the source of the timestamps.
 	//
 	// This parameter is required if PlaybackMode is ON_DEMAND or LIVE_REPLAY. This
 	// parameter is optional if PlaybackMode is LIVE. If PlaybackMode is LIVE, the
@@ -1794,6 +1871,120 @@ func (s *HLSTimestampRange) SetStartTimestamp(v time.Time) *HLSTimestampRange {
 	return s
 }
 
+// A specified parameter exceeds its restrictions, is not supported, or can't
+// be used.
+type InvalidArgumentException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s InvalidArgumentException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s InvalidArgumentException) GoString() string {
+	return s.String()
+}
+
+func newErrorInvalidArgumentException(v protocol.ResponseMetadata) error {
+	return &InvalidArgumentException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *InvalidArgumentException) Code() string {
+	return "InvalidArgumentException"
+}
+
+// Message returns the exception's message.
+func (s *InvalidArgumentException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *InvalidArgumentException) OrigErr() error {
+	return nil
+}
+
+func (s *InvalidArgumentException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *InvalidArgumentException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *InvalidArgumentException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// The codec private data in at least one of the tracks of the video stream
+// is not valid for this operation.
+type InvalidCodecPrivateDataException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s InvalidCodecPrivateDataException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s InvalidCodecPrivateDataException) GoString() string {
+	return s.String()
+}
+
+func newErrorInvalidCodecPrivateDataException(v protocol.ResponseMetadata) error {
+	return &InvalidCodecPrivateDataException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *InvalidCodecPrivateDataException) Code() string {
+	return "InvalidCodecPrivateDataException"
+}
+
+// Message returns the exception's message.
+func (s *InvalidCodecPrivateDataException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *InvalidCodecPrivateDataException) OrigErr() error {
+	return nil
+}
+
+func (s *InvalidCodecPrivateDataException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *InvalidCodecPrivateDataException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *InvalidCodecPrivateDataException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
 type ListFragmentsInput struct {
 	_ struct{} `type:"structure"`
 
@@ -1912,6 +2103,239 @@ func (s *ListFragmentsOutput) SetNextToken(v string) *ListFragmentsOutput {
 	return s
 }
 
+// No codec private data was found in at least one of tracks of the video stream.
+type MissingCodecPrivateDataException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s MissingCodecPrivateDataException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s MissingCodecPrivateDataException) GoString() string {
+	return s.String()
+}
+
+func newErrorMissingCodecPrivateDataException(v protocol.ResponseMetadata) error {
+	return &MissingCodecPrivateDataException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *MissingCodecPrivateDataException) Code() string {
+	return "MissingCodecPrivateDataException"
+}
+
+// Message returns the exception's message.
+func (s *MissingCodecPrivateDataException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *MissingCodecPrivateDataException) OrigErr() error {
+	return nil
+}
+
+func (s *MissingCodecPrivateDataException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *MissingCodecPrivateDataException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *MissingCodecPrivateDataException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// A streaming session was requested for a stream that does not retain data
+// (that is, has a DataRetentionInHours of 0).
+type NoDataRetentionException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s NoDataRetentionException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NoDataRetentionException) GoString() string {
+	return s.String()
+}
+
+func newErrorNoDataRetentionException(v protocol.ResponseMetadata) error {
+	return &NoDataRetentionException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *NoDataRetentionException) Code() string {
+	return "NoDataRetentionException"
+}
+
+// Message returns the exception's message.
+func (s *NoDataRetentionException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *NoDataRetentionException) OrigErr() error {
+	return nil
+}
+
+func (s *NoDataRetentionException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *NoDataRetentionException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *NoDataRetentionException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// Status Code: 403, The caller is not authorized to perform an operation on
+// the given stream, or the token has expired.
+type NotAuthorizedException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s NotAuthorizedException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NotAuthorizedException) GoString() string {
+	return s.String()
+}
+
+func newErrorNotAuthorizedException(v protocol.ResponseMetadata) error {
+	return &NotAuthorizedException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *NotAuthorizedException) Code() string {
+	return "NotAuthorizedException"
+}
+
+// Message returns the exception's message.
+func (s *NotAuthorizedException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *NotAuthorizedException) OrigErr() error {
+	return nil
+}
+
+func (s *NotAuthorizedException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *NotAuthorizedException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *NotAuthorizedException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// GetMedia throws this error when Kinesis Video Streams can't find the stream
+// that you specified.
+//
+// GetHLSStreamingSessionURL and GetDASHStreamingSessionURL throw this error
+// if a session with a PlaybackMode of ON_DEMAND or LIVE_REPLAYis requested
+// for a stream that has no fragments within the requested time range, or if
+// a session with a PlaybackMode of LIVE is requested for a stream that has
+// no fragments within the last 30 seconds.
+type ResourceNotFoundException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s ResourceNotFoundException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ResourceNotFoundException) GoString() string {
+	return s.String()
+}
+
+func newErrorResourceNotFoundException(v protocol.ResponseMetadata) error {
+	return &ResourceNotFoundException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *ResourceNotFoundException) Code() string {
+	return "ResourceNotFoundException"
+}
+
+// Message returns the exception's message.
+func (s *ResourceNotFoundException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *ResourceNotFoundException) OrigErr() error {
+	return nil
+}
+
+func (s *ResourceNotFoundException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *ResourceNotFoundException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *ResourceNotFoundException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
 // The range of timestamps for which to return fragments.
 type TimestampRange struct {
 	_ struct{} `type:"structure"`
@@ -1963,6 +2387,65 @@ func (s *TimestampRange) SetEndTimestamp(v time.Time) *TimestampRange {
 func (s *TimestampRange) SetStartTimestamp(v time.Time) *TimestampRange {
 	s.StartTimestamp = &v
 	return s
+}
+
+// The type of the media (for example, h.264 or h.265 video or ACC or G.711
+// audio) could not be determined from the codec IDs of the tracks in the first
+// fragment for a playback session. The codec ID for track 1 should be V_MPEG/ISO/AVC
+// and, optionally, the codec ID for track 2 should be A_AAC.
+type UnsupportedStreamMediaTypeException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s UnsupportedStreamMediaTypeException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UnsupportedStreamMediaTypeException) GoString() string {
+	return s.String()
+}
+
+func newErrorUnsupportedStreamMediaTypeException(v protocol.ResponseMetadata) error {
+	return &UnsupportedStreamMediaTypeException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *UnsupportedStreamMediaTypeException) Code() string {
+	return "UnsupportedStreamMediaTypeException"
+}
+
+// Message returns the exception's message.
+func (s *UnsupportedStreamMediaTypeException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *UnsupportedStreamMediaTypeException) OrigErr() error {
+	return nil
+}
+
+func (s *UnsupportedStreamMediaTypeException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *UnsupportedStreamMediaTypeException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *UnsupportedStreamMediaTypeException) RequestID() string {
+	return s.RespMetadata.RequestID
 }
 
 const (
@@ -2022,6 +2505,9 @@ const (
 
 	// HLSDiscontinuityModeNever is a HLSDiscontinuityMode enum value
 	HLSDiscontinuityModeNever = "NEVER"
+
+	// HLSDiscontinuityModeOnDiscontinuity is a HLSDiscontinuityMode enum value
+	HLSDiscontinuityModeOnDiscontinuity = "ON_DISCONTINUITY"
 )
 
 const (

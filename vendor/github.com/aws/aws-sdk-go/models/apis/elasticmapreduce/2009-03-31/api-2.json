@@ -167,6 +167,15 @@
         {"shape":"InvalidRequestException"}
       ]
     },
+    "GetManagedScalingPolicy":{
+      "name":"GetManagedScalingPolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"GetManagedScalingPolicyInput"},
+      "output":{"shape":"GetManagedScalingPolicyOutput"}
+    },
     "ListBootstrapActions":{
       "name":"ListBootstrapActions",
       "http":{
@@ -258,6 +267,19 @@
         {"shape":"InvalidRequestException"}
       ]
     },
+    "ModifyCluster":{
+      "name":"ModifyCluster",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"ModifyClusterInput"},
+      "output":{"shape":"ModifyClusterOutput"},
+      "errors":[
+        {"shape":"InternalServerError"},
+        {"shape":"InvalidRequestException"}
+      ]
+    },
     "ModifyInstanceFleet":{
       "name":"ModifyInstanceFleet",
       "http":{
@@ -303,6 +325,15 @@
         {"shape":"InvalidRequestException"}
       ]
     },
+    "PutManagedScalingPolicy":{
+      "name":"PutManagedScalingPolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"PutManagedScalingPolicyInput"},
+      "output":{"shape":"PutManagedScalingPolicyOutput"}
+    },
     "RemoveAutoScalingPolicy":{
       "name":"RemoveAutoScalingPolicy",
       "http":{
@@ -311,6 +342,15 @@
       },
       "input":{"shape":"RemoveAutoScalingPolicyInput"},
       "output":{"shape":"RemoveAutoScalingPolicyOutput"}
+    },
+    "RemoveManagedScalingPolicy":{
+      "name":"RemoveManagedScalingPolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"RemoveManagedScalingPolicyInput"},
+      "output":{"shape":"RemoveManagedScalingPolicyOutput"}
     },
     "RemoveTags":{
       "name":"RemoveTags",
@@ -396,7 +436,8 @@
       "type":"structure",
       "members":{
         "ClusterId":{"shape":"XmlStringMaxLen256"},
-        "InstanceFleetId":{"shape":"InstanceFleetId"}
+        "InstanceFleetId":{"shape":"InstanceFleetId"},
+        "ClusterArn":{"shape":"ArnType"}
       }
     },
     "AddInstanceGroupsInput":{
@@ -414,7 +455,8 @@
       "type":"structure",
       "members":{
         "JobFlowId":{"shape":"XmlStringMaxLen256"},
-        "InstanceGroupIds":{"shape":"InstanceGroupIdsList"}
+        "InstanceGroupIds":{"shape":"InstanceGroupIdsList"},
+        "ClusterArn":{"shape":"ArnType"}
       }
     },
     "AddJobFlowStepsInput":{
@@ -588,9 +630,14 @@
     },
     "CancelStepsInput":{
       "type":"structure",
+      "required":[
+        "ClusterId",
+        "StepIds"
+      ],
       "members":{
         "ClusterId":{"shape":"XmlStringMaxLen256"},
-        "StepIds":{"shape":"StepIdsList"}
+        "StepIds":{"shape":"StepIdsList"},
+        "StepCancellationOption":{"shape":"StepCancellationOption"}
       }
     },
     "CancelStepsOutput":{
@@ -653,7 +700,10 @@
         "CustomAmiId":{"shape":"XmlStringMaxLen256"},
         "EbsRootVolumeSize":{"shape":"Integer"},
         "RepoUpgradeOnBoot":{"shape":"RepoUpgradeOnBoot"},
-        "KerberosAttributes":{"shape":"KerberosAttributes"}
+        "KerberosAttributes":{"shape":"KerberosAttributes"},
+        "ClusterArn":{"shape":"ArnType"},
+        "OutpostArn":{"shape":"OptionalArnType"},
+        "StepConcurrencyLevel":{"shape":"Integer"}
       }
     },
     "ClusterId":{"type":"string"},
@@ -707,7 +757,9 @@
         "Id":{"shape":"ClusterId"},
         "Name":{"shape":"String"},
         "Status":{"shape":"ClusterStatus"},
-        "NormalizedInstanceHours":{"shape":"Integer"}
+        "NormalizedInstanceHours":{"shape":"Integer"},
+        "ClusterArn":{"shape":"ArnType"},
+        "OutpostArn":{"shape":"OptionalArnType"}
       }
     },
     "ClusterSummaryList":{
@@ -741,6 +793,28 @@
         "GREATER_THAN",
         "LESS_THAN",
         "LESS_THAN_OR_EQUAL"
+      ]
+    },
+    "ComputeLimits":{
+      "type":"structure",
+      "required":[
+        "UnitType",
+        "MinimumCapacityUnits",
+        "MaximumCapacityUnits"
+      ],
+      "members":{
+        "UnitType":{"shape":"ComputeLimitsUnitType"},
+        "MinimumCapacityUnits":{"shape":"Integer"},
+        "MaximumCapacityUnits":{"shape":"Integer"},
+        "MaximumOnDemandCapacityUnits":{"shape":"Integer"}
+      }
+    },
+    "ComputeLimitsUnitType":{
+      "type":"string",
+      "enum":[
+        "InstanceFleetUnits",
+        "Instances",
+        "VCPU"
       ]
     },
     "Configuration":{
@@ -943,6 +1017,19 @@
       "members":{
         "BlockPublicAccessConfiguration":{"shape":"BlockPublicAccessConfiguration"},
         "BlockPublicAccessConfigurationMetadata":{"shape":"BlockPublicAccessConfigurationMetadata"}
+      }
+    },
+    "GetManagedScalingPolicyInput":{
+      "type":"structure",
+      "required":["ClusterId"],
+      "members":{
+        "ClusterId":{"shape":"ClusterId"}
+      }
+    },
+    "GetManagedScalingPolicyOutput":{
+      "type":"structure",
+      "members":{
+        "ManagedScalingPolicy":{"shape":"ManagedScalingPolicy"}
       }
     },
     "HadoopJarStepConfig":{
@@ -1625,6 +1712,12 @@
       }
     },
     "Long":{"type":"long"},
+    "ManagedScalingPolicy":{
+      "type":"structure",
+      "members":{
+        "ComputeLimits":{"shape":"ComputeLimits"}
+      }
+    },
     "Marker":{"type":"string"},
     "MarketType":{
       "type":"string",
@@ -1643,6 +1736,20 @@
     "MetricDimensionList":{
       "type":"list",
       "member":{"shape":"MetricDimension"}
+    },
+    "ModifyClusterInput":{
+      "type":"structure",
+      "required":["ClusterId"],
+      "members":{
+        "ClusterId":{"shape":"String"},
+        "StepConcurrencyLevel":{"shape":"Integer"}
+      }
+    },
+    "ModifyClusterOutput":{
+      "type":"structure",
+      "members":{
+        "StepConcurrencyLevel":{"shape":"Integer"}
+      }
     },
     "ModifyInstanceFleetInput":{
       "type":"structure",
@@ -1669,6 +1776,11 @@
     "NonNegativeDouble":{
       "type":"double",
       "min":0.0
+    },
+    "OptionalArnType":{
+      "type":"string",
+      "max":2048,
+      "min":0
     },
     "PlacementType":{
       "type":"structure",
@@ -1712,7 +1824,8 @@
       "members":{
         "ClusterId":{"shape":"ClusterId"},
         "InstanceGroupId":{"shape":"InstanceGroupId"},
-        "AutoScalingPolicy":{"shape":"AutoScalingPolicyDescription"}
+        "AutoScalingPolicy":{"shape":"AutoScalingPolicyDescription"},
+        "ClusterArn":{"shape":"ArnType"}
       }
     },
     "PutBlockPublicAccessConfigurationInput":{
@@ -1723,6 +1836,22 @@
       }
     },
     "PutBlockPublicAccessConfigurationOutput":{
+      "type":"structure",
+      "members":{
+      }
+    },
+    "PutManagedScalingPolicyInput":{
+      "type":"structure",
+      "required":[
+        "ClusterId",
+        "ManagedScalingPolicy"
+      ],
+      "members":{
+        "ClusterId":{"shape":"ClusterId"},
+        "ManagedScalingPolicy":{"shape":"ManagedScalingPolicy"}
+      }
+    },
+    "PutManagedScalingPolicyOutput":{
       "type":"structure",
       "members":{
       }
@@ -1739,6 +1868,18 @@
       }
     },
     "RemoveAutoScalingPolicyOutput":{
+      "type":"structure",
+      "members":{
+      }
+    },
+    "RemoveManagedScalingPolicyInput":{
+      "type":"structure",
+      "required":["ClusterId"],
+      "members":{
+        "ClusterId":{"shape":"ClusterId"}
+      }
+    },
+    "RemoveManagedScalingPolicyOutput":{
       "type":"structure",
       "members":{
       }
@@ -1796,13 +1937,16 @@
         "CustomAmiId":{"shape":"XmlStringMaxLen256"},
         "EbsRootVolumeSize":{"shape":"Integer"},
         "RepoUpgradeOnBoot":{"shape":"RepoUpgradeOnBoot"},
-        "KerberosAttributes":{"shape":"KerberosAttributes"}
+        "KerberosAttributes":{"shape":"KerberosAttributes"},
+        "StepConcurrencyLevel":{"shape":"Integer"},
+        "ManagedScalingPolicy":{"shape":"ManagedScalingPolicy"}
       }
     },
     "RunJobFlowOutput":{
       "type":"structure",
       "members":{
-        "JobFlowId":{"shape":"XmlStringMaxLen256"}
+        "JobFlowId":{"shape":"XmlStringMaxLen256"},
+        "ClusterArn":{"shape":"ArnType"}
       }
     },
     "ScaleDownBehavior":{
@@ -1955,6 +2099,13 @@
         "ActionOnFailure":{"shape":"ActionOnFailure"},
         "Status":{"shape":"StepStatus"}
       }
+    },
+    "StepCancellationOption":{
+      "type":"string",
+      "enum":[
+        "SEND_INTERRUPT",
+        "TERMINATE_PROCESS"
+      ]
     },
     "StepConfig":{
       "type":"structure",

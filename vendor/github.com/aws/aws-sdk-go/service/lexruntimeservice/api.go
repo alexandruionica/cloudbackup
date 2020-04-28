@@ -3,12 +3,14 @@
 package lexruntimeservice
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awsutil"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/signer/v4"
+	"github.com/aws/aws-sdk-go/private/protocol"
 )
 
 const opDeleteSession = "DeleteSession"
@@ -64,22 +66,22 @@ func (c *LexRuntimeService) DeleteSessionRequest(input *DeleteSessionInput) (req
 // See the AWS API reference guide for Amazon Lex Runtime Service's
 // API operation DeleteSession for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeNotFoundException "NotFoundException"
+// Returned Error Types:
+//   * NotFoundException
 //   The resource (such as the Amazon Lex bot or an alias) that is referred to
 //   is not found.
 //
-//   * ErrCodeBadRequestException "BadRequestException"
+//   * BadRequestException
 //   Request validation failed, there is no usable message in the context, or
 //   the bot build failed, is still in progress, or contains unbuilt changes.
 //
-//   * ErrCodeLimitExceededException "LimitExceededException"
+//   * LimitExceededException
 //   Exceeded a limit.
 //
-//   * ErrCodeInternalFailureException "InternalFailureException"
+//   * InternalFailureException
 //   Internal service error. Retry the call.
 //
-//   * ErrCodeConflictException "ConflictException"
+//   * ConflictException
 //   Two clients are using the same AWS account, Amazon Lex bot, and user ID.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/runtime.lex-2016-11-28/DeleteSession
@@ -134,7 +136,7 @@ func (c *LexRuntimeService) GetSessionRequest(input *GetSessionInput) (req *requ
 	op := &request.Operation{
 		Name:       opGetSession,
 		HTTPMethod: "GET",
-		HTTPPath:   "/bot/{botName}/alias/{botAlias}/user/{userId}/session",
+		HTTPPath:   "/bot/{botName}/alias/{botAlias}/user/{userId}/session/",
 	}
 
 	if input == nil {
@@ -157,19 +159,19 @@ func (c *LexRuntimeService) GetSessionRequest(input *GetSessionInput) (req *requ
 // See the AWS API reference guide for Amazon Lex Runtime Service's
 // API operation GetSession for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeNotFoundException "NotFoundException"
+// Returned Error Types:
+//   * NotFoundException
 //   The resource (such as the Amazon Lex bot or an alias) that is referred to
 //   is not found.
 //
-//   * ErrCodeBadRequestException "BadRequestException"
+//   * BadRequestException
 //   Request validation failed, there is no usable message in the context, or
 //   the bot build failed, is still in progress, or contains unbuilt changes.
 //
-//   * ErrCodeLimitExceededException "LimitExceededException"
+//   * LimitExceededException
 //   Exceeded a limit.
 //
-//   * ErrCodeInternalFailureException "InternalFailureException"
+//   * InternalFailureException
 //   Internal service error. Retry the call.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/runtime.lex-2016-11-28/GetSession
@@ -296,34 +298,34 @@ func (c *LexRuntimeService) PostContentRequest(input *PostContentInput) (req *re
 // See the AWS API reference guide for Amazon Lex Runtime Service's
 // API operation PostContent for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeNotFoundException "NotFoundException"
+// Returned Error Types:
+//   * NotFoundException
 //   The resource (such as the Amazon Lex bot or an alias) that is referred to
 //   is not found.
 //
-//   * ErrCodeBadRequestException "BadRequestException"
+//   * BadRequestException
 //   Request validation failed, there is no usable message in the context, or
 //   the bot build failed, is still in progress, or contains unbuilt changes.
 //
-//   * ErrCodeLimitExceededException "LimitExceededException"
+//   * LimitExceededException
 //   Exceeded a limit.
 //
-//   * ErrCodeInternalFailureException "InternalFailureException"
+//   * InternalFailureException
 //   Internal service error. Retry the call.
 //
-//   * ErrCodeConflictException "ConflictException"
+//   * ConflictException
 //   Two clients are using the same AWS account, Amazon Lex bot, and user ID.
 //
-//   * ErrCodeUnsupportedMediaTypeException "UnsupportedMediaTypeException"
+//   * UnsupportedMediaTypeException
 //   The Content-Type header (PostContent API) has an invalid value.
 //
-//   * ErrCodeNotAcceptableException "NotAcceptableException"
+//   * NotAcceptableException
 //   The accept header in the request does not have a valid value.
 //
-//   * ErrCodeRequestTimeoutException "RequestTimeoutException"
+//   * RequestTimeoutException
 //   The input speech is too long.
 //
-//   * ErrCodeDependencyFailedException "DependencyFailedException"
+//   * DependencyFailedException
 //   One of the dependencies, such as AWS Lambda or Amazon Polly, threw an exception.
 //   For example,
 //
@@ -335,11 +337,11 @@ func (c *LexRuntimeService) PostContentRequest(input *PostContentInput) (req *re
 //      * If a fulfillment Lambda function returns a Delegate dialog action without
 //      removing any slot values.
 //
-//   * ErrCodeBadGatewayException "BadGatewayException"
+//   * BadGatewayException
 //   Either the Amazon Lex bot is still building, or one of the dependent services
 //   (Amazon Polly, AWS Lambda) failed with an internal service error.
 //
-//   * ErrCodeLoopDetectedException "LoopDetectedException"
+//   * LoopDetectedException
 //   This exception is not used.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/runtime.lex-2016-11-28/PostContent
@@ -408,9 +410,9 @@ func (c *LexRuntimeService) PostTextRequest(input *PostTextInput) (req *request.
 
 // PostText API operation for Amazon Lex Runtime Service.
 //
-// Sends user input (text or SSML) to Amazon Lex. Client applications can use
-// this API to send requests to Amazon Lex at runtime. Amazon Lex then interprets
-// the user input using the machine learning model it built for the bot.
+// Sends user input to Amazon Lex. Client applications can use this API to send
+// requests to Amazon Lex at runtime. Amazon Lex then interprets the user input
+// using the machine learning model it built for the bot.
 //
 // In response, Amazon Lex returns the next message to convey to the user an
 // optional responseCard to display. Consider the following example messages:
@@ -458,25 +460,25 @@ func (c *LexRuntimeService) PostTextRequest(input *PostTextInput) (req *request.
 // See the AWS API reference guide for Amazon Lex Runtime Service's
 // API operation PostText for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeNotFoundException "NotFoundException"
+// Returned Error Types:
+//   * NotFoundException
 //   The resource (such as the Amazon Lex bot or an alias) that is referred to
 //   is not found.
 //
-//   * ErrCodeBadRequestException "BadRequestException"
+//   * BadRequestException
 //   Request validation failed, there is no usable message in the context, or
 //   the bot build failed, is still in progress, or contains unbuilt changes.
 //
-//   * ErrCodeLimitExceededException "LimitExceededException"
+//   * LimitExceededException
 //   Exceeded a limit.
 //
-//   * ErrCodeInternalFailureException "InternalFailureException"
+//   * InternalFailureException
 //   Internal service error. Retry the call.
 //
-//   * ErrCodeConflictException "ConflictException"
+//   * ConflictException
 //   Two clients are using the same AWS account, Amazon Lex bot, and user ID.
 //
-//   * ErrCodeDependencyFailedException "DependencyFailedException"
+//   * DependencyFailedException
 //   One of the dependencies, such as AWS Lambda or Amazon Polly, threw an exception.
 //   For example,
 //
@@ -488,11 +490,11 @@ func (c *LexRuntimeService) PostTextRequest(input *PostTextInput) (req *request.
 //      * If a fulfillment Lambda function returns a Delegate dialog action without
 //      removing any slot values.
 //
-//   * ErrCodeBadGatewayException "BadGatewayException"
+//   * BadGatewayException
 //   Either the Amazon Lex bot is still building, or one of the dependent services
 //   (Amazon Polly, AWS Lambda) failed with an internal service error.
 //
-//   * ErrCodeLoopDetectedException "LoopDetectedException"
+//   * LoopDetectedException
 //   This exception is not used.
 //
 // See also, https://docs.aws.amazon.com/goto/WebAPI/runtime.lex-2016-11-28/PostText
@@ -574,28 +576,28 @@ func (c *LexRuntimeService) PutSessionRequest(input *PutSessionInput) (req *requ
 // See the AWS API reference guide for Amazon Lex Runtime Service's
 // API operation PutSession for usage and error information.
 //
-// Returned Error Codes:
-//   * ErrCodeNotFoundException "NotFoundException"
+// Returned Error Types:
+//   * NotFoundException
 //   The resource (such as the Amazon Lex bot or an alias) that is referred to
 //   is not found.
 //
-//   * ErrCodeBadRequestException "BadRequestException"
+//   * BadRequestException
 //   Request validation failed, there is no usable message in the context, or
 //   the bot build failed, is still in progress, or contains unbuilt changes.
 //
-//   * ErrCodeLimitExceededException "LimitExceededException"
+//   * LimitExceededException
 //   Exceeded a limit.
 //
-//   * ErrCodeInternalFailureException "InternalFailureException"
+//   * InternalFailureException
 //   Internal service error. Retry the call.
 //
-//   * ErrCodeConflictException "ConflictException"
+//   * ConflictException
 //   Two clients are using the same AWS account, Amazon Lex bot, and user ID.
 //
-//   * ErrCodeNotAcceptableException "NotAcceptableException"
+//   * NotAcceptableException
 //   The accept header in the request does not have a valid value.
 //
-//   * ErrCodeDependencyFailedException "DependencyFailedException"
+//   * DependencyFailedException
 //   One of the dependencies, such as AWS Lambda or Amazon Polly, threw an exception.
 //   For example,
 //
@@ -607,7 +609,7 @@ func (c *LexRuntimeService) PutSessionRequest(input *PutSessionInput) (req *requ
 //      * If a fulfillment Lambda function returns a Delegate dialog action without
 //      removing any slot values.
 //
-//   * ErrCodeBadGatewayException "BadGatewayException"
+//   * BadGatewayException
 //   Either the Amazon Lex bot is still building, or one of the dependent services
 //   (Amazon Polly, AWS Lambda) failed with an internal service error.
 //
@@ -631,6 +633,120 @@ func (c *LexRuntimeService) PutSessionWithContext(ctx aws.Context, input *PutSes
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
+}
+
+// Either the Amazon Lex bot is still building, or one of the dependent services
+// (Amazon Polly, AWS Lambda) failed with an internal service error.
+type BadGatewayException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s BadGatewayException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s BadGatewayException) GoString() string {
+	return s.String()
+}
+
+func newErrorBadGatewayException(v protocol.ResponseMetadata) error {
+	return &BadGatewayException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *BadGatewayException) Code() string {
+	return "BadGatewayException"
+}
+
+// Message returns the exception's message.
+func (s *BadGatewayException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *BadGatewayException) OrigErr() error {
+	return nil
+}
+
+func (s *BadGatewayException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *BadGatewayException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *BadGatewayException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// Request validation failed, there is no usable message in the context, or
+// the bot build failed, is still in progress, or contains unbuilt changes.
+type BadRequestException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s BadRequestException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s BadRequestException) GoString() string {
+	return s.String()
+}
+
+func newErrorBadRequestException(v protocol.ResponseMetadata) error {
+	return &BadRequestException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *BadRequestException) Code() string {
+	return "BadRequestException"
+}
+
+// Message returns the exception's message.
+func (s *BadRequestException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *BadRequestException) OrigErr() error {
+	return nil
+}
+
+func (s *BadRequestException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *BadRequestException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *BadRequestException) RequestID() string {
+	return s.RespMetadata.RequestID
 }
 
 // Represents an option to be shown on the client platform (Facebook, Slack,
@@ -671,6 +787,62 @@ func (s *Button) SetText(v string) *Button {
 func (s *Button) SetValue(v string) *Button {
 	s.Value = &v
 	return s
+}
+
+// Two clients are using the same AWS account, Amazon Lex bot, and user ID.
+type ConflictException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s ConflictException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ConflictException) GoString() string {
+	return s.String()
+}
+
+func newErrorConflictException(v protocol.ResponseMetadata) error {
+	return &ConflictException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *ConflictException) Code() string {
+	return "ConflictException"
+}
+
+// Message returns the exception's message.
+func (s *ConflictException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *ConflictException) OrigErr() error {
+	return nil
+}
+
+func (s *ConflictException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *ConflictException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *ConflictException) RequestID() string {
+	return s.RespMetadata.RequestID
 }
 
 type DeleteSessionInput struct {
@@ -796,6 +968,71 @@ func (s *DeleteSessionOutput) SetSessionId(v string) *DeleteSessionOutput {
 func (s *DeleteSessionOutput) SetUserId(v string) *DeleteSessionOutput {
 	s.UserId = &v
 	return s
+}
+
+// One of the dependencies, such as AWS Lambda or Amazon Polly, threw an exception.
+// For example,
+//
+//    * If Amazon Lex does not have sufficient permissions to call a Lambda
+//    function.
+//
+//    * If a Lambda function takes longer than 30 seconds to execute.
+//
+//    * If a fulfillment Lambda function returns a Delegate dialog action without
+//    removing any slot values.
+type DependencyFailedException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s DependencyFailedException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DependencyFailedException) GoString() string {
+	return s.String()
+}
+
+func newErrorDependencyFailedException(v protocol.ResponseMetadata) error {
+	return &DependencyFailedException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *DependencyFailedException) Code() string {
+	return "DependencyFailedException"
+}
+
+// Message returns the exception's message.
+func (s *DependencyFailedException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *DependencyFailedException) OrigErr() error {
+	return nil
+}
+
+func (s *DependencyFailedException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *DependencyFailedException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *DependencyFailedException) RequestID() string {
+	return s.RespMetadata.RequestID
 }
 
 // Describes the next action that the bot should take in its interaction with
@@ -1004,6 +1241,13 @@ type GetSessionInput struct {
 	// BotName is a required field
 	BotName *string `location:"uri" locationName:"botName" type:"string" required:"true"`
 
+	// A string used to filter the intents returned in the recentIntentSummaryView
+	// structure.
+	//
+	// When you specify a filter, only intents with their checkpointLabel field
+	// set to that string are returned.
+	CheckpointLabelFilter *string `location:"querystring" locationName:"checkpointLabelFilter" min:"1" type:"string"`
+
 	// The ID of the client application user. Amazon Lex uses this to identify a
 	// user's conversation with your bot.
 	//
@@ -1036,6 +1280,9 @@ func (s *GetSessionInput) Validate() error {
 	if s.BotName != nil && len(*s.BotName) < 1 {
 		invalidParams.Add(request.NewErrParamMinLen("BotName", 1))
 	}
+	if s.CheckpointLabelFilter != nil && len(*s.CheckpointLabelFilter) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CheckpointLabelFilter", 1))
+	}
 	if s.UserId == nil {
 		invalidParams.Add(request.NewErrParamRequired("UserId"))
 	}
@@ -1061,6 +1308,12 @@ func (s *GetSessionInput) SetBotName(v string) *GetSessionInput {
 	return s
 }
 
+// SetCheckpointLabelFilter sets the CheckpointLabelFilter field's value.
+func (s *GetSessionInput) SetCheckpointLabelFilter(v string) *GetSessionInput {
+	s.CheckpointLabelFilter = &v
+	return s
+}
+
 // SetUserId sets the UserId field's value.
 func (s *GetSessionInput) SetUserId(v string) *GetSessionInput {
 	s.UserId = &v
@@ -1077,6 +1330,9 @@ type GetSessionOutput struct {
 	// can contain a maximum of three summaries. If more than three intents are
 	// used in the session, the recentIntentSummaryView operation contains information
 	// about the last three intents used.
+	//
+	// If you set the checkpointLabelFilter parameter in the request, the array
+	// contains only the intents with the specified label.
 	RecentIntentSummaryView []*IntentSummary `locationName:"recentIntentSummaryView" type:"list"`
 
 	// Map of key/value pairs representing the session-specific context information.
@@ -1127,6 +1383,14 @@ func (s *GetSessionOutput) SetSessionId(v string) *GetSessionOutput {
 // or so that you can return the intent to its previous state.
 type IntentSummary struct {
 	_ struct{} `type:"structure"`
+
+	// A user-defined label that identifies a particular intent. You can use this
+	// label to return to a previous intent.
+	//
+	// Use the checkpointLabelFilter parameter of the GetSessionRequest operation
+	// to filter the intents returned by the operation to those with only the specified
+	// label.
+	CheckpointLabel *string `locationName:"checkpointLabel" min:"1" type:"string"`
 
 	// The status of the intent after the user responds to the confirmation prompt.
 	// If the user confirms the intent, Amazon Lex sets this field to Confirmed.
@@ -1194,6 +1458,28 @@ func (s IntentSummary) GoString() string {
 	return s.String()
 }
 
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *IntentSummary) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "IntentSummary"}
+	if s.CheckpointLabel != nil && len(*s.CheckpointLabel) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("CheckpointLabel", 1))
+	}
+	if s.DialogActionType == nil {
+		invalidParams.Add(request.NewErrParamRequired("DialogActionType"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetCheckpointLabel sets the CheckpointLabel field's value.
+func (s *IntentSummary) SetCheckpointLabel(v string) *IntentSummary {
+	s.CheckpointLabel = &v
+	return s
+}
+
 // SetConfirmationStatus sets the ConfirmationStatus field's value.
 func (s *IntentSummary) SetConfirmationStatus(v string) *IntentSummary {
 	s.ConfirmationStatus = &v
@@ -1228,6 +1514,289 @@ func (s *IntentSummary) SetSlotToElicit(v string) *IntentSummary {
 func (s *IntentSummary) SetSlots(v map[string]*string) *IntentSummary {
 	s.Slots = v
 	return s
+}
+
+// Internal service error. Retry the call.
+type InternalFailureException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s InternalFailureException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s InternalFailureException) GoString() string {
+	return s.String()
+}
+
+func newErrorInternalFailureException(v protocol.ResponseMetadata) error {
+	return &InternalFailureException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *InternalFailureException) Code() string {
+	return "InternalFailureException"
+}
+
+// Message returns the exception's message.
+func (s *InternalFailureException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *InternalFailureException) OrigErr() error {
+	return nil
+}
+
+func (s *InternalFailureException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *InternalFailureException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *InternalFailureException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// Exceeded a limit.
+type LimitExceededException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+
+	RetryAfterSeconds *string `location:"header" locationName:"Retry-After" type:"string"`
+}
+
+// String returns the string representation
+func (s LimitExceededException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LimitExceededException) GoString() string {
+	return s.String()
+}
+
+func newErrorLimitExceededException(v protocol.ResponseMetadata) error {
+	return &LimitExceededException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *LimitExceededException) Code() string {
+	return "LimitExceededException"
+}
+
+// Message returns the exception's message.
+func (s *LimitExceededException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *LimitExceededException) OrigErr() error {
+	return nil
+}
+
+func (s *LimitExceededException) Error() string {
+	return fmt.Sprintf("%s: %s\n%s", s.Code(), s.Message(), s.String())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *LimitExceededException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *LimitExceededException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// This exception is not used.
+type LoopDetectedException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"Message" type:"string"`
+}
+
+// String returns the string representation
+func (s LoopDetectedException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s LoopDetectedException) GoString() string {
+	return s.String()
+}
+
+func newErrorLoopDetectedException(v protocol.ResponseMetadata) error {
+	return &LoopDetectedException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *LoopDetectedException) Code() string {
+	return "LoopDetectedException"
+}
+
+// Message returns the exception's message.
+func (s *LoopDetectedException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *LoopDetectedException) OrigErr() error {
+	return nil
+}
+
+func (s *LoopDetectedException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *LoopDetectedException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *LoopDetectedException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// The accept header in the request does not have a valid value.
+type NotAcceptableException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s NotAcceptableException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NotAcceptableException) GoString() string {
+	return s.String()
+}
+
+func newErrorNotAcceptableException(v protocol.ResponseMetadata) error {
+	return &NotAcceptableException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *NotAcceptableException) Code() string {
+	return "NotAcceptableException"
+}
+
+// Message returns the exception's message.
+func (s *NotAcceptableException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *NotAcceptableException) OrigErr() error {
+	return nil
+}
+
+func (s *NotAcceptableException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *NotAcceptableException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *NotAcceptableException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
+// The resource (such as the Amazon Lex bot or an alias) that is referred to
+// is not found.
+type NotFoundException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s NotFoundException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s NotFoundException) GoString() string {
+	return s.String()
+}
+
+func newErrorNotFoundException(v protocol.ResponseMetadata) error {
+	return &NotFoundException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *NotFoundException) Code() string {
+	return "NotFoundException"
+}
+
+// Message returns the exception's message.
+func (s *NotFoundException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *NotFoundException) OrigErr() error {
+	return nil
+}
+
+func (s *NotFoundException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *NotFoundException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *NotFoundException) RequestID() string {
+	return s.RespMetadata.RequestID
 }
 
 type PostContentInput struct {
@@ -1533,8 +2102,17 @@ type PostContentOutput struct {
 	//    intent was created.
 	MessageFormat *string `location:"header" locationName:"x-amz-lex-message-format" type:"string" enum:"MessageFormatType"`
 
+	// The sentiment expressed in and utterance.
+	//
+	// When the bot is configured to send utterances to Amazon Comprehend for sentiment
+	// analysis, this field contains the result of the analysis.
+	SentimentResponse *string `location:"header" locationName:"x-amz-lex-sentiment" type:"string"`
+
 	// Map of key/value pairs representing the session-specific context information.
 	SessionAttributes aws.JSONValue `location:"header" locationName:"x-amz-lex-session-attributes" type:"jsonvalue"`
+
+	// The unique identifier for the session.
+	SessionId *string `location:"header" locationName:"x-amz-lex-session-id" type:"string"`
 
 	// If the dialogState value is ElicitSlot, returns the name of the slot for
 	// which Amazon Lex is eliciting a value.
@@ -1606,9 +2184,21 @@ func (s *PostContentOutput) SetMessageFormat(v string) *PostContentOutput {
 	return s
 }
 
+// SetSentimentResponse sets the SentimentResponse field's value.
+func (s *PostContentOutput) SetSentimentResponse(v string) *PostContentOutput {
+	s.SentimentResponse = &v
+	return s
+}
+
 // SetSessionAttributes sets the SessionAttributes field's value.
 func (s *PostContentOutput) SetSessionAttributes(v aws.JSONValue) *PostContentOutput {
 	s.SessionAttributes = v
+	return s
+}
+
+// SetSessionId sets the SessionId field's value.
+func (s *PostContentOutput) SetSessionId(v string) *PostContentOutput {
+	s.SessionId = &v
 	return s
 }
 
@@ -1844,8 +2434,17 @@ type PostTextOutput struct {
 	// choose the settings button next to a slot) or from a code hook (Lambda function).
 	ResponseCard *ResponseCard `locationName:"responseCard" type:"structure"`
 
+	// The sentiment expressed in and utterance.
+	//
+	// When the bot is configured to send utterances to Amazon Comprehend for sentiment
+	// analysis, this field contains the result of the analysis.
+	SentimentResponse *SentimentResponse `locationName:"sentimentResponse" type:"structure"`
+
 	// A map of key-value pairs representing the session-specific context information.
 	SessionAttributes map[string]*string `locationName:"sessionAttributes" type:"map" sensitive:"true"`
+
+	// A unique identifier for the session.
+	SessionId *string `locationName:"sessionId" type:"string"`
 
 	// If the dialogState value is ElicitSlot, returns the name of the slot for
 	// which Amazon Lex is eliciting a value.
@@ -1904,9 +2503,21 @@ func (s *PostTextOutput) SetResponseCard(v *ResponseCard) *PostTextOutput {
 	return s
 }
 
+// SetSentimentResponse sets the SentimentResponse field's value.
+func (s *PostTextOutput) SetSentimentResponse(v *SentimentResponse) *PostTextOutput {
+	s.SentimentResponse = v
+	return s
+}
+
 // SetSessionAttributes sets the SessionAttributes field's value.
 func (s *PostTextOutput) SetSessionAttributes(v map[string]*string) *PostTextOutput {
 	s.SessionAttributes = v
+	return s
+}
+
+// SetSessionId sets the SessionId field's value.
+func (s *PostTextOutput) SetSessionId(v string) *PostTextOutput {
+	s.SessionId = &v
 	return s
 }
 
@@ -1956,6 +2567,27 @@ type PutSessionInput struct {
 	// Sets the next action that the bot should take to fulfill the conversation.
 	DialogAction *DialogAction `locationName:"dialogAction" type:"structure"`
 
+	// A summary of the recent intents for the bot. You can use the intent summary
+	// view to set a checkpoint label on an intent and modify attributes of intents.
+	// You can also use it to remove or add intent summary objects to the list.
+	//
+	// An intent that you modify or add to the list must make sense for the bot.
+	// For example, the intent name must be valid for the bot. You must provide
+	// valid values for:
+	//
+	//    * intentName
+	//
+	//    * slot names
+	//
+	//    * slotToElict
+	//
+	// If you send the recentIntentSummaryView parameter in a PutSession request,
+	// the contents of the new summary view replaces the old summary view. For example,
+	// if a GetSession request returns three intents in the summary view and you
+	// call PutSession with one intent in the summary view, the next call to GetSession
+	// will only return one intent.
+	RecentIntentSummaryView []*IntentSummary `locationName:"recentIntentSummaryView" type:"list"`
+
 	// Map of key/value pairs representing the session-specific context information.
 	// It contains application information passed between Amazon Lex and a client
 	// application.
@@ -2004,6 +2636,16 @@ func (s *PutSessionInput) Validate() error {
 			invalidParams.AddNested("DialogAction", err.(request.ErrInvalidParams))
 		}
 	}
+	if s.RecentIntentSummaryView != nil {
+		for i, v := range s.RecentIntentSummaryView {
+			if v == nil {
+				continue
+			}
+			if err := v.Validate(); err != nil {
+				invalidParams.AddNested(fmt.Sprintf("%s[%v]", "RecentIntentSummaryView", i), err.(request.ErrInvalidParams))
+			}
+		}
+	}
 
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -2032,6 +2674,12 @@ func (s *PutSessionInput) SetBotName(v string) *PutSessionInput {
 // SetDialogAction sets the DialogAction field's value.
 func (s *PutSessionInput) SetDialogAction(v *DialogAction) *PutSessionInput {
 	s.DialogAction = v
+	return s
+}
+
+// SetRecentIntentSummaryView sets the RecentIntentSummaryView field's value.
+func (s *PutSessionInput) SetRecentIntentSummaryView(v []*IntentSummary) *PutSessionInput {
+	s.RecentIntentSummaryView = v
 	return s
 }
 
@@ -2188,6 +2836,62 @@ func (s *PutSessionOutput) SetSlots(v aws.JSONValue) *PutSessionOutput {
 	return s
 }
 
+// The input speech is too long.
+type RequestTimeoutException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s RequestTimeoutException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s RequestTimeoutException) GoString() string {
+	return s.String()
+}
+
+func newErrorRequestTimeoutException(v protocol.ResponseMetadata) error {
+	return &RequestTimeoutException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *RequestTimeoutException) Code() string {
+	return "RequestTimeoutException"
+}
+
+// Message returns the exception's message.
+func (s *RequestTimeoutException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *RequestTimeoutException) OrigErr() error {
+	return nil
+}
+
+func (s *RequestTimeoutException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *RequestTimeoutException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *RequestTimeoutException) RequestID() string {
+	return s.RespMetadata.RequestID
+}
+
 // If you configure a response card when creating your bots, Amazon Lex substitutes
 // the session attributes and slot values that are available, and then returns
 // it. The response card can also come from a Lambda function ( dialogCodeHook
@@ -2231,6 +2935,99 @@ func (s *ResponseCard) SetGenericAttachments(v []*GenericAttachment) *ResponseCa
 func (s *ResponseCard) SetVersion(v string) *ResponseCard {
 	s.Version = &v
 	return s
+}
+
+// The sentiment expressed in an utterance.
+//
+// When the bot is configured to send utterances to Amazon Comprehend for sentiment
+// analysis, this field structure contains the result of the analysis.
+type SentimentResponse struct {
+	_ struct{} `type:"structure"`
+
+	// The inferred sentiment that Amazon Comprehend has the highest confidence
+	// in.
+	SentimentLabel *string `locationName:"sentimentLabel" type:"string"`
+
+	// The likelihood that the sentiment was correctly inferred.
+	SentimentScore *string `locationName:"sentimentScore" type:"string"`
+}
+
+// String returns the string representation
+func (s SentimentResponse) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s SentimentResponse) GoString() string {
+	return s.String()
+}
+
+// SetSentimentLabel sets the SentimentLabel field's value.
+func (s *SentimentResponse) SetSentimentLabel(v string) *SentimentResponse {
+	s.SentimentLabel = &v
+	return s
+}
+
+// SetSentimentScore sets the SentimentScore field's value.
+func (s *SentimentResponse) SetSentimentScore(v string) *SentimentResponse {
+	s.SentimentScore = &v
+	return s
+}
+
+// The Content-Type header (PostContent API) has an invalid value.
+type UnsupportedMediaTypeException struct {
+	_            struct{}                  `type:"structure"`
+	RespMetadata protocol.ResponseMetadata `json:"-" xml:"-"`
+
+	Message_ *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s UnsupportedMediaTypeException) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s UnsupportedMediaTypeException) GoString() string {
+	return s.String()
+}
+
+func newErrorUnsupportedMediaTypeException(v protocol.ResponseMetadata) error {
+	return &UnsupportedMediaTypeException{
+		RespMetadata: v,
+	}
+}
+
+// Code returns the exception type name.
+func (s *UnsupportedMediaTypeException) Code() string {
+	return "UnsupportedMediaTypeException"
+}
+
+// Message returns the exception's message.
+func (s *UnsupportedMediaTypeException) Message() string {
+	if s.Message_ != nil {
+		return *s.Message_
+	}
+	return ""
+}
+
+// OrigErr always returns nil, satisfies awserr.Error interface.
+func (s *UnsupportedMediaTypeException) OrigErr() error {
+	return nil
+}
+
+func (s *UnsupportedMediaTypeException) Error() string {
+	return fmt.Sprintf("%s: %s", s.Code(), s.Message())
+}
+
+// Status code returns the HTTP status code for the request's response error.
+func (s *UnsupportedMediaTypeException) StatusCode() int {
+	return s.RespMetadata.StatusCode
+}
+
+// RequestID returns the service's response RequestID for request.
+func (s *UnsupportedMediaTypeException) RequestID() string {
+	return s.RespMetadata.RequestID
 }
 
 const (

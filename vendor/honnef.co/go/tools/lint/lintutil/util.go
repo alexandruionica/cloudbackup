@@ -12,7 +12,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"go/ast"
 	"go/build"
 	"go/token"
 	"io"
@@ -24,28 +23,20 @@ import (
 	"runtime/pprof"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"honnef.co/go/tools/config"
 	"honnef.co/go/tools/internal/cache"
 	"honnef.co/go/tools/lint"
 	"honnef.co/go/tools/lint/lintutil/format"
-	"honnef.co/go/tools/pattern"
 	"honnef.co/go/tools/version"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/buildutil"
 	"golang.org/x/tools/go/packages"
 )
-
-func MustParse(s string) pattern.Pattern {
-	p := &pattern.Parser{AllowTypeInfo: true}
-	pat, err := p.Parse(s)
-	if err != nil {
-		panic(err)
-	}
-	return pat
-}
 
 func NewVersionFlag() flag.Getter {
 	tags := build.Default.ReleaseTags
@@ -125,6 +116,8 @@ func FlagSet(name string) *flag.FlagSet {
 	flags.String("debug.memprofile", "", "Write memory profile to `file`")
 	flags.Bool("debug.version", false, "Print detailed version information about this program")
 	flags.Bool("debug.no-compile-errors", false, "Don't print compile errors")
+	flags.String("debug.measure-analyzers", "", "Write analysis measurements to `file`. `file` will be opened for appending if it already exists.")
+	flags.Uint("debug.repeat-analyzers", 0, "Run analyzers `num` times")
 
 	checks := list{"inherit"}
 	fail := list{"all"}
@@ -164,6 +157,24 @@ func ProcessFlagSet(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, fs *
 	memProfile := fs.Lookup("debug.memprofile").Value.(flag.Getter).Get().(string)
 	debugVersion := fs.Lookup("debug.version").Value.(flag.Getter).Get().(bool)
 	debugNoCompile := fs.Lookup("debug.no-compile-errors").Value.(flag.Getter).Get().(bool)
+	debugRepeat := fs.Lookup("debug.repeat-analyzers").Value.(flag.Getter).Get().(uint)
+
+	var measureAnalyzers func(analysis *analysis.Analyzer, pkg *lint.Package, d time.Duration)
+	if path := fs.Lookup("debug.measure-analyzers").Value.(flag.Getter).Get().(string); path != "" {
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		mu := &sync.Mutex{}
+		measureAnalyzers = func(analysis *analysis.Analyzer, pkg *lint.Package, d time.Duration) {
+			mu.Lock()
+			defer mu.Unlock()
+			if _, err := fmt.Fprintf(f, "%s\t%s\t%d\n", analysis.Name, pkg.ID, d.Nanoseconds()); err != nil {
+				log.Println("error writing analysis measurements:", err)
+			}
+		}
+	}
 
 	cfg := config.Config{}
 	cfg.Checks = *fs.Lookup("checks").Value.(*list)
@@ -228,17 +239,6 @@ func ProcessFlagSet(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, fs *
 		exit(0)
 	}
 
-	ps, err := Lint(cs, cums, fs.Args(), &Options{
-		Tags:      tags,
-		LintTests: tests,
-		GoVersion: goVersion,
-		Config:    cfg,
-	})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		exit(1)
-	}
-
 	var f format.Formatter
 	switch formatter {
 	case "text":
@@ -252,10 +252,24 @@ func ProcessFlagSet(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, fs *
 		exit(2)
 	}
 
+	ps, err := Lint(cs, cums, fs.Args(), &Options{
+		Tags:                     tags,
+		LintTests:                tests,
+		GoVersion:                goVersion,
+		Config:                   cfg,
+		PrintAnalyzerMeasurement: measureAnalyzers,
+		RepeatAnalyzers:          debugRepeat,
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		exit(1)
+	}
+
 	var (
 		total    int
 		errors   int
 		warnings int
+		ignored  int
 	)
 
 	fail := *fs.Lookup("fail").Value.(*list)
@@ -273,6 +287,7 @@ func ProcessFlagSet(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, fs *
 			continue
 		}
 		if p.Severity == lint.Ignored && !showIgnored {
+			ignored++
 			continue
 		}
 		if shouldExit[p.Check] {
@@ -284,7 +299,7 @@ func ProcessFlagSet(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, fs *
 		f.Format(p)
 	}
 	if f, ok := f.(format.Statter); ok {
-		f.Stats(total, errors, warnings)
+		f.Stats(total, errors, warnings, ignored)
 	}
 	if errors > 0 {
 		exit(1)
@@ -295,9 +310,11 @@ func ProcessFlagSet(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, fs *
 type Options struct {
 	Config config.Config
 
-	Tags      string
-	LintTests bool
-	GoVersion int
+	Tags                     string
+	LintTests                bool
+	GoVersion                int
+	PrintAnalyzerMeasurement func(analysis *analysis.Analyzer, pkg *lint.Package, d time.Duration)
+	RepeatAnalyzers          uint
 }
 
 func computeSalt() ([]byte, error) {
@@ -336,7 +353,9 @@ func Lint(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, paths []string
 		CumulativeCheckers: cums,
 		GoVersion:          opt.GoVersion,
 		Config:             opt.Config,
+		RepeatAnalyzers:    opt.RepeatAnalyzers,
 	}
+	l.Stats.PrintAnalyzerMeasurement = opt.PrintAnalyzerMeasurement
 	cfg := &packages.Config{}
 	if opt.LintTests {
 		cfg.Tests = true
@@ -379,7 +398,8 @@ func Lint(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, paths []string
 		}()
 	}
 
-	return l.Lint(cfg, paths)
+	ps, err := l.Lint(cfg, paths)
+	return ps, err
 }
 
 var posRe = regexp.MustCompile(`^(.+?):(\d+)(?::(\d+)?)?$`)
@@ -421,53 +441,4 @@ func InitializeAnalyzers(docs map[string]*lint.Documentation, analyzers map[stri
 		}
 	}
 	return out
-}
-
-func MayHaveSideEffects(expr ast.Expr) bool {
-	switch expr := expr.(type) {
-	case *ast.BasicLit:
-		return false
-	case *ast.BinaryExpr:
-		return MayHaveSideEffects(expr.X) || MayHaveSideEffects(expr.Y)
-	case *ast.CallExpr:
-		return true
-	case *ast.CompositeLit:
-		if MayHaveSideEffects(expr.Type) {
-			return true
-		}
-		for _, elt := range expr.Elts {
-			if MayHaveSideEffects(elt) {
-				return true
-			}
-		}
-		return false
-	case *ast.Ident:
-		return false
-	case *ast.IndexExpr:
-		return MayHaveSideEffects(expr.X) || MayHaveSideEffects(expr.Index)
-	case *ast.KeyValueExpr:
-		return MayHaveSideEffects(expr.Key) || MayHaveSideEffects(expr.Value)
-	case *ast.SelectorExpr:
-		return MayHaveSideEffects(expr.X)
-	case *ast.SliceExpr:
-		return MayHaveSideEffects(expr.X) ||
-			MayHaveSideEffects(expr.Low) ||
-			MayHaveSideEffects(expr.High) ||
-			MayHaveSideEffects(expr.Max)
-	case *ast.StarExpr:
-		return MayHaveSideEffects(expr.X)
-	case *ast.TypeAssertExpr:
-		return MayHaveSideEffects(expr.X)
-	case *ast.UnaryExpr:
-		if MayHaveSideEffects(expr.X) {
-			return true
-		}
-		return expr.Op == token.ARROW
-	case *ast.ParenExpr:
-		return MayHaveSideEffects(expr.X)
-	case nil:
-		return false
-	default:
-		panic(fmt.Sprintf("internal error: unhandled type %T", expr))
-	}
 }

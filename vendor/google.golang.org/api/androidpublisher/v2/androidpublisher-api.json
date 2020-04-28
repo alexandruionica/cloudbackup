@@ -15,7 +15,7 @@
   "description": "Accesses Android application developers' Google Play accounts.",
   "discoveryVersion": "v1",
   "documentationLink": "https://developers.google.com/android-publisher",
-  "etag": "\"9eZ1uxVRThTDhLJCZHhqs3eQWz4/_TjFdWvetKD4N1AdKqi9eovr8vY\"",
+  "etag": "\"u9GIe6H63LSGq-9_t39K2Zx_EAc/d1DsaGZzUpO_VvaChZpAEzGh6JA\"",
   "icons": {
     "x16": "https://www.google.com/images/icons/product/android-16.png",
     "x32": "https://www.google.com/images/icons/product/android-32.png"
@@ -631,7 +631,7 @@
                 "accept": [
                   "application/octet-stream"
                 ],
-                "maxSize": "2GB",
+                "maxSize": "10GB",
                 "protocols": {
                   "resumable": {
                     "multipart": true,
@@ -680,7 +680,7 @@
         "deobfuscationfiles": {
           "methods": {
             "upload": {
-              "description": "Uploads the deobfuscation file of the specified APK. If a deobfuscation file already exists, it will be replaced.",
+              "description": "Uploads the deobfuscation file of the specified APK. If a deobfuscation or symbolication file already exists, it will be replaced. See https://developer.android.com/studio/build/shrink-code to learn more about deobfuscation files.",
               "httpMethod": "POST",
               "id": "androidpublisher.edits.deobfuscationfiles.upload",
               "mediaUpload": {
@@ -715,9 +715,11 @@
                 },
                 "deobfuscationFileType": {
                   "enum": [
+                    "nativeCode",
                     "proguard"
                   ],
                   "enumDescriptions": [
+                    "",
                     ""
                   ],
                   "location": "path",
@@ -731,7 +733,7 @@
                   "type": "string"
                 },
                 "packageName": {
-                  "description": "Unique identifier of the Android app for which the deobfuscatiuon files are being uploaded; for example, \"com.spiffygame\".",
+                  "description": "Unique identifier of the Android app for which the deobfuscation files are being uploaded; for example, \"com.spiffygame\".",
                   "location": "path",
                   "required": true,
                   "type": "string"
@@ -2483,7 +2485,7 @@
       }
     }
   },
-  "revision": "20190910",
+  "revision": "20200421",
   "rootUrl": "https://www.googleapis.com/",
   "schemas": {
     "Apk": {
@@ -2951,7 +2953,7 @@
           "description": "Default price cannot be zero. In-app products can never be free. Default price is always in the developer's Checkout merchant currency."
         },
         "gracePeriod": {
-          "description": "Grace period of the subscription, specified in ISO 8601 format. It will allow developers to give their subscribers a grace period when the payment for the new recurrence period is declined. Acceptable values = \"P3D\" (three days) and \"P7D\" (seven days)",
+          "description": "Grace period of the subscription, specified in ISO 8601 format. It will allow developers to give their subscribers a grace period when the payment for the new recurrence period is declined. Acceptable values = \"P3D\" (three days), \"P7D\" (seven days), \"P14D\" (fourteen days), and \"P30D\" (thirty days)",
           "type": "string"
         },
         "listings": {
@@ -2977,10 +2979,6 @@
         "purchaseType": {
           "description": "Purchase type enum value. Unmodifiable after creation.",
           "type": "string"
-        },
-        "season": {
-          "$ref": "Season",
-          "description": "Definition of a season for a seasonal subscription. Can be defined only for yearly subscriptions."
         },
         "sku": {
           "description": "The stock-keeping-unit (SKU) of the product, unique within an app.",
@@ -3078,22 +3076,6 @@
       },
       "type": "object"
     },
-    "MonthDay": {
-      "id": "MonthDay",
-      "properties": {
-        "day": {
-          "description": "Day of a month, value in [1, 31] range. Valid range depends on the specified month.",
-          "format": "uint32",
-          "type": "integer"
-        },
-        "month": {
-          "description": "Month of a year. e.g. 1 = JAN, 2 = FEB etc.",
-          "format": "uint32",
-          "type": "integer"
-        }
-      },
-      "type": "object"
-    },
     "PageInfo": {
       "id": "PageInfo",
       "properties": {
@@ -3166,20 +3148,6 @@
       },
       "type": "object"
     },
-    "Prorate": {
-      "id": "Prorate",
-      "properties": {
-        "defaultPrice": {
-          "$ref": "Price",
-          "description": "Default price cannot be zero and must be less than the full subscription price. Default price is always in the developer's Checkout merchant currency. Targeted countries have their prices set automatically based on the default_price."
-        },
-        "start": {
-          "$ref": "MonthDay",
-          "description": "Defines the first day on which the price takes effect."
-        }
-      },
-      "type": "object"
-    },
     "Review": {
       "id": "Review",
       "properties": {
@@ -3248,27 +3216,6 @@
       "properties": {
         "result": {
           "$ref": "ReviewReplyResult"
-        }
-      },
-      "type": "object"
-    },
-    "Season": {
-      "id": "Season",
-      "properties": {
-        "end": {
-          "$ref": "MonthDay",
-          "description": "Inclusive end date of the recurrence period."
-        },
-        "prorations": {
-          "description": "Optionally present list of prorations for the season. Each proration is a one-off discounted entry into a subscription. Each proration contains the first date on which the discount is available and the new pricing information.",
-          "items": {
-            "$ref": "Prorate"
-          },
-          "type": "array"
-        },
-        "start": {
-          "$ref": "MonthDay",
-          "description": "Inclusive start date of the recurrence period."
         }
       },
       "type": "object"
@@ -3404,7 +3351,7 @@
           "type": "string"
         },
         "purchaseType": {
-          "description": "The type of purchase of the subscription. This field is only set if this purchase was not made using the standard in-app billing flow. Possible values are:  \n- Test (i.e. purchased from a license testing account)",
+          "description": "The type of purchase of the subscription. This field is only set if this purchase was not made using the standard in-app billing flow. Possible values are:  \n- Test (i.e. purchased from a license testing account) \n- Promo (i.e. purchased using a promo code)",
           "format": "int32",
           "type": "integer"
         },

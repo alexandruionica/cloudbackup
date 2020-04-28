@@ -7,6 +7,6 @@ require (
 	github.com/google/renameio v0.1.0
 	github.com/kisielk/gotool v1.0.0
 	github.com/rogpeppe/go-internal v1.3.0
-	golang.org/x/mod v0.0.0-20190513183733-4bf6d317e70e
-	golang.org/x/tools v0.0.0-20190826182127-07722704da13
+	golang.org/x/mod v0.2.0
+	golang.org/x/tools v0.0.0-20200427214658-4697a2867c88
 )

@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -56,6 +56,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -72,6 +73,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "firebase:v1beta1"
 const apiName = "firebase"
@@ -103,6 +105,7 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -428,9 +431,17 @@ type AnalyticsDetails struct {
 	// associated with the specified `FirebaseProject`.
 	AnalyticsProperty *AnalyticsProperty `json:"analyticsProperty,omitempty"`
 
-	// StreamMappings: A map of `AppId` to `StreamId` for each Firebase App
-	// in the specified
-	// `FirebaseProject`. Each `AppId` and `StreamId` appears only once.
+	// StreamMappings: For Android Apps and iOS Apps: A map of `app` to
+	// `streamId` for each
+	// Firebase App in the specified `FirebaseProject`. Each `app`
+	// and
+	// `streamId` appears only once.<br>
+	// <br>
+	// For Web Apps: A map of `app` to `streamId` and `measurementId` for
+	// each
+	// Firebase App in the specified `FirebaseProject`. Each `app`,
+	// `streamId`,
+	// and `measurementId` appears only once.
 	StreamMappings []*StreamMapping `json:"streamMappings,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -1266,16 +1277,66 @@ func (s *ListWebAppsResponse) MarshalJSON() ([]byte, error) {
 
 // Location: A GCP resource location that can be selected for a Project.
 type Location struct {
-	// LocationId: The ID of the default GCP resource location. It must be
-	// one of the
-	// available
+	// Features: Products and services that are available in the GCP
+	// resource location.
+	//
+	// Possible values:
+	//   "LOCATION_FEATURE_UNSPECIFIED" - Used internally for distinguishing
+	// unset values and is not intended for
+	// external use.
+	//   "FIRESTORE" - This location supports Cloud Firestore database
+	// instances.
+	// <br>
+	// App Engine is available in this location, so it can be a
+	// project's
+	// [default GCP
+	// resource
+	// location](//firebase.google.com/docs/projects/locations#defau
+	// lt-cloud-location).
+	//   "DEFAULT_STORAGE" - This location supports default Cloud Storage
+	// buckets.
+	// <br>
+	// App Engine is available in this location, so it can be a
+	// project's
+	// [default GCP
+	// resource
+	// location](//firebase.google.com/docs/projects/locations#defau
+	// lt-cloud-location).
+	//   "FUNCTIONS" - Cloud Functions for Firebase is available in this
+	// location.
+	Features []string `json:"features,omitempty"`
+
+	// LocationId: The ID of the GCP resource location. It will be one of
+	// the available
 	// [GCP
 	// resource
-	// locations](https://firebase.google.com/docs/projects/location
-	// s).
+	// locations](https://firebase.google.com/docs/projects/loc
+	// ations#types).
 	LocationId string `json:"locationId,omitempty"`
 
-	// ForceSendFields is a list of field names (e.g. "LocationId") to
+	// Type: Indicates whether the GCP resource location is a [regional
+	// or
+	// multi-regional
+	// location](https://firebase.google.com/docs/projects/
+	// locations#types)
+	// for data replication.
+	//
+	// Possible values:
+	//   "LOCATION_TYPE_UNSPECIFIED" - Used internally for distinguishing
+	// unset values and is not intended for
+	// external use.
+	//   "REGIONAL" - The location is a regional location.
+	// <br>Data in a regional location is replicated in multiple zones
+	// within a
+	// region.
+	//   "MULTI_REGIONAL" - The location is a multi-regional
+	// location.
+	// <br>Data in a multi-region location is replicated in multiple
+	// regions.
+	// Within each region, data is replicated in multiple zones.
+	Type string `json:"type,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Features") to
 	// unconditionally include in API requests. By default, fields with
 	// empty values are omitted from API requests. However, any non-pointer,
 	// non-interface field appearing in ForceSendFields will be sent to the
@@ -1283,7 +1344,7 @@ type Location struct {
 	// used to include empty fields in Patch requests.
 	ForceSendFields []string `json:"-"`
 
-	// NullFields is a list of field names (e.g. "LocationId") to include in
+	// NullFields is a list of field names (e.g. "Features") to include in
 	// API requests with the JSON null value. By default, fields with empty
 	// values are omitted from API requests. However, any field with an
 	// empty value appearing in NullFields will be sent to the server as
@@ -1697,16 +1758,28 @@ type StreamMapping struct {
 	// with the
 	// Google Analytics data stream, in the
 	// format:
-	// <br><code>projects/<var>projectId</var>/iosApps/<var>appId</va
-	// r></code>
+	// <br><code>projects/<var>projectId</var>/androidApps/<var>appId
+	// </var></code>
 	// or
-	// <br><code>projects/<var>projectId</var>/androidApps/<var>
-	// appId</var></code>
+	// <code>projects/<var>projectId</var>/iosApps/<var>appI
+	// d</var></code>
+	// or
+	// <code>projects/<var>projectId</var>/webApps/<var>app
+	// Id</var></code>
 	App string `json:"app,omitempty"`
 
-	// MeasurementId: Analytics-provided measurement ID, for use in the
-	// gtag.js library.
-	// Will only be present for Firebase Web Apps.
+	// MeasurementId: Applicable for Firebase Web Apps only.<br>
+	// <br>The unique Google-assigned identifier of the Google Analytics
+	// web
+	// stream associated with the Firebase Web App. Firebase SDKs use this
+	// ID to
+	// interact with Google Analytics APIs.
+	// <br>
+	// <br>Learn more about this ID and Google Analytics web streams in
+	// the
+	// [Analytics
+	// documentation](https://support.google.com/analytics/top
+	// ic/9303475).
 	MeasurementId string `json:"measurementId,omitempty"`
 
 	// StreamId: The unique Google-assigned identifier of the Google
@@ -1880,9 +1953,27 @@ type WebAppConfig struct {
 	// r you add Firebase services to your project.
 	LocationId string `json:"locationId,omitempty"`
 
-	// MeasurementId: Analytics-provided measurement ID, for use in the
-	// gtag.js library.
-	// Will only be present for Firebase Web Apps.
+	// MeasurementId: The unique Google-assigned identifier of the Google
+	// Analytics web stream
+	// associated with the Firebase Web App. Firebase SDKs use this ID to
+	// interact
+	// with Google Analytics APIs.
+	// <br>
+	// <br>This field is only present if the App is linked to a web stream
+	// in a
+	// Google Analytics App + Web property. Learn more about this ID and
+	// Google
+	// Analytics web streams in the
+	// [Analytics
+	// documentation](https://support.google.com/analytics/topic/9
+	// 303475).
+	// <br>
+	// <br>To generate a `measurementId` and link the Web App with a
+	// Google
+	// Analytics web stream,
+	// call
+	// [`AddGoogleAnalytics`](../../v1beta1/projects/addGoogleAnalytics)
+	// .
 	MeasurementId string `json:"measurementId,omitempty"`
 
 	// MessagingSenderId: The sender ID for use with Firebase Cloud
@@ -2019,7 +2110,7 @@ func (c *AvailableProjectsListCall) Header() http.Header {
 
 func (c *AvailableProjectsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2190,7 +2281,7 @@ func (c *OperationsGetCall) Header() http.Header {
 
 func (c *OperationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2263,7 +2354,7 @@ func (c *OperationsGetCall) Do(opts ...googleapi.CallOption) (*Operation, error)
 	//     "name": {
 	//       "description": "The name of the operation resource.",
 	//       "location": "path",
-	//       "pattern": "^operations/.+$",
+	//       "pattern": "^operations/.*$",
 	//       "required": true,
 	//       "type": "string"
 	//     }
@@ -2372,7 +2463,7 @@ func (c *ProjectsAddFirebaseCall) Header() http.Header {
 
 func (c *ProjectsAddFirebaseCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2484,29 +2575,38 @@ type ProjectsAddGoogleAnalyticsCall struct {
 // <br>
 // <br>Using this call, you can either:
 // <ul>
-// <li>Provision a new Google Analytics property and associate the
-// new
-// property with your `FirebaseProject`.</li>
-// <li>Associate an existing Google Analytics property with
-// your
-// `FirebaseProject`.</li>
+// <li>Specify an `analyticsAccountId` to provision a new Google
+// Analytics
+// property within the specified account and associate the new property
+// with
+// your `FirebaseProject`.</li>
+// <li>Specify an existing `analyticsPropertyId` to associate the
+// property
+// with your `FirebaseProject`.</li>
 // </ul>
 // <br>
 // Note that when you call `AddGoogleAnalytics`:
-// <ul>
-// <li>Any Firebase Apps already in your `FirebaseProject`
+// <ol>
+// <li>The first check determines if any existing data streams in
+// the
+// Google Analytics property correspond to any existing Firebase Apps in
+// your
+// `FirebaseProject` (based on the `packageName` or `bundleId`
+// associated with
+// the data stream). Then, as applicable, the data streams and apps
 // are
-// automatically provisioned as new <em>data streams</em> in the
-// Google
-// Analytics property.</li>
-// <li>Any <em>data streams</em> already in the Google Analytics
-// property are
-// automatically associated with their corresponding Firebase Apps
-// (only
-// applies when an app's `packageName` or `bundleId` match those for
-// an
-// existing data stream).</li>
-// </ul>
+// linked. Note that this auto-linking only applies to Android Apps and
+// iOS
+// Apps.</li>
+// <li>If no corresponding data streams are found for your Firebase
+// Apps,
+// new data streams are provisioned in the Google Analytics property
+// for each of your Firebase Apps. Note that a new data stream is
+// always
+// provisioned for a Web App even if it was previously associated with
+// a
+// data stream in your Analytics property.</li>
+// </ol>
 // Learn more about the hierarchy and structure of Google
 // Analytics
 // accounts in
@@ -2586,7 +2686,7 @@ func (c *ProjectsAddGoogleAnalyticsCall) Header() http.Header {
 
 func (c *ProjectsAddGoogleAnalyticsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2650,7 +2750,7 @@ func (c *ProjectsAddGoogleAnalyticsCall) Do(opts ...googleapi.CallOption) (*Oper
 	}
 	return ret, nil
 	// {
-	//   "description": "Links a FirebaseProject with an existing\n[Google Analytics account](http://www.google.com/analytics/).\n\u003cbr\u003e\n\u003cbr\u003eUsing this call, you can either:\n\u003cul\u003e\n\u003cli\u003eProvision a new Google Analytics property and associate the new\nproperty with your `FirebaseProject`.\u003c/li\u003e\n\u003cli\u003eAssociate an existing Google Analytics property with your\n`FirebaseProject`.\u003c/li\u003e\n\u003c/ul\u003e\n\u003cbr\u003e\nNote that when you call `AddGoogleAnalytics`:\n\u003cul\u003e\n\u003cli\u003eAny Firebase Apps already in your `FirebaseProject` are\nautomatically provisioned as new \u003cem\u003edata streams\u003c/em\u003e in the Google\nAnalytics property.\u003c/li\u003e\n\u003cli\u003eAny \u003cem\u003edata streams\u003c/em\u003e already in the Google Analytics property are\nautomatically associated with their corresponding Firebase Apps (only\napplies when an app's `packageName` or `bundleId` match those for an\nexisting data stream).\u003c/li\u003e\n\u003c/ul\u003e\nLearn more about the hierarchy and structure of Google Analytics\naccounts in the\n[Analytics\ndocumentation](https://support.google.com/analytics/answer/9303323).\n\u003cbr\u003e\n\u003cbr\u003eThe result of this call is an [`Operation`](../../v1beta1/operations).\nPoll the `Operation` to track the provisioning process by calling\nGetOperation until\n[`done`](../../v1beta1/operations#Operation.FIELDS.done) is `true`. When\n`done` is `true`, the `Operation` has either succeeded or failed. If the\n`Operation` succeeded, its\n[`response`](../../v1beta1/operations#Operation.FIELDS.response) is set to\nan AnalyticsDetails; if the `Operation` failed, its\n[`error`](../../v1beta1/operations#Operation.FIELDS.error) is set to a\ngoogle.rpc.Status.\n\u003cbr\u003e\n\u003cbr\u003eTo call `AddGoogleAnalytics`, a member must be an Owner for\nthe existing `FirebaseProject` and have the\n[`Edit` permission](https://support.google.com/analytics/answer/2884495)\nfor the Google Analytics account.\n\u003cbr\u003e\n\u003cbr\u003eIf a `FirebaseProject` already has Google Analytics enabled, and you\ncall `AddGoogleAnalytics` using an `analyticsPropertyId` that's different\nfrom the currently associated property, then the call will fail. Analytics\nmay have already been enabled in the Firebase console or by specifying\n`timeZone` and `regionCode` in the call to\n[`AddFirebase`](../../v1beta1/projects/addFirebase).",
+	//   "description": "Links a FirebaseProject with an existing\n[Google Analytics account](http://www.google.com/analytics/).\n\u003cbr\u003e\n\u003cbr\u003eUsing this call, you can either:\n\u003cul\u003e\n\u003cli\u003eSpecify an `analyticsAccountId` to provision a new Google Analytics\nproperty within the specified account and associate the new property with\nyour `FirebaseProject`.\u003c/li\u003e\n\u003cli\u003eSpecify an existing `analyticsPropertyId` to associate the property\nwith your `FirebaseProject`.\u003c/li\u003e\n\u003c/ul\u003e\n\u003cbr\u003e\nNote that when you call `AddGoogleAnalytics`:\n\u003col\u003e\n\u003cli\u003eThe first check determines if any existing data streams in the\nGoogle Analytics property correspond to any existing Firebase Apps in your\n`FirebaseProject` (based on the `packageName` or `bundleId` associated with\nthe data stream). Then, as applicable, the data streams and apps are\nlinked. Note that this auto-linking only applies to Android Apps and iOS\nApps.\u003c/li\u003e\n\u003cli\u003eIf no corresponding data streams are found for your Firebase Apps,\nnew data streams are provisioned in the Google Analytics property\nfor each of your Firebase Apps. Note that a new data stream is always\nprovisioned for a Web App even if it was previously associated with a\ndata stream in your Analytics property.\u003c/li\u003e\n\u003c/ol\u003e\nLearn more about the hierarchy and structure of Google Analytics\naccounts in the\n[Analytics\ndocumentation](https://support.google.com/analytics/answer/9303323).\n\u003cbr\u003e\n\u003cbr\u003eThe result of this call is an [`Operation`](../../v1beta1/operations).\nPoll the `Operation` to track the provisioning process by calling\nGetOperation until\n[`done`](../../v1beta1/operations#Operation.FIELDS.done) is `true`. When\n`done` is `true`, the `Operation` has either succeeded or failed. If the\n`Operation` succeeded, its\n[`response`](../../v1beta1/operations#Operation.FIELDS.response) is set to\nan AnalyticsDetails; if the `Operation` failed, its\n[`error`](../../v1beta1/operations#Operation.FIELDS.error) is set to a\ngoogle.rpc.Status.\n\u003cbr\u003e\n\u003cbr\u003eTo call `AddGoogleAnalytics`, a member must be an Owner for\nthe existing `FirebaseProject` and have the\n[`Edit` permission](https://support.google.com/analytics/answer/2884495)\nfor the Google Analytics account.\n\u003cbr\u003e\n\u003cbr\u003eIf a `FirebaseProject` already has Google Analytics enabled, and you\ncall `AddGoogleAnalytics` using an `analyticsPropertyId` that's different\nfrom the currently associated property, then the call will fail. Analytics\nmay have already been enabled in the Firebase console or by specifying\n`timeZone` and `regionCode` in the call to\n[`AddFirebase`](../../v1beta1/projects/addFirebase).",
 	//   "flatPath": "v1beta1/projects/{projectsId}:addGoogleAnalytics",
 	//   "httpMethod": "POST",
 	//   "id": "firebase.projects.addGoogleAnalytics",
@@ -2737,7 +2837,7 @@ func (c *ProjectsGetCall) Header() http.Header {
 
 func (c *ProjectsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2891,7 +2991,7 @@ func (c *ProjectsGetAdminSdkConfigCall) Header() http.Header {
 
 func (c *ProjectsGetAdminSdkConfigCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3044,7 +3144,7 @@ func (c *ProjectsGetAnalyticsDetailsCall) Header() http.Header {
 
 func (c *ProjectsGetAnalyticsDetailsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3230,7 +3330,7 @@ func (c *ProjectsListCall) Header() http.Header {
 
 func (c *ProjectsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3404,7 +3504,7 @@ func (c *ProjectsPatchCall) Header() http.Header {
 
 func (c *ProjectsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3533,7 +3633,13 @@ type ProjectsRemoveAnalyticsCall struct {
 // calling
 // [`AddGoogleAnalytics`](../../v1beta1/projects/addGoogleAnal
 // ytics) and
-// specifying the same `analyticsPropertyId`.
+// specifying the same `analyticsPropertyId`. For Android Apps and iOS
+// Apps,
+// this call re-links data streams with their corresponding apps.
+// However,
+// for Web Apps, this call provisions a <em>new</em> data stream for
+// each Web
+// App.
 // <br>
 // <br>To call `RemoveAnalytics`, a member must be an Owner for
 // the `FirebaseProject`.
@@ -3571,7 +3677,7 @@ func (c *ProjectsRemoveAnalyticsCall) Header() http.Header {
 
 func (c *ProjectsRemoveAnalyticsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3635,7 +3741,7 @@ func (c *ProjectsRemoveAnalyticsCall) Do(opts ...googleapi.CallOption) (*Empty, 
 	}
 	return ret, nil
 	// {
-	//   "description": "Unlinks the specified `FirebaseProject` from its Google Analytics account.\n\u003cbr\u003e\n\u003cbr\u003eThis call removes the association of the specified `FirebaseProject`\nwith its current Google Analytics property. However, this call does not\ndelete the Google Analytics resources, such as the Google Analytics\nproperty or any data streams.\n\u003cbr\u003e\n\u003cbr\u003eThese resources may be re-associated later to the `FirebaseProject` by\ncalling\n[`AddGoogleAnalytics`](../../v1beta1/projects/addGoogleAnalytics) and\nspecifying the same `analyticsPropertyId`.\n\u003cbr\u003e\n\u003cbr\u003eTo call `RemoveAnalytics`, a member must be an Owner for\nthe `FirebaseProject`.",
+	//   "description": "Unlinks the specified `FirebaseProject` from its Google Analytics account.\n\u003cbr\u003e\n\u003cbr\u003eThis call removes the association of the specified `FirebaseProject`\nwith its current Google Analytics property. However, this call does not\ndelete the Google Analytics resources, such as the Google Analytics\nproperty or any data streams.\n\u003cbr\u003e\n\u003cbr\u003eThese resources may be re-associated later to the `FirebaseProject` by\ncalling\n[`AddGoogleAnalytics`](../../v1beta1/projects/addGoogleAnalytics) and\nspecifying the same `analyticsPropertyId`. For Android Apps and iOS Apps,\nthis call re-links data streams with their corresponding apps. However,\nfor Web Apps, this call provisions a \u003cem\u003enew\u003c/em\u003e data stream for each Web\nApp.\n\u003cbr\u003e\n\u003cbr\u003eTo call `RemoveAnalytics`, a member must be an Owner for\nthe `FirebaseProject`.",
 	//   "flatPath": "v1beta1/projects/{projectsId}:removeAnalytics",
 	//   "httpMethod": "POST",
 	//   "id": "firebase.projects.removeAnalytics",
@@ -3659,7 +3765,8 @@ func (c *ProjectsRemoveAnalyticsCall) Do(opts ...googleapi.CallOption) (*Empty, 
 	//     "$ref": "Empty"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-platform"
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/firebase"
 	//   ]
 	// }
 
@@ -3750,7 +3857,7 @@ func (c *ProjectsSearchAppsCall) Header() http.Header {
 
 func (c *ProjectsSearchAppsCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3926,7 +4033,7 @@ func (c *ProjectsAndroidAppsCreateCall) Header() http.Header {
 
 func (c *ProjectsAndroidAppsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -3999,7 +4106,7 @@ func (c *ProjectsAndroidAppsCreateCall) Do(opts ...googleapi.CallOption) (*Opera
 	//   ],
 	//   "parameters": {
 	//     "parent": {
-	//       "description": "The parent Project for which to list Apps, in the format:\n\u003cbr\u003e\u003ccode\u003eprojects/\u003cvar\u003eprojectId\u003c/var\u003e\u003c/code\u003e",
+	//       "description": "The parent Project in which to create an App, in the format:\n\u003cbr\u003e\u003ccode\u003eprojects/\u003cvar\u003eprojectId\u003c/var\u003e\u003c/code\u003e",
 	//       "location": "path",
 	//       "pattern": "^projects/[^/]+$",
 	//       "required": true,
@@ -4076,7 +4183,7 @@ func (c *ProjectsAndroidAppsGetCall) Header() http.Header {
 
 func (c *ProjectsAndroidAppsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4225,7 +4332,7 @@ func (c *ProjectsAndroidAppsGetConfigCall) Header() http.Header {
 
 func (c *ProjectsAndroidAppsGetConfigCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4308,7 +4415,10 @@ func (c *ProjectsAndroidAppsGetConfigCall) Do(opts ...googleapi.CallOption) (*An
 	//     "$ref": "AndroidAppConfig"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-platform"
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/cloud-platform.read-only",
+	//     "https://www.googleapis.com/auth/firebase",
+	//     "https://www.googleapis.com/auth/firebase.readonly"
 	//   ]
 	// }
 
@@ -4396,7 +4506,7 @@ func (c *ProjectsAndroidAppsListCall) Header() http.Header {
 
 func (c *ProjectsAndroidAppsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4578,7 +4688,7 @@ func (c *ProjectsAndroidAppsPatchCall) Header() http.Header {
 
 func (c *ProjectsAndroidAppsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4725,7 +4835,7 @@ func (c *ProjectsAndroidAppsShaCreateCall) Header() http.Header {
 
 func (c *ProjectsAndroidAppsShaCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -4864,7 +4974,7 @@ func (c *ProjectsAndroidAppsShaDeleteCall) Header() http.Header {
 
 func (c *ProjectsAndroidAppsShaDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5008,7 +5118,7 @@ func (c *ProjectsAndroidAppsShaListCall) Header() http.Header {
 
 func (c *ProjectsAndroidAppsShaListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5115,30 +5225,33 @@ type ProjectsAvailableLocationsListCall struct {
 // locations for
 // the specified Project (including a FirebaseProject).
 // <br>
-// <br>The default GCP resource location of a project defines the
-// geographical
-// location where project resources, such as Cloud Firestore, will
-// be
-// provisioned by default.
+// <br>One of these locations can be selected as the Project's
+// [_default_ GCP
+// resource
+// location](https://firebase.google.com/docs/projects/locations),
+// which is the geographical location where project resources, such as
+// Cloud
+// Firestore, will be provisioned by default. However, if the default
+// GCP
+// resource location has already been set for the Project, then this
+// setting
+// cannot be changed.
 // <br>
-// <br>The returned list are the available
-// [GCP
-// resource
-// locations](https://firebase.google.com/docs/projects/location
-// s). <br>
-// <br>This call checks for any location restrictions for the
-// specified
-// Project and, thus, might return a subset of all possible GCP
-// resource
-// locations. To list all GCP resource locations (regardless of
-// any
-// restrictions), call the endpoint without specifying a `projectId`
+// <br>This call checks for any
+// possible
+// [location
+// restrictions](https://cloud.google.com/resource-man
+// ager/docs/organization-policy/defining-locations)
+// for the specified Project and, thus, might return a subset of all
+// possible
+// GCP resource locations. To list all GCP resource locations
+// (regardless of
+// any restrictions), call the endpoint without specifying a `projectId`
 // (that
 // is,
 // `/v1beta1/{parent=projects/-}/listAvailableLocations`).
 // <br>
-// <br>T
-// o call `ListAvailableLocations` with a specified project, a
+// <br>To call `ListAvailableLocations` with a specified project, a
 // member
 // must be at minimum a Viewer of the project. Calls without a
 // specified
@@ -5208,7 +5321,7 @@ func (c *ProjectsAvailableLocationsListCall) Header() http.Header {
 
 func (c *ProjectsAvailableLocationsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5270,7 +5383,7 @@ func (c *ProjectsAvailableLocationsListCall) Do(opts ...googleapi.CallOption) (*
 	}
 	return ret, nil
 	// {
-	//   "description": "Returns a list of valid Google Cloud Platform (GCP) resource locations for\nthe specified Project (including a FirebaseProject).\n\u003cbr\u003e\n\u003cbr\u003eThe default GCP resource location of a project defines the geographical\nlocation where project resources, such as Cloud Firestore, will be\nprovisioned by default.\n\u003cbr\u003e\n\u003cbr\u003eThe returned list are the available\n[GCP resource\nlocations](https://firebase.google.com/docs/projects/locations). \u003cbr\u003e\n\u003cbr\u003eThis call checks for any location restrictions for the specified\nProject and, thus, might return a subset of all possible GCP resource\nlocations. To list all GCP resource locations (regardless of any\nrestrictions), call the endpoint without specifying a `projectId` (that is,\n`/v1beta1/{parent=projects/-}/listAvailableLocations`).\n\u003cbr\u003e\n\u003cbr\u003eTo call `ListAvailableLocations` with a specified project, a member\nmust be at minimum a Viewer of the project. Calls without a specified\nproject do not require any specific project permissions.",
+	//   "description": "Returns a list of valid Google Cloud Platform (GCP) resource locations for\nthe specified Project (including a FirebaseProject).\n\u003cbr\u003e\n\u003cbr\u003eOne of these locations can be selected as the Project's [_default_ GCP\nresource location](https://firebase.google.com/docs/projects/locations),\nwhich is the geographical location where project resources, such as Cloud\nFirestore, will be provisioned by default. However, if the default GCP\nresource location has already been set for the Project, then this setting\ncannot be changed.\n\u003cbr\u003e\n\u003cbr\u003eThis call checks for any possible\n[location\nrestrictions](https://cloud.google.com/resource-manager/docs/organization-policy/defining-locations)\nfor the specified Project and, thus, might return a subset of all possible\nGCP resource locations. To list all GCP resource locations (regardless of\nany restrictions), call the endpoint without specifying a `projectId` (that\nis, `/v1beta1/{parent=projects/-}/listAvailableLocations`).\n\u003cbr\u003e\n\u003cbr\u003eTo call `ListAvailableLocations` with a specified project, a member\nmust be at minimum a Viewer of the project. Calls without a specified\nproject do not require any specific project permissions.",
 	//   "flatPath": "v1beta1/projects/{projectsId}/availableLocations",
 	//   "httpMethod": "GET",
 	//   "id": "firebase.projects.availableLocations.list",
@@ -5440,7 +5553,7 @@ func (c *ProjectsDefaultLocationFinalizeCall) Header() http.Header {
 
 func (c *ProjectsDefaultLocationFinalizeCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5528,7 +5641,8 @@ func (c *ProjectsDefaultLocationFinalizeCall) Do(opts ...googleapi.CallOption) (
 	//     "$ref": "Operation"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-platform"
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/firebase"
 	//   ]
 	// }
 
@@ -5586,7 +5700,7 @@ func (c *ProjectsIosAppsCreateCall) Header() http.Header {
 
 func (c *ProjectsIosAppsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5659,7 +5773,7 @@ func (c *ProjectsIosAppsCreateCall) Do(opts ...googleapi.CallOption) (*Operation
 	//   ],
 	//   "parameters": {
 	//     "parent": {
-	//       "description": "The parent Project for which to list Apps, in the format:\n\u003cbr\u003e\u003ccode\u003eprojects/\u003cvar\u003eprojectId\u003c/var\u003e\u003c/code\u003e",
+	//       "description": "The parent Project in which to create an App, in the format:\n\u003cbr\u003e\u003ccode\u003eprojects/\u003cvar\u003eprojectId\u003c/var\u003e\u003c/code\u003e",
 	//       "location": "path",
 	//       "pattern": "^projects/[^/]+$",
 	//       "required": true,
@@ -5736,7 +5850,7 @@ func (c *ProjectsIosAppsGetCall) Header() http.Header {
 
 func (c *ProjectsIosAppsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5884,7 +5998,7 @@ func (c *ProjectsIosAppsGetConfigCall) Header() http.Header {
 
 func (c *ProjectsIosAppsGetConfigCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -5967,7 +6081,10 @@ func (c *ProjectsIosAppsGetConfigCall) Do(opts ...googleapi.CallOption) (*IosApp
 	//     "$ref": "IosAppConfig"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-platform"
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/cloud-platform.read-only",
+	//     "https://www.googleapis.com/auth/firebase",
+	//     "https://www.googleapis.com/auth/firebase.readonly"
 	//   ]
 	// }
 
@@ -6055,7 +6172,7 @@ func (c *ProjectsIosAppsListCall) Header() http.Header {
 
 func (c *ProjectsIosAppsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6237,7 +6354,7 @@ func (c *ProjectsIosAppsPatchCall) Header() http.Header {
 
 func (c *ProjectsIosAppsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6390,7 +6507,7 @@ func (c *ProjectsWebAppsCreateCall) Header() http.Header {
 
 func (c *ProjectsWebAppsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6463,7 +6580,7 @@ func (c *ProjectsWebAppsCreateCall) Do(opts ...googleapi.CallOption) (*Operation
 	//   ],
 	//   "parameters": {
 	//     "parent": {
-	//       "description": "The parent Project for which to list Apps, in the format:\n\u003cbr\u003e\u003ccode\u003eprojects/\u003cvar\u003eprojectId\u003c/var\u003e\u003c/code\u003e",
+	//       "description": "The parent Project in which to create an App, in the format:\n\u003cbr\u003e\u003ccode\u003eprojects/\u003cvar\u003eprojectId\u003c/var\u003e\u003c/code\u003e",
 	//       "location": "path",
 	//       "pattern": "^projects/[^/]+$",
 	//       "required": true,
@@ -6540,7 +6657,7 @@ func (c *ProjectsWebAppsGetCall) Header() http.Header {
 
 func (c *ProjectsWebAppsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6688,7 +6805,7 @@ func (c *ProjectsWebAppsGetConfigCall) Header() http.Header {
 
 func (c *ProjectsWebAppsGetConfigCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -6771,7 +6888,10 @@ func (c *ProjectsWebAppsGetConfigCall) Do(opts ...googleapi.CallOption) (*WebApp
 	//     "$ref": "WebAppConfig"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-platform"
+	//     "https://www.googleapis.com/auth/cloud-platform",
+	//     "https://www.googleapis.com/auth/cloud-platform.read-only",
+	//     "https://www.googleapis.com/auth/firebase",
+	//     "https://www.googleapis.com/auth/firebase.readonly"
 	//   ]
 	// }
 
@@ -6859,7 +6979,7 @@ func (c *ProjectsWebAppsListCall) Header() http.Header {
 
 func (c *ProjectsWebAppsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -7041,7 +7161,7 @@ func (c *ProjectsWebAppsPatchCall) Header() http.Header {
 
 func (c *ProjectsWebAppsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}

@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -25,7 +25,7 @@
 //
 // By default, all available scopes (see "Constants") are used to authenticate. To restrict scopes, use option.WithScopes:
 //
-//   cloudidentityService, err := cloudidentity.NewService(ctx, option.WithScopes(cloudidentity.CloudIdentityGroupsReadonlyScope))
+//   cloudidentityService, err := cloudidentity.NewService(ctx, option.WithScopes(cloudidentity.CloudPlatformScope))
 //
 // To use an API key for authentication (note: some APIs do not support API keys), use option.WithAPIKey:
 //
@@ -56,6 +56,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -72,6 +73,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "cloudidentity:v1beta1"
 const apiName = "cloudidentity"
@@ -87,6 +89,9 @@ const (
 	// See any Cloud Identity Groups that you can access, including group
 	// members and their emails
 	CloudIdentityGroupsReadonlyScope = "https://www.googleapis.com/auth/cloud-identity.groups.readonly"
+
+	// View and manage your data across Google Cloud Platform services
+	CloudPlatformScope = "https://www.googleapis.com/auth/cloud-platform"
 )
 
 // NewService creates a new Service.
@@ -94,9 +99,11 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	scopesOption := option.WithScopes(
 		"https://www.googleapis.com/auth/cloud-identity.groups",
 		"https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+		"https://www.googleapis.com/auth/cloud-platform",
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -161,26 +168,688 @@ type GroupsMembershipsService struct {
 	s *Service
 }
 
-// EntityKey: An EntityKey uniquely identifies an Entity. Namespaces are
-// used to provide
-// isolation for ids.  A single Id can be reused across namespaces but
-// the
-// combination of a namespace and an id must be unique.
+// AndroidAttributes: Resource representing the Android specific
+// attributes of a Device.
+type AndroidAttributes struct {
+	// EnabledUnknownSources: Whether applications from unknown sources can
+	// be installed on device.
+	EnabledUnknownSources bool `json:"enabledUnknownSources,omitempty"`
+
+	// OwnerProfileAccount: Whether this account is on an owner/primary
+	// profile.
+	// For phones, only true for owner profiles. Android 4+ devices
+	// can have secondary or restricted user profiles.
+	OwnerProfileAccount bool `json:"ownerProfileAccount,omitempty"`
+
+	// OwnershipPrivilege: Ownership privileges on device.
+	//
+	// Possible values:
+	//   "OWNERSHIP_PRIVILEGE_UNSPECIFIED" - Ownership privilege is not set.
+	//   "DEVICE_ADMINISTRATOR" - Active device administrator privileges on
+	// the device.
+	//   "PROFILE_OWNER" - Profile Owner privileges.
+	// The account is in a managed corporate profile.
+	//   "DEVICE_OWNER" - Device Owner privileges on the device.
+	OwnershipPrivilege string `json:"ownershipPrivilege,omitempty"`
+
+	// SupportsWorkProfile: Whether device supports Android work profiles.
+	// If false, this service
+	// will not block access to corp data even if an administrator turns on
+	// the
+	// "Enforce Work Profile" policy.
+	SupportsWorkProfile bool `json:"supportsWorkProfile,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g.
+	// "EnabledUnknownSources") to unconditionally include in API requests.
+	// By default, fields with empty values are omitted from API requests.
+	// However, any non-pointer, non-interface field appearing in
+	// ForceSendFields will be sent to the server regardless of whether the
+	// field is empty or not. This may be used to include empty fields in
+	// Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "EnabledUnknownSources") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *AndroidAttributes) MarshalJSON() ([]byte, error) {
+	type NoMethod AndroidAttributes
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// ApproveDeviceUserResponse: Response message for approving the device
+// to access user data.
+type ApproveDeviceUserResponse struct {
+	// DeviceUser: Resultant DeviceUser object for the action.
+	DeviceUser *DeviceUser `json:"deviceUser,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "DeviceUser") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "DeviceUser") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ApproveDeviceUserResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod ApproveDeviceUserResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// BlockDeviceUserResponse: Response message for blocking the device
+// from accessing user data.
+type BlockDeviceUserResponse struct {
+	// DeviceUser: Resultant DeviceUser object for the action.
+	DeviceUser *DeviceUser `json:"deviceUser,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "DeviceUser") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "DeviceUser") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *BlockDeviceUserResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod BlockDeviceUserResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// CancelWipeDeviceResponse: Response message for cancelling an
+// unfinished device wipe.
+type CancelWipeDeviceResponse struct {
+	// Device: Resultant Device object for the action. Note that asset tags
+	// will not be
+	// returned in the device object.
+	Device *Device `json:"device,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Device") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Device") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *CancelWipeDeviceResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod CancelWipeDeviceResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// CancelWipeDeviceUserResponse: Response message for cancelling an
+// unfinished user account wipe.
+type CancelWipeDeviceUserResponse struct {
+	// DeviceUser: Resultant DeviceUser object for the action.
+	DeviceUser *DeviceUser `json:"deviceUser,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "DeviceUser") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "DeviceUser") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *CancelWipeDeviceUserResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod CancelWipeDeviceUserResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// ClientState: Resource representing ClientState and supports updates
+// from API users
+type ClientState struct {
+	// AssetTags: The caller can specify asset tags for this resource
+	AssetTags []string `json:"assetTags,omitempty"`
+
+	// ComplianceState: The compliance state of the resource as specified by
+	// the API client.
+	//
+	// Possible values:
+	//   "COMPLIANCE_STATE_UNSPECIFIED" - The compliance state of the
+	// resource is unknown or unspecified.
+	//   "COMPLIANT" - Device is compliant with third party policies
+	//   "NON_COMPLIANT" - Device is not compliant with third party policies
+	ComplianceState string `json:"complianceState,omitempty"`
+
+	// CreateTime: Output only. The time the client state data was created.
+	CreateTime string `json:"createTime,omitempty"`
+
+	// CustomId: This field may be used to store a unique identifier for the
+	// API resource
+	// within which these CustomAttributes are a field.
+	CustomId string `json:"customId,omitempty"`
+
+	// Etag: The token that needs to be passed back for
+	// concurrency control in updates. Token needs to be passed back
+	// in UpdateRequest
+	Etag string `json:"etag,omitempty"`
+
+	// HealthScore: The Health score of the resource
+	//
+	// Possible values:
+	//   "HEALTH_SCORE_UNSPECIFIED" - Default value
+	//   "VERY_POOR" - The object is in very poor health as defined by the
+	// caller.
+	//   "POOR" - The object is in poor health as defined by the caller.
+	//   "NEUTRAL" - The object health is neither good nor poor, as defined
+	// by the caller.
+	//   "GOOD" - The object is in good health as defined by the caller.
+	//   "VERY_GOOD" - The object is in very good health as defined by the
+	// caller.
+	HealthScore string `json:"healthScore,omitempty"`
+
+	// KeyValuePairs: The map of key-value attributes stored by callers
+	// specific to a
+	// device. The total serialized length of this map may not exceed 10KB.
+	// No
+	// limit is placed on the number of attributes in a map.
+	KeyValuePairs map[string]CustomAttributeValue `json:"keyValuePairs,omitempty"`
+
+	// LastUpdateTime: Output only. The time the client state data was last
+	// updated.
+	LastUpdateTime string `json:"lastUpdateTime,omitempty"`
+
+	// Managed: The management state of the resource as specified by the API
+	// client.
+	//
+	// Possible values:
+	//   "MANAGED_STATE_UNSPECIFIED" - The management state of the resource
+	// is unknown or unspecified.
+	//   "MANAGED" - The resource is managed.
+	//   "UNMANAGED" - The resource is not managed.
+	Managed string `json:"managed,omitempty"`
+
+	// Name: Output only. [Resource
+	// name](https://cloud.google.com/apis/design/resource_names) of
+	// the ClientState in
+	// format:
+	// `devices/{device_id}/deviceUsers/{device_user_id}/clientState/
+	// {partner_id}`,
+	// where partner_id corresponds to the partner storing the data.
+	Name string `json:"name,omitempty"`
+
+	// OwnerType: Output only. The owner of the ClientState
+	//
+	// Possible values:
+	//   "OWNER_TYPE_UNSPECIFIED" - Unknown owner type
+	//   "OWNER_TYPE_CUSTOMER" - Customer is the owner
+	//   "OWNER_TYPE_PARTNER" - Partner is the owner
+	OwnerType string `json:"ownerType,omitempty"`
+
+	// ScoreReason: A descriptive cause of the health score.
+	ScoreReason string `json:"scoreReason,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AssetTags") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AssetTags") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ClientState) MarshalJSON() ([]byte, error) {
+	type NoMethod ClientState
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// CustomAttributeValue: Additional custom attribute values may be one
+// of these types
+type CustomAttributeValue struct {
+	// BoolValue: Represents a boolean value.
+	BoolValue bool `json:"boolValue,omitempty"`
+
+	// NumberValue: Represents a double value.
+	NumberValue float64 `json:"numberValue,omitempty"`
+
+	// StringValue: Represents a string value.
+	StringValue string `json:"stringValue,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "BoolValue") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "BoolValue") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *CustomAttributeValue) MarshalJSON() ([]byte, error) {
+	type NoMethod CustomAttributeValue
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+func (s *CustomAttributeValue) UnmarshalJSON(data []byte) error {
+	type NoMethod CustomAttributeValue
+	var s1 struct {
+		NumberValue gensupport.JSONFloat64 `json:"numberValue"`
+		*NoMethod
+	}
+	s1.NoMethod = (*NoMethod)(s)
+	if err := json.Unmarshal(data, &s1); err != nil {
+		return err
+	}
+	s.NumberValue = float64(s1.NumberValue)
+	return nil
+}
+
+// Device: Represents a Device known to Google Cloud, independent of the
+// device
+// ownership, type, and whether it is assigned or in use by a user.
+type Device struct {
+	// AndroidSpecificAttributes: Output only. Attributes specific to
+	// Android devices.
+	AndroidSpecificAttributes *AndroidAttributes `json:"androidSpecificAttributes,omitempty"`
+
+	// AssetTag: Asset tag of the device.
+	AssetTag string `json:"assetTag,omitempty"`
+
+	// BasebandVersion: Output only. Baseband version of the device.
+	BasebandVersion string `json:"basebandVersion,omitempty"`
+
+	// BootloaderVersion: Output only. Device bootloader version. Example:
+	// 0.6.7.
+	BootloaderVersion string `json:"bootloaderVersion,omitempty"`
+
+	// Brand: Output only. Device brand. Example: Samsung.
+	Brand string `json:"brand,omitempty"`
+
+	// BuildNumber: Output only. Build number of the device.
+	BuildNumber string `json:"buildNumber,omitempty"`
+
+	// CompromisedState: Output only. Represents whether the Device is
+	// compromised.
+	//
+	// Possible values:
+	//   "COMPROMISED_STATE_UNSPECIFIED" - Default value.
+	//   "COMPROMISED" - The device is compromised (currently, this means
+	// Android device is
+	// rooted).
+	//   "UNCOMPROMISED" - The device is safe (currently, this means Android
+	// device is unrooted).
+	CompromisedState string `json:"compromisedState,omitempty"`
+
+	// CreateTime: Output only. When the Company-Owned device was imported.
+	// This field is empty for BYOD
+	// devices.
+	CreateTime string `json:"createTime,omitempty"`
+
+	// DeviceType: Output only. Type of device.
+	//
+	// Possible values:
+	//   "DEVICE_TYPE_UNSPECIFIED" - Unknown device type
+	//   "ANDROID" - Device is an Android device
+	//   "IOS" - Device is an iOS device
+	//   "GOOGLE_SYNC" - Device is a Google Sync device.
+	//   "WINDOWS" - Device is a Windows device.
+	//   "MAC_OS" - Device is a MacOS device.
+	//   "LINUX" - Device is a Linux device.
+	//   "CHROME_OS" - Device is a ChromeOS device.
+	DeviceType string `json:"deviceType,omitempty"`
+
+	// EnabledDeveloperOptions: Output only. Whether developer options is
+	// enabled on device.
+	EnabledDeveloperOptions bool `json:"enabledDeveloperOptions,omitempty"`
+
+	// EnabledUsbDebugging: Output only. Whether USB debugging is enabled on
+	// device.
+	EnabledUsbDebugging bool `json:"enabledUsbDebugging,omitempty"`
+
+	// EncryptionState: Output only. Device encryption state.
+	//
+	// Possible values:
+	//   "ENCRYPTION_STATE_UNSPECIFIED" - Encryption Status is not set.
+	//   "UNSUPPORTED_BY_DEVICE" - Device doesn't support encryption.
+	//   "ENCRYPTED" - Device is encrypted.
+	//   "NOT_ENCRYPTED" - Device is not encrypted.
+	EncryptionState string `json:"encryptionState,omitempty"`
+
+	// Imei: Output only. IMEI number of device if GSM device; empty
+	// otherwise.
+	Imei string `json:"imei,omitempty"`
+
+	// KernelVersion: Output only. Kernel version of the device.
+	KernelVersion string `json:"kernelVersion,omitempty"`
+
+	// LastSyncTime: Most recent time when device synced with this service.
+	LastSyncTime string `json:"lastSyncTime,omitempty"`
+
+	// ManagementState: Output only. Management state of the device
+	//
+	// Possible values:
+	//   "MANAGEMENT_STATE_UNSPECIFIED" - Default value. This value is
+	// unused.
+	//   "APPROVED" - Device is approved.
+	//   "BLOCKED" - Device is blocked.
+	//   "PENDING" - Device is pending approval.
+	//   "UNPROVISIONED" - The device is not provisioned. Device will start
+	// from this state until
+	// some action is taken (i.e. a user starts using the device).
+	//   "WIPING" - Data and settings on the device are being removed.
+	//   "WIPED" - All data and settings on the device are removed.
+	ManagementState string `json:"managementState,omitempty"`
+
+	// Manufacturer: Output only. Device manufacturer. Example: Motorola.
+	Manufacturer string `json:"manufacturer,omitempty"`
+
+	// Meid: Output only. MEID number of device if CDMA device; empty
+	// otherwise.
+	Meid string `json:"meid,omitempty"`
+
+	// Model: Output only. Model name of device. Example: Pixel 3.
+	Model string `json:"model,omitempty"`
+
+	// Name: Output only. [Resource
+	// name](https://cloud.google.com/apis/design/resource_names)
+	// of the Device in format: `devices/{device_id}`, where device_id
+	// is
+	// the unique id assigned to the Device.
+	Name string `json:"name,omitempty"`
+
+	// NetworkOperator: Output only. Mobile or network operator of device,
+	// if available.
+	NetworkOperator string `json:"networkOperator,omitempty"`
+
+	// OsVersion: Output only. OS version of the device. Example: Android
+	// 8.1.0.
+	OsVersion string `json:"osVersion,omitempty"`
+
+	// OtherAccounts: Output only. Domain name for Google accounts on
+	// device. Type for other accounts on
+	// device. On Android, will only be populated if |ownership_privilege|
+	// is
+	// |PROFILE_OWNER| or |DEVICE_OWNER|. Does not include the account
+	// signed in
+	// to the device policy app if that account's domain has only one
+	// account.
+	// Examples: "com.example", "xyz.com".
+	OtherAccounts []string `json:"otherAccounts,omitempty"`
+
+	// OwnerType: Whether the device is owned by the company or an
+	// individual
+	//
+	// Possible values:
+	//   "DEVICE_OWNERSHIP_UNSPECIFIED" - Default value. The value is
+	// unused.
+	//   "COMPANY" - Company owns the device.
+	//   "BYOD" - Bring Your Own Device (i.e. individual owns the device)
+	OwnerType string `json:"ownerType,omitempty"`
+
+	// ReleaseVersion: Output only. OS release version. Example: 6.0.
+	ReleaseVersion string `json:"releaseVersion,omitempty"`
+
+	// SecurityPatchTime: Output only. OS security patch update time on
+	// device.
+	SecurityPatchTime string `json:"securityPatchTime,omitempty"`
+
+	// SerialNumber: Serial Number of device. Example: HT82V1A01076.
+	SerialNumber string `json:"serialNumber,omitempty"`
+
+	// WifiMacAddresses: WiFi MAC addresses of device.
+	WifiMacAddresses []string `json:"wifiMacAddresses,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g.
+	// "AndroidSpecificAttributes") to unconditionally include in API
+	// requests. By default, fields with empty values are omitted from API
+	// requests. However, any non-pointer, non-interface field appearing in
+	// ForceSendFields will be sent to the server regardless of whether the
+	// field is empty or not. This may be used to include empty fields in
+	// Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g.
+	// "AndroidSpecificAttributes") to include in API requests with the JSON
+	// null value. By default, fields with empty values are omitted from API
+	// requests. However, any field with an empty value appearing in
+	// NullFields will be sent to the server as null. It is an error if a
+	// field in this list has a non-empty value. This may be used to include
+	// null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *Device) MarshalJSON() ([]byte, error) {
+	type NoMethod Device
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// DeviceUser: A DeviceUser is a resource representing a user's use of a
+// Device
+type DeviceUser struct {
+	// CompromisedState: Compromised State of the DeviceUser object
+	//
+	// Possible values:
+	//   "COMPROMISED_STATE_UNSPECIFIED" - Compromised state of Device User
+	// account is unknown or unspecified.
+	//   "COMPROMISED" - Device User Account is compromised.
+	//   "NOT_COMPROMISED" - Device User Account is not compromised.
+	CompromisedState string `json:"compromisedState,omitempty"`
+
+	// FirstSyncTime: Output only. Most recent time when user registered
+	// with this service.
+	FirstSyncTime string `json:"firstSyncTime,omitempty"`
+
+	// LanguageCode: Output only. Default locale used on device, in IETF
+	// BCP-47 format.
+	LanguageCode string `json:"languageCode,omitempty"`
+
+	// LastSyncTime: Output only. Last time when user synced with policies.
+	LastSyncTime string `json:"lastSyncTime,omitempty"`
+
+	// ManagementState: Output only. Management state of the user on the
+	// device.
+	//
+	// Possible values:
+	//   "MANAGEMENT_STATE_UNSPECIFIED" - Default value. This value is
+	// unused.
+	//   "WIPING" - This user's data and profile is being removed from the
+	// device.
+	//   "WIPED" - This user's data and profile is removed from the device.
+	//   "APPROVED" - User is approved to access data on the device.
+	//   "BLOCKED" - User is blocked from accessing data on the device.
+	//   "PENDING_APPROVAL" - User is awaiting approval.
+	//   "UNENROLLED" - User is unenrolled from Advanced Windows Management,
+	// but the Windows
+	// account is still intact.
+	ManagementState string `json:"managementState,omitempty"`
+
+	// Name: Output only. [Resource
+	// name](https://cloud.google.com/apis/design/resource_names) of
+	// the DeviceUser in format:
+	// `devices/{device_id}/deviceUsers/{user_id}`,
+	// where user_id is the ID of the user associated with the user session.
+	Name string `json:"name,omitempty"`
+
+	// PasswordState: Password state of the DeviceUser object
+	//
+	// Possible values:
+	//   "PASSWORD_STATE_UNSPECIFIED" - Password state not set.
+	//   "PASSWORD_SET" - Password set in object.
+	//   "PASSWORD_NOT_SET" - Password not set in object.
+	PasswordState string `json:"passwordState,omitempty"`
+
+	// UserAgent: Output only. User agent on the device for this specific
+	// user
+	UserAgent string `json:"userAgent,omitempty"`
+
+	// UserEmail: Email address of the user registered on the device.
+	UserEmail string `json:"userEmail,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "CompromisedState") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "CompromisedState") to
+	// include in API requests with the JSON null value. By default, fields
+	// with empty values are omitted from API requests. However, any field
+	// with an empty value appearing in NullFields will be sent to the
+	// server as null. It is an error if a field in this list has a
+	// non-empty value. This may be used to include null fields in Patch
+	// requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *DeviceUser) MarshalJSON() ([]byte, error) {
+	type NoMethod DeviceUser
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// EndpointApp: An EndpointApp represents an app that is installed on a
+// device
+type EndpointApp struct {
+	// DisplayName: Output only. Name of the app displayed to the user
+	DisplayName string `json:"displayName,omitempty"`
+
+	// Name: Output only. [Resource
+	// name](https://cloud.google.com/apis/design/resource_names) of
+	// the EndpointApp in
+	// format:
+	// `devices/{device}/deviceUsers/{device_user}/endpointApps/{endp
+	// oint_app}`,
+	// where client_app_id is the ID of the app associated with the Device.
+	Name string `json:"name,omitempty"`
+
+	// PackageName: Output only. Full package name of the installed app
+	PackageName string `json:"packageName,omitempty"`
+
+	// Permissions: Output only. Names of all permissions granted to the
+	// installed app
+	Permissions []string `json:"permissions,omitempty"`
+
+	// VersionCode: Output only. Version code of the installed app
+	VersionCode int64 `json:"versionCode,omitempty"`
+
+	// VersionName: Output only. Version name of the installed app
+	VersionName string `json:"versionName,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "DisplayName") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "DisplayName") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *EndpointApp) MarshalJSON() ([]byte, error) {
+	type NoMethod EndpointApp
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// EntityKey: A unique identifier for an entity in the Cloud Identity
+// Groups API.
+//
+// An entity can represent either a group with an optional `namespace`
+// or a user
+// without a `namespace`. The combination of `id` and `namespace` must
+// be
+// unique; however, the same `id` can be used with different
+// `namespace`s.
 type EntityKey struct {
-	// Id: The id of the entity within the given namespace. The id must be
-	// unique
-	// within its namespace.
+	// Id: The ID of the entity.
+	//
+	// For Google-managed entities, the `id` must be the email address of
+	// an
+	// existing group or user.
+	//
+	// For external-identity-mapped entities, the `id` must be a string
+	// conforming
+	// to the Identity Source's requirements.
+	//
+	// Must be unique within a `namespace`.
 	Id string `json:"id,omitempty"`
 
-	// Namespace: Namespaces provide isolation for ids, i.e an id only needs
-	// to be unique
-	// within its namespace.
+	// Namespace: The namespace in which the entity exists.
 	//
-	// Namespaces are currently only created as part of IdentitySource
-	// creation
-	// from Admin Console. A namespace
-	// "identitysources/{identity_source_id}" is
-	// created corresponding to every Identity Source `identity_source_id`.
+	// If not specified, the `EntityKey` represents a Google-managed entity
+	// such
+	// as a Google user or a Google Group.
+	//
+	// If specified, the `EntityKey` represents an external-identity-mapped
+	// group.
+	// The namespace must correspond to an identity source created in
+	// Admin
+	// Console and must be in the form of
+	// `identitysources/{identity_source_id}.
 	Namespace string `json:"namespace,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Id") to
@@ -206,60 +875,96 @@ func (s *EntityKey) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// Group: Resource representing a Group
+// GetMembershipGraphResponse: The response message for
+// MembershipsService.GetMembershipGraph.
+type GetMembershipGraphResponse struct {
+	// AdjacencyList: The membership graph's path information represented as
+	// an adjacency list.
+	AdjacencyList []*MembershipAdjacencyList `json:"adjacencyList,omitempty"`
+
+	// Groups: The resources representing each group in the adjacency list.
+	// Each
+	// group in this list can be correlated to a 'group' of
+	// the
+	// MembershipAdjacencyList using the 'name' of the Group resource.
+	Groups []*Group `json:"groups,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AdjacencyList") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AdjacencyList") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *GetMembershipGraphResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod GetMembershipGraphResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// Group: A group within the Cloud Identity Groups API.
+//
+// A `Group` is a collection of entities, where each entity is either a
+// user,
+// another group or a service account.
 type Group struct {
-	// AdditionalGroupKeys: Optional. Additional entity key aliases for a
-	// Group
+	// AdditionalGroupKeys: Additional entity key aliases for a Group.
 	AdditionalGroupKeys []*EntityKey `json:"additionalGroupKeys,omitempty"`
 
-	// CreateTime: The time when the Group was created.
-	// Output only
+	// CreateTime: Output only. The time when the `Group` was created.
 	CreateTime string `json:"createTime,omitempty"`
 
 	// Description: An extended description to help users determine the
-	// purpose of a Group. For
-	// example, you can include information about who should join the Group,
-	// the
-	// types of messages to send to the Group, links to FAQs about the
-	// Group, or
-	// related Groups. Maximum length is 4,096 characters.
+	// purpose of a `Group`.
+	//
+	// Must not be longer than 4,096 characters.
 	Description string `json:"description,omitempty"`
 
-	// DisplayName: The Group's display name.
+	// DisplayName: The display name of the `Group`.
 	DisplayName string `json:"displayName,omitempty"`
 
-	// GroupKey: EntityKey of the Group.
-	//
-	// Must be set when creating a Group, read-only afterwards.
+	// GroupKey: Required. Immutable. The `EntityKey` of the `Group`.
 	GroupKey *EntityKey `json:"groupKey,omitempty"`
 
-	// Labels: Labels for Group resource.
-	// Required.
-	// For creating Groups under a namespace, set label key
-	// to
-	// 'labels/system/groups/external' and label value as empty.
+	// Labels: Required. The labels that apply to the `Group`.
+	//
+	// Must not contain more than one entry. Must contain the
+	// entry
+	// `'cloudidentity.googleapis.com/groups.discussion_forum': ''` if the
+	// `Group`
+	// is a Google Group or `'system/groups/external': ''` if the `Group` is
+	// an
+	// external-identity-mapped group.
 	Labels map[string]string `json:"labels,omitempty"`
 
-	// Name: [Resource
+	// Name: Output only. The [resource
 	// name](https://cloud.google.com/apis/design/resource_names) of
-	// the
-	// Group in the format: `groups/{group_id}`, where group_id is the
-	// unique id
-	// assigned to the Group.
+	// the `Group`.
 	//
-	// Must be left blank while creating a Group
+	// Shall be of the form `groups/{group_id}`.
 	Name string `json:"name,omitempty"`
 
-	// Parent: The entity under which this Group resides in Cloud Identity
-	// resource
-	// hierarchy. Must be set when creating a Group, read-only
-	// afterwards.
+	// Parent: Required. Immutable. The resource name of the entity under
+	// which this `Group` resides in the
+	// Cloud Identity resource hierarchy.
 	//
-	// Currently allowed types: 'identitysources'.
+	// Must be of the form `identitysources/{identity_source_id}` for
+	// external-
+	// identity-mapped groups or `customers/{customer_id}` for Google
+	// Groups.
 	Parent string `json:"parent,omitempty"`
 
-	// UpdateTime: The time when the Group was last updated.
-	// Output only
+	// UpdateTime: Output only. The time when the `Group` was last updated.
 	UpdateTime string `json:"updateTime,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -290,13 +995,156 @@ func (s *Group) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// ListDeviceUsersResponse: Response message that is returned in LRO
+// result of ListDeviceUsers Operation.
+type ListDeviceUsersResponse struct {
+	// DeviceUsers: Devices meeting the list restrictions.
+	DeviceUsers []*DeviceUser `json:"deviceUsers,omitempty"`
+
+	// NextPageToken: Token to retrieve the next page of results. Empty if
+	// there are no more
+	// results.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "DeviceUsers") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "DeviceUsers") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ListDeviceUsersResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod ListDeviceUsersResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// ListDevicesResponse: Response message that is returned in LRO result
+// of ListDevices Operation.
+type ListDevicesResponse struct {
+	// Devices: Devices meeting the list restrictions.
+	Devices []*Device `json:"devices,omitempty"`
+
+	// NextPageToken: Token to retrieve the next page of results. Empty if
+	// there are no more
+	// results.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Devices") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Devices") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ListDevicesResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod ListDevicesResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// ListEndpointAppsResponse: Response message for listing all apps on
+// the device.
+type ListEndpointAppsResponse struct {
+	// EndpointApps: The list of matching EndpointApps found as a result of
+	// the request.
+	EndpointApps []*EndpointApp `json:"endpointApps,omitempty"`
+
+	// NextPageToken: Token to retrieve the next page of results. Empty if
+	// there are no more
+	// results.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "EndpointApps") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "EndpointApps") to include
+	// in API requests with the JSON null value. By default, fields with
+	// empty values are omitted from API requests. However, any field with
+	// an empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ListEndpointAppsResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod ListEndpointAppsResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// ListGroupsResponse: The response message for
+// GroupsService.ListGroups.
+type ListGroupsResponse struct {
+	// Groups: The `Group`s under the specified `parent`.
+	Groups []*Group `json:"groups,omitempty"`
+
+	// NextPageToken: A continuation token to retrieve the next page of
+	// results, or empty if
+	// there are no more results available.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "Groups") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Groups") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ListGroupsResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod ListGroupsResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// ListMembershipsResponse: The response message for
+// MembershipsService.ListMemberships.
 type ListMembershipsResponse struct {
-	// Memberships: List of Memberships
+	// Memberships: The `Membership`s under the specified `parent`.
 	Memberships []*Membership `json:"memberships,omitempty"`
 
-	// NextPageToken: Token to retrieve the next page of results, or empty
-	// if there are no
-	// more results available for listing.
+	// NextPageToken: A continuation token to retrieve the next page of
+	// results, or empty if
+	// there are no more results available.
 	NextPageToken string `json:"nextPageToken,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -326,13 +1174,12 @@ func (s *ListMembershipsResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// LookupGroupNameResponse: The response message for
+// GroupsService.LookupGroupName.
 type LookupGroupNameResponse struct {
-	// Name: [Resource
+	// Name: Output only. The [resource
 	// name](https://cloud.google.com/apis/design/resource_names) of
-	// the
-	// Group in the format: `groups/{group_id}`, where `group_id` is the
-	// unique id
-	// assigned to the Group.
+	// the looked-up `Group`.
 	Name string `json:"name,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -362,17 +1209,14 @@ func (s *LookupGroupNameResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// LookupMembershipNameResponse: The response message for
+// MembershipsService.LookupMembershipName.
 type LookupMembershipNameResponse struct {
-	// Name: [Resource
+	// Name: The [resource
 	// name](https://cloud.google.com/apis/design/resource_names) of
-	// the
-	// Membership being looked up.
+	// the looked-up `Membership`.
 	//
-	// Format: `groups/{group_id}/memberships/{member_id}`, where `group_id`
-	// is
-	// the unique id assigned to the Group to which Membership belongs to,
-	// and
-	// `member_id` is the unique id assigned to the member.
+	// Must be of the form `groups/{group_id}/memberships/{membership_id}`.
 	Name string `json:"name,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -402,37 +1246,97 @@ func (s *LookupMembershipNameResponse) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// Membership: Resource representing a Membership within a Group
+// LookupSelfDeviceUsersResponse: Response containing resource names of
+// the DeviceUsers associated with the
+// caller's credentials.
+type LookupSelfDeviceUsersResponse struct {
+	// Customer: The obfuscated customer Id that may be passed back to
+	// other
+	// Devices API methods such as List, Get, etc.
+	Customer string `json:"customer,omitempty"`
+
+	// Names: [Resource
+	// names](https://cloud.google.com/apis/design/resource_names) of
+	// the DeviceUsers in the
+	// format:
+	// `devices/{device_id}/deviceUsers/{user_resource_id}`, where
+	// device_id is the unique ID assigned to a Device and
+	// user_resource_id is the unique user ID
+	Names []string `json:"names,omitempty"`
+
+	// NextPageToken: Token to retrieve the next page of results. Empty if
+	// there are no more
+	// results.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Customer") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Customer") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *LookupSelfDeviceUsersResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod LookupSelfDeviceUsersResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// Membership: A membership within the Cloud Identity Groups API.
+//
+// A `Membership` defines a relationship between a `Group` and an
+// entity
+// belonging to that `Group`, referred to as a "member".
 type Membership struct {
-	// CreateTime: Creation timestamp of the Membership.
+	// CreateTime: Output only. The time when the `Membership` was created.
 	CreateTime string `json:"createTime,omitempty"`
 
-	// MemberKey: EntityKey of the entity to be added as the member. Must be
-	// set while
-	// creating a Membership, read-only afterwards.
+	// MemberKey: Immutable. The `EntityKey` of the member.
 	//
-	// Currently allowed entity types: `Users`, `Groups`.
+	// Either `member_key` or `preferred_member_key` must be set when
+	// calling
+	// MembershipsService.CreateMembership but not both; both shall be
+	// set
+	// when returned.
 	MemberKey *EntityKey `json:"memberKey,omitempty"`
 
-	// Name: [Resource
+	// Name: Output only. The [resource
 	// name](https://cloud.google.com/apis/design/resource_names) of
-	// the
-	// Membership in the format:
-	// `groups/{group_id}/memberships/{member_id}`,
-	// where group_id is the unique id assigned to the Group to which
-	// Membership
-	// belongs to, and member_id is the unique id assigned to the
-	// member
+	// the `Membership`.
 	//
-	// Must be left blank while creating a Membership.
+	// Shall be of the form `groups/{group_id}/memberships/{membership_id}`.
 	Name string `json:"name,omitempty"`
 
-	// Roles: Roles for a member within the Group.
+	// PreferredMemberKey: Required. Immutable. The `EntityKey` of the
+	// member.
 	//
-	// Currently supported MembershipRoles: "MEMBER".
+	// Either `member_key` or `preferred_member_key` must be set when
+	// calling
+	// MembershipsService.CreateMembership but not both; both shall be
+	// set
+	// when returned.
+	PreferredMemberKey *EntityKey `json:"preferredMemberKey,omitempty"`
+
+	// Roles: The `MembershipRole`s that apply to the `Membership`.
+	//
+	// If unspecified, defaults to a single `MembershipRole` with `name`
+	// `MEMBER`.
+	//
+	// Must not contain duplicate `MembershipRole`s with the same `name`.
 	Roles []*MembershipRole `json:"roles,omitempty"`
 
-	// UpdateTime: Last updated timestamp of the Membership.
+	// UpdateTime: Output only. The time when the `Membership` was last
+	// updated.
 	UpdateTime string `json:"updateTime,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -462,11 +1366,47 @@ func (s *Membership) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
-// MembershipRole: Resource representing a role within a Membership.
+// MembershipAdjacencyList: Membership graph's path information as an
+// adjacency list.
+type MembershipAdjacencyList struct {
+	// Edges: Each edge contains information about the member that belongs
+	// to this group.
+	Edges []*Membership `json:"edges,omitempty"`
+
+	// Group: Resource name of the group that the members belong to.
+	Group string `json:"group,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Edges") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Edges") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *MembershipAdjacencyList) MarshalJSON() ([]byte, error) {
+	type NoMethod MembershipAdjacencyList
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// MembershipRole: A membership role within the Cloud Identity Groups
+// API.
+//
+// A `MembershipRole` defines the privileges granted to a `Membership`.
 type MembershipRole struct {
-	// Name: MembershipRole in string format.
+	// Name: The name of the `MembershipRole`.
 	//
-	// Currently supported MembershipRoles: "MEMBER".
+	// Must be one of `OWNER`, `MANAGER`, `MEMBER`.
 	Name string `json:"name,omitempty"`
 
 	// ForceSendFields is a list of field names (e.g. "Name") to
@@ -488,6 +1428,101 @@ type MembershipRole struct {
 
 func (s *MembershipRole) MarshalJSON() ([]byte, error) {
 	type NoMethod MembershipRole
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// ModifyMembershipRolesRequest: The request message for
+// MembershipsService.ModifyMembershipRoles.
+type ModifyMembershipRolesRequest struct {
+	// AddRoles: The `MembershipRole`s to be added.
+	//
+	// Adding or removing roles in the same request as updating roles is
+	// not
+	// supported.
+	//
+	// Must not be set if `update_roles_params` is set.
+	AddRoles []*MembershipRole `json:"addRoles,omitempty"`
+
+	// RemoveRoles: The `name`s of the `MembershipRole`s to be
+	// removed.
+	//
+	// Adding or removing roles in the same request as updating roles is
+	// not
+	// supported.
+	//
+	// It is not possible to remove the `MEMBER` `MembershipRole`. If you
+	// wish to
+	// delete a `Membership`, call
+	// MembershipsService.DeleteMembership
+	// instead.
+	//
+	// Must not contain `MEMBER`. Must not be set if `update_roles_params`
+	// is set.
+	RemoveRoles []string `json:"removeRoles,omitempty"`
+
+	// UpdateRolesParams: The `MembershipRole`s to be updated.
+	//
+	// Updating roles in the same request as adding or removing roles is
+	// not
+	// supported.
+	//
+	// Must not be set if either `add_roles` or `remove_roles` is set.
+	UpdateRolesParams []*UpdateMembershipRolesParams `json:"updateRolesParams,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "AddRoles") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "AddRoles") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ModifyMembershipRolesRequest) MarshalJSON() ([]byte, error) {
+	type NoMethod ModifyMembershipRolesRequest
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// ModifyMembershipRolesResponse: The response message for
+// MembershipsService.ModifyMembershipRoles.
+type ModifyMembershipRolesResponse struct {
+	// Membership: The `Membership` resource after modifying its
+	// `MembershipRole`s.
+	Membership *Membership `json:"membership,omitempty"`
+
+	// ServerResponse contains the HTTP response code and headers from the
+	// server.
+	googleapi.ServerResponse `json:"-"`
+
+	// ForceSendFields is a list of field names (e.g. "Membership") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Membership") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *ModifyMembershipRolesResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod ModifyMembershipRolesResponse
 	raw := NoMethod(*s)
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
@@ -568,13 +1603,15 @@ func (s *Operation) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// SearchGroupsResponse: The response message for
+// GroupsService.SearchGroups.
 type SearchGroupsResponse struct {
-	// Groups: List of Groups satisfying the search query.
+	// Groups: The `Group`s that match the search query.
 	Groups []*Group `json:"groups,omitempty"`
 
-	// NextPageToken: Token to retrieve the next page of results, or empty
-	// if there are no
-	// more results available for specified query.
+	// NextPageToken: A continuation token to retrieve the next page of
+	// results, or empty if
+	// there are no more results available.
 	NextPageToken string `json:"nextPageToken,omitempty"`
 
 	// ServerResponse contains the HTTP response code and headers from the
@@ -656,6 +1693,104 @@ func (s *Status) MarshalJSON() ([]byte, error) {
 	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
 }
 
+// UpdateMembershipRolesParams: The details of an update to a
+// `MembershipRole`.
+type UpdateMembershipRolesParams struct {
+	// FieldMask: The fully-qualified names of fields to update.
+	//
+	// May only contain the field `expiry_detail`.
+	FieldMask string `json:"fieldMask,omitempty"`
+
+	// MembershipRole: The `MembershipRole`s to be updated.
+	//
+	// Only `MEMBER` `MembershipRoles` can currently be updated.
+	//
+	// May only contain a `MembershipRole` with `name` `MEMBER`.
+	MembershipRole *MembershipRole `json:"membershipRole,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "FieldMask") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "FieldMask") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *UpdateMembershipRolesParams) MarshalJSON() ([]byte, error) {
+	type NoMethod UpdateMembershipRolesParams
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// WipeDeviceResponse: Response message for wiping all data on the
+// device.
+type WipeDeviceResponse struct {
+	// Device: Resultant Device object for the action. Note that asset tags
+	// will not be
+	// returned in the device object.
+	Device *Device `json:"device,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "Device") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "Device") to include in API
+	// requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *WipeDeviceResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod WipeDeviceResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
+// WipeDeviceUserResponse: Response message for wiping the user's
+// account from the device.
+type WipeDeviceUserResponse struct {
+	// DeviceUser: Resultant DeviceUser object for the action.
+	DeviceUser *DeviceUser `json:"deviceUser,omitempty"`
+
+	// ForceSendFields is a list of field names (e.g. "DeviceUser") to
+	// unconditionally include in API requests. By default, fields with
+	// empty values are omitted from API requests. However, any non-pointer,
+	// non-interface field appearing in ForceSendFields will be sent to the
+	// server regardless of whether the field is empty or not. This may be
+	// used to include empty fields in Patch requests.
+	ForceSendFields []string `json:"-"`
+
+	// NullFields is a list of field names (e.g. "DeviceUser") to include in
+	// API requests with the JSON null value. By default, fields with empty
+	// values are omitted from API requests. However, any field with an
+	// empty value appearing in NullFields will be sent to the server as
+	// null. It is an error if a field in this list has a non-empty value.
+	// This may be used to include null fields in Patch requests.
+	NullFields []string `json:"-"`
+}
+
+func (s *WipeDeviceUserResponse) MarshalJSON() ([]byte, error) {
+	type NoMethod WipeDeviceUserResponse
+	raw := NoMethod(*s)
+	return gensupport.MarshalJSON(raw, s.ForceSendFields, s.NullFields)
+}
+
 // method id "cloudidentity.groups.create":
 
 type GroupsCreateCall struct {
@@ -666,10 +1801,22 @@ type GroupsCreateCall struct {
 	header_    http.Header
 }
 
-// Create: Creates a Group.
+// Create: Creates a `Group`.
 func (r *GroupsService) Create(group *Group) *GroupsCreateCall {
 	c := &GroupsCreateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.group = group
+	return c
+}
+
+// InitialGroupConfig sets the optional parameter "initialGroupConfig":
+// Required. The initial configuration option for the `Group`.
+//
+// Possible values:
+//   "INITIAL_GROUP_CONFIG_UNSPECIFIED"
+//   "WITH_INITIAL_OWNER"
+//   "EMPTY"
+func (c *GroupsCreateCall) InitialGroupConfig(initialGroupConfig string) *GroupsCreateCall {
+	c.urlParams_.Set("initialGroupConfig", initialGroupConfig)
 	return c
 }
 
@@ -700,7 +1847,7 @@ func (c *GroupsCreateCall) Header() http.Header {
 
 func (c *GroupsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -761,12 +1908,23 @@ func (c *GroupsCreateCall) Do(opts ...googleapi.CallOption) (*Operation, error) 
 	}
 	return ret, nil
 	// {
-	//   "description": "Creates a Group.",
+	//   "description": "Creates a `Group`.",
 	//   "flatPath": "v1beta1/groups",
 	//   "httpMethod": "POST",
 	//   "id": "cloudidentity.groups.create",
 	//   "parameterOrder": [],
-	//   "parameters": {},
+	//   "parameters": {
+	//     "initialGroupConfig": {
+	//       "description": "Required. The initial configuration option for the `Group`.",
+	//       "enum": [
+	//         "INITIAL_GROUP_CONFIG_UNSPECIFIED",
+	//         "WITH_INITIAL_OWNER",
+	//         "EMPTY"
+	//       ],
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
 	//   "path": "v1beta1/groups",
 	//   "request": {
 	//     "$ref": "Group"
@@ -775,7 +1933,8 @@ func (c *GroupsCreateCall) Do(opts ...googleapi.CallOption) (*Operation, error) 
 	//     "$ref": "Operation"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-identity.groups"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -791,7 +1950,7 @@ type GroupsDeleteCall struct {
 	header_    http.Header
 }
 
-// Delete: Deletes a Group.
+// Delete: Deletes a `Group`.
 func (r *GroupsService) Delete(name string) *GroupsDeleteCall {
 	c := &GroupsDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -825,7 +1984,7 @@ func (c *GroupsDeleteCall) Header() http.Header {
 
 func (c *GroupsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -884,7 +2043,7 @@ func (c *GroupsDeleteCall) Do(opts ...googleapi.CallOption) (*Operation, error) 
 	}
 	return ret, nil
 	// {
-	//   "description": "Deletes a Group.",
+	//   "description": "Deletes a `Group`.",
 	//   "flatPath": "v1beta1/groups/{groupsId}",
 	//   "httpMethod": "DELETE",
 	//   "id": "cloudidentity.groups.delete",
@@ -893,7 +2052,7 @@ func (c *GroupsDeleteCall) Do(opts ...googleapi.CallOption) (*Operation, error) 
 	//   ],
 	//   "parameters": {
 	//     "name": {
-	//       "description": "[Resource name](https://cloud.google.com/apis/design/resource_names) of the\nGroup in the format: `groups/{group_id}`, where `group_id` is the unique id\nassigned to the Group.",
+	//       "description": "Required. The [resource name](https://cloud.google.com/apis/design/resource_names) of\nthe `Group` to retrieve.\n\nMust be of the form `groups/{group_id}`.",
 	//       "location": "path",
 	//       "pattern": "^groups/[^/]+$",
 	//       "required": true,
@@ -905,7 +2064,8 @@ func (c *GroupsDeleteCall) Do(opts ...googleapi.CallOption) (*Operation, error) 
 	//     "$ref": "Operation"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-identity.groups"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -922,7 +2082,7 @@ type GroupsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Retrieves a Group.
+// Get: Retrieves a `Group`.
 func (r *GroupsService) Get(name string) *GroupsGetCall {
 	c := &GroupsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -966,7 +2126,7 @@ func (c *GroupsGetCall) Header() http.Header {
 
 func (c *GroupsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1028,7 +2188,7 @@ func (c *GroupsGetCall) Do(opts ...googleapi.CallOption) (*Group, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Retrieves a Group.",
+	//   "description": "Retrieves a `Group`.",
 	//   "flatPath": "v1beta1/groups/{groupsId}",
 	//   "httpMethod": "GET",
 	//   "id": "cloudidentity.groups.get",
@@ -1037,7 +2197,7 @@ func (c *GroupsGetCall) Do(opts ...googleapi.CallOption) (*Group, error) {
 	//   ],
 	//   "parameters": {
 	//     "name": {
-	//       "description": "[Resource name](https://cloud.google.com/apis/design/resource_names) of the\nGroup in the format: `groups/{group_id}`, where `group_id` is the unique id\nassigned to the Group.",
+	//       "description": "Required. The [resource name](https://cloud.google.com/apis/design/resource_names) of\nthe `Group` to retrieve.\n\nMust be of the form `groups/{group_id}`.",
 	//       "location": "path",
 	//       "pattern": "^groups/[^/]+$",
 	//       "required": true,
@@ -1050,10 +2210,245 @@ func (c *GroupsGetCall) Do(opts ...googleapi.CallOption) (*Group, error) {
 	//   },
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/cloud-identity.groups",
-	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
+}
+
+// method id "cloudidentity.groups.list":
+
+type GroupsListCall struct {
+	s            *Service
+	urlParams_   gensupport.URLParams
+	ifNoneMatch_ string
+	ctx_         context.Context
+	header_      http.Header
+}
+
+// List: Lists the `Group`s under a customer or namespace.
+func (r *GroupsService) List() *GroupsListCall {
+	c := &GroupsListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	return c
+}
+
+// PageSize sets the optional parameter "pageSize": The maximum number
+// of results to return.
+//
+// Note that the number of results returned may be less than this value
+// even
+// if there are more available results. To fetch all results, clients
+// must
+// continue calling this method repeatedly until the response no
+// longer
+// contains a `next_page_token`.
+//
+// If unspecified, defaults to 200 for `View.BASIC` and to 50 for
+// `View.FULL`.
+//
+// Must not be greater than 1000 for `View.BASIC` or 500 for
+// `View.FULL`.
+func (c *GroupsListCall) PageSize(pageSize int64) *GroupsListCall {
+	c.urlParams_.Set("pageSize", fmt.Sprint(pageSize))
+	return c
+}
+
+// PageToken sets the optional parameter "pageToken": The
+// `next_page_token` value returned from a previous list request, if
+// any.
+func (c *GroupsListCall) PageToken(pageToken string) *GroupsListCall {
+	c.urlParams_.Set("pageToken", pageToken)
+	return c
+}
+
+// Parent sets the optional parameter "parent": Required. The parent
+// resource under which to list all `Group`s.
+//
+// Must be of the form `identitysources/{identity_source_id}` for
+// external-
+// identity-mapped groups or `customers/{customer_id}` for Google
+// Groups.
+func (c *GroupsListCall) Parent(parent string) *GroupsListCall {
+	c.urlParams_.Set("parent", parent)
+	return c
+}
+
+// View sets the optional parameter "view": The level of detail to be
+// returned.
+//
+// If unspecified, defaults to `View.BASIC`.
+//
+// Possible values:
+//   "VIEW_UNSPECIFIED"
+//   "BASIC"
+//   "FULL"
+func (c *GroupsListCall) View(view string) *GroupsListCall {
+	c.urlParams_.Set("view", view)
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *GroupsListCall) Fields(s ...googleapi.Field) *GroupsListCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// IfNoneMatch sets the optional parameter which makes the operation
+// fail if the object's ETag matches the given value. This is useful for
+// getting updates only after the object has changed since the last
+// request. Use googleapi.IsNotModified to check whether the response
+// error from Do is the result of In-None-Match.
+func (c *GroupsListCall) IfNoneMatch(entityTag string) *GroupsListCall {
+	c.ifNoneMatch_ = entityTag
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *GroupsListCall) Context(ctx context.Context) *GroupsListCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *GroupsListCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *GroupsListCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	if c.ifNoneMatch_ != "" {
+		reqHeaders.Set("If-None-Match", c.ifNoneMatch_)
+	}
+	var body io.Reader = nil
+	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "v1beta1/groups")
+	urls += "?" + c.urlParams_.Encode()
+	req, err := http.NewRequest("GET", urls, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = reqHeaders
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "cloudidentity.groups.list" call.
+// Exactly one of *ListGroupsResponse or error will be non-nil. Any
+// non-2xx status code is an error. Response headers are in either
+// *ListGroupsResponse.ServerResponse.Header or (if a response was
+// returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *GroupsListCall) Do(opts ...googleapi.CallOption) (*ListGroupsResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &ListGroupsResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Lists the `Group`s under a customer or namespace.",
+	//   "flatPath": "v1beta1/groups",
+	//   "httpMethod": "GET",
+	//   "id": "cloudidentity.groups.list",
+	//   "parameterOrder": [],
+	//   "parameters": {
+	//     "pageSize": {
+	//       "description": "The maximum number of results to return.\n\nNote that the number of results returned may be less than this value even\nif there are more available results. To fetch all results, clients must\ncontinue calling this method repeatedly until the response no longer\ncontains a `next_page_token`.\n\nIf unspecified, defaults to 200 for `View.BASIC` and to 50 for `View.FULL`.\n\nMust not be greater than 1000 for `View.BASIC` or 500 for `View.FULL`.",
+	//       "format": "int32",
+	//       "location": "query",
+	//       "type": "integer"
+	//     },
+	//     "pageToken": {
+	//       "description": "The `next_page_token` value returned from a previous list request, if any.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "parent": {
+	//       "description": "Required. The parent resource under which to list all `Group`s.\n\nMust be of the form `identitysources/{identity_source_id}` for external-\nidentity-mapped groups or `customers/{customer_id}` for Google Groups.",
+	//       "location": "query",
+	//       "type": "string"
+	//     },
+	//     "view": {
+	//       "description": "The level of detail to be returned.\n\nIf unspecified, defaults to `View.BASIC`.",
+	//       "enum": [
+	//         "VIEW_UNSPECIFIED",
+	//         "BASIC",
+	//         "FULL"
+	//       ],
+	//       "location": "query",
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "v1beta1/groups",
+	//   "response": {
+	//     "$ref": "ListGroupsResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-identity.groups",
+	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
+	// }
+
+}
+
+// Pages invokes f for each page of results.
+// A non-nil error returned from f will halt the iteration.
+// The provided context supersedes any context provided to the Context method.
+func (c *GroupsListCall) Pages(ctx context.Context, f func(*ListGroupsResponse) error) error {
+	c.ctx_ = ctx
+	defer c.PageToken(c.urlParams_.Get("pageToken")) // reset paging to original point
+	for {
+		x, err := c.Do()
+		if err != nil {
+			return err
+		}
+		if err := f(x); err != nil {
+			return err
+		}
+		if x.NextPageToken == "" {
+			return nil
+		}
+		c.PageToken(x.NextPageToken)
+	}
 }
 
 // method id "cloudidentity.groups.lookup":
@@ -1066,34 +2461,46 @@ type GroupsLookupCall struct {
 	header_      http.Header
 }
 
-// Lookup: Looks up
+// Lookup: Looks up the
 // [resource
-// name](https://cloud.google.com/apis/design/resource_names) of a Group
-// by
-// its EntityKey.
+// name](https://cloud.google.com/apis/design/resource_names) of a
+// `Group` by
+// its `EntityKey`.
 func (r *GroupsService) Lookup() *GroupsLookupCall {
 	c := &GroupsLookupCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	return c
 }
 
-// GroupKeyId sets the optional parameter "groupKey.id": The id of the
-// entity within the given namespace. The id must be unique
-// within its namespace.
+// GroupKeyId sets the optional parameter "groupKey.id": The ID of the
+// entity.
+//
+// For Google-managed entities, the `id` must be the email address of
+// an
+// existing group or user.
+//
+// For external-identity-mapped entities, the `id` must be a string
+// conforming
+// to the Identity Source's requirements.
+//
+// Must be unique within a `namespace`.
 func (c *GroupsLookupCall) GroupKeyId(groupKeyId string) *GroupsLookupCall {
 	c.urlParams_.Set("groupKey.id", groupKeyId)
 	return c
 }
 
 // GroupKeyNamespace sets the optional parameter "groupKey.namespace":
-// Namespaces provide isolation for ids, i.e an id only needs to be
-// unique
-// within its namespace.
+// The namespace in which the entity exists.
 //
-// Namespaces are currently only created as part of IdentitySource
-// creation
-// from Admin Console. A namespace
-// "identitysources/{identity_source_id}" is
-// created corresponding to every Identity Source `identity_source_id`.
+// If not specified, the `EntityKey` represents a Google-managed entity
+// such
+// as a Google user or a Google Group.
+//
+// If specified, the `EntityKey` represents an external-identity-mapped
+// group.
+// The namespace must correspond to an identity source created in
+// Admin
+// Console and must be in the form of
+// `identitysources/{identity_source_id}.
 func (c *GroupsLookupCall) GroupKeyNamespace(groupKeyNamespace string) *GroupsLookupCall {
 	c.urlParams_.Set("groupKey.namespace", groupKeyNamespace)
 	return c
@@ -1136,7 +2543,7 @@ func (c *GroupsLookupCall) Header() http.Header {
 
 func (c *GroupsLookupCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1195,19 +2602,19 @@ func (c *GroupsLookupCall) Do(opts ...googleapi.CallOption) (*LookupGroupNameRes
 	}
 	return ret, nil
 	// {
-	//   "description": "Looks up [resource\nname](https://cloud.google.com/apis/design/resource_names) of a Group by\nits EntityKey.",
+	//   "description": "Looks up the [resource\nname](https://cloud.google.com/apis/design/resource_names) of a `Group` by\nits `EntityKey`.",
 	//   "flatPath": "v1beta1/groups:lookup",
 	//   "httpMethod": "GET",
 	//   "id": "cloudidentity.groups.lookup",
 	//   "parameterOrder": [],
 	//   "parameters": {
 	//     "groupKey.id": {
-	//       "description": "The id of the entity within the given namespace. The id must be unique\nwithin its namespace.",
+	//       "description": "The ID of the entity.\n\nFor Google-managed entities, the `id` must be the email address of an\nexisting group or user.\n\nFor external-identity-mapped entities, the `id` must be a string conforming\nto the Identity Source's requirements.\n\nMust be unique within a `namespace`.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "groupKey.namespace": {
-	//       "description": "Namespaces provide isolation for ids, i.e an id only needs to be unique\nwithin its namespace.\n\nNamespaces are currently only created as part of IdentitySource creation\nfrom Admin Console. A namespace `\"identitysources/{identity_source_id}\"` is\ncreated corresponding to every Identity Source `identity_source_id`.",
+	//       "description": "The namespace in which the entity exists.\n\nIf not specified, the `EntityKey` represents a Google-managed entity such\nas a Google user or a Google Group.\n\nIf specified, the `EntityKey` represents an external-identity-mapped group.\nThe namespace must correspond to an identity source created in Admin\nConsole and must be in the form of `identitysources/{identity_source_id}.",
 	//       "location": "query",
 	//       "type": "string"
 	//     }
@@ -1218,7 +2625,8 @@ func (c *GroupsLookupCall) Do(opts ...googleapi.CallOption) (*LookupGroupNameRes
 	//   },
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/cloud-identity.groups",
-	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -1235,7 +2643,7 @@ type GroupsPatchCall struct {
 	header_    http.Header
 }
 
-// Patch: Updates a Group.
+// Patch: Updates a `Group`.
 func (r *GroupsService) Patch(name string, group *Group) *GroupsPatchCall {
 	c := &GroupsPatchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -1243,8 +2651,10 @@ func (r *GroupsService) Patch(name string, group *Group) *GroupsPatchCall {
 	return c
 }
 
-// UpdateMask sets the optional parameter "updateMask": Editable fields:
-// `display_name`, `description`
+// UpdateMask sets the optional parameter "updateMask": Required. The
+// fully-qualified names of fields to update.
+//
+// May only contain the following fields: `display_name`, `description`.
 func (c *GroupsPatchCall) UpdateMask(updateMask string) *GroupsPatchCall {
 	c.urlParams_.Set("updateMask", updateMask)
 	return c
@@ -1277,7 +2687,7 @@ func (c *GroupsPatchCall) Header() http.Header {
 
 func (c *GroupsPatchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1341,7 +2751,7 @@ func (c *GroupsPatchCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
 	}
 	return ret, nil
 	// {
-	//   "description": "Updates a Group.",
+	//   "description": "Updates a `Group`.",
 	//   "flatPath": "v1beta1/groups/{groupsId}",
 	//   "httpMethod": "PATCH",
 	//   "id": "cloudidentity.groups.patch",
@@ -1350,14 +2760,14 @@ func (c *GroupsPatchCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
 	//   ],
 	//   "parameters": {
 	//     "name": {
-	//       "description": "[Resource name](https://cloud.google.com/apis/design/resource_names) of the\nGroup in the format: `groups/{group_id}`, where group_id is the unique id\nassigned to the Group.\n\nMust be left blank while creating a Group",
+	//       "description": "Output only. The [resource name](https://cloud.google.com/apis/design/resource_names) of\nthe `Group`.\n\nShall be of the form `groups/{group_id}`.",
 	//       "location": "path",
 	//       "pattern": "^groups/[^/]+$",
 	//       "required": true,
 	//       "type": "string"
 	//     },
 	//     "updateMask": {
-	//       "description": "Editable fields: `display_name`, `description`",
+	//       "description": "Required. The fully-qualified names of fields to update.\n\nMay only contain the following fields: `display_name`, `description`.",
 	//       "format": "google-fieldmask",
 	//       "location": "query",
 	//       "type": "string"
@@ -1371,7 +2781,8 @@ func (c *GroupsPatchCall) Do(opts ...googleapi.CallOption) (*Operation, error) {
 	//     "$ref": "Operation"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-identity.groups"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -1387,46 +2798,65 @@ type GroupsSearchCall struct {
 	header_      http.Header
 }
 
-// Search: Searches for Groups.
+// Search: Searches for `Group`s matching a specified query.
 func (r *GroupsService) Search() *GroupsSearchCall {
 	c := &GroupsSearchCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	return c
 }
 
-// PageSize sets the optional parameter "pageSize": The default page
-// size is 200 (max 1000) for the BASIC view, and 50
-// (max 500) for the FULL view.
+// PageSize sets the optional parameter "pageSize": The maximum number
+// of results to return.
+//
+// Note that the number of results returned may be less than this value
+// even
+// if there are more available results. To fetch all results, clients
+// must
+// continue calling this method repeatedly until the response no
+// longer
+// contains a `next_page_token`.
+//
+// If unspecified, defaults to 200 for `GroupView.BASIC` and to 50
+// for
+// `GroupView.FULL`.
+//
+// Must not be greater than 1000 for `GroupView.BASIC` or 500
+// for
+// `GroupView.FULL`.
 func (c *GroupsSearchCall) PageSize(pageSize int64) *GroupsSearchCall {
 	c.urlParams_.Set("pageSize", fmt.Sprint(pageSize))
 	return c
 }
 
 // PageToken sets the optional parameter "pageToken": The
-// next_page_token value returned from a previous search request, if
+// `next_page_token` value returned from a previous search request,
+// if
 // any.
 func (c *GroupsSearchCall) PageToken(pageToken string) *GroupsSearchCall {
 	c.urlParams_.Set("pageToken", pageToken)
 	return c
 }
 
-// Query sets the optional parameter "query": Query string for
-// performing search on groups.
-// Users can search on namespace and label attributes of groups.
-// EXACT match ('=') is supported on namespace, and CONTAINS match (':')
-// is
-// supported on labels. This is a `required` field.
-// Multiple queries can be combined using `AND` operator. The operator
-// is case
-// sensitive.
-// An example query would be:
-// "namespace=<namespace_value> AND labels:<labels_value>".
+// Query sets the optional parameter "query": Required. The search
+// query.
+//
+// Must be specified in [Common
+// Expression
+// Language](https://opensource.google/projects/cel). May only
+// contain
+// equality operators on the parent and inclusion operators on labels
+// (e.g.,
+// `parent == 'customers/{customer_id}'
+// &&
+// 'cloudidentity.googleapis.com/groups.discussion_forum' in labels`).
 func (c *GroupsSearchCall) Query(query string) *GroupsSearchCall {
 	c.urlParams_.Set("query", query)
 	return c
 }
 
-// View sets the optional parameter "view": Group resource view to be
-// returned. Defaults to [GroupView.BASIC]().
+// View sets the optional parameter "view": The level of detail to be
+// returned.
+//
+// If unspecified, defaults to `View.BASIC`.
 //
 // Possible values:
 //   "BASIC"
@@ -1473,7 +2903,7 @@ func (c *GroupsSearchCall) Header() http.Header {
 
 func (c *GroupsSearchCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1532,30 +2962,30 @@ func (c *GroupsSearchCall) Do(opts ...googleapi.CallOption) (*SearchGroupsRespon
 	}
 	return ret, nil
 	// {
-	//   "description": "Searches for Groups.",
+	//   "description": "Searches for `Group`s matching a specified query.",
 	//   "flatPath": "v1beta1/groups:search",
 	//   "httpMethod": "GET",
 	//   "id": "cloudidentity.groups.search",
 	//   "parameterOrder": [],
 	//   "parameters": {
 	//     "pageSize": {
-	//       "description": "The default page size is 200 (max 1000) for the BASIC view, and 50\n(max 500) for the FULL view.",
+	//       "description": "The maximum number of results to return.\n\nNote that the number of results returned may be less than this value even\nif there are more available results. To fetch all results, clients must\ncontinue calling this method repeatedly until the response no longer\ncontains a `next_page_token`.\n\nIf unspecified, defaults to 200 for `GroupView.BASIC` and to 50 for\n`GroupView.FULL`.\n\nMust not be greater than 1000 for `GroupView.BASIC` or 500 for\n`GroupView.FULL`.",
 	//       "format": "int32",
 	//       "location": "query",
 	//       "type": "integer"
 	//     },
 	//     "pageToken": {
-	//       "description": "The next_page_token value returned from a previous search request, if any.",
+	//       "description": "The `next_page_token` value returned from a previous search request, if\nany.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "query": {
-	//       "description": "Query string for performing search on groups.\nUsers can search on namespace and label attributes of groups.\nEXACT match ('=') is supported on namespace, and CONTAINS match (':') is\nsupported on labels. This is a `required` field.\nMultiple queries can be combined using `AND` operator. The operator is case\nsensitive.\nAn example query would be:\n\"namespace=\u003cnamespace_value\u003e AND labels:\u003clabels_value\u003e\".",
+	//       "description": "Required. The search query.\n\nMust be specified in [Common Expression\nLanguage](https://opensource.google/projects/cel). May only contain\nequality operators on the parent and inclusion operators on labels (e.g.,\n`parent == 'customers/{customer_id}' \u0026\u0026\n'cloudidentity.googleapis.com/groups.discussion_forum' in labels`).",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "view": {
-	//       "description": "Group resource view to be returned. Defaults to [GroupView.BASIC]().",
+	//       "description": "The level of detail to be returned.\n\nIf unspecified, defaults to `View.BASIC`.",
 	//       "enum": [
 	//         "BASIC",
 	//         "FULL"
@@ -1570,7 +3000,8 @@ func (c *GroupsSearchCall) Do(opts ...googleapi.CallOption) (*SearchGroupsRespon
 	//   },
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/cloud-identity.groups",
-	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -1608,7 +3039,7 @@ type GroupsMembershipsCreateCall struct {
 	header_    http.Header
 }
 
-// Create: Creates a Membership.
+// Create: Creates a `Membership`.
 func (r *GroupsMembershipsService) Create(parent string, membership *Membership) *GroupsMembershipsCreateCall {
 	c := &GroupsMembershipsCreateCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.parent = parent
@@ -1643,7 +3074,7 @@ func (c *GroupsMembershipsCreateCall) Header() http.Header {
 
 func (c *GroupsMembershipsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1707,7 +3138,7 @@ func (c *GroupsMembershipsCreateCall) Do(opts ...googleapi.CallOption) (*Operati
 	}
 	return ret, nil
 	// {
-	//   "description": "Creates a Membership.",
+	//   "description": "Creates a `Membership`.",
 	//   "flatPath": "v1beta1/groups/{groupsId}/memberships",
 	//   "httpMethod": "POST",
 	//   "id": "cloudidentity.groups.memberships.create",
@@ -1716,7 +3147,7 @@ func (c *GroupsMembershipsCreateCall) Do(opts ...googleapi.CallOption) (*Operati
 	//   ],
 	//   "parameters": {
 	//     "parent": {
-	//       "description": "[Resource name](https://cloud.google.com/apis/design/resource_names) of the\nGroup to create Membership within. Format: `groups/{group_id}`, where\n`group_id` is the unique id assigned to the Group.",
+	//       "description": "Required. The parent `Group` resource under which to create the `Membership`.\n\nMust be of the form `groups/{group_id}`.",
 	//       "location": "path",
 	//       "pattern": "^groups/[^/]+$",
 	//       "required": true,
@@ -1731,7 +3162,8 @@ func (c *GroupsMembershipsCreateCall) Do(opts ...googleapi.CallOption) (*Operati
 	//     "$ref": "Operation"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-identity.groups"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -1747,7 +3179,7 @@ type GroupsMembershipsDeleteCall struct {
 	header_    http.Header
 }
 
-// Delete: Deletes a Membership.
+// Delete: Deletes a `Membership`.
 func (r *GroupsMembershipsService) Delete(name string) *GroupsMembershipsDeleteCall {
 	c := &GroupsMembershipsDeleteCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -1781,7 +3213,7 @@ func (c *GroupsMembershipsDeleteCall) Header() http.Header {
 
 func (c *GroupsMembershipsDeleteCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1840,7 +3272,7 @@ func (c *GroupsMembershipsDeleteCall) Do(opts ...googleapi.CallOption) (*Operati
 	}
 	return ret, nil
 	// {
-	//   "description": "Deletes a Membership.",
+	//   "description": "Deletes a `Membership`.",
 	//   "flatPath": "v1beta1/groups/{groupsId}/memberships/{membershipsId}",
 	//   "httpMethod": "DELETE",
 	//   "id": "cloudidentity.groups.memberships.delete",
@@ -1849,7 +3281,7 @@ func (c *GroupsMembershipsDeleteCall) Do(opts ...googleapi.CallOption) (*Operati
 	//   ],
 	//   "parameters": {
 	//     "name": {
-	//       "description": "[Resource name](https://cloud.google.com/apis/design/resource_names) of the\nMembership to be deleted.\n\nFormat: `groups/{group_id}/memberships/{member_id}`, where `group_id` is\nthe unique id assigned to the Group to which Membership belongs to, and\nmember_id is the unique id assigned to the member.",
+	//       "description": "Required. The [resource name](https://cloud.google.com/apis/design/resource_names) of\nthe `Membership` to delete.\n\nMust be of the form `groups/{group_id}/memberships/{membership_id}`.",
 	//       "location": "path",
 	//       "pattern": "^groups/[^/]+/memberships/[^/]+$",
 	//       "required": true,
@@ -1861,7 +3293,8 @@ func (c *GroupsMembershipsDeleteCall) Do(opts ...googleapi.CallOption) (*Operati
 	//     "$ref": "Operation"
 	//   },
 	//   "scopes": [
-	//     "https://www.googleapis.com/auth/cloud-identity.groups"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -1878,7 +3311,7 @@ type GroupsMembershipsGetCall struct {
 	header_      http.Header
 }
 
-// Get: Retrieves a Membership.
+// Get: Retrieves a `Membership`.
 func (r *GroupsMembershipsService) Get(name string) *GroupsMembershipsGetCall {
 	c := &GroupsMembershipsGetCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.name = name
@@ -1922,7 +3355,7 @@ func (c *GroupsMembershipsGetCall) Header() http.Header {
 
 func (c *GroupsMembershipsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -1984,7 +3417,7 @@ func (c *GroupsMembershipsGetCall) Do(opts ...googleapi.CallOption) (*Membership
 	}
 	return ret, nil
 	// {
-	//   "description": "Retrieves a Membership.",
+	//   "description": "Retrieves a `Membership`.",
 	//   "flatPath": "v1beta1/groups/{groupsId}/memberships/{membershipsId}",
 	//   "httpMethod": "GET",
 	//   "id": "cloudidentity.groups.memberships.get",
@@ -1993,7 +3426,7 @@ func (c *GroupsMembershipsGetCall) Do(opts ...googleapi.CallOption) (*Membership
 	//   ],
 	//   "parameters": {
 	//     "name": {
-	//       "description": "[Resource name](https://cloud.google.com/apis/design/resource_names) of the\nMembership to be retrieved.\n\nFormat: `groups/{group_id}/memberships/{member_id}`, where `group_id` is\nthe unique id assigned to the Group to which Membership belongs to, and\n`member_id` is the unique id assigned to the member.",
+	//       "description": "Required. The [resource name](https://cloud.google.com/apis/design/resource_names) of\nthe `Membership` to retrieve.\n\nMust be of the form `groups/{group_id}/memberships/{membership_id}`.",
 	//       "location": "path",
 	//       "pattern": "^groups/[^/]+/memberships/[^/]+$",
 	//       "required": true,
@@ -2006,7 +3439,8 @@ func (c *GroupsMembershipsGetCall) Do(opts ...googleapi.CallOption) (*Membership
 	//   },
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/cloud-identity.groups",
-	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -2023,30 +3457,49 @@ type GroupsMembershipsListCall struct {
 	header_      http.Header
 }
 
-// List: List Memberships within a Group.
+// List: Lists the `Membership`s within a `Group`.
 func (r *GroupsMembershipsService) List(parent string) *GroupsMembershipsListCall {
 	c := &GroupsMembershipsListCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.parent = parent
 	return c
 }
 
-// PageSize sets the optional parameter "pageSize": The default page
-// size is 200 (max 1000) for the BASIC view, and 50
-// (max 500) for the FULL view.
+// PageSize sets the optional parameter "pageSize": The maximum number
+// of results to return.
+//
+// Note that the number of results returned may be less than this value
+// even
+// if there are more available results. To fetch all results, clients
+// must
+// continue calling this method repeatedly until the response no
+// longer
+// contains a `next_page_token`.
+//
+// If unspecified, defaults to 200 for `GroupView.BASIC` and to 50
+// for
+// `GroupView.FULL`.
+//
+// Must not be greater than 1000 for `GroupView.BASIC` or 500
+// for
+// `GroupView.FULL`.
 func (c *GroupsMembershipsListCall) PageSize(pageSize int64) *GroupsMembershipsListCall {
 	c.urlParams_.Set("pageSize", fmt.Sprint(pageSize))
 	return c
 }
 
 // PageToken sets the optional parameter "pageToken": The
-// next_page_token value returned from a previous list request, if any
+// `next_page_token` value returned from a previous search request,
+// if
+// any.
 func (c *GroupsMembershipsListCall) PageToken(pageToken string) *GroupsMembershipsListCall {
 	c.urlParams_.Set("pageToken", pageToken)
 	return c
 }
 
-// View sets the optional parameter "view": Membership resource view to
-// be returned. Defaults to MembershipView.BASIC.
+// View sets the optional parameter "view": The level of detail to be
+// returned.
+//
+// If unspecified, defaults to `MembershipView.BASIC`.
 //
 // Possible values:
 //   "BASIC"
@@ -2093,7 +3546,7 @@ func (c *GroupsMembershipsListCall) Header() http.Header {
 
 func (c *GroupsMembershipsListCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2155,7 +3608,7 @@ func (c *GroupsMembershipsListCall) Do(opts ...googleapi.CallOption) (*ListMembe
 	}
 	return ret, nil
 	// {
-	//   "description": "List Memberships within a Group.",
+	//   "description": "Lists the `Membership`s within a `Group`.",
 	//   "flatPath": "v1beta1/groups/{groupsId}/memberships",
 	//   "httpMethod": "GET",
 	//   "id": "cloudidentity.groups.memberships.list",
@@ -2164,25 +3617,25 @@ func (c *GroupsMembershipsListCall) Do(opts ...googleapi.CallOption) (*ListMembe
 	//   ],
 	//   "parameters": {
 	//     "pageSize": {
-	//       "description": "The default page size is 200 (max 1000) for the BASIC view, and 50\n(max 500) for the FULL view.",
+	//       "description": "The maximum number of results to return.\n\nNote that the number of results returned may be less than this value even\nif there are more available results. To fetch all results, clients must\ncontinue calling this method repeatedly until the response no longer\ncontains a `next_page_token`.\n\nIf unspecified, defaults to 200 for `GroupView.BASIC` and to 50 for\n`GroupView.FULL`.\n\nMust not be greater than 1000 for `GroupView.BASIC` or 500 for\n`GroupView.FULL`.",
 	//       "format": "int32",
 	//       "location": "query",
 	//       "type": "integer"
 	//     },
 	//     "pageToken": {
-	//       "description": "The next_page_token value returned from a previous list request, if any",
+	//       "description": "The `next_page_token` value returned from a previous search request, if\nany.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "parent": {
-	//       "description": "[Resource name](https://cloud.google.com/apis/design/resource_names) of the\nGroup to list Memberships within.\n\nFormat: `groups/{group_id}`, where `group_id` is the unique id assigned to\nthe Group.",
+	//       "description": "Required. The parent `Group` resource under which to lookup the `Membership` name.\n\nMust be of the form `groups/{group_id}`.",
 	//       "location": "path",
 	//       "pattern": "^groups/[^/]+$",
 	//       "required": true,
 	//       "type": "string"
 	//     },
 	//     "view": {
-	//       "description": "Membership resource view to be returned. Defaults to MembershipView.BASIC.",
+	//       "description": "The level of detail to be returned.\n\nIf unspecified, defaults to `MembershipView.BASIC`.",
 	//       "enum": [
 	//         "BASIC",
 	//         "FULL"
@@ -2197,7 +3650,8 @@ func (c *GroupsMembershipsListCall) Do(opts ...googleapi.CallOption) (*ListMembe
 	//   },
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/cloud-identity.groups",
-	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 
@@ -2235,35 +3689,47 @@ type GroupsMembershipsLookupCall struct {
 	header_      http.Header
 }
 
-// Lookup: Looks up
+// Lookup: Looks up the
 // [resource
-// name](https://cloud.google.com/apis/design/resource_names) of a
-// Membership
-// within a Group by member's EntityKey.
+// name](https://cloud.google.com/apis/design/resource_names) of
+// a
+// `Membership` by its `EntityKey`.
 func (r *GroupsMembershipsService) Lookup(parent string) *GroupsMembershipsLookupCall {
 	c := &GroupsMembershipsLookupCall{s: r.s, urlParams_: make(gensupport.URLParams)}
 	c.parent = parent
 	return c
 }
 
-// MemberKeyId sets the optional parameter "memberKey.id": The id of the
-// entity within the given namespace. The id must be unique
-// within its namespace.
+// MemberKeyId sets the optional parameter "memberKey.id": The ID of the
+// entity.
+//
+// For Google-managed entities, the `id` must be the email address of
+// an
+// existing group or user.
+//
+// For external-identity-mapped entities, the `id` must be a string
+// conforming
+// to the Identity Source's requirements.
+//
+// Must be unique within a `namespace`.
 func (c *GroupsMembershipsLookupCall) MemberKeyId(memberKeyId string) *GroupsMembershipsLookupCall {
 	c.urlParams_.Set("memberKey.id", memberKeyId)
 	return c
 }
 
 // MemberKeyNamespace sets the optional parameter "memberKey.namespace":
-// Namespaces provide isolation for ids, i.e an id only needs to be
-// unique
-// within its namespace.
+// The namespace in which the entity exists.
 //
-// Namespaces are currently only created as part of IdentitySource
-// creation
-// from Admin Console. A namespace
-// "identitysources/{identity_source_id}" is
-// created corresponding to every Identity Source `identity_source_id`.
+// If not specified, the `EntityKey` represents a Google-managed entity
+// such
+// as a Google user or a Google Group.
+//
+// If specified, the `EntityKey` represents an external-identity-mapped
+// group.
+// The namespace must correspond to an identity source created in
+// Admin
+// Console and must be in the form of
+// `identitysources/{identity_source_id}.
 func (c *GroupsMembershipsLookupCall) MemberKeyNamespace(memberKeyNamespace string) *GroupsMembershipsLookupCall {
 	c.urlParams_.Set("memberKey.namespace", memberKeyNamespace)
 	return c
@@ -2306,7 +3772,7 @@ func (c *GroupsMembershipsLookupCall) Header() http.Header {
 
 func (c *GroupsMembershipsLookupCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -2368,7 +3834,7 @@ func (c *GroupsMembershipsLookupCall) Do(opts ...googleapi.CallOption) (*LookupM
 	}
 	return ret, nil
 	// {
-	//   "description": "Looks up [resource\nname](https://cloud.google.com/apis/design/resource_names) of a Membership\nwithin a Group by member's EntityKey.",
+	//   "description": "Looks up the [resource\nname](https://cloud.google.com/apis/design/resource_names) of a\n`Membership` by its `EntityKey`.",
 	//   "flatPath": "v1beta1/groups/{groupsId}/memberships:lookup",
 	//   "httpMethod": "GET",
 	//   "id": "cloudidentity.groups.memberships.lookup",
@@ -2377,17 +3843,17 @@ func (c *GroupsMembershipsLookupCall) Do(opts ...googleapi.CallOption) (*LookupM
 	//   ],
 	//   "parameters": {
 	//     "memberKey.id": {
-	//       "description": "The id of the entity within the given namespace. The id must be unique\nwithin its namespace.",
+	//       "description": "The ID of the entity.\n\nFor Google-managed entities, the `id` must be the email address of an\nexisting group or user.\n\nFor external-identity-mapped entities, the `id` must be a string conforming\nto the Identity Source's requirements.\n\nMust be unique within a `namespace`.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "memberKey.namespace": {
-	//       "description": "Namespaces provide isolation for ids, i.e an id only needs to be unique\nwithin its namespace.\n\nNamespaces are currently only created as part of IdentitySource creation\nfrom Admin Console. A namespace `\"identitysources/{identity_source_id}\"` is\ncreated corresponding to every Identity Source `identity_source_id`.",
+	//       "description": "The namespace in which the entity exists.\n\nIf not specified, the `EntityKey` represents a Google-managed entity such\nas a Google user or a Google Group.\n\nIf specified, the `EntityKey` represents an external-identity-mapped group.\nThe namespace must correspond to an identity source created in Admin\nConsole and must be in the form of `identitysources/{identity_source_id}.",
 	//       "location": "query",
 	//       "type": "string"
 	//     },
 	//     "parent": {
-	//       "description": "[Resource name](https://cloud.google.com/apis/design/resource_names) of the\nGroup to lookup Membership within.\n\nFormat: `groups/{group_id}`, where `group_id` is the unique id assigned to\nthe Group.",
+	//       "description": "Required. The parent `Group` resource under which to lookup the `Membership` name.\n\nMust be of the form `groups/{group_id}`.",
 	//       "location": "path",
 	//       "pattern": "^groups/[^/]+$",
 	//       "required": true,
@@ -2400,7 +3866,150 @@ func (c *GroupsMembershipsLookupCall) Do(opts ...googleapi.CallOption) (*LookupM
 	//   },
 	//   "scopes": [
 	//     "https://www.googleapis.com/auth/cloud-identity.groups",
-	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly"
+	//     "https://www.googleapis.com/auth/cloud-identity.groups.readonly",
+	//     "https://www.googleapis.com/auth/cloud-platform"
+	//   ]
+	// }
+
+}
+
+// method id "cloudidentity.groups.memberships.modifyMembershipRoles":
+
+type GroupsMembershipsModifyMembershipRolesCall struct {
+	s                            *Service
+	name                         string
+	modifymembershiprolesrequest *ModifyMembershipRolesRequest
+	urlParams_                   gensupport.URLParams
+	ctx_                         context.Context
+	header_                      http.Header
+}
+
+// ModifyMembershipRoles: Modifies the `MembershipRole`s of a
+// `Membership`.
+func (r *GroupsMembershipsService) ModifyMembershipRoles(name string, modifymembershiprolesrequest *ModifyMembershipRolesRequest) *GroupsMembershipsModifyMembershipRolesCall {
+	c := &GroupsMembershipsModifyMembershipRolesCall{s: r.s, urlParams_: make(gensupport.URLParams)}
+	c.name = name
+	c.modifymembershiprolesrequest = modifymembershiprolesrequest
+	return c
+}
+
+// Fields allows partial responses to be retrieved. See
+// https://developers.google.com/gdata/docs/2.0/basics#PartialResponse
+// for more information.
+func (c *GroupsMembershipsModifyMembershipRolesCall) Fields(s ...googleapi.Field) *GroupsMembershipsModifyMembershipRolesCall {
+	c.urlParams_.Set("fields", googleapi.CombineFields(s))
+	return c
+}
+
+// Context sets the context to be used in this call's Do method. Any
+// pending HTTP request will be aborted if the provided context is
+// canceled.
+func (c *GroupsMembershipsModifyMembershipRolesCall) Context(ctx context.Context) *GroupsMembershipsModifyMembershipRolesCall {
+	c.ctx_ = ctx
+	return c
+}
+
+// Header returns an http.Header that can be modified by the caller to
+// add HTTP headers to the request.
+func (c *GroupsMembershipsModifyMembershipRolesCall) Header() http.Header {
+	if c.header_ == nil {
+		c.header_ = make(http.Header)
+	}
+	return c.header_
+}
+
+func (c *GroupsMembershipsModifyMembershipRolesCall) doRequest(alt string) (*http.Response, error) {
+	reqHeaders := make(http.Header)
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
+	for k, v := range c.header_ {
+		reqHeaders[k] = v
+	}
+	reqHeaders.Set("User-Agent", c.s.userAgent())
+	var body io.Reader = nil
+	body, err := googleapi.WithoutDataWrapper.JSONReader(c.modifymembershiprolesrequest)
+	if err != nil {
+		return nil, err
+	}
+	reqHeaders.Set("Content-Type", "application/json")
+	c.urlParams_.Set("alt", alt)
+	c.urlParams_.Set("prettyPrint", "false")
+	urls := googleapi.ResolveRelative(c.s.BasePath, "v1beta1/{+name}:modifyMembershipRoles")
+	urls += "?" + c.urlParams_.Encode()
+	req, err := http.NewRequest("POST", urls, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = reqHeaders
+	googleapi.Expand(req.URL, map[string]string{
+		"name": c.name,
+	})
+	return gensupport.SendRequest(c.ctx_, c.s.client, req)
+}
+
+// Do executes the "cloudidentity.groups.memberships.modifyMembershipRoles" call.
+// Exactly one of *ModifyMembershipRolesResponse or error will be
+// non-nil. Any non-2xx status code is an error. Response headers are in
+// either *ModifyMembershipRolesResponse.ServerResponse.Header or (if a
+// response was returned at all) in error.(*googleapi.Error).Header. Use
+// googleapi.IsNotModified to check whether the returned error was
+// because http.StatusNotModified was returned.
+func (c *GroupsMembershipsModifyMembershipRolesCall) Do(opts ...googleapi.CallOption) (*ModifyMembershipRolesResponse, error) {
+	gensupport.SetOptions(c.urlParams_, opts...)
+	res, err := c.doRequest("json")
+	if res != nil && res.StatusCode == http.StatusNotModified {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+		return nil, &googleapi.Error{
+			Code:   res.StatusCode,
+			Header: res.Header,
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer googleapi.CloseBody(res)
+	if err := googleapi.CheckResponse(res); err != nil {
+		return nil, err
+	}
+	ret := &ModifyMembershipRolesResponse{
+		ServerResponse: googleapi.ServerResponse{
+			Header:         res.Header,
+			HTTPStatusCode: res.StatusCode,
+		},
+	}
+	target := &ret
+	if err := gensupport.DecodeResponse(target, res); err != nil {
+		return nil, err
+	}
+	return ret, nil
+	// {
+	//   "description": "Modifies the `MembershipRole`s of a `Membership`.",
+	//   "flatPath": "v1beta1/groups/{groupsId}/memberships/{membershipsId}:modifyMembershipRoles",
+	//   "httpMethod": "POST",
+	//   "id": "cloudidentity.groups.memberships.modifyMembershipRoles",
+	//   "parameterOrder": [
+	//     "name"
+	//   ],
+	//   "parameters": {
+	//     "name": {
+	//       "description": "Required. The [resource name](https://cloud.google.com/apis/design/resource_names) of\nthe `Membership` whose roles are to be modified.\n\nMust be of the form `groups/{group_id}/memberships/{membership_id}`.",
+	//       "location": "path",
+	//       "pattern": "^groups/[^/]+/memberships/[^/]+$",
+	//       "required": true,
+	//       "type": "string"
+	//     }
+	//   },
+	//   "path": "v1beta1/{+name}:modifyMembershipRoles",
+	//   "request": {
+	//     "$ref": "ModifyMembershipRolesRequest"
+	//   },
+	//   "response": {
+	//     "$ref": "ModifyMembershipRolesResponse"
+	//   },
+	//   "scopes": [
+	//     "https://www.googleapis.com/auth/cloud-identity.groups",
+	//     "https://www.googleapis.com/auth/cloud-platform"
 	//   ]
 	// }
 

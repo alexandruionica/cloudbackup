@@ -22,6 +22,7 @@
   },
   "id": "cloudfunctions:v1beta2",
   "kind": "discovery#restDescription",
+  "mtlsRootUrl": "https://cloudfunctions.mtls.googleapis.com/",
   "name": "cloudfunctions",
   "ownerDomain": "google.com",
   "ownerName": "Google",
@@ -139,7 +140,7 @@
           "parameterOrder": [],
           "parameters": {
             "filter": {
-              "description": "Required. A filter for matching the requested operations.\u003cbr\u003e\u003cbr\u003e The supported formats of \u003cb\u003efilter\u003c/b\u003e are:\u003cbr\u003e To query for specific function: \u003ccode\u003eproject:*,location:*,function:*\u003c/code\u003e\u003cbr\u003e To query for all of the latest operations for a project: \u003ccode\u003eproject:*,latest:true\u003c/code\u003e",
+              "description": "Required. A filter for matching the requested operations.\u003cbr\u003e\u003cbr\u003e The supported formats of \u003cb\u003efilter\u003c/b\u003e are:\u003cbr\u003e To query for a specific function: \u003ccode\u003eproject:*,location:*,function:*\u003c/code\u003e\u003cbr\u003e To query for all of the latest operations for a project: \u003ccode\u003eproject:*,latest:true\u003c/code\u003e",
               "location": "query",
               "type": "string"
             },
@@ -149,13 +150,13 @@
               "type": "string"
             },
             "pageSize": {
-              "description": "The standard list page size.",
+              "description": "The maximum number of records that should be returned.\u003cbr\u003e Requested page size cannot exceed 100. If not set, the default page size is 100.\u003cbr\u003e\u003cbr\u003e Pagination is only supported when querying for a specific function.",
               "format": "int32",
               "location": "query",
               "type": "integer"
             },
             "pageToken": {
-              "description": "The standard list page token.",
+              "description": "Token identifying which result to start with, which is returned by a previous list call.\u003cbr\u003e\u003cbr\u003e Pagination is only supported when querying for a specific function.",
               "location": "query",
               "type": "string"
             }
@@ -229,7 +230,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The name of the function to be called.",
+                      "description": "Required. The name of the function to be called.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/locations/[^/]+/functions/[^/]+$",
                       "required": true,
@@ -257,7 +258,7 @@
                   ],
                   "parameters": {
                     "location": {
-                      "description": "The project and location in which the function should be created, specified\nin the format `projects/*/locations/*`",
+                      "description": "Required. The project and location in which the function should be created, specified\nin the format `projects/*/locations/*`",
                       "location": "path",
                       "pattern": "^projects/[^/]+/locations/[^/]+$",
                       "required": true,
@@ -285,7 +286,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The name of the function which should be deleted.",
+                      "description": "Required. The name of the function which should be deleted.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/locations/[^/]+/functions/[^/]+$",
                       "required": true,
@@ -366,7 +367,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The name of the function which details should be obtained.",
+                      "description": "Required. The name of the function which details should be obtained.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/locations/[^/]+/functions/[^/]+$",
                       "required": true,
@@ -391,7 +392,7 @@
                   ],
                   "parameters": {
                     "location": {
-                      "description": "The project and location from which the function should be listed,\nspecified in the format `projects/*/locations/*`\nIf you want to list functions in all locations, use \"-\" in place of a\nlocation.",
+                      "description": "Required. The project and location from which the function should be listed,\nspecified in the format `projects/*/locations/*`\nIf you want to list functions in all locations, use \"-\" in place of a\nlocation. When listing functions in all locations, if one or more\nlocation(s) are unreachable, the response will contain functions from all\nreachable locations along with the names of any unreachable locations.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/locations/[^/]+$",
                       "required": true,
@@ -427,7 +428,7 @@
                   ],
                   "parameters": {
                     "name": {
-                      "description": "The name of the function to be updated.",
+                      "description": "Required. The name of the function to be updated.",
                       "location": "path",
                       "pattern": "^projects/[^/]+/locations/[^/]+/functions/[^/]+$",
                       "required": true,
@@ -452,7 +453,7 @@
       }
     }
   },
-  "revision": "20190807",
+  "revision": "20200219",
   "rootUrl": "https://cloudfunctions.googleapis.com/",
   "schemas": {
     "CallFunctionRequest": {
@@ -460,7 +461,7 @@
       "id": "CallFunctionRequest",
       "properties": {
         "data": {
-          "description": "Input to be passed to the function.",
+          "description": "Required. Input to be passed to the function.",
           "type": "string"
         }
       },
@@ -700,6 +701,13 @@
         "nextPageToken": {
           "description": "If not empty, indicates that there may be more functions that match\nthe request; this value should be passed in a new\ngoogle.cloud.functions.v1beta2.ListFunctionsRequest\nto get more functions.",
           "type": "string"
+        },
+        "unreachable": {
+          "description": "Locations that could not be reached. The response does not include any\nfunctions from these locations.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "type": "object"

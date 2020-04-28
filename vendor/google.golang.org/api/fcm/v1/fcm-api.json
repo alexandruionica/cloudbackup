@@ -22,6 +22,7 @@
   },
   "id": "fcm:v1",
   "kind": "discovery#restDescription",
+  "mtlsRootUrl": "https://fcm.mtls.googleapis.com/",
   "name": "fcm",
   "ownerDomain": "google.com",
   "ownerName": "Google",
@@ -141,7 +142,7 @@
       }
     }
   },
-  "revision": "20190820",
+  "revision": "20200203",
   "rootUrl": "https://fcm.googleapis.com/",
   "schemas": {
     "AndroidConfig": {
@@ -158,6 +159,10 @@
           },
           "description": "Arbitrary key/value payload. If present, it will override\ngoogle.firebase.fcm.v1.Message.data.",
           "type": "object"
+        },
+        "directBootOk": {
+          "description": "If set to true, messages will be allowed to be delivered to the app while\nthe device is in direct boot mode. See [Support Direct Boot\nmode](https://developer.android.com/training/articles/direct-boot).",
+          "type": "boolean"
         },
         "fcmOptions": {
           "$ref": "AndroidFcmOptions",
@@ -361,7 +366,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "HTTP request headers defined in Apple Push Notification Service. Refer to\n[APNs request headers](https://goo.gl/C6Yhia) for\nsupported headers, e.g. \"apns-priority\": \"10\".",
+          "description": "HTTP request headers defined in Apple Push Notification Service. Refer to\n[APNs request\nheaders](https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/sending_notification_requests_to_apns)\nfor supported headers, e.g. \"apns-priority\": \"10\".",
           "type": "object"
         },
         "payload": {
@@ -369,7 +374,7 @@
             "description": "Properties of the object.",
             "type": "any"
           },
-          "description": "APNs payload as a JSON object, including both `aps` dictionary and custom\npayload. See [Payload Key Reference](https://goo.gl/32Pl5W).\nIf present, it overrides google.firebase.fcm.v1.Notification.title\nand google.firebase.fcm.v1.Notification.body.",
+          "description": "APNs payload as a JSON object, including both `aps` dictionary and custom\npayload. See [Payload Key\nReference](https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server/generating_a_remote_notification).\nIf present, it overrides google.firebase.fcm.v1.Notification.title\nand google.firebase.fcm.v1.Notification.body.",
           "type": "object"
         }
       },
@@ -469,7 +474,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Input only. Arbitrary key/value payload.",
+          "description": "Input only. Arbitrary key/value payload. The key should not be a reserved\nword (\"from\", \"message_type\", or any word starting with \"google\" or \"gcm\").",
           "type": "object"
         },
         "fcmOptions": {
@@ -570,6 +575,10 @@
       "description": "Options for features provided by the FCM SDK for Web.",
       "id": "WebpushFcmOptions",
       "properties": {
+        "analyticsLabel": {
+          "description": "Label associated with the message's analytics data.",
+          "type": "string"
+        },
         "link": {
           "description": "The link to open when the user clicks on the notification.\nFor all URL values, HTTPS is required.",
           "type": "string"

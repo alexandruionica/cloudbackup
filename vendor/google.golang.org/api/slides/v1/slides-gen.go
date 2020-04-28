@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC.
+// Copyright 2020 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -56,6 +56,7 @@ import (
 	googleapi "google.golang.org/api/googleapi"
 	gensupport "google.golang.org/api/internal/gensupport"
 	option "google.golang.org/api/option"
+	internaloption "google.golang.org/api/option/internaloption"
 	htransport "google.golang.org/api/transport/http"
 )
 
@@ -72,6 +73,7 @@ var _ = googleapi.Version
 var _ = errors.New
 var _ = strings.Replace
 var _ = context.Canceled
+var _ = internaloption.WithDefaultEndpoint
 
 const apiId = "slides:v1"
 const apiName = "slides"
@@ -116,6 +118,7 @@ func NewService(ctx context.Context, opts ...option.ClientOption) (*Service, err
 	)
 	// NOTE: prepend, so we don't override user-specified scopes.
 	opts = append([]option.ClientOption{scopesOption}, opts...)
+	opts = append(opts, internaloption.WithDefaultEndpoint(basePath))
 	client, endpoint, err := htransport.NewClient(ctx, opts...)
 	if err != nil {
 		return nil, err
@@ -3968,8 +3971,8 @@ type Presentation struct {
 	// - The master page properties define the common page properties
 	// inherited by
 	//   its layouts.
-	// - Any other shapes on the master slide will appear on all slides
-	// using that
+	// - Any other shapes on the master slide appear on all slides using
+	// that
 	//   master, regardless of their layout.
 	Masters []*Page `json:"masters,omitempty"`
 
@@ -3985,7 +3988,7 @@ type Presentation struct {
 	//   `BODY` placeholder shape contains the speaker notes.
 	// - The notes master page properties define the common page properties
 	//   inherited by all notes pages.
-	// - Any other shapes on the notes master will appear on all notes
+	// - Any other shapes on the notes master appears on all notes
 	// pages.
 	//
 	// The notes master is read-only.
@@ -4061,12 +4064,12 @@ type Range struct {
 	// EndIndex: The optional zero-based index of the end of the
 	// collection.
 	// Required for `FIXED_RANGE` ranges.
-	EndIndex int64 `json:"endIndex,omitempty"`
+	EndIndex *int64 `json:"endIndex,omitempty"`
 
 	// StartIndex: The optional zero-based index of the beginning of the
 	// collection.
 	// Required for `FIXED_RANGE` and `FROM_START_INDEX` ranges.
-	StartIndex int64 `json:"startIndex,omitempty"`
+	StartIndex *int64 `json:"startIndex,omitempty"`
 
 	// Type: The type of range.
 	//
@@ -8135,7 +8138,7 @@ func (c *PresentationsBatchUpdateCall) Header() http.Header {
 
 func (c *PresentationsBatchUpdateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8284,7 +8287,7 @@ func (c *PresentationsCreateCall) Header() http.Header {
 
 func (c *PresentationsCreateCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8422,7 +8425,7 @@ func (c *PresentationsGetCall) Header() http.Header {
 
 func (c *PresentationsGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8573,7 +8576,7 @@ func (c *PresentationsPagesGetCall) Header() http.Header {
 
 func (c *PresentationsPagesGetCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8703,8 +8706,7 @@ func (r *PresentationsPagesService) GetThumbnail(presentationId string, pageObje
 // "thumbnailProperties.mimeType": The optional mime type of the
 // thumbnail image.
 //
-// If you don't specify the mime type, the default mime type will be
-// PNG.
+// If you don't specify the mime type, the mime type defaults to PNG.
 //
 // Possible values:
 //   "PNG"
@@ -8768,7 +8770,7 @@ func (c *PresentationsPagesGetThumbnailCall) Header() http.Header {
 
 func (c *PresentationsPagesGetThumbnailCall) doRequest(alt string) (*http.Response, error) {
 	reqHeaders := make(http.Header)
-	reqHeaders.Set("x-goog-api-client", "gl-go/1.11.0 gdcl/20190923")
+	reqHeaders.Set("x-goog-api-client", "gl-go/"+gensupport.GoVersion()+" gdcl/20200425")
 	for k, v := range c.header_ {
 		reqHeaders[k] = v
 	}
@@ -8853,7 +8855,7 @@ func (c *PresentationsPagesGetThumbnailCall) Do(opts ...googleapi.CallOption) (*
 	//       "type": "string"
 	//     },
 	//     "thumbnailProperties.mimeType": {
-	//       "description": "The optional mime type of the thumbnail image.\n\nIf you don't specify the mime type, the default mime type will be PNG.",
+	//       "description": "The optional mime type of the thumbnail image.\n\nIf you don't specify the mime type, the mime type defaults to PNG.",
 	//       "enum": [
 	//         "PNG"
 	//       ],
