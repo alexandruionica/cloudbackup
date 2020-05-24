@@ -1,5 +1,5 @@
 hash: 49c2702ee5cc3781711200a9b8c050f58d7874cf0c909761a8cb1948ad226641
-updated: 2020-04-28T21:46:38.400214829+10:00
+updated: 2020-04-28T22:22:56.493681912+10:00
 imports:
 - name: cloud.google.com/go
   version: 69e77e66e59741e053c986d469791a983ee1d6a5
@@ -258,7 +258,7 @@ imports:
   - internal/urlfetch
   - urlfetch
 - name: google.golang.org/genproto
-  version: bca184e23272c97429f0cb78a825f71ede0635fc
+  version: c45acf45369a9d2fa234d9508b092aefb9cb9385
   subpackages:
   - googleapis/api/annotations
   - googleapis/iam/v1
