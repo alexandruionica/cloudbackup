@@ -36,7 +36,7 @@ try {
 
 	echo "Linting Python integration tests ..."
 	# We put the linting here for simplicity, since this is not a Python project
-	& "$TESTSFOLDER\.venv\Scripts\flake8.exe" --ignore E501,F401,F403,F405 ${TESTSFOLDER} --exclude=.venv
+	& "$TESTSFOLDER\.venv\Scripts\flake8.exe" --ignore E501,F401,F403,F405,W504,W605 ${TESTSFOLDER} --exclude=.venv
 	if ( $LastExitCode -ne 0 ) {
 	  echo 'Linting error'
 	  exit $LastExitCode
