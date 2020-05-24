@@ -1399,7 +1399,7 @@ definitions:
         description: maximum results to return in one response. If more results are available then a $next token will be returned in the response and it is expected said $next token will be supplied for a subsequent request. Defaults to 1000 and max accepted value is 10000. If a $next token is specified then the value of this parameter will be ignored.
       job_id:
         type: string
-        description: Job id corresponding to the backup job $name for which the list of successfully backed up items to be shown. If this field is not specified or is empty then the list of all files backed up during different backup job runs for $name will be shown but this operation will be allowed only as long as there isn't a running backup for the given $name. If the $parent parameter is specified then filtering of results may happen. If a $next token is specified then the value of this parameter will be ignored.
+        description: Job id corresponding to the backup job $name for which the list of successfully backed up items to be shown. If this field is not specified or is empty then the list of all files backed up during different backup job runs for $name will be shown but this operation will be allowed only as long as there isn't a running backup for the given $name. If the $path parameter is specified then filtering of results may happen. If a $next token is specified then the value of this parameter will be ignored.
         example: '163A61FE-2205-4EB2-A0CB-B19A033C1CE3'
       path:
         type: string
