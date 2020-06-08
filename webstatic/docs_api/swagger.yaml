@@ -497,7 +497,7 @@ paths:
         - report
       summary: List backed up files
       description: >-
-        List backed up files, directories and symlinks during a specific backup job run or all files to have backups for the given backup job definition. To discover all available backup job runs for a given backup definition, use the /report/backup/list API call.
+        List backed up files, directories and symlinks during a specific backup job run. To discover all available backup job runs for a given backup definition, use the /report/backup/list API call.
       operationId: ReportBackupFileList
       produces:
         - application/json
@@ -815,6 +815,10 @@ definitions:
         description: >-
           An end time of 0001-01-01T00:00:00Z is the equivallent of null time
           and should be ignored for jobs having "state"=="stopped" or "state"=="running". Date+time format is RFC3339 with nanosecond support.
+      platform:
+        type: string
+        example: linux
+        description: Platform (operating system) on which this job is running / has ran. Possible values are "linux", "freebsd", "darwin" (MacOS X), "windows"
       file_content_bytes_read:
         type: integer
         example: '39282'
@@ -1411,6 +1415,7 @@ definitions:
         description: If set to true and the value in $path is a directory then beside listing the contents of the directory, it will descend in sub directories and list their contents and their children's contents. If set to true and the value of $path is not specified then all top level directories (part of backup or backups) will be descended into. If a $next token is specified then the value of this parameter will be ignored.
     required:
       - name
+      - job_id
       - path
   ObjectStoreRates:
     type: object

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/paulbellamy/ratecounter"
 	log "github.com/sirupsen/logrus"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -97,7 +98,8 @@ type BackupJobStatus struct {
 	// - makes sense only for $State == "running"
 	StartTime time.Time `json:"start_time,omitempty"`
 	// time when job finished (or got cancelled, or failed)
-	EndTime time.Time `json:"end_time,omitempty"`
+	EndTime  time.Time `json:"end_time,omitempty"`
+	Platform string    `json:"platform"`
 	// bandwidth/second used during last 1/5/15 minute(s) - makes sense only for $State == "running" . This
 	// value is the lower of disk read bandwidth and the upload speed to the backend object store
 	Rate1Min             int64 `json:"rate_1min"`
@@ -292,6 +294,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		State:       "running",
 		BackupJobId: BackupJobId,
 		StartTime:   time.Now(),
+		Platform:    runtime.GOOS,
 		// init statistics related fields ; IF ANY NEW ENTRY IS ADDED BELOW THEN REVISIT AT LEAST METHOD
 		// IncrementCounter() AND SEE IF SAID ADDITION NEEDS TO BE EXCLUDED FROM BEING SEND TO WATCHERS
 		StatsCounters: map[string]uint64{
