@@ -44,10 +44,10 @@ func CreateDb(db *sql.DB, dbfilepath string) error {
 	CREATE TABLE targets (name TEXT NOT NULL PRIMARY KEY, backup_name TEXT, type TEXT, bucket TEXT, prefix TEXT, date_added INTEGER);
 
 	CREATE TABLE jobs (id TEXT NOT NULL PRIMARY KEY, name TEXT, type TEXT, start_time INTEGER, end_time INTEGER, state TEXT, 
-	report TEXT);
+	report TEXT, src_os TEXT);
 
 	CREATE TABLE remote_files (uuid TEXT NOT NULL PRIMARY KEY, local_path TEXT, parent TEXT, target TEXT, 
-	upload_date INTEGER, job_id TEXT, delete_marker INTEGER, version INTEGER, remote_version TEXT, src_os TEXT, type TEXT, 
+	upload_date INTEGER, job_id TEXT, delete_marker INTEGER, version INTEGER, remote_version TEXT, type TEXT, 
 	link_target TEXT, size INTEGER, mtime INTEGER, ctime INTEGER, owner TEXT, permissions TEXT, checksum TEXT, 
 	checksum_type, encrypted INTEGER,
 	FOREIGN KEY(target) REFERENCES targets(name), FOREIGN KEY(job_id) REFERENCES jobs(id));

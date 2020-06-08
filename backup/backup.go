@@ -340,7 +340,7 @@ func addDbEntryToRemoteFiles(target string, jobUuid string, deleteMarker int, db
 	entryUuid := u.String()
 
 	_, err = dbtx.Exec(dbData.PreparedStatements.RemoteFilesInsert, entryUuid, fileDbRecord.Path, filepath.Dir(filepath.Clean(fileDbRecord.Path)),
-		target, time.Now().UnixNano(), jobUuid, deleteMarker, version, remoteVersion, runtime.GOOS, fileDbRecord.Type,
+		target, time.Now().UnixNano(), jobUuid, deleteMarker, version, remoteVersion, fileDbRecord.Type,
 		fileDbRecord.LinkTarget, fileDbRecord.Size, fileDbRecord.Mtime.UnixNano(),
 		fileDbRecord.Ctime.UnixNano(), fileDbRecord.Owner,
 		fileDbRecord.Permissions, fileDbRecord.Checksum, fileDbRecord.ChecksumType, fileDbRecord.Encrypted)

@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	log "github.com/sirupsen/logrus"
+	"runtime"
 	"time"
 )
 
@@ -83,8 +84,8 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// insert statement - having it as text only and not an actual prepared statement (as this will be used only in transactions, and called generally once per transaction)
 	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, local_path, parent, target, upload_date, " +
-		"job_id, delete_marker, version, remote_version, src_os, type, link_target, size, mtime, ctime, owner, permissions, " +
-		"checksum, checksum_type, encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		"job_id, delete_marker, version, remote_version, type, link_target, size, mtime, ctime, owner, permissions, " +
+		"checksum, checksum_type, encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	//  query statement used to figure out the largest version for a particular path and target name pair
 	PreparedStatements.RemoteFilesQueryNewestVersion = "SELECT version FROM remote_files WHERE local_path = ? AND target = ? ORDER BY version DESC LIMIT 1"
@@ -412,9 +413,9 @@ func CheckJobUuidExists(db *sql.DB, jobid string) (bool, error) {
 
 // adds a new record in the "jobs" table for a new job
 func AddJobDetails(db *sql.DB, jobId string, jobName string, jobType string, startTime time.Time) error {
-	_, err := db.Exec("INSERT INTO jobs (id, name, type, start_time, end_time, state, report) "+
+	_, err := db.Exec("INSERT INTO jobs (id, name, type, start_time, end_time, state, report, src_os) "+
 		"VALUES "+
-		"(?, ?, ?, ?, ?, ?, ?)", jobId, jobName, jobType, startTime.UnixNano(), 0, "started", "")
+		"(?, ?, ?, ?, ?, ?, ?, ?)", jobId, jobName, jobType, startTime.UnixNano(), 0, "started", "", runtime.GOOS)
 	if err != nil {
 		logger.Errorf("While trying to add information about %s job having name '%s' and id '%s' to the "+
 			"database, the following error was encountered: '%s'", jobType, jobName, jobId, err)
