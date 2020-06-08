@@ -160,7 +160,8 @@ class TestCliAdvanced(unittest.TestCase):
             "rate_5min": 0,
             "rate_15min": 0,
             "file_content_bytes_read": 0,
-            "next_run": "0001-01-01T00:00:00Z"
+            "next_run": "0001-01-01T00:00:00Z",
+            "platform": ""
         }
         self.assertEqual(decoded, expected_result, "Result from command doesn't match expected JSON output")
 
