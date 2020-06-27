@@ -297,3 +297,38 @@ func IsValidUrl(toTest string) bool {
 		return true
 	}
 }
+
+// returns the path separator for a given OS - if this function is changed then most likely StripEndOfPathSeparators() below needs updating too
+func GetPathSeparator(os string) string {
+	// according to go 1.12.2 go/src/os/path_*.go only  "windows" has a path separator of "\" while everything else is "/"
+	if strings.ToLower(os) == "windows" {
+		return `\`
+	}
+	return "/"
+}
+
+// strip ending separator(s) from a path - this is to be used when filepath.Clean can't be used because the path and
+// the separator may be from a different OS
+func StripEndOfPathSeparators(path string, separator string) string {
+	if separator == `\` {
+		// on Windows a path like c:\ can't be further "cleaned"
+		for len(path) > 3 {
+			if path[len(path)-1:] == `\` {
+				path = path[:len(path)-1]
+			} else {
+				return path
+			}
+		}
+		return path
+	} else {
+		// Separator is `/` so we're on some kind of Unix or Unix like OS ; as of GO 1.12 only Windows had a different path separator
+		for len(path) > 1 {
+			if path[len(path)-1:] == `/` {
+				path = path[:len(path)-1]
+			} else {
+				return path
+			}
+		}
+	}
+	return path
+}
