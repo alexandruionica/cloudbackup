@@ -587,3 +587,91 @@ func TestIsExcluded6(t *testing.T) {
 			"argument in reply) is empty but instead we got: '%s'", exclusionRule)
 	}
 }
+
+func TestStripEndOfPathSeparators_Windows(t *testing.T) {
+	path, separator, result := `c:\`, `\`, `c:\`
+	res := StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `c:\\`, `\`, `c:\`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `c:\\\\\`, `\`, `c:\`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `c:\asdasd\a`, `\`, `c:\asdasd\a`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `c:\asdasd\a\`, `\`, `c:\asdasd\a`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `c:\asdasd\a\\`, `\`, `c:\asdasd\a`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+}
+
+func TestStripEndOfPathSeparators_Unixes(t *testing.T) {
+	path, separator, result := `/`, `/`, `/`
+	res := StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `/lala`, `/`, `/lala`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `/lala/`, `/`, `/lala`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `/lala//`, `/`, `/lala`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `/lala///`, `/`, `/lala`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+
+	path, separator, result = `/lala/a`, `/`, `/lala/a`
+	res = StripEndOfPathSeparators(path, separator)
+	if res != result {
+		t.Fatalf("Unexpected result of: '%s' while '%s' was expected for path '%s' and separator: '%s'", res,
+			result, path, separator)
+	}
+}
