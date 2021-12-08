@@ -1,7 +1,6 @@
 
 # Go parameters
 GOCMD=go
-GLIDECMD=glide
 GOBUILD=$(GOCMD) build
 GOCLEAN=$(GOCMD) clean
 GOTEST=$(GOCMD) test
@@ -13,7 +12,7 @@ COVERAGE_FILE=coverage.out
 all: test build
 build:
 	@$(GOCMD) version
-	$(GOCMD) build -v
+	$(GOCMD) build -v -mod=vendor
 test: testcp gotest gotestrace
 alltest: test build inttest
 # test coding practices
@@ -65,7 +64,7 @@ run:
 	./$(BINARY_NAME)
 
 deps: 
-	$(GLIDECMD) install
+	go mod
 
 docs:
 	@echo "############ Generating Documentation ############"

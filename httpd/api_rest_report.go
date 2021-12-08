@@ -573,7 +573,7 @@ func getDbAccess(srvSrc SrvData, jobName string, w http.ResponseWriter, logConte
 	if err != nil {
 		if err.Error() == database.ErrTimedOut {
 			logger.Debugf("Timed out while trying to get database access from '%s' being ran for job definition '%s'", logContext, jobName)
-			msg := fmt.Sprint("Timed out while trying to get database access. Please try again later.")
+			msg := "Timed out while trying to get database access. Please try again later."
 			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable, msg)
 			return shared.DbData{}, nil, errors.New(msg)
 		} else {

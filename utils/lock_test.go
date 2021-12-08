@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -35,16 +36,25 @@ func TestMutexWithTimeout(t *testing.T) {
 	lock.GetLock()
 
 	var testInt uint32
+	// use a channel to hand off the error
+	errs := make(chan error, 1)
+
 	go func() { // nolint
 		t.Log("Routine attempting to get a lock, in blocking mode")
 		atomic.AddUint32(&testInt, 1)
 		lock.GetLock()
-		t.Fatalf("should have never gotten lock as it should be held by previous call to GetLock()")
+		errs <- fmt.Errorf("should have never gotten lock as it should be held by previous call to GetLock()")
 	}()
 
 	// give a change for the above go func to complete run
 	time.Sleep(time.Millisecond * 50)
 	if atomic.LoadUint32(&testInt) != 1 {
 		t.Fatalf("GO routine did not ran")
+	}
+	select {
+	case msg := <-errs:
+		t.Fatalf(msg.Error())
+	default:
+		return
 	}
 }
