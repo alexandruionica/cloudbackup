@@ -310,7 +310,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// /tmp/$RANDOM/file1
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644)
+	err = ioutil.WriteFile(path+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
@@ -319,14 +319,14 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	// /tmp/$RANDOM/dir1/dir2/dir3/file2.txt
 	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
 		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file2.txt", []byte(`text for file2.txt`),
-		0644)
+		0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 	// /tmp/$RANDOM/dir1/dir2/dir3/file3
 	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
-		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file3", []byte(`text for file3`), 0644)
+		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file3", []byte(`text for file3`), 0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
@@ -334,7 +334,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 
 	// /tmp/$RANDOM/dir1/dir2/dir3/file4
 	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
-		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file4", []byte(`text for file4`), 0644)
+		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file4", []byte(`text for file4`), 0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
@@ -342,7 +342,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 
 	// /tmp/$RANDOM/dir1/dir2/file5
 	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
-		string(filepath.Separator)+"file5", []byte(`text for file5`), 0640)
+		string(filepath.Separator)+"file5", []byte(`text for file5`), 0640) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)

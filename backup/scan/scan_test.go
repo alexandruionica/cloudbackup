@@ -858,7 +858,7 @@ func TestPath6(t *testing.T) {
 	}()
 
 	// create file to backup
-	err = ioutil.WriteFile(backupDirPath+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644)
+	err = ioutil.WriteFile(backupDirPath+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644) // #nosec
 	if err != nil {
 		t.Fatalf("While trying to create a tmp file to test backing up of, got error: '%s'", err)
 	}
@@ -981,7 +981,7 @@ func TestPath7(t *testing.T) {
 	}()
 
 	// create file to backup
-	err = ioutil.WriteFile(backupDirPath2+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644)
+	err = ioutil.WriteFile(backupDirPath2+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644) // #nosec
 	if err != nil {
 		t.Fatalf("While trying to create a tmp file to test backing up of, got error: '%s'", err)
 	}

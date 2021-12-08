@@ -210,31 +210,31 @@ func prepareHtmlEmail(emailTextBody []string, decodedJson shared.BackupJobStatus
   background-color: #4CAF50;
   color: white;
 }
-</style></head><body>` + fmt.Sprintf("\n")
+</style></head><body>` + "\n"
 	result = header + "<b>" + strings.Join(emailTextBody, "<br>") +
-		fmt.Sprintf("</b>\n<hr>\n<table id='report' style='border-collapse:collapse;'\n")
+		"</b>\n<hr>\n<table id='report' style='border-collapse:collapse;'\n"
 
 	result += tr + "Start time" + td + fmt.Sprintf("%s\n", decodedJson.StartTime)
 	result += tr + "Duration" + td + fmt.Sprintf("%s\n", decodedJson.EndTime.Sub(decodedJson.StartTime).Round(time.Second))
 
 	if len(decodedJson.ObjectStoreRates) < 2 {
-		result += tr + "1 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate1Min)) + "/s" + fmt.Sprintf("\n")
-		result += tr + "5 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate5Min)) + "/s" + fmt.Sprintf("\n")
-		result += tr + "15 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate15Min)) + "/s" + fmt.Sprintf("\n")
+		result += tr + "1 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate1Min)) + "/s" + "\n"
+		result += tr + "5 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate5Min)) + "/s" + "\n"
+		result += tr + "15 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate15Min)) + "/s" + "\n"
 	} else {
 		result += tr + "Global 1 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate1Min)) + "/s"
 		for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-			result += td + fmt.Sprintf("target %s 1 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate1Min)) + "/s" + fmt.Sprintf("\n")
+			result += td + fmt.Sprintf("target %s 1 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate1Min)) + "/s" + "\n"
 		}
 
 		result += tr + "Global 5 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate5Min)) + "/s"
 		for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-			result += td + fmt.Sprintf("target %s 5 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate5Min)) + "/s" + fmt.Sprintf("\n")
+			result += td + fmt.Sprintf("target %s 5 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate5Min)) + "/s" + "\n"
 		}
 
 		result += tr + "Global 15 minute rate:" + td + humanize.Bytes(uint64(decodedJson.Rate15Min)) + "/s"
 		for _, objectStoreRate := range decodedJson.ObjectStoreRates {
-			result += td + fmt.Sprintf("target %s 15 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate15Min)) + "/s" + fmt.Sprintf("\n")
+			result += td + fmt.Sprintf("target %s 15 minute rate:", objectStoreRate.Name) + td + humanize.Bytes(uint64(objectStoreRate.Rate15Min)) + "/s" + "\n"
 		}
 	}
 	var tdTmp string

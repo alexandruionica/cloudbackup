@@ -217,7 +217,7 @@ func TestNewFileReader2(t *testing.T) {
 	// setup a 20 byte long file
 	tmpPath := utils.SetupTmpDir("unittest_objectstore_common_test", t)
 	fileToOpen := tmpPath + string(filepath.Separator) + "file.txt"
-	err = ioutil.WriteFile(fileToOpen, []byte(`12345678901234567890`), 0644)
+	err = ioutil.WriteFile(fileToOpen, []byte(`12345678901234567890`), 0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
@@ -304,7 +304,7 @@ func TestNewFileReader3(t *testing.T) {
 	// setup a 20 byte long file
 	tmpPath := utils.SetupTmpDir("unittest_objectstore_common_test", t)
 	fileToOpen := tmpPath + string(filepath.Separator) + "file.txt"
-	err = ioutil.WriteFile(fileToOpen, []byte(`12345678901234567890`), 0644)
+	err = ioutil.WriteFile(fileToOpen, []byte(`12345678901234567890`), 0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)

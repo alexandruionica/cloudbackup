@@ -182,7 +182,7 @@ func (objStore *StoreGcpStorage) MarkDeleted(existingDbRecord shared.BackedUpFil
 	err = objStore.gcpBucketObj.Object(remotePath).Delete(objStore.ctx)
 	if err != nil {
 		if err == gcpStorage.ErrObjectNotExist {
-			return string(markerVersion) + "_delete_marker", false, fmt.Errorf("while trying to place a delete marker on '%s'"+
+			return strconv.FormatInt(markerVersion, 10) + "_delete_marker", false, fmt.Errorf("while trying to place a delete marker on '%s'"+
 				" from GCP storage bucket '%s' received error "+
 				"message: '%s' . You must investigate what "+
 				"happened on the object store side as your backup may be compromised and be invalid if files no longer "+
@@ -194,7 +194,7 @@ func (objStore *StoreGcpStorage) MarkDeleted(existingDbRecord shared.BackedUpFil
 	}
 	// append "_delete_marker" to the version so later when it is requested to delete the delete marker itself we know
 	// to not do anything (as GCP storage doesn't have a concept of delete markers)
-	return string(markerVersion) + "_delete_marker", false, nil
+	return strconv.FormatInt(markerVersion, 10) + "_delete_marker", false, nil
 }
 
 // delete a particular version for a given path

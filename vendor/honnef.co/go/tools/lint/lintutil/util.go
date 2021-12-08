@@ -239,19 +239,6 @@ func ProcessFlagSet(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, fs *
 		exit(0)
 	}
 
-	var f format.Formatter
-	switch formatter {
-	case "text":
-		f = format.Text{W: os.Stdout}
-	case "stylish":
-		f = &format.Stylish{W: os.Stdout}
-	case "json":
-		f = format.JSON{W: os.Stdout}
-	default:
-		fmt.Fprintf(os.Stderr, "unsupported output format %q\n", formatter)
-		exit(2)
-	}
-
 	ps, err := Lint(cs, cums, fs.Args(), &Options{
 		Tags:                     tags,
 		LintTests:                tests,
@@ -263,6 +250,19 @@ func ProcessFlagSet(cs []*analysis.Analyzer, cums []lint.CumulativeChecker, fs *
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		exit(1)
+	}
+
+	var f format.Formatter
+	switch formatter {
+	case "text":
+		f = format.Text{W: os.Stdout}
+	case "stylish":
+		f = &format.Stylish{W: os.Stdout}
+	case "json":
+		f = format.JSON{W: os.Stdout}
+	default:
+		fmt.Fprintf(os.Stderr, "unsupported output format %q\n", formatter)
+		exit(2)
 	}
 
 	var (

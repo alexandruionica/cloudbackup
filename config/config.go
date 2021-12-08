@@ -104,7 +104,7 @@ func Save(runtimeCfg *shared.RuntimeConfig, newConfig shared.CfgTemplate) error 
 		return fmt.Errorf("could not marshall YAML when preparing for write the configuration "+
 			"file. The error received was: %s", err.Error())
 	}
-	if err := ioutil.WriteFile(runtimeCfg.Path, toWrite, 0644); err != nil {
+	if err := ioutil.WriteFile(runtimeCfg.Path, toWrite, 0600); err != nil {
 		return fmt.Errorf("could not write to configuration file '%s' . Received error was: %s",
 			runtimeCfg.Path, err)
 	}
@@ -261,14 +261,14 @@ func ValidatePrePostRunScript(path string, scriptType string, backupName string,
 func ValidateHttps(config shared.CfgTemplate, logError bool) error {
 	if config.Https.Enabled {
 		if config.Https.SslCertPath == "" {
-			msg := fmt.Sprintf("https: enabled=true  but https: ssl_cert_path  is not set")
+			msg := "https: enabled=true  but https: ssl_cert_path  is not set"
 			if logError {
 				logger.Error(msg)
 			}
 			return errors.New(msg)
 		}
 		if config.Https.SslKeyPath == "" {
-			msg := fmt.Sprintf("https: enabled=true  but https: ssl_key_path  is not set")
+			msg := "https: enabled=true  but https: ssl_key_path  is not set"
 			if logError {
 				logger.Error(msg)
 			}

@@ -1,3 +1,4 @@
+//go:build darwin || freebsd || netbsd || openbsd || solaris || linux
 // +build darwin freebsd netbsd openbsd solaris linux
 
 package config

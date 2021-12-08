@@ -1536,7 +1536,8 @@ func CheckCanonicalHeaderKey(pass *analysis.Pass) (interface{}, error) {
 		if !push {
 			return false
 		}
-		if assign, ok := node.(*ast.AssignStmt); ok {
+		assign, ok := node.(*ast.AssignStmt)
+		if ok {
 			// TODO(dh): This risks missing some Header reads, for
 			// example in `h1["foo"] = h2["foo"]` – these edge
 			// cases are probably rare enough to ignore for now.
@@ -2706,10 +2707,6 @@ func CheckSillyBitwiseOps(pass *analysis.Pass) (interface{}, error) {
 			if !ok {
 				return
 			}
-			if obj.Pkg() != pass.Pkg {
-				// identifier was dot-imported
-				return
-			}
 			if v, _ := constant.Int64Val(obj.Val()); v != 0 {
 				return
 			}
@@ -2930,12 +2927,6 @@ func CheckDeprecated(pass *analysis.Pass) (interface{}, error) {
 		p := spec.Path.Value
 		path := p[1 : len(p)-1]
 		if depr, ok := deprs.Packages[imp]; ok {
-			if path == "github.com/golang/protobuf/proto" {
-				gen, ok := code.Generator(pass, spec.Path.Pos())
-				if ok && gen == facts.ProtocGenGo {
-					return
-				}
-			}
 			report.Report(pass, spec, fmt.Sprintf("package %s is deprecated: %s", path, depr.Msg))
 		}
 	}
