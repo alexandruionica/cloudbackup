@@ -26,25 +26,27 @@ type DbAccess struct {
 // this normally populated by dataabase/dbops/Prepare()
 type DbPreparedStatements struct {
 	// each "string" entry contains the sql statement to be used for preparing the statement
-	FilesQuery                            string
-	FilesQueryStmt                        *sql.Stmt
-	FilesInsert                           string
-	FilesInsertStmt                       *sql.Stmt
-	FilesUpdate                           string
-	FilesUpdateStmt                       *sql.Stmt
-	FilesDelete                           string
-	JobStartTime                          string
-	RemoteFilesInsert                     string
-	RemoteFilesQueryNewestVersion         string
-	RemoteFilesQueryNewestVersionUuidStmt *sql.Stmt
-	RemoteFilesQueryRemoteVersion         string
-	BackupCollectionsInsert               string
-	BackupCollectionsInsertStmt           *sql.Stmt
-	FindDeletedItemsStmt                  *sql.Stmt
-	FailedFilesInsertStmt                 *sql.Stmt
-	ReportBackupJobsListQuery             string
-	ReportBackupJobsShowQuery             string
-	ReportBackupJobsFileListFindJobQuery  string
-	ReportBackupJobsFileListWithJobId     string
-	TopItemsInsert                        string
+	FilesQuery                                  string
+	FilesQueryStmt                              *sql.Stmt
+	FilesInsert                                 string
+	FilesInsertStmt                             *sql.Stmt
+	FilesUpdate                                 string
+	FilesUpdateStmt                             *sql.Stmt
+	FilesDelete                                 string
+	JobStartTime                                string
+	JobPlatform                                 string
+	RemoteFilesInsert                           string
+	RemoteFilesQueryNewestVersion               string
+	RemoteFilesQueryNewestVersionUuidStmt       *sql.Stmt
+	RemoteFilesQueryRemoteVersion               string
+	BackupCollectionsInsert                     string
+	BackupCollectionsInsertStmt                 *sql.Stmt
+	FindDeletedItemsStmt                        *sql.Stmt
+	FailedFilesInsertStmt                       *sql.Stmt
+	ReportBackupJobsListQuery                   string
+	ReportBackupJobsShowQuery                   string
+	ReportBackupJobsFileListFindJobQuery        string
+	ReportBackupJobsFileListWithJobId           string
+	ReportBackupJobsFileListWithJobIdAndDescend string
+	TopItemsInsert                              string
 }

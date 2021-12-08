@@ -6,6 +6,8 @@ import (
 	"cloudbackup/database/dbops"
 	"cloudbackup/notifications"
 	"cloudbackup/shared"
+	"cloudbackup/utils"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -77,7 +79,8 @@ type ReportBackupFileListInstanceDbResults struct {
 
 type ReportBackupFileListDbResults struct {
 	// Absolute path of the file/dir/symlink
-	Path string `json:"path"`
+	Path   string `json:"path"`
+	Parent string `json:"parent"`
 	// One or more backed up versions of this item
 	Instances []ReportBackupFileListInstanceDbResults `json:"instances"`
 }
@@ -501,25 +504,28 @@ func (srvSrc SrvData) handlerPostReportBackupFileList(w http.ResponseWriter, r *
 		return
 	}
 
-	if jobId == "" {
-		// if we don't have specified job id then the only way to reliably produce a file listing is if a backup is
-		//  not running for the given backup name. Even so, between calls to this handler, if using a Next token it is
-		// still possible to have a backup run in between and then the result would be incomplete and unreliable
-		if backupJobsState.IsRunning(decodedJson.Name, "", loggingContext+".handlerPostReportBackupFileList") {
-			JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Backup for job having "+
-				"name '%s' is running and you have requested a file listing without supplying the jobid. In this case a "+
-				"running backup may lead to incomplete and inconsistent results during file listing. Please retry the "+
-				"operation once the running backup is completed or specify a job id", decodedJson.Name))
-			return
-		}
-	} else {
-		err := checkIfBackupJobIdIsUsable(dbData, jobName, jobId)
-		if err != nil {
-			JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
-			return
-		}
+	if backupJobsState.IsRunning(decodedJson.Name, jobId, loggingContext+".handlerPostReportBackupFileList") {
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Backup for job having "+
+			"name '%s' and id '%s' is running and you have requested a file listing. In the case of a "+
+			"running backup this may lead to incomplete and inconsistent results during file listing. Please retry the "+
+			"operation once the running backup has completed or specify a different job id", decodedJson.Name, jobId))
+		return
 	}
-	dbResults, err := getRowsForHandlerPostReportBackupFileListWithJobId(dbData, jobId, jobName, path, limit, offset)
+	err = checkIfBackupJobIdIsUsable(dbData, jobName, jobId)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+		return
+	}
+
+	platform, err := dbops.GetJobPlatform(dbData, jobName, jobId)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+		return
+	}
+	pathSeparator := utils.GetPathSeparator(platform)
+
+	dbResults, err := getRowsForHandlerPostReportBackupFileListWithJobId(dbData, jobId, jobName,
+		utils.StripEndOfPathSeparators(path, pathSeparator), limit, offset, descend, pathSeparator)
 	if err != nil {
 		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
 		return
@@ -595,7 +601,7 @@ func getDbAccess(srvSrc SrvData, jobName string, w http.ResponseWriter, logConte
 	// end - all the plumbing needed in order to get DB access
 }
 
-// for a given job id and backup definition name, checks if there are previusly ran jobs
+// for a given job id and backup definition name, checks if there are previously ran jobs
 func checkIfBackupJobIdIsUsable(dbData shared.DbData, jobName string, jobId string) error {
 	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListFindJobQuery, jobName, jobId)
 	if err != nil {
@@ -671,9 +677,18 @@ func decodeNextTokenOfReportBackupFileList(nextToken string) (limit uint64, offs
 // $limit represents how many records to retrieve in one go; $offset is the offset to start request records from
 // (this is related to $limit); $jobId represents the job id to look for and if its an empty string then all jobs will be searched
 // (for the current backup definition which the $dbData represents); $parentDir is the parent directory for the items to search.
-func getRowsForHandlerPostReportBackupFileListWithJobId(dbData shared.DbData, jobId string, jobName string, parentDir string, limit uint64, offset uint64) ([]ReportBackupFileListDbResults, error) {
+func getRowsForHandlerPostReportBackupFileListWithJobId(dbData shared.DbData, jobId string, jobName string, parentDir string,
+	limit uint64, offset uint64, descend bool, pathSeparator string) ([]ReportBackupFileListDbResults, error) {
 	results := make([]ReportBackupFileListDbResults, 0)
-	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobId, jobId, parentDir, limit, offset)
+	var err error
+	var rows *sql.Rows
+
+	if descend {
+		rows, err = dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobIdAndDescend, jobId, parentDir, parentDir+pathSeparator, limit, offset)
+	} else {
+		rows, err = dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobId, jobId, parentDir, limit, offset)
+	}
+
 	if err != nil {
 		logger.Errorf("While querying the database in order to get the list of backed up files, the "+
 			"following error was encountered: %s", err)
@@ -692,10 +707,11 @@ func getRowsForHandlerPostReportBackupFileListWithJobId(dbData shared.DbData, jo
 		// INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND rf.parent=? ORDER BY local_path ASC LIMIT ? OFFSET ?"
 		rowResult := ReportBackupFileListInstanceDbResults{}
 		var path string
+		var parent string
 		var tmpUploadDate int64
 		rowResult.JobId = jobId
 		rowResult.JobName = jobName
-		err := rows.Scan(&path, &tmpUploadDate, &rowResult.JobTarget, &rowResult.Type, &rowResult.Size, &rowResult.DeleteMarker)
+		err := rows.Scan(&path, &parent, &tmpUploadDate, &rowResult.JobTarget, &rowResult.Type, &rowResult.Size, &rowResult.DeleteMarker)
 		if err != nil {
 			logger.Errorf("While retrieving the database records in order to build report list for backup "+
 				"job id '%s', the following error was encountered: '%s'", jobId, err)
@@ -710,17 +726,19 @@ func getRowsForHandlerPostReportBackupFileListWithJobId(dbData shared.DbData, jo
 			} else {
 				results = append(results, ReportBackupFileListDbResults{
 					Path:      path,
+					Parent:    parent,
 					Instances: []ReportBackupFileListInstanceDbResults{rowResult}})
 			}
 		} else {
 			results = append(results, ReportBackupFileListDbResults{
 				Path:      path,
+				Parent:    parent,
 				Instances: []ReportBackupFileListInstanceDbResults{rowResult}})
 		}
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database in order to build report list for "+
-			"backup job id '%s', the following error was encountered: '%s'", jobId, err)
+		logger.Errorf("While enumerating the results of querying the database in order to build report list for "+
+			"backup job id '%s', the following error was encountered after %d results: '%s'", jobId, len(results), err)
 		return results, err
 	}
 	err = addJobStartTimeToReportBackupFileListDbResults(dbData, jobId, jobName, "backup", results)

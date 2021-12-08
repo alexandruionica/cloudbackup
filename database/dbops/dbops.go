@@ -6,6 +6,7 @@ import (
 	"cloudbackup/utils"
 	"database/sql"
 	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"runtime"
 	"time"
@@ -81,6 +82,9 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 
 	// get a job's start time
 	PreparedStatements.JobStartTime = "SELECT start_time FROM jobs WHERE id=? and name=? AND type=?"
+
+	// get a job's platform (OS it is running / has ran on)
+	PreparedStatements.JobPlatform = "SELECT src_os FROM jobs WHERE name=? and id=?"
 
 	// insert statement - having it as text only and not an actual prepared statement (as this will be used only in transactions, and called generally once per transaction)
 	PreparedStatements.RemoteFilesInsert = "INSERT INTO remote_files (uuid, local_path, parent, target, upload_date, " +
@@ -213,8 +217,11 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	PreparedStatements.ReportBackupJobsFileListFindJobQuery = "SELECT count(*) FROM jobs WHERE name = ? AND id = ? AND state != 'started' AND type = 'backup'"
 
 	// list backed up files for a given backup job id and parent directory
-	PreparedStatements.ReportBackupJobsFileListWithJobId = "SELECT local_path, upload_date, rf.target, type, size, delete_marker FROM remote_files " +
+	PreparedStatements.ReportBackupJobsFileListWithJobId = "SELECT local_path, parent, upload_date, rf.target, type, size, delete_marker FROM remote_files " +
 		"rf INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND rf.parent=? ORDER BY local_path ASC LIMIT ? OFFSET ?"
+
+	PreparedStatements.ReportBackupJobsFileListWithJobIdAndDescend = "SELECT local_path, parent, upload_date, rf.target, type, size, delete_marker FROM remote_files " +
+		"rf INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND (rf.parent=? OR rf.parent LIKE '?%') ORDER BY local_path ASC LIMIT ? OFFSET ?"
 
 	// adds an entry for each top level item in the config file (backup.paths[]) which is being processed
 	PreparedStatements.TopItemsInsert = "INSERT INTO top_items (job_id, path, type) VALUES (?, ?, ?)"
@@ -453,6 +460,37 @@ func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, 
 
 	}
 	return nil
+}
+
+// for a given jobName and jobId , it returns the platform the job ran / is running on
+func GetJobPlatform(dbData shared.DbData, jobName string, jobId string) (string, error) {
+	rows, err := dbData.Db.Query(dbData.PreparedStatements.JobPlatform, jobName, jobId)
+	if err != nil {
+		return "", fmt.Errorf("while querying the database in order get the platform (OS) for job id '%s' belonging "+
+			"to backup definition '%s' is usable, the following error was encountered: %s", jobId, jobName, err)
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Error("while trying to Close() a the database query used to find the platform (OS) for job id "+
+				"'%s' belonging to backup definition '%s', the following error was encountered: %s", jobId, jobName, err)
+		}
+	}()
+
+	var platform string
+	for rows.Next() {
+		err := rows.Scan(&platform)
+		if err != nil {
+			return "", fmt.Errorf("while retrieving the database record in with the platform (OS) for backup definition "+
+				"'%s' having job id '%s', the following error was encountered: '%s'", jobName, jobId, err)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		return "", fmt.Errorf("while enumerating the results of querying the database for platform (OS) of job id '%s' belonging to "+
+			"backup definition '%s', the following error was encountered: '%s'", jobId, jobName, err)
+	}
+
+	return platform, nil
 }
 
 // setup all Database related prerequisites required for running a backup of files/dirs/symlinks and return a shared.DbData
