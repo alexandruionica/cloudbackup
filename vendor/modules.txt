@@ -16,15 +16,11 @@ github.com/Azure/azure-pipeline-go/pipeline
 # github.com/Azure/azure-storage-blob-go v0.8.0
 ## explicit
 github.com/Azure/azure-storage-blob-go/azblob
+# github.com/Azure/go-autorest/autorest/adal v0.9.17
+## explicit; go 1.15
 # github.com/BurntSushi/toml v0.3.1
 ## explicit
 github.com/BurntSushi/toml
-# github.com/PuerkitoBio/goquery v1.8.0
-## explicit; go 1.13
-github.com/PuerkitoBio/goquery
-# github.com/andybalholm/cascadia v1.3.1
-## explicit; go 1.16
-github.com/andybalholm/cascadia
 # github.com/aws/aws-sdk-go v1.30.15
 ## explicit; go 1.11
 github.com/aws/aws-sdk-go/aws
@@ -77,9 +73,6 @@ github.com/bearmini/go-acl/api
 # github.com/bmatcuk/doublestar v1.3.0
 ## explicit; go 1.12
 github.com/bmatcuk/doublestar
-# github.com/davecgh/go-spew v1.1.0
-## explicit
-github.com/davecgh/go-spew/spew
 # github.com/djherbis/times v1.2.0
 ## explicit
 github.com/djherbis/times
@@ -91,11 +84,7 @@ github.com/dustin/go-humanize
 github.com/gofrs/uuid
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 ## explicit
-github.com/golang/groupcache/consistenthash
-github.com/golang/groupcache/groupcachepb
 github.com/golang/groupcache/lru
-github.com/golang/groupcache/singleflight
-github.com/golang/groupcache/testpb
 # github.com/golang/protobuf v1.4.1-0.20200419202630-fa093f59480c
 ## explicit; go 1.9
 github.com/golang/protobuf/internal/gengogrpc
@@ -106,8 +95,6 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/googleapis/gax-go v1.0.4-0.20200325113634-be11bb253a76
-## explicit; go 1.11
 # github.com/googleapis/gax-go/v2 v2.0.5
 ## explicit
 github.com/googleapis/gax-go/v2
@@ -143,16 +130,10 @@ github.com/mattn/go-sqlite3
 # github.com/paulbellamy/ratecounter v0.2.0
 ## explicit
 github.com/paulbellamy/ratecounter
-# github.com/pmezard/go-difflib v1.0.0
-## explicit
-github.com/pmezard/go-difflib/difflib
 # github.com/sirupsen/logrus v1.0.5
 ## explicit
 github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/test
-# github.com/stretchr/testify v1.5.1
-## explicit; go 1.13
-github.com/stretchr/testify/assert
 # go.opencensus.io v0.22.4-0.20200403004729-46dfec7deb6e
 ## explicit; go 1.13
 go.opencensus.io
@@ -171,8 +152,8 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20200427165652-729f1e841bcc
-## explicit; go 1.11
+# golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+## explicit; go 1.17
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/ssh/terminal
@@ -191,8 +172,6 @@ golang.org/x/mod/semver
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
-golang.org/x/net/html
-golang.org/x/net/html/atom
 golang.org/x/net/http/httpguts
 golang.org/x/net/http/httpproxy
 golang.org/x/net/http2
@@ -207,12 +186,16 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20210423082822-04245dca01da
-## explicit; go 1.12
+# golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
+# golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
+## explicit; go 1.11
+golang.org/x/term
 # golang.org/x/text v0.3.6
 ## explicit; go 1.11
 golang.org/x/text/secure/bidirule
@@ -366,10 +349,8 @@ google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/pluginpb
 # gopkg.in/airbrake/gobrake.v2 v2.0.9
 ## explicit
-gopkg.in/airbrake/gobrake.v2
 # gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2
 ## explicit
-gopkg.in/gemnasium/logrus-airbrake-hook.v2
 # gopkg.in/yaml.v2 v2.2.8
 ## explicit
 gopkg.in/yaml.v2

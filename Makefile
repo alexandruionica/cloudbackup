@@ -64,7 +64,7 @@ run:
 	./$(BINARY_NAME)
 
 deps: 
-	go mod
+	go mod tidy
 
 docs:
 	@echo "############ Generating Documentation ############"
