@@ -65,6 +65,7 @@ run:
 
 deps: 
 	go mod tidy
+	go mod vendor
 
 docs:
 	@echo "############ Generating Documentation ############"
