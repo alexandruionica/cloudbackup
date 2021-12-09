@@ -52,7 +52,7 @@ Vagrant.configure("2") do |config|
       freebsd.vm.synced_folder ".", "/vagrant", disabled: true
 
       freebsd.vm.provision "shell", inline: "su root -c 'pkg update'"
-      freebsd.vm.provision "shell", inline: "pkg install --yes python38 py38-virtualenv py38-pip py38-sqlite3 wget openjdk8-jre bash gcc ca_root_nss git gmake ca_root_nss"
+      freebsd.vm.provision "shell", inline: "pkg install --yes python38 py38-virtualenv py38-pip py38-sqlite3 wget openjdk8-jre bash gcc ca_root_nss git gmake ca_root_nss rust"
       # TODO - install some kind of Docker Server (unfortunately the old package docker-freebsd is as of now broken and no more available via pkg_install
       # the GO package is a dependency of Docker but otherwise clashes with the custom version we want ...
       freebsd.vm.provision "shell", inline: "(pkg info go && pkg remove --yes --force go) || echo"
@@ -71,8 +71,13 @@ Vagrant.configure("2") do |config|
       freebsd.vm.provision "shell", inline: "test -h /usr/local/bin/go || rm -f go#{GO_VERSION}.freebsd-amd64.tar.gz"
       freebsd.vm.provision "shell", inline: "test -h /usr/local/bin/go || ln -s /usr/local/go/bin/go /usr/local/bin/"
       # install GO linter (before GOPATH is set)
-      freebsd.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
-      freebsd.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || cp /root/go/bin/golangci-lint /usr/local/bin/"
+      freebsd.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || wget  https://github.com/golangci/golangci-lint/releases/download/v#{GOLANGCI_LINT_VERSION}/golangci-lint-#{GOLANGCI_LINT_VERSION}-freebsd-amd64.tar.gz"
+      freebsd.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || tar -xzf golangci-lint-#{GOLANGCI_LINT_VERSION}-freebsd-amd64.tar.gz"
+      freebsd.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || chmod +x golangci-lint-#{GOLANGCI_LINT_VERSION}-freebsd-amd64/golangci-lint"
+      freebsd.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || cp golangci-lint-#{GOLANGCI_LINT_VERSION}-freebsd-amd64/golangci-lint /usr/local/bin/"
+      freebsd.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || rm -rf golangci-lint-#{GOLANGCI_LINT_VERSION}-freebsd-amd64.tar.gz golangci-lint-#{GOLANGCI_LINT_VERSION}-freebsd-amd64/"
+
+
       # enable UTF8 System wide
       freebsd.vm.provision "shell", inline: 'sed -i -e "s/:priority=0:\\\\\/:priority=0::charset=UTF-8::lang=en_US.UTF-8:\\\\\/" /etc/login.conf'
       freebsd.vm.provision "shell", inline: "cap_mkdb /etc/login.conf"
