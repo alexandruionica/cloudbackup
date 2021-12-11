@@ -108,29 +108,32 @@ class TestRestAPIReportMisc1(unittest.TestCase):
                                                                      "not ran. Response was: {}".format(url, r.text))
 
         self.assertIn("AzureBlobStorageSdk", response['result'], "For {} response['result'] is missing the '"
-                                                                 "AzureBlobStorageSdk' key. Response was: {}".format(url, r.text))
-        self.assertNotEqual("", response['result']['AzureBlobStorageSdk'], "For {} response['result']['AzureBlobStorageSdk'] "
-                                                                           "is empty, maybe the script setting the versions "
-                                                                           "has not ran. Response was: {}".format(url, r.text))
+                                                                 "AzureBlobStorageSdk' key. "
+                                                                 "Response was: {}".format(url, r.text))
+        self.assertNotEqual("", response['result']['AzureBlobStorageSdk'], "For {} "
+                                                                           "response['result']['AzureBlobStorageSdk'] "
+                                                                           "is empty, maybe the script setting the "
+                                                                           "versions has not ran. "
+                                                                           "Response was: {}".format(url, r.text))
 
         self.assertIn("CloudBackup", response['result'], "For {} response['result'] is missing the 'CloudBackup' "
-                                                           "key. Response was: {}".format(url, r.text))
+                                                         "key. Response was: {}".format(url, r.text))
         self.assertNotEqual("", response['result']['CloudBackup'], "For {} response['result']['CloudBackup'] is "
+                                                                   "empty, maybe the script setting the versions has "
+                                                                   "not ran. Response was: {}".format(url, r.text))
+
+        self.assertIn("BuildDate", response['result'], "For {} response['result'] is missing the 'BuildDate' "
+                                                       "key. Response was: {}".format(url, r.text))
+        self.assertNotEqual("", response['result']['BuildDate'], "For {} response['result']['BuildDate'] is "
                                                                  "empty, maybe the script setting the versions has "
                                                                  "not ran. Response was: {}".format(url, r.text))
 
-        self.assertIn("BuildDate", response['result'], "For {} response['result'] is missing the 'BuildDate' "
-                                                           "key. Response was: {}".format(url, r.text))
-        self.assertNotEqual("", response['result']['BuildDate'], "For {} response['result']['BuildDate'] is "
-                                                                     "empty, maybe the script setting the versions has "
-                                                                     "not ran. Response was: {}".format(url, r.text))
-
         self.assertIn("OS", response['result'], "For {} response['result'] is missing the 'OS' "
-                                                           "key. Response was: {}".format(url, r.text))
+                                                "key. Response was: {}".format(url, r.text))
         self.assertIn("Arch", response['result'], "For {} response['result'] is missing the 'Arch' "
-                                                           "key. Response was: {}".format(url, r.text))
+                                                  "key. Response was: {}".format(url, r.text))
         self.assertIn("Runtime", response['result'], "For {} response['result'] is missing the 'Runtime' "
-                                                           "key. Response was: {}".format(url, r.text))
+                                                     "key. Response was: {}".format(url, r.text))
 
 
 def get_args():
