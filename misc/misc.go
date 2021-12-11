@@ -19,6 +19,17 @@ type LoggingArgs struct {
 	LogFile string
 }
 
+type Version struct {
+	AwsSdk              string
+	GcpStorageSdk       string
+	AzureBlobStorageSdk string
+	CloudBackup         string
+	BuildDate           string
+	OS                  string
+	Arch                string
+	Runtime             string
+}
+
 const SampleUnixServerYamlConfig = `---
 # where are the internal SQL databases to be kept
 data_dir: /var/lib/cloudbackup
