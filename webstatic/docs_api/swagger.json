@@ -702,6 +702,28 @@
         },
         "security": []
       }
+    },
+    "/report/version": {
+      "get": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Return software version details",
+        "description": "Get the CloudBackup server version, build date, build target architecure and operating system and also Cloud Provider SDK versions used.",
+        "operationId": "ReportVersion",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseReportVersion"
+            }
+          }
+        },
+        "security": []
+      }
     }
   },
   "securityDefinitions": {
@@ -1485,6 +1507,51 @@
         }
       }
     },
+    "ResultReportVersion": {
+      "type": "object",
+      "properties": {
+        "AwsSdk": {
+          "type": "string",
+          "example": "v1.30.15",
+          "description": "Used version of the AWS SDK for GO Lang"
+        },
+        "GcpStorageSdk": {
+          "type": "string",
+          "example": "v1.6.0",
+          "description": "Used version of the GCP Storage SDK for GO Lang"
+        },
+        "AzureBlobStorageSdk": {
+          "type": "string",
+          "example": "v0.8.0",
+          "description": "Used version of the Azure Blob Storage SDK for GO Lang"
+        },
+        "CloudBackup": {
+          "type": "string",
+          "example": "0.0.1-a46f20b1",
+          "description": "Version of the CloudBackup server"
+        },
+        "BuildDate": {
+          "type": "string",
+          "example": "2021-12-10T09:46:08.000Z",
+          "description": "UTC Date and time when the CloudBackup server was built from source code"
+        },
+        "OS": {
+          "type": "string",
+          "example": "linux",
+          "description": "Operating System for which CloudBackup server was built for"
+        },
+        "Arch": {
+          "type": "string",
+          "example": "amd64",
+          "description": "Architecture for which CloudBackup server was built for"
+        },
+        "Runtime": {
+          "type": "string",
+          "example": "amd64",
+          "description": "GO Lang runtime version"
+        }
+      }
+    },
     "BackupJobName": {
       "type": "object",
       "properties": {
@@ -1779,6 +1846,25 @@
         },
         "result": {
           "$ref": "#/definitions/ResultBackupJobStatus"
+        }
+      }
+    },
+    "ApiResponseReportVersion": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "success"
+        },
+        "message": {
+          "type": "string",
+          "example": "success"
+        },
+        "result": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResultReportVersion"
+          }
         }
       }
     }

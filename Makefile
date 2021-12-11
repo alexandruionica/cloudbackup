@@ -11,6 +11,11 @@ COVERAGE_FILE=coverage.out
 # !!!! TABs MUST be tabs and not spaces; make does not like spaces instead of tabs !!!!
 all: test build
 build:
+ifeq ($(OS),Windows_NT)
+	@echo "Running on Windows"
+else
+	bash generate_version.sh
+endif
 	@$(GOCMD) version
 	$(GOCMD) build -v -mod=vendor
 test: testcp gotest gotestrace
