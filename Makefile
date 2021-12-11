@@ -13,6 +13,7 @@ all: test build
 build:
 ifeq ($(OS),Windows_NT)
 	@echo "Running on Windows"
+	powershell '& .\generate_version.ps1'
 else
 	bash generate_version.sh
 endif
