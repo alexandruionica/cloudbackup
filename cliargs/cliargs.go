@@ -1,6 +1,7 @@
 package cliargs
 
 import (
+	"cloudbackup/client"
 	clientBackup "cloudbackup/client/backup"
 	clientBackupReport "cloudbackup/client/backup/report"
 	clientBackupTarget "cloudbackup/client/backup/target"
@@ -30,8 +31,9 @@ type Args struct {
 }
 
 type ArgsCommandServer struct {
-	Config ArgsCommandServerConfig `command:"config" description:"Server configuration file related options"`
-	Start  ArgsCommandServerStart  `command:"start" description:"Start the backup server"`
+	Config  ArgsCommandServerConfig  `command:"config" description:"Server configuration file related options"`
+	Start   ArgsCommandServerStart   `command:"start" description:"Start the backup server"`
+	Version ArgsCommandServerVersion `command:"version" description:"Show server version"`
 }
 
 type ArgsCommandServerConfig struct {
@@ -61,17 +63,27 @@ type ArgsCommandServerStart struct {
 
 type ArgsCommandServerConfigExample struct{}
 
+type ArgsCommandServerVersion struct{}
+
 type ArgsCommandMisc struct {
 	HashPassword ArgsCommandMiscHash `command:"hash-password" description:"Hash a password using bcrypt. This is a convenience function so you can easily hash passwords before adding them to the yaml config file of the server."`
 }
 
-type ArgsCommandMiscHash struct {
-}
+type ArgsCommandMiscHash struct{}
 
 type ArgsCommandClient struct {
-	Config       ArgsCommandClientConfig       `command:"config" description:"Client configuration file related options"`
-	Backup       ArgsCommandClientBackup       `command:"backup" description:"Interact with backup jobs (start/stop/status)"`
-	Notification ArgsCommandClientNotification `command:"notification" description:"Interact with server generated notifications"`
+	Config        ArgsCommandClientConfig        `command:"config" description:"Client configuration file related options"`
+	Backup        ArgsCommandClientBackup        `command:"backup" description:"Interact with backup jobs (start/stop/status)"`
+	Notification  ArgsCommandClientNotification  `command:"notification" description:"Interact with server generated notifications"`
+	Version       ArgsCommandClientVersion       `command:"version" description:"Client version"`
+	ServerVersion ArgsCommandClientServerVersion `command:"server-version" description:"Retrieve and show server version"`
+}
+
+type ArgsCommandClientVersion struct{}
+
+type ArgsCommandClientServerVersion struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
 }
 
 type ArgsCommandClientConfig struct {
@@ -265,12 +277,49 @@ func (command *ArgsCommandServerConfigExample) Execute(args []string) error {
 	return nil
 }
 
+func (command *ArgsCommandServerVersion) Execute(args []string) error {
+	v := misc.CloudBackupVersion()
+	v.OS = runtime.GOOS
+	v.Arch = runtime.GOARCH
+	v.Runtime = runtime.Version()
+	fmt.Printf("Server version: %s\nBuild date:%s\nOS: %s\nArch: %s\nRuntime: %s\nAWS SDK: %s\nAzure Blob "+
+		"Storage SDK: %s\nGoogle Cloud Platform SDK: %s\n", v.CloudBackup, v.BuildDate, v.OS, v.Arch, v.Runtime,
+		v.AwsSdk, v.AzureBlobStorageSdk, v.GcpStorageSdk)
+	os.Exit(0)
+
+	return nil
+}
+
+func (command *ArgsCommandClientServerVersion) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	client.RetrieveServerVersion(clConfig, command.Json)
+	return nil
+}
+
 func (command *ArgsCommandMiscHash) Execute(args []string) error {
 	hash, err := password.ReadPassFromCli()
 	if err != nil {
 		os.Exit(1)
 	}
 	fmt.Printf("The hashed password is: %s \n", hash)
+	os.Exit(0)
+	return nil
+}
+
+func (command *ArgsCommandClientVersion) Execute(args []string) error {
+	fmt.Printf("Client version: %s\nBuild date: %s\n", misc.CloudBackupVersion().CloudBackup, misc.CloudBackupVersion().BuildDate)
 	os.Exit(0)
 	return nil
 }

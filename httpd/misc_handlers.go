@@ -27,7 +27,6 @@ func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ http
 }
 
 func (srvSrc SrvData) handlerVersion(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	LogHttpRequest(r)
 	v := misc.CloudBackupVersion()
 	v.OS = runtime.GOOS
 	v.Arch = runtime.GOARCH

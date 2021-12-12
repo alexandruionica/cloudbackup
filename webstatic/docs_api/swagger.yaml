@@ -1352,11 +1352,11 @@ definitions:
       GcpStorageSdk:
         type: string
         example: v1.6.0
-        description: Used version of the GCP Storage SDK for GO Lang
+        description: Used version of the Google Cloud Platform Storage SDK for GO Lang
       AzureBlobStorageSdk:
         type: string
         example: v0.8.0
-        description: Used version of the Azure Blob Storage SDK for GO Lang
+        description: Used version of the Microsoft Azure Blob Storage SDK for GO Lang
       CloudBackup:
         type: string
         example: 0.0.1-a46f20b1
