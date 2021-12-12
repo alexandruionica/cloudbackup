@@ -89,7 +89,7 @@ class TestRestAPIReportMisc1(unittest.TestCase):
     def test_report_version_test1(self):
         # attempt to get version reponse
         url = self.base_url + self.api_root + '/report/version'
-        r = requests.get(url=url)
+        r = requests.get(url=url, auth=(self.username, self.password))
         self.assertEqual(r.status_code, 200, url + " " + r.text)
         response = self.ValidatedAndDecodeResponse(r, url)
         # check response has expected keys

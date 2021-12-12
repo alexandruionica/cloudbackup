@@ -36,7 +36,7 @@ class TestRestAPISwagger(unittest.TestCase):
     def test_swagger_unauthorized(self):
         authorize_error = {
             'get': {
-                '/api/v1/report/version': [200]
+                '/api/v1/report/version': [401]
             }
         }
         swagger_test(app_url=self.base_url, authorize_error=authorize_error)
