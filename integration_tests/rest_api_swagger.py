@@ -34,7 +34,12 @@ class TestRestAPISwagger(unittest.TestCase):
                     os.remove(entry)
 
     def test_swagger_unauthorized(self):
-        swagger_test(app_url=self.base_url)
+        authorize_error = {
+            'get': {
+                '/api/v1/report/version': [200]
+            }
+        }
+        swagger_test(app_url=self.base_url, authorize_error=authorize_error)
         stopped, _, _ = self.daemon.stop()
         self.assertTrue(stopped, "Backup daemon already stopped. Something must have gone wrong")
 
