@@ -14,6 +14,7 @@ import shutil
 import tempfile
 import unittest
 import yaml
+import iso8601
 from common import *
 from pprint import pprint
 
@@ -352,6 +353,53 @@ class TestCliAdvanced(unittest.TestCase):
             if 'is not running'.lower() in line.lower():
                 found_expected_error = True
         self.assertTrue(found_expected_error, "Command output object: {}".format(result))
+
+    # ./cloudbackup client server-version -c client_config.yaml
+    def test_cmd_client_server_version(self):
+        result = run_shell_cmd(self.cmd + " client server-version -c " + self.client_config_file_path)
+        self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
+                                                         "{}".format(cmd_default, result))
+
+        found_server_version_field = False
+        server_version = ""
+        build_date = ""
+        found_build_date_field = False
+        line_num = 0
+        for line in result['result'].stdout.decode("utf-8").split('\n'):
+            if line.startswith('Server version: '):
+                found_server_version_field = True
+                server_version = line.split("Server version: ", 1)[1].strip('\n')
+            if line.startswith('Build date: '):
+                found_build_date_field = True
+                build_date = line.split("Build date: ", 1)[1].strip('\n')
+            line_num += 1
+        # last new line increments by 1 but in fact the total number of lines -1
+        self.assertEqual(line_num - 1, 8, "Expected output from {} to be 8 lines long. Command output object: "
+                                          "{}".format(cmd_default, result))
+        self.assertTrue(found_server_version_field, "Did not find a 'Server version: '. Command output object: "
+                                                    "{}".format(result))
+        self.assertTrue(found_build_date_field, "Did not find a 'Build date: '. Command output object: "
+                                                "{}".format(result))
+        self.assertNotEqual(server_version, "", "Server version is an empty string. Command output object: "
+                                                "{}".format(result))
+        self.assertTrue(any(char.isdigit() for char in server_version), "Server version doesn't seem to contain any "
+                                                                        "digits. Command output object: "
+                                                                        "{}".format(result))
+        self.assertTrue(any(char.isalpha() for char in server_version), "Server version doesn't seem to contain any "
+                                                                        "letters. Command output object: "
+                                                                        "{}".format(result))
+        self.assertTrue('-' in server_version, "Server version doesn't seem to contain a dash character. "
+                                               "Command output object: {}".format(result))
+        self.assertTrue('.' in server_version, "Server version doesn't seem to contain a dot character. "
+                                               "Command output object: {}".format(result))
+        self.assertNotEqual(build_date, "", "Build date is an empty string. Command output object: "
+                                            "{}".format(result))
+
+        try:
+            iso8601.parse_date(build_date)
+        except iso8601.iso8601.ParseError:
+            self.fail("Build date is not parasable as a RFC3339 date time format. Example RC3339 is "
+                      "2021-12-13T11:35:38.498655Z while the retrieved build date was: {}".format(build_date))
 
 
 def get_args():

@@ -282,7 +282,7 @@ func (command *ArgsCommandServerVersion) Execute(args []string) error {
 	v.OS = runtime.GOOS
 	v.Arch = runtime.GOARCH
 	v.Runtime = runtime.Version()
-	fmt.Printf("Server version: %s\nBuild date:%s\nOS: %s\nArch: %s\nRuntime: %s\nAWS SDK: %s\nAzure Blob "+
+	fmt.Printf("Server version: %s\nBuild date: %s\nOS: %s\nArch: %s\nRuntime: %s\nAWS SDK: %s\nAzure Blob "+
 		"Storage SDK: %s\nGoogle Cloud Platform SDK: %s\n", v.CloudBackup, v.BuildDate, v.OS, v.Arch, v.Runtime,
 		v.AwsSdk, v.AzureBlobStorageSdk, v.GcpStorageSdk)
 	os.Exit(0)
