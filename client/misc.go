@@ -70,7 +70,7 @@ func RetrieveServerVersion(config clientConfig.Client, jsonOutput bool) {
 		}
 	} else {
 		v := decodedJson.Result
-		fmt.Printf("Server version: %s\nBuild date:%s\nOS: %s\nArch: %s\nRuntime: %s\nAWS SDK: %s\nAzure Blob "+
+		fmt.Printf("Server version: %s\nBuild date: %s\nOS: %s\nArch: %s\nRuntime: %s\nAWS SDK: %s\nAzure Blob "+
 			"Storage SDK: %s\nGoogle Cloud Platform SDK: %s\n", v.CloudBackup, v.BuildDate, v.OS, v.Arch, v.Runtime,
 			v.AwsSdk, v.AzureBlobStorageSdk, v.GcpStorageSdk)
 	}
