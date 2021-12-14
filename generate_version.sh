@@ -15,7 +15,12 @@ GCP_STORAGE_SDK=$(grep cloud.google.com/go/storage go.mod  | awk {'print $2'})
 AZURE_BLOB_STORAGE_SDK=$(grep github.com/Azure/azure-storage-blob-go go.mod  | awk {'print $2'})
 
 LATEST_COMMIT_ID=$(git rev-parse --short HEAD)
-BUILD_START_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")
+if [[ $(uname -s) == "FreeBSD" ]]; then
+  # FreeBSD's date doesn't support sub second
+  BUILD_START_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+else
+  BUILD_START_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")
+fi
 
 cat << EOF > misc/version.go
 package misc
