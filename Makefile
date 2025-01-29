@@ -74,5 +74,5 @@ deps:
 	go mod vendor
 
 docs:
-	@echo "############ Generating Documentation ############"
+	@echo "############ Regenerating Documentation ############"
 	./generate_docs.sh
