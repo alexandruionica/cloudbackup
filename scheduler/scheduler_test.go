@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-//normal function usage, when no error conditions exist (empty backupJobsState.Running slice)
+// normal function usage, when no error conditions exist (empty backupJobsState.Running slice)
 func TestGenerateJobUuid1(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_scheduler_GenerateJobUuid_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -33,7 +33,7 @@ func TestGenerateJobUuid1(t *testing.T) {
 	}
 }
 
-//normal function usage, when no error conditions exist (populated backupJobsState.Running slice)
+// normal function usage, when no error conditions exist (populated backupJobsState.Running slice)
 func TestGenerateJobUuid2(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_scheduler_GenerateJobUuid_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded

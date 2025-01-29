@@ -26,7 +26,9 @@ type Account struct {
 }
 
 // TODO - support more fields beside the AceHeader (AceType + AceFlags) and AceMask . For example the library we use,
-//  github.com/bearmini/go-acl/api has implemented support for them and looking at
+//
+//	github.com/bearmini/go-acl/api has implemented support for them and looking at
+//
 // https://docs.microsoft.com/en-gb/windows/desktop/api/winnt/ns-winnt-_ace_header shows that there are way more fields
 // available for some of the AceType
 type ACE struct {
@@ -53,13 +55,13 @@ type FilePermissions struct {
 // case scenario it will be empty; the second string will be empty if an error is encountered
 //
 // Example usage:
-// 	_, jsonPermissions, err := GetObjectPermissions(`C:\Users\testuser\Desktop\test`)
+//
+//	_, jsonPermissions, err := GetObjectPermissions(`C:\Users\testuser\Desktop\test`)
 //	if err != nil {
 //		fmt.Printf("Got error: %s\n", err)
 //	} else {
 //		fmt.Printf("%+v\n", jsonPermissions)
 //	}
-//
 func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error) {
 	// Stuff to read to have a basic understanding of dACLS, ACEs and others:
 	// https://docs.microsoft.com/en-us/windows/desktop/secauthz/dacls-and-aces

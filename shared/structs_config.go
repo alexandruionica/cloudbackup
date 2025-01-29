@@ -7,7 +7,9 @@ import (
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
-//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+//
+//	any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+//
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigBackup struct {
@@ -32,7 +34,9 @@ type ConfigBackup struct {
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
-//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+//
+//	any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+//
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigBackupTarget struct {
@@ -46,7 +50,9 @@ type ConfigBackupTarget struct {
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
-//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+//
+//	any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+//
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigBackupTargetParams struct {
@@ -56,7 +62,9 @@ type ConfigBackupTargetParams struct {
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // config.SanitizeCfgTemplate takes care of replacing passwords with *** . Unfortunately this function doesn't have
-//  any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+//
+//	any smarts so whenever the config struct is changed then also config.SanitizeCfgTemplate needs updating
+//
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type ConfigUser struct {

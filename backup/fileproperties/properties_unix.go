@@ -32,13 +32,13 @@ type FilePermissions struct {
 // string will probably still have a valid value while the second will be empty
 //
 // Example usage:
-// 	_, jsonPermissions, err := GetObjectPermissions(`/home/testuser/Desktop/test`, os.stat(`/home/testuser/Desktop/test`))
+//
+//	_, jsonPermissions, err := GetObjectPermissions(`/home/testuser/Desktop/test`, os.stat(`/home/testuser/Desktop/test`))
 //	if err != nil {
 //		fmt.Printf("Got error: %s\n", err)
 //	} else {
 //		fmt.Printf("%+v\n", jsonPermissions)
 //	}
-//
 func GetObjectPermissions(path string, stat os.FileInfo) (string, string, error) {
 	filePerm := FilePermissions{
 		Mode: stat.Mode(),
