@@ -7,8 +7,8 @@ integration_tests/.venv
 integration_tests/__pycache__
 documentation_src/.venv/
 documentation_src/__pycache__
-private_documentation/.venv
-private_documentation/__pycache__
+developer_documentation/.venv
+developer_documentation/__pycache__
 *.pyc
 *~
 .vagrant/
