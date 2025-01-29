@@ -458,7 +458,7 @@ func getRemoteVersionForVersion(dbData shared.DbData, dbtx *sql.Tx, localPath st
 		}
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database in order to find the remote_version"+
+		logger.Errorf("While enumerating the results of querying the database in order to find the remote_version"+
 			" for '%s' , the following error was encountered: %s", localPath, err)
 		return "", err
 	}
@@ -499,7 +499,7 @@ func getNewestRemoteFileUuid(dbData shared.DbData, localPath string, targetName 
 		break //nolint:staticcheck
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database for the remote uuid for '%s' "+
+		logger.Errorf("While enumerating the results of querying the database for the remote uuid for '%s' "+
 			", the following error was encountered: %s", localPath, err)
 		return "", err
 	}
@@ -566,7 +566,7 @@ func getBackedupObjectPropertiesFromDb(path string, dbData shared.DbData) (bool,
 		}
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database in order to check if '%s' "+
+		logger.Errorf("While enumerating the results of querying the database in order to check if '%s' "+
 			"has been previously backed up, the following error was encountered: %s", path, err)
 		return false, shared.BackedUpFileProperties{}, err
 	}
@@ -935,7 +935,7 @@ func FindAndMarkDeleted(ctx context.Context, backupConfig shared.ConfigBackup, d
 		}
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database in order to find deleted items, "+
+		logger.Errorf("While enumerating the results of querying the database in order to find deleted items, "+
 			"the following error was encountered: %s", err)
 		backupJobsState.IncrementCounter(backupConfig.Name, "failed_to_find_deleted", "", "", "mark_deleted", err.Error())
 		return false

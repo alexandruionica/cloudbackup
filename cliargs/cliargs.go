@@ -269,9 +269,9 @@ func (command *ArgsCommandServerStart) Execute(args []string) error {
 
 func (command *ArgsCommandServerConfigExample) Execute(args []string) error {
 	if strings.ToLower(runtime.GOOS) == "windows" {
-		fmt.Println(misc.SampleWindowsServerYamlConfig)
+		fmt.Print(misc.SampleWindowsServerYamlConfig)
 	} else {
-		fmt.Println(misc.SampleUnixServerYamlConfig)
+		fmt.Print(misc.SampleUnixServerYamlConfig)
 	}
 	os.Exit(0)
 	return nil

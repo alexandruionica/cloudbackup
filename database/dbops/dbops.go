@@ -472,7 +472,7 @@ func GetJobPlatform(dbData shared.DbData, jobName string, jobId string) (string,
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			logger.Error("while trying to Close() a the database query used to find the platform (OS) for job id "+
+			logger.Errorf("while trying to Close() a the database query used to find the platform (OS) for job id "+
 				"'%s' belonging to backup definition '%s', the following error was encountered: %s", jobId, jobName, err)
 		}
 	}()
