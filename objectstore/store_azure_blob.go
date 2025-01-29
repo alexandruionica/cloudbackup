@@ -171,8 +171,9 @@ func (objStore *StoreAzureBlob) GetStoreDetails() (StoreName string, StoreType s
 }
 
 // Mark a file as deleted by uploading a 0 bytes file which has the same name but has the suffix ".d${markerVersion}"
-//   ($markerVersion gets replaces with the value of the parameter). This is needed because Azure Blobs does not
-//   support versioning (it supports snapshots but that is not the same thing as versioning and it has limitations)
+//
+//	($markerVersion gets replaces with the value of the parameter). This is needed because Azure Blobs does not
+//	support versioning (it supports snapshots but that is not the same thing as versioning and it has limitations)
 func (objStore *StoreAzureBlob) MarkDeleted(existingDbRecord shared.BackedUpFileProperties, markerVersion int64, metadata bool) (remoteVersion string, cancelled bool, err error) {
 	// Azure Blob doesn't support versioning so we use our own scheme of  "d" + $version appended together with a "." to the file name
 	remotePath, remoteVersion := calculateAzureStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata, markerVersion, true)
@@ -390,9 +391,10 @@ func newRateLimitedHttpClientForAzure(ctx context.Context, bucket *rate.Limiter,
 }
 
 // the below function is a copy of newDefaultHTTPClientFactory() from vendor/github.com/Azure/azure-pipeline-go/pipeline/core.go
-//   with only altered the call to init a new http.Client which is replaced with our own call which produces an almost
-//   identical client but with a http.Transport which does rate limiting. Because if this there is tight coupling to both
-//   vendor/github.com/Azure/azure-pipeline-go and github.com/Azure/azure-storage-blob-go/azblob so changes to any of them may lead to trouble
+//
+//	with only altered the call to init a new http.Client which is replaced with our own call which produces an almost
+//	identical client but with a http.Transport which does rate limiting. Because if this there is tight coupling to both
+//	vendor/github.com/Azure/azure-pipeline-go and github.com/Azure/azure-storage-blob-go/azblob so changes to any of them may lead to trouble
 func newCloudBackupHTTPClientFactory(CloudbackupCtx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64) pipeline.Factory {
 	return pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
 		return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {

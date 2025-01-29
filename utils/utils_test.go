@@ -241,7 +241,7 @@ func TestDirExists2(t *testing.T) {
 	}
 }
 
-//absolute path does not exist - do dereference
+// absolute path does not exist - do dereference
 func TestDirExists3(t *testing.T) {
 	var path string
 	// absolute paths in Ms Windows start with the drive letter

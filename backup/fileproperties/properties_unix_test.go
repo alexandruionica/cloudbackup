@@ -248,7 +248,7 @@ func TestGetObjectPermissions1withStat(t *testing.T) {
 	}
 }
 
-//use Lstat instead of Stat which means to NOT dereference links
+// use Lstat instead of Stat which means to NOT dereference links
 func TestGetObjectPermissions1withLstat(t *testing.T) {
 	uid, username, gid, groupname := getRunningUserDetails(t)
 

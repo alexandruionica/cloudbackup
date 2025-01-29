@@ -53,7 +53,7 @@ func TestMutexWithTimeout(t *testing.T) {
 	}
 	select {
 	case msg := <-errs:
-		t.Fatalf(msg.Error())
+		t.Fatal(msg.Error())
 	default:
 		return
 	}

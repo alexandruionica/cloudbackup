@@ -303,7 +303,8 @@ func TestCreateDb2_1(t *testing.T) {
 }
 
 // test CreateDb() with valid, absolute path to the .sqlite database file and then call it again with same path ; 2nd
-//  call should return an error
+//
+//	call should return an error
 func TestCreateDb3(t *testing.T) {
 	dbDataDirPath := utils.SetupTmpDir("unittest_database_GetDbFilePath_", t)
 	backupName := "backup1"

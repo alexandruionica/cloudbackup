@@ -158,7 +158,8 @@ type ObjectStoreRate struct {
 }
 
 // this interface is used only for cloudbackup/backup/scan/Scan() in order to be able to pass a different object when doing a
-//  dry run report
+//
+//	dry run report
 type BackupJobsStateInterface interface {
 	AddBytesRead(BackupJobName string, bytesRead uint64)
 	IncrementCounter(BackupJobName string, counterName string, Path string, fileType string, OperationType string, Error string)
@@ -620,7 +621,8 @@ func (jobs *BackupJobsState) IncrementSequence(BackupJobName string) {
 }
 
 // return the cancel function for a particular Running job with a particular uuid (or if uuid="" then match on
-//    name only)
+//
+//	name only)
 func (jobs *BackupJobsState) GetCancelFunctionForJob(BackupJobName string, BackupJobId string) (context.CancelFunc, error) {
 	//log.WithFields(log.Fields{"context": loggingContext + ".GetCancelFunctionForJob"}).Debug("Acquiring read lock " +
 	//	"before reading the backup jobs struct")
@@ -659,7 +661,8 @@ func (jobs *BackupJobsState) GetCancelFunctionForJob(BackupJobName string, Backu
 }
 
 // return the context for a particular Running job with a particular uuid (or if uuid="" then match on
-//    name only)
+//
+//	name only)
 func (jobs *BackupJobsState) GetContextForJob(BackupJobName string, BackupJobId string) (context.Context, error) {
 	//log.WithFields(log.Fields{"context": loggingContext + ".GetContextForJob"}).Debug("Acquiring read lock " +
 	//	"before reading the backup jobs struct")

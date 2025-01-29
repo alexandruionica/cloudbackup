@@ -951,7 +951,8 @@ func TestPath6(t *testing.T) {
 }
 
 // test number of examined files as reported by Path() when  dereference=true with two top level paths in the config file:
-//  one a folder (containing stuff) and the other one a file
+//
+//	one a folder (containing stuff) and the other one a file
 func TestPath7(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded
@@ -1075,7 +1076,8 @@ func TestPath7(t *testing.T) {
 }
 
 // test number of examined files as reported by Path() when  dereference=true with two top level paths in the config file:
-//  one a folder (containing stuff) and the other one also a folder (having a copy of the files/folders from 1st path)
+//
+//	one a folder (containing stuff) and the other one also a folder (having a copy of the files/folders from 1st path)
 func TestPath8(t *testing.T) {
 	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_backup_scan_path_")
 	// remove tmpfile which holds the yaml as the config has been parsed and loaded

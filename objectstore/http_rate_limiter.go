@@ -80,7 +80,8 @@ func (handle *wrapAroundTransportRequestBody) Close() error {
 }
 
 // structure used to provide an altered http.Client which uses our custom http.Transport . For usage examples see
-//   newRateLimitedHttpClientForGcp() in the same package as this type
+//
+//	newRateLimitedHttpClientForGcp() in the same package as this type
 type wrapAroundTransport struct {
 	// original http.Transport to which we will defer the actual work
 	origTransport http.RoundTripper

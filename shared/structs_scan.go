@@ -63,8 +63,9 @@ func (jobs *DryRunBackupJobsState) AddBytesRead(BackupJobName string, bytesRead 
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
 // stopped state
 // This method is used in order to send messages (via a channel) during an eval job run. The method name was "inherited",
-//  from the initial implementation but since switched to using an interface and adjusting behaviour as needed; the
-//  method name makes sense in the BackupJobsState struct
+//
+//	from the initial implementation but since switched to using an interface and adjusting behaviour as needed; the
+//	method name makes sense in the BackupJobsState struct
 func (jobs *DryRunBackupJobsState) UpdateStatsText(BackupJobName string, statName string, statValue string,
 	exclusionExpr string, fileError string) {
 	jobs.Lock.Lock()
@@ -150,7 +151,8 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 }
 
 // return the signal channel used by a particular DryRunning job with a particular uuid (or if uuid="" then match on
-//    name only)
+//
+//	name only)
 func (jobs *DryRunBackupJobsState) GetCancelFunctionForJob(BackupJobName string, BackupJobId string) (context.CancelFunc, error) {
 	jobs.Lock.RLock()
 	defer func() {
@@ -184,7 +186,8 @@ func (jobs *DryRunBackupJobsState) GetCancelFunctionForJob(BackupJobName string,
 }
 
 // return the context for a particular Running job with a particular uuid (or if uuid="" then match on
-//    name only)
+//
+//	name only)
 func (jobs *DryRunBackupJobsState) GetContextForJob(BackupJobName string, BackupJobId string) (context.Context, error) {
 	jobs.Lock.RLock()
 	defer func() {

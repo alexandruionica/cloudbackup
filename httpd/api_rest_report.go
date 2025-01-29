@@ -788,7 +788,8 @@ func GetJobStartTime(dbData shared.DbData, jobId string, jobName string, jobType
 }
 
 // traverses a []ReportBackupFileListDbResults and adds job start time. Returns error if any encountered. Given that
-//   []ReportBackupFileListDbResults is basically a pointer then we don't really need to return a changed data set as we adjust it in place
+//
+//	[]ReportBackupFileListDbResults is basically a pointer then we don't really need to return a changed data set as we adjust it in place
 func addJobStartTimeToReportBackupFileListDbResults(dbData shared.DbData, jobId string, jobName string, jobType string, results []ReportBackupFileListDbResults) error {
 	var err error
 	// key is job id + job name + job type   and value is the start time
