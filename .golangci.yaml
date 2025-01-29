@@ -6,5 +6,3 @@ linters-settings:
 issues:
   exclude:
     - "printf: non-constant format string in call to" # TODO - look at this again as it may need some work
-    - "github.com/sirupsen/logrus.Entry" # TODO - look at this again as it may need some work
-    - "fmt.Println` arg list ends with redundant newline"

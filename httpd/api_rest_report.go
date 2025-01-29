@@ -267,7 +267,7 @@ func getRowsForHandlerPostReportBackupList(dbData shared.DbData, jobName string,
 		results = append(results, rowResult)
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database in order to build report list for "+
+		logger.Errorf("While enumerating the results of querying the database in order to build report list for "+
 			"backup definition '%s', the following error was encountered: '%s'", jobName, err)
 		return results, err
 	}
@@ -405,7 +405,7 @@ func getRowsForHandlerPostReportBackupShow(dbData shared.DbData, jobName string,
 		}
 	}
 	if err = rows.Err(); err != nil {
-		logger.Error("While enumerating the results of querying the database in order to build report list for "+
+		logger.Errorf("While enumerating the results of querying the database in order to build report list for "+
 			"backup definition '%s', the following error was encountered: '%s'", jobName, err)
 		return shared.BackupJobStatus{}, 0, err
 	}
@@ -611,7 +611,7 @@ func checkIfBackupJobIdIsUsable(dbData shared.DbData, jobName string, jobId stri
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			logger.Error("While trying to Close() a the database query used to validate that job id '%s' belonging"+
+			logger.Errorf("While trying to Close() a the database query used to validate that job id '%s' belonging"+
 				" to backup definition '%s' is usable, the following error was encountered: %s", jobId, jobName, err)
 		}
 	}()
@@ -743,8 +743,8 @@ func getRowsForHandlerPostReportBackupFileListWithJobId(dbData shared.DbData, jo
 	}
 	err = addJobStartTimeToReportBackupFileListDbResults(dbData, jobId, jobName, "backup", results)
 	if err != nil {
-		logger.Error("While adding the backup job start time to the list of results, the following error was "+
-			"encountered: '%s'", jobId, err)
+		logger.Errorf("While adding the backup job start time to the list of results for job id '%s', the following"+
+			" error was encountered: '%s'", jobId, err)
 		return results, err
 	}
 
