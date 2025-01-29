@@ -30,14 +30,6 @@ cd $GOPATH/srv/cloudbackup
 make
 ```
 
-* SafeSQL (for later, see go get github.com/stripe/safesql ) - looks for SQL injections
-* Install dependencies, build, build dependencies and install (make future compile times shorter)
-
-```
-cd $GOPATH/srv/cloudbackup
-make
-```
-
 # Re-Generating Documentation
 
 Run on Linux/Unixes only:
