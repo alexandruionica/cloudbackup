@@ -37,7 +37,7 @@ Run on Linux/Unixes only:
 ```
 make docs
 ```
-The documentation is in the `documentation_src` folder but once the server is launched  (`./cloudbackup server start -c config.yaml`) the the documentation can be accessed at http://127.0.0.1:8080 or the network reachable IP + port of the server (if one was configured)
+The documentation is in the `documentation_src` folder but once the server is launched  (`./cloudbackup server start -c config.yaml`) the the documentation can be accessed at http://127.0.0.1:8080/docs or the network reachable IP + port of the server (if one was configured)
 
 # Required for running tests
 
