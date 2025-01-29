@@ -27,9 +27,7 @@ git clone git@bitbucket.org:alexandru_ionica/cloudbackup.git
 To do a build, run:
 ```
 cd $GOPATH/srv/cloudbackup
-<<<<<<< HEAD
-=======
-make testdeps
+make
 ```
 
 * SafeSQL (for later, see go get github.com/stripe/safesql ) - looks for SQL injections
