@@ -1,5 +1,6 @@
 # README #
-This project was an attempt to build an opensource backup solution which provides file leval granularity of backups and is able to store resulting backups in a cloud provider's blob store, like WS S3, Azure Blob Storage or Google's GCP Cloud Storage.
+This project was an attempt to build an opensource backup solution which provides file leval granularity of backups and is able to store resulting backups in a cloud provider's blob store, like AWS S3, Azure Blob Storage or Google's GCP Cloud Storage.
+The project was a continuation of a tool(https://bitbucket.org/alexandru_ionica/s3backuptool/) a built many years ago(in 2016), in Python. This new attempt was in GO and was setup from the get go to use modern coding practices.
 
 It had a server which would take care of backups, restores and reporting and a command line client capable to connect to the server and request on demand backups, restores and reporting.
 The client could also connect and see in realtime the progress of a backup. Additionally an HTTP API (used by the client) was documented using SWAGGER.
