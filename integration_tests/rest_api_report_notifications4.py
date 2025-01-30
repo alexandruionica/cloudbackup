@@ -44,7 +44,9 @@ class TestRestAPIReportNotification4(unittest.TestCase):
             fd.write(yaml.dump(parsed))
         # start SMTP server on Linux only as it doesn't work on other platforms
         if platform.system().lower() == 'linux':
-            self.mock_server = MockSMTPServer("localhost", 25025)
+            self.smtp_handler = CustomSMTPHandler()
+            self.smtp_controller = Controller(self.smtp_handler, hostname='localhost', port=25025)
+            self.smtp_controller.start()
         # start server
         self.base_url = "http://127.0.0.1:8080"
         if platform.system() == 'Windows':
@@ -72,7 +74,7 @@ class TestRestAPIReportNotification4(unittest.TestCase):
         #     if os.path.exists(self.inttestlog):
         #         os.remove(self.inttestlog)
         if platform.system().lower() == 'linux':
-            self.mock_server.stopsmtpsrv()
+            self.smtp_controller.stop()
 
     def ValidatedAndDecodeResponse(self, r, url):
         """
@@ -144,10 +146,10 @@ class TestRestAPIReportNotification4(unittest.TestCase):
                 time.sleep(0.1)
                 counter += 1
         # verify that the message has been received
-        self.assertEqual(self.mock_server.received_messages_count(), 1, "Was expecting exactly 1 email message to have "
-                                                                        "been received")
+        self.assertEqual(self.smtp_handler.received_messages_count(), 1, "Was expecting exactly 1 email message to have "
+                                                                         "been received")
         try:
-            matches, email_msg = self.mock_server.received_message_matching(".*From: smith@bar.com*")
+            matches, email_msg = self.smtp_handler.received_message_matching(".*From: smith@bar.com*")
         except UnicodeDecodeError:
             self.fail("1.Did not manage to fully decode the UTF-8 body of the email. Most likely this means that one of"
                       " the fields you are searching for was not found while scanning the text part of the email and"
@@ -157,7 +159,7 @@ class TestRestAPIReportNotification4(unittest.TestCase):
 
         # verify that the message matches To: expectations
         try:
-            matches, email_msg = self.mock_server.received_message_matching(".*To: someone@foobar.com.*")
+            matches, email_msg = self.smtp_handler.received_message_matching(".*To: someone@foobar.com.*")
         except UnicodeDecodeError:
             self.fail("2.Did not manage to fully decode the UTF-8 body of the email. Most likely this means that one of"
                       " the fields you are searching for was not found while scanning the text part of the email and"
@@ -167,8 +169,8 @@ class TestRestAPIReportNotification4(unittest.TestCase):
 
         # verify that the message matches Subject: expectations
         try:
-            matches, email_msg = self.mock_server.received_message_matching(".*Subject: backup "
-                                                                            "job \"{}\" has failed.*".format(job_name))
+            matches, email_msg = self.smtp_handler.received_message_matching(".*Subject: backup "
+                                                                             "job \"{}\" has failed.*".format(job_name))
         except UnicodeDecodeError:
             self.fail("3.Did not manage to fully decode the UTF-8 body of the email. Most likely this means that one of"
                       " the fields you are searching for was not found while scanning the text part of the email and"
@@ -179,8 +181,8 @@ class TestRestAPIReportNotification4(unittest.TestCase):
 
         # verify that the message matches body(data) expectations
         try:
-            matches, email_msg = self.mock_server.received_message_matching(".*backup job \"{}\" having id {} has "
-                                                                            "failed.*".format(job_name, job_id))
+            matches, email_msg = self.smtp_handler.received_message_matching(".*backup job \"{}\" having id {} has "
+                                                                             "failed.*".format(job_name, job_id))
         except UnicodeDecodeError:
             self.fail("4.Did not manage to fully decode the UTF-8 body of the email. Most likely this means that one of"
                       " the fields you are searching for was not found while scanning the text part of the email and"

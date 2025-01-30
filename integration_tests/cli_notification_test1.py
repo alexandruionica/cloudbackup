@@ -36,7 +36,9 @@ class TestCliNotification1(unittest.TestCase):
         with open(self.server_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
         # start SMTP server
-        self.mock_server = MockSMTPServer("localhost", 25025)
+        self.smtp_handler = CustomSMTPHandler()
+        self.smtp_controller = Controller(self.smtp_handler, hostname='localhost', port=25025)
+        self.smtp_controller.start()
         # start server
         self.base_url = "http://127.0.0.1:8080"
         self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url)
@@ -54,7 +56,7 @@ class TestCliNotification1(unittest.TestCase):
             os.remove(self.client_config_file_path)
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
-        self.mock_server.stopsmtpsrv()
+        self.smtp_controller.stop()
 
     # ./cloudbackup client notification test -c client_config.yaml fails as we're missing a notification section in
     # the server's config file
