@@ -15,7 +15,7 @@ To do initial setup:
 
 *  install Golang 1.22 and golangci-lint v1.64.4 https://github.com/golangci/golangci-lint/releases/tag/v1.63.4
 *  set $GOPATH
-*  install Make, Python3 , Python3 Virtualenv, Python3 pip
+*  install Make, Python3 >=3.12.3 , Python3 Virtualenv, Python3 pip
 *  Clone repo
 
 ```
@@ -46,10 +46,29 @@ Various credentials are needed for the tests which use object stores, like AWS S
 
 
 ```
+# AWS S3 credentials for integration tests
 export CLD_AWS_ACCESS_KEY_ID="REPLACE_WITH_KEY_ID"
 export CLD_AWS_SECRET_ACCESS_KEY="REPLACE_WITH_SECRET"
 export CLD_S3_BUCKET="aionica-tests"
 export CLD_S3_REGION="us-east-1"
+
+# GCP Storage credentials for integration tests
+export CLD_GCP_TYPE="service_account"
+export CLD_GCP_PROJECT_ID="FILL_IN"
+export CLD_GCP_PRIVATE_KEY_ID="FILL_IN"
+export CLD_GCP_PRIVATE_KEY='FILL_IN'
+export CLD_GCP_CLIENT_EMAIL="FILL_IN"
+export CLD_GCP_CLIENT_ID="FILL_IN"
+export CLD_GCP_AUTH_URI="FILL_IN"
+export CLD_GCP_TOKEN_URI="FILL_IN"
+export CLD_GCP_AUTH_PROVIDER_X509_CERT_URL="FILL_IN"
+export CLD_GCP_CLIENT_X509_CERT_URL="FILL_IN"
+export CLD_GCP_STORAGE_BUCKET="aionica-tests"
+
+# Azure Blobs credentials for integration tests
+export CLD_AZURE_STORAGE_ACCOUNT='FILL_IN'
+export CLD_AZURE_STORAGE_ACCESS_KEY='FILL_IN'
+export CLD_AZURE_STORAGE_CONTAINER='FILL_IN'
 ```
 
 It's generally recommended to add them to a `.creds` file at the root of the repo as this filename is blackliested 
