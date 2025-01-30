@@ -45,7 +45,9 @@ class TestCliNotification2(unittest.TestCase):
             fd.write(yaml.dump(parsed))
         # start SMTP server on Linux only as it doesn't work on other platforms
         if platform.system().lower() == 'linux':
-            self.mock_server = MockSMTPServer("localhost", 25025)
+            self.smtp_handler = CustomSMTPHandler()
+            self.smtp_controller = Controller(self.smtp_handler, hostname='localhost', port=25025)
+            self.smtp_controller.start()
         # start server
         self.base_url = "http://127.0.0.1:8080"
         self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url)
@@ -64,7 +66,7 @@ class TestCliNotification2(unittest.TestCase):
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
         if platform.system().lower() == 'linux':
-            self.mock_server.stopsmtpsrv()
+            self.smtp_controller.stop()
 
     # ./cloudbackup client notification test -c client_config.yaml     works
     def test_cmd_client_notification_test1(self):
@@ -77,26 +79,26 @@ class TestCliNotification2(unittest.TestCase):
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))
         # verify that the message has been received
-        self.assertEqual(self.mock_server.received_messages_count(), 1, "Was expecting exactly 1 email message to have "
-                                                                        "been received")
+        self.assertEqual(self.smtp_handler.received_messages_count(), 1, "Was expecting exactly 1 email message to "
+                                                                         "have been received")
         # verify that the message matches From: expectations
         hostname = socket.gethostname()
-        matches, email_msg = self.mock_server.received_message_matching(".*From: cloudbackup@{}.*".format(hostname))
+        matches, email_msg = self.smtp_handler.received_message_matching(".*From: cloudbackup@{}.*".format(hostname))
         self.assertTrue(matches, "email doesn't match From: expectations. What we received was: {}".format(email_msg))
 
         # verify that the message matches To: expectations
-        matches, email_msg = self.mock_server.received_message_matching(".*To: someone@foobar.com.*")
+        matches, email_msg = self.smtp_handler.received_message_matching(".*To: someone@foobar.com.*")
         self.assertTrue(matches, "email doesn't match To: expectations. What we received was: {}".format(email_msg))
 
         # verify that the message matches Subject: expectations
-        matches, email_msg = self.mock_server.received_message_matching(".*Subject: Notification test.*")
+        matches, email_msg = self.smtp_handler.received_message_matching(".*Subject: Notification test.*")
         self.assertTrue(matches, "email doesn't match Subject: expectations. What we received "
                                  "was: {}".format(email_msg))
 
         # verify that the message matches body(data) expectations
-        matches, email_msg = self.mock_server.received_message_matching(".*Receiving this email proves that the backup"
-                                                                        " server's SMTP\(email\) settings are "
-                                                                        "correct.*")
+        matches, email_msg = self.smtp_handler.received_message_matching(".*Receiving this email proves that the "
+                                                                         "backup server's SMTP\(email\) settings are "
+                                                                         "correct.*")
         self.assertTrue(matches, "email doesn't match body(data) expectations. What we received "
                                  "was: {}".format(email_msg))
 
