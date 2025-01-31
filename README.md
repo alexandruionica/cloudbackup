@@ -9,7 +9,7 @@ Supported platforms were Linux, FreeBSD and MS Windows. While MacOS was not inte
 The project never completed the restore capability while the on-demand backup one was implemented, for the three mentioned object stores.
 If you wish to continue then to get started you need to make a build
 
-The CI/CD setup is in a separate repository. Jenkins for the actual CI/CD and some tooling for building the AWS AMIs for Linux/FreeBSD/Windows to be used by Jenkins. 
+The CI/CD setup is [in a separate repository](https://bitbucket.org/alexandru_ionica/cloudbackup_infrastructure/src/master/). Jenkins for the actual CI/CD and some tooling for building the AWS AMIs for Linux/FreeBSD/Windows to be used by Jenkins. 
 
 To do initial setup:
 
@@ -31,14 +31,10 @@ cd $GOPATH/srv/cloudbackup
 make
 ```
 
-# Re-Generating Documentation
 
-Run on Linux/Unixes only:
+## Quick demo ##
 
-```
-make docs
-```
-The documentation is in the `documentation_src` folder but once the server is launched  (`./cloudbackup server start -c config.yaml`) the the documentation can be accessed at http://127.0.0.1:8080/docs or the network reachable IP + port of the server (if one was configured)
+Watch https://www.youtube.com/watch?v=wyoO3pm_fmY for a quick demo of the project in action.
 
 # Required for running tests
 
@@ -75,3 +71,12 @@ It's generally recommended to add them to a `.creds` file at the root of the rep
 (via `.gitignore`) and then just execute once `source .creds` after starting a new terminal session (in which the tests
  will eventually be ran). You will most likely also have to copy said values into your IDE so it can run tests and give
   you the coverage report (integrated with your IDE, assuming it has such functionality).
+
+# Re-Generating Documentation
+
+Run on Linux/Unixes only:
+
+```
+make docs
+```
+The documentation is in the `documentation_src` folder but once the server is launched  (`./cloudbackup server start -c config.yaml`) the the documentation can be accessed at http://127.0.0.1:8080/docs or the network reachable IP + port of the server (if one was configured)
