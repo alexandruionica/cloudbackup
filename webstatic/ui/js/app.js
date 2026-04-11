@@ -166,7 +166,7 @@ function JobCard(props) {
         <span><strong>Started:</strong> ${fmtTime(job.start_time)}</span>
         <span><strong>Ended:</strong> ${fmtTime(job.end_time)}</span>
         <span><strong>Next run:</strong> ${fmtTime(job.next_run)}</span>
-        ${job.job_id ? html `<span><strong>Job id:</strong> <code>${job.job_id.slice(0, 8)}…</code></span>` : null}
+        ${job.job_id ? html `<span><strong>Job id:</strong> <code>${job.job_id}</code></span>` : null}
       </div>
       ${running && job.stats_counters ? html `
         <div class="stats">
@@ -256,6 +256,17 @@ function WatchModal(props) {
         setStatus('streaming');
         const cancel = watchBackup(conn, job.name, job.job_id, (e) => {
             setEvents(prev => {
+                // Collapse successive events for the same item into a single
+                // line: the server emits one event per upload progress step
+                // for a given file and all of those share the same sequence
+                // number, so we replace the last entry in place rather than
+                // appending a new line.
+                const last = prev.length ? prev[prev.length - 1] : undefined;
+                if (last && last.sequence === e.sequence) {
+                    const next = prev.slice();
+                    next[next.length - 1] = e;
+                    return next;
+                }
                 const next = prev.length >= MAX_EVENTS ? prev.slice(prev.length - MAX_EVENTS + 1) : prev.slice();
                 next.push(e);
                 return next;
