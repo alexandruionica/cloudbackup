@@ -47,6 +47,19 @@ export async function stopBackup(c, name, jobId) {
         body.job_id = jobId;
     await jsonRequest(c, '/backup/stop', 'POST', body);
 }
+export async function listReports(c, name, next) {
+    const body = { name };
+    if (next)
+        body.next = next;
+    const r = await jsonRequest(c, '/report/backup/list', 'POST', body);
+    return { items: r.result ?? [], next: r.next ?? '' };
+}
+export async function showReport(c, name, jobId) {
+    const r = await jsonRequest(c, '/report/backup/show', 'POST', { name, job_id: jobId });
+    if (!r.result)
+        throw new Error('Server returned no result');
+    return r.result;
+}
 export async function getVersion(c) {
     // The server returns result as a single object despite what the
     // swagger doc declares (httpd/misc_handlers.go:handlerVersion passes

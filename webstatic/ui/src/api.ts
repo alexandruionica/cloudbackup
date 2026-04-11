@@ -118,6 +118,41 @@ export async function stopBackup(c: Connection, name: string, jobId?: string): P
   await jsonRequest<ApiResponse<unknown>>(c, '/backup/stop', 'POST', body);
 }
 
+export interface ReportListItem {
+  name: string;
+  job_id: string;
+  start_time: string;
+  end_time: string;
+  state: string;
+}
+
+interface ReportListApiResponse {
+  code: string;
+  message: string;
+  next?: string;
+  result?: ReportListItem[];
+}
+
+export interface ReportListPage {
+  items: ReportListItem[];
+  next: string;
+}
+
+export async function listReports(c: Connection, name: string, next?: string): Promise<ReportListPage> {
+  const body: Record<string, unknown> = { name };
+  if (next) body.next = next;
+  const r = await jsonRequest<ReportListApiResponse>(c, '/report/backup/list', 'POST', body);
+  return { items: r.result ?? [], next: r.next ?? '' };
+}
+
+export async function showReport(c: Connection, name: string, jobId: string): Promise<BackupJobStatus> {
+  const r = await jsonRequest<ApiResponse<BackupJobStatus>>(
+    c, '/report/backup/show', 'POST', { name, job_id: jobId },
+  );
+  if (!r.result) throw new Error('Server returned no result');
+  return r.result;
+}
+
 export interface ServerVersion {
   CloudBackup?: string;
   BuildDate?: string;
