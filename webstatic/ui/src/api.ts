@@ -118,8 +118,24 @@ export async function stopBackup(c: Connection, name: string, jobId?: string): P
   await jsonRequest<ApiResponse<unknown>>(c, '/backup/stop', 'POST', body);
 }
 
-export async function getVersion(c: Connection): Promise<ApiResponse<unknown>> {
-  return jsonRequest<ApiResponse<unknown>>(c, '/report/version', 'GET');
+export interface ServerVersion {
+  CloudBackup?: string;
+  BuildDate?: string;
+  OS?: string;
+  Arch?: string;
+  Runtime?: string;
+  AwsSdk?: string;
+  GcpStorageSdk?: string;
+  AzureBlobStorageSdk?: string;
+}
+
+export async function getVersion(c: Connection): Promise<ServerVersion | null> {
+  // The server returns result as a single object despite what the
+  // swagger doc declares (httpd/misc_handlers.go:handlerVersion passes
+  // the struct directly to JSONSuccessWithResult, not wrapped in an
+  // array).
+  const r = await jsonRequest<ApiResponse<ServerVersion>>(c, '/report/version', 'GET');
+  return r.result ?? null;
 }
 
 /**

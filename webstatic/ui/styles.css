@@ -170,6 +170,18 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
   border-radius: 6px;
 }
 
+.server-version {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.server-version strong { color: var(--text); font-weight: 500; }
+
 .error {
   background: #2a1414;
   border: 1px solid #5a1e1e;
