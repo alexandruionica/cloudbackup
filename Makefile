@@ -19,8 +19,17 @@ else
 endif
 	@$(GOCMD) version
 	$(GOCMD) build -v -mod=vendor
-test: testcp gotest gotestrace
+test: testcp gotest gotestrace uitest
 alltest: test build inttest
+uitest:
+	@echo "############ Running: web UI unit tests ############"
+	@node_major=$$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0); \
+	if [ "$$node_major" -lt 18 ]; then \
+		echo "ERROR: web UI tests require Node.js >= 18 (found $$(node --version 2>/dev/null || echo none))."; \
+		echo "       If using nvm: 'nvm use 20' (or newer) before running make."; \
+		exit 1; \
+	fi
+	cd webstatic/ui && npm test
 # test coding practices
 testcp:
 	@$(GOCMD) version

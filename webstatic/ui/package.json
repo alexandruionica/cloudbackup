@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "test": "tsc && node --test tests/api.test.mjs"
   },
   "devDependencies": {
     "htm": "^3.1.1",
