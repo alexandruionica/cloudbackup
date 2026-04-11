@@ -48,7 +48,12 @@ export async function stopBackup(c, name, jobId) {
     await jsonRequest(c, '/backup/stop', 'POST', body);
 }
 export async function getVersion(c) {
-    return jsonRequest(c, '/report/version', 'GET');
+    // The server returns result as a single object despite what the
+    // swagger doc declares (httpd/misc_handlers.go:handlerVersion passes
+    // the struct directly to JSONSuccessWithResult, not wrapped in an
+    // array).
+    const r = await jsonRequest(c, '/report/version', 'GET');
+    return r.result ?? null;
 }
 /**
  * Stream live watch events for a job. Uses fetch() streaming because the native

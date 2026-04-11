@@ -2,8 +2,8 @@ import { html } from 'htm/preact';
 import { render } from 'preact';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
-  listBackups, startBackup, stopBackup, watchBackup,
-  type BackupJobStatus, type Connection, type WatchEvent,
+  getVersion, listBackups, startBackup, stopBackup, watchBackup,
+  type BackupJobStatus, type Connection, type ServerVersion, type WatchEvent,
 } from './api.js';
 
 const STORAGE_KEY = 'cloudbackup.connection';
@@ -54,6 +54,7 @@ function isRunning(state: string): boolean {
 function App() {
   const [conn, setConn] = useState<Connection>(loadConnection);
   const [jobs, setJobs] = useState<BackupJobStatus[]>([]);
+  const [version, setVersion] = useState<ServerVersion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [connOpen, setConnOpen] = useState(false);
@@ -83,6 +84,21 @@ function App() {
     const id = setInterval(() => { void tick(); }, POLL_MS);
     return () => { stopped = true; clearInterval(id); };
   }, [refresh]);
+
+  useEffect(() => {
+    let stopped = false;
+    setVersion(null);
+    (async () => {
+      try {
+        const v = await getVersion(conn);
+        if (!stopped) setVersion(v);
+      } catch {
+        // version is a best-effort display; surface any auth/network
+        // trouble through the main error channel from listBackups.
+      }
+    })();
+    return () => { stopped = true; };
+  }, [conn]);
 
   const onStart = useCallback(async (name: string) => {
     setBusy(b => ({ ...b, [name]: true }));
@@ -118,6 +134,14 @@ function App() {
       </div>
     </header>
     <main>
+      ${version ? html`
+        <div class="server-version">
+          Server: <strong>CloudBackup ${version.CloudBackup || '?'}</strong>
+          ${version.OS || version.Arch ? html` · ${version.OS || ''}${version.Arch ? '/' + version.Arch : ''}` : null}
+          ${version.Runtime ? html` · Go ${version.Runtime}` : null}
+          ${version.BuildDate ? html` · built ${version.BuildDate}` : null}
+        </div>
+      ` : null}
       ${error ? html`<div class="error">${error}</div>` : null}
       ${jobs.length === 0 && !loading && !error ? html`
         <div class="empty">No backup jobs found. Configure jobs in the server config file.</div>
