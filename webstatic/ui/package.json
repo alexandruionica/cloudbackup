@@ -1,0 +1,17 @@
+{
+  "name": "cloudbackup-ui",
+  "version": "1.0.0",
+  "description": "CloudBackup web interface (Preact + TypeScript, no bundler).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "htm": "^3.1.1",
+    "preact": "^10.22.1",
+    "typescript": "^5.4.5"
+  }
+}
