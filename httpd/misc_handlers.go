@@ -8,21 +8,10 @@ import (
 	"runtime"
 )
 
-// serve / and logger.Info requester
+// serve / and logger.Info requester. Redirects to the web UI at /ui/
 func (srvSrc SrvData) handlerRoot(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	LogHttpRequest(r)
-	srv := srvSrc.GetCopyWithLock(loggingContext + ".handlerRoot")
-	if srv.httpsEnabled {
-		_, err := w.Write([]byte("HTTPS server is running\n"))
-		if err != nil {
-			logger.Debug("handlerRoot() - could not write response back to client ")
-		}
-	} else {
-		_, err := w.Write([]byte("HTTP server is running\n"))
-		if err != nil {
-			logger.Debug("handlerRoot() - could not write response back to client ")
-		}
-	}
+	http.Redirect(w, r, "/ui/", http.StatusFound)
 	logger.Info(fmt.Sprintf("HTTP request for RequestURI: %s from requester: %s ", r.RequestURI, r.RemoteAddr))
 }
 

@@ -120,17 +120,20 @@ function App() {
     setConnOpen(false);
   }, []);
 
+  const docsBase = (conn.baseUrl || '').replace(/\/+$/, '');
   return html`
     <header>
       <h1>CloudBackup</h1>
       <div class="conn-info">
         Connected to <strong>${conn.baseUrl}</strong>${conn.username ? html` as <strong>${conn.username}</strong>` : null}
       </div>
+      <nav class="nav-links">
+        <a href=${`${docsBase}/docs/`} target="_blank" rel="noopener">Documentation</a>
+        <a href=${`${docsBase}/docs_api/`} target="_blank" rel="noopener">API (Swagger)</a>
+      </nav>
       <div>
         <button onClick=${() => setConnOpen(true)}>Connection</button>
-        <button onClick=${() => { void refresh(); }} disabled=${loading}>
-          ${loading ? html`<span class="spinner"></span>` : 'Refresh'}
-        </button>
+        <button onClick=${() => { void refresh(); }}>Refresh</button>
       </div>
     </header>
     <main>

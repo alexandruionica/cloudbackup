@@ -2,7 +2,6 @@ package httpd
 
 import (
 	"github.com/julienschmidt/httprouter"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -17,22 +16,22 @@ func TestPageRootHttp(t *testing.T) {
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL)
+	// do not follow redirects so we can inspect the Location header
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	res, err := client.Get(ts.URL + "/")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.StatusCode != 200 {
-		t.Fatalf("Expected HTTP 200 when requesting '/' but got instead %+v", res.StatusCode)
-	}
-
-	// test if response body for / is what we expect
-	expectedResponse := "HTTP server is running\n"
 	defer func() { _ = res.Body.Close() }()
-	contents, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("%s", err)
+
+	if res.StatusCode != http.StatusFound {
+		t.Fatalf("Expected HTTP 302 when requesting '/' but got instead %+v", res.StatusCode)
 	}
-	if string(contents) != expectedResponse {
-		t.Fatalf("Response body was '%+v' while we were expecting '%+v'", string(contents), expectedResponse)
+	if loc := res.Header.Get("Location"); loc != "/ui/" {
+		t.Fatalf("Expected Location header '/ui/' but got '%s'", loc)
 	}
 }

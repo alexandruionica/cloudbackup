@@ -54,6 +54,24 @@ header .conn-info {
 
 header .conn-info strong { color: var(--text); font-weight: 500; }
 
+header .nav-links {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+
+header .nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+  padding-bottom: 1px;
+}
+
+header .nav-links a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 main {
   padding: 20px;
   max-width: 1200px;
@@ -87,6 +105,7 @@ button.primary:hover:not(:disabled) { background: var(--accent-hover); border-co
 
 button.danger { color: var(--err); border-color: #50282a; }
 button.danger:hover:not(:disabled) { background: #2a1a1c; border-color: var(--err); }
+
 
 input, select {
   font: inherit;
