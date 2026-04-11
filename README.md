@@ -1,5 +1,5 @@
 # README #
-This project was an attempt to build an opensource backup solution which provides file leval granularity of backups and is able to store resulting backups in a cloud provider's blob store, like AWS S3, Azure Blob Storage or Google's GCP Cloud Storage.
+This project was an attempt to build an opensource backup solution which provides file level granularity of backups and is able to store resulting backups in a cloud provider's blob store, like AWS S3, Azure Blob Storage or Google's GCP Cloud Storage.
 The project was a continuation of a tool(https://bitbucket.org/alexandru_ionica/s3backuptool/) a built many years ago(in 2016), in Python. This new attempt was in GO and was setup from the get go to use modern coding practices.
 
 It had a server which would take care of backups, restores and reporting and a command line client capable to connect to the server and request on demand backups, restores and reporting.
@@ -31,10 +31,21 @@ cd $GOPATH/srv/cloudbackup
 make
 ```
 
+## LLM usage ##
+
+Code submitted before April 2026 was produced in "classical ways" and represents the vast majority of the codebase. 
+
+Submissions starting with April 2026 represent code produced with agentic LLMs and have allowed to:
+
+* add functionality in areas where my expertise is very limited like Javascript/Typescript web UIs.
+
+* work to progress in areas where I didn't have any more significant time to invest 
 
 ## Quick demo ##
 
-Watch https://www.youtube.com/watch?v=wyoO3pm_fmY for a quick demo of the project in action.
+Watch https://www.youtube.com/watch?v=wyoO3pm_fmY for a quick demo of the project in action, showing CLI usage and access to documentation.
+
+For a view of the web UI see https://youtu.be/EFjg5-VDSu8 .
 
 # Required for running tests
 
