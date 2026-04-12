@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -229,51 +230,61 @@ func (objStore *StoreGcpStorage) Delete(existingDbRecord shared.BackedUpFileProp
 // Download a particular version of $existingDbRecord and save it at $restorePath; $version is ignored in this
 // implementation but is specified due to being required by the interface specification
 func (objStore *StoreGcpStorage) Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error) {
-	//remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
-	//generation, err := strconv.ParseInt(remoteVersion, 10, 64)
-	//if err != nil {
-	//	return false, fmt.Errorf("could not convert '%s' to an int64 due to error: %s . Because of this, download of "+
-	//		"'%s' having version '%s' from object store: '%s' using bucket: '%s' and full remote path: '%s' is not possible",
-	//		remoteVersion, err, existingDbRecord.Path, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
-	//}
-	//
-	//rc, err := objStore.gcpBucketObj.Object(remotePath).Generation(generation).NewReader(objStore.ctx)
-	//if err != nil {
-	//	if rc != nil {
-	//		err2 := rc.Close()
-	//		if err2 != nil {
-	//			logger.Warnf("could not close handle on GCP download due to received error message: '%s'. " +
-	//				"Because of this, download of '%s' having version '%s' from object store: '%s' using bucket: '%s' and " +
-	//				"full remote path: '%s' is not possible", err2, existingDbRecord.Path, remoteVersion,
-	//				objStore.storeName, objStore.storeBucketName, remotePath)
-	//		}
-	//	}
-	//	return false, fmt.Errorf("while trying to setup a download received error "+
-	//		"message: '%s'. Because of this, download of '%s' having version '%s' from object store: '%s' using bucket: " +
-	//		"'%s' and full remote path: '%s' is not possible", err, existingDbRecord.Path, remoteVersion,
-	//		objStore.storeName, objStore.storeBucketName, remotePath)
-	//}
-	//
-	//// TODO - create a WRITER which saves content at remotePath
-	//
-	//// TODO - DOWNLOAD
-	//if _, err := io.Copy(WRITER_GOES_HERE, rc); err != nil {
-	//	if objStore.ctx.Err() == context.Canceled {
-	//		msg := fmt.Sprintf("received cancellation request while downloading '%s' having version '%s' from " +
-	//			"object store: '%s' using bucket: '%s' and full remote path: '%s'", existingDbRecord.Path, remoteVersion,
-	//			objStore.storeName, objStore.storeBucketName, remotePath)
-	//		logger.Info(msg)
-	//		return cancelled, nil
-	//	}
-	//	return false, err
-	//}
-	//
-	//err = rc.Close()
-	//if err != nil {
-	//	logger.Warnf("Could not close handle on GCP download due to received error message: '%s'. Because of " +
-	//		"this, download of '%s' having version '%s' from object store: '%s' using bucket: '%s' and full remote path: " +
-	//		"'%s' is not possible", err, existingDbRecord.Path, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
-	//}
+	if existingDbRecord.Type != "file" {
+		return false, nil
+	}
+
+	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	generation, err := strconv.ParseInt(remoteVersion, 10, 64)
+	if err != nil {
+		return false, fmt.Errorf("could not convert '%s' to an int64 due to error: %s . Because of this, download of "+
+			"'%s' having version '%s' from object store: '%s' using bucket: '%s' and full remote path: '%s' is not possible",
+			remoteVersion, err, existingDbRecord.Path, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
+	}
+
+	logger.Debugf("Downloading: '%s' having remote version(generation): '%d' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s' to local path: '%s'", existingDbRecord.Path, generation, objStore.storeName,
+		objStore.storeBucketName, remotePath, restorePath)
+
+	rc, err := objStore.gcpBucketObj.Object(remotePath).Generation(generation).NewReader(objStore.ctx)
+	if err != nil {
+		if rc != nil {
+			err2 := rc.Close()
+			if err2 != nil {
+				logger.Warnf("could not close handle on GCP download due to received error message: '%s'. "+
+					"Because of this, download of '%s' having version '%s' from object store: '%s' using bucket: '%s' and "+
+					"full remote path: '%s' is not possible", err2, existingDbRecord.Path, remoteVersion,
+					objStore.storeName, objStore.storeBucketName, remotePath)
+			}
+		}
+		return false, fmt.Errorf("while trying to setup a download received error "+
+			"message: '%s'. Because of this, download of '%s' having version '%s' from object store: '%s' using bucket: "+
+			"'%s' and full remote path: '%s' is not possible", err, existingDbRecord.Path, remoteVersion,
+			objStore.storeName, objStore.storeBucketName, remotePath)
+	}
+	defer func() {
+		closeErr := rc.Close()
+		if closeErr != nil {
+			logger.Warnf("could not close GCP reader for '%s': %s", remotePath, closeErr)
+		}
+	}()
+
+	f, err := os.Create(restorePath)
+	if err != nil {
+		return false, fmt.Errorf("could not create file '%s' for restore: %s", restorePath, err)
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(f, rc); err != nil {
+		if objStore.ctx.Err() == context.Canceled {
+			msg := fmt.Sprintf("received cancellation request while downloading '%s' having version '%s' from "+
+				"object store: '%s' using bucket: '%s' and full remote path: '%s'", existingDbRecord.Path, remoteVersion,
+				objStore.storeName, objStore.storeBucketName, remotePath)
+			logger.Info(msg)
+			return true, nil
+		}
+		return false, err
+	}
 
 	return false, nil
 }

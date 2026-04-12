@@ -123,7 +123,12 @@ type ConfigNotificationScript struct {
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
 // ; also GetCopyWithLock() needs updating to ensure a deep copy is done
 type CfgTemplate struct {
-	DataDir       string             `required:"true" yaml:"data_dir" json:"data_dir"`
+	DataDir string `required:"true" yaml:"data_dir" json:"data_dir"`
+	// RestoreDir is the default base directory under which files restored from a backup will be written.
+	// If empty, it defaults to "<DataDir>/restores". Each restore job writes its files under
+	// "<RestoreDir>/<backupName>/<restoreJobId>/" unless the restore start request overrides this with
+	// its own "restore_dir" field.
+	RestoreDir    string             `yaml:"restore_dir" json:"restore_dir"`
 	HtmlDir       string             `default:"webstatic" yaml:"html_dir" json:"html_dir"`
 	User          []ConfigUser       `yaml:"user" json:"user"`
 	Http          ConfigHttp         `yaml:"http" json:"http"`

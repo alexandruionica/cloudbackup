@@ -125,6 +125,15 @@ func Validate(config shared.CfgTemplate, hiddenPass bool) error {
 	if err := ValidateDir(config.HtmlDir, "html_dir", true); err != nil {
 		return err
 	}
+	// validate "restore_dir". If unset, this is a soft default resolved at restore time
+	// to "<DataDir>/restores" and we skip the existence check here because the directory
+	// may legitimately not exist yet until the first restore runs. If the user has set a
+	// custom value it must exist and be usable.
+	if config.RestoreDir != "" {
+		if err := ValidateDir(config.RestoreDir, "restore_dir", true); err != nil {
+			return err
+		}
+	}
 	// validate HTTPS section of the config
 	if err := ValidateHttps(config, true); err != nil {
 		return err
