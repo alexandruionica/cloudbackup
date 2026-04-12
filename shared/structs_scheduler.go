@@ -81,9 +81,67 @@ func (comm *CommWithSchedulerForBackup) Init() {
 	comm.Shutdown = make(chan bool)
 }
 
+// CommWithSchedulerForRestore mirrors CommWithSchedulerForBackup but is used for restore jobs.
+// A restore job reuses the same backup definition name (and SQLite database) as the backup it
+// is restoring from, so it competes for the same per-name slot in BackupJobsState.Running[].
+type CommWithSchedulerForRestore struct {
+	Mutex           *sync.Mutex
+	ReceivedCommand chan ReceiveRestoreCommand
+	SendResponse    chan ResponseRestoreCommand
+	Shutdown        chan bool
+}
+
+// ReceiveRestoreCommand is the message sent from HTTP handlers to the scheduler for a restore operation.
+type ReceiveRestoreCommand struct {
+	Id string
+	// one of "start" or "stop"
+	Command string
+	// uuid of the restore job. Makes sense only for "stop" command
+	RestoreJobId string
+	// name of the backup definition to restore from (as defined in the config file)
+	Name string
+	// uuid of the source backup job to restore files from. If empty, the restore package
+	// will pick the newest non-deleted version of each requested file across all backups.
+	SourceBackupJobId string
+	// name of the target (inside the backup definition) to download blobs from.
+	// If empty, the restore package defaults to the first target in the backup definition.
+	TargetName string
+	// explicit list of file paths to restore. Ignored when AllFiles == true.
+	Files []string
+	// if true, restore every file contained in the backup. Mutually exclusive with Files.
+	AllFiles bool
+	// optional per-request override of the destination directory. If empty, the restore
+	// package computes a default of "<config.RestoreDir>/<Name>/<RestoreJobId>/". Clients
+	// that pass an absolute path here must ensure it exists and is writable.
+	RestoreDirOverride string
+}
+
+// ResponseRestoreCommand is the reply the scheduler sends back to the HTTP handler.
+type ResponseRestoreCommand struct {
+	Id           string
+	Command      string
+	RestoreJobId string
+	Name         string
+	Err          bool
+	Message      string
+}
+
+// init the CommWithSchedulerForRestore structure
+func (comm *CommWithSchedulerForRestore) Init() {
+	comm.Mutex = &sync.Mutex{}
+	comm.ReceivedCommand = make(chan ReceiveRestoreCommand)
+	comm.SendResponse = make(chan ResponseRestoreCommand)
+	comm.Shutdown = make(chan bool)
+}
+
 // ANY CHANGES TO THIS STRUCT MAY NEED ALSO AN UPDATE in *BackupJobsState.Get() method as this does a deep copy like
 // operation (without reflection so manual care needs to be taken in order to update the method)
 type BackupJobStatus struct {
+	// JobType is one of "backup" or "restore". It distinguishes what kind of job is represented
+	// by this entry in the Running[] slice so that handlers like /backup/list and /restore/list
+	// can filter. An empty value is treated as "backup" to preserve backward compatibility with
+	// callers that predate the restore subsystem.
+	JobType string `json:"job_type,omitempty"`
 	// name of the backup job as it was defined in the configuration file at job start (things may have changed after)
 	Name string `json:"name"`
 	// one of "running" or "stopped", "stopping" for Backup jobs and when this is used for reporting purposes (of Backup
@@ -182,8 +240,16 @@ func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []Backu
 		//log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Read lock released after reading running " +
 		//	"backup jobs struct")
 	}()
-	// add state of running jobs
+	// add state of running jobs. Only backup-type entries are surfaced here; restore jobs
+	// (which also live in jobs.Running) are filtered out so that callers of /backup/list
+	// do not see restores masquerading as backups. A matching restore for the same name
+	// still populates runningList so we do not incorrectly emit a "stopped" placeholder
+	// for the backup definition below.
 	for _, job := range jobs.Running {
+		if job.JobType != "" && job.JobType != "backup" {
+			runningList[job.Name] = job.Name
+			continue
+		}
 		jobCopy := job
 		// init empty maps
 		jobCopy.StatsCounters = make(map[string]uint64)
@@ -224,6 +290,34 @@ func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []Backu
 
 // checks if a given job is running. Returns true if running, false otherwise
 // ("stopping" state is considered running too)
+// GetRestoresRunning returns a snapshot of all currently running restore jobs. Unlike Get(),
+// it does NOT emit placeholder "stopped" entries for backup definitions in the config because
+// restores are ephemeral — they do not have a stable identity that persists across runs, so a
+// list of "known restore targets" is meaningless. The returned slice is safe to serialize.
+func (jobs *BackupJobsState) GetRestoresRunning(logContext string) []BackupJobStatus {
+	result := make([]BackupJobStatus, 0)
+	jobs.Lock.RLock()
+	defer jobs.Lock.RUnlock()
+	for _, job := range jobs.Running {
+		if job.JobType != "restore" {
+			continue
+		}
+		jobCopy := job
+		jobCopy.StatsCounters = make(map[string]uint64)
+		jobCopy.StatsText = make(map[string]string)
+		for k, v := range job.StatsCounters {
+			jobCopy.StatsCounters[k] = v
+		}
+		for k, v := range job.StatsText {
+			jobCopy.StatsText[k] = v
+		}
+		jobCopy.ObjectStoreRates = make([]ObjectStoreRate, len(job.ObjectStoreRates))
+		copy(jobCopy.ObjectStoreRates, job.ObjectStoreRates)
+		result = append(result, jobCopy)
+	}
+	return result
+}
+
 func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext string) bool {
 	//log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Acquiring read lock before reading running " +
 	//	"backup jobs struct")
@@ -291,6 +385,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	jobs.Running = append(jobs.Running, BackupJobStatus{
+		JobType:     "backup",
 		Name:        name,
 		State:       "running",
 		BackupJobId: BackupJobId,
@@ -357,6 +452,48 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		Sequence: 0,
 		// TODO - init metadata for Bandwidth usage (also several new fields are needed in order to note when the last update was
 		// TODO - add NextRun
+	})
+	return nil
+}
+
+// MarkRestoreRunning adds a restore job to the Running[] slice. A restore for a given backup
+// definition name competes for the same per-name slot as a backup of that name: if there is
+// already ANY job (backup or restore) running with the same name, this function returns
+// ErrJobAlreadyRunning. The caller is expected to invoke MarkStopped when the restore
+// finishes (same entry-removal logic applies as for backups, keyed by name + RestoreJobId).
+func (jobs *BackupJobsState) MarkRestoreRunning(name string, logContext string, RestoreJobId string) error {
+	log.WithFields(log.Fields{"context": logContext}).Debugf("Marking restore job '%s' as 'running'", name)
+	jobs.Lock.Lock()
+	defer jobs.Lock.Unlock()
+	for _, job := range jobs.Running {
+		if name == job.Name {
+			return errors.New(ErrJobAlreadyRunning)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	jobs.Running = append(jobs.Running, BackupJobStatus{
+		JobType:     "restore",
+		Name:        name,
+		State:       "running",
+		BackupJobId: RestoreJobId,
+		StartTime:   time.Now(),
+		Platform:    runtime.GOOS,
+		// restore uses a small distinct set of stats counters. They are kept inside StatsCounters
+		// so existing watch/status plumbing works unchanged.
+		StatsCounters: map[string]uint64{
+			"restored_files":          0,
+			"restored_directories":    0,
+			"restored_symlinks":       0,
+			"failed_to_restore_files": 0,
+			"skipped_delete_markers":  0,
+		},
+		StatsText: map[string]string{
+			"current_file":      "",
+			"current_operation": "",
+		},
+		Ctx:      ctx,
+		Cancel:   cancel,
+		Sequence: 0,
 	})
 	return nil
 }
