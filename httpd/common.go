@@ -55,6 +55,8 @@ type SrvData struct {
 	Mutex *sync.RWMutex
 	// used to send backup (start/stop) commands to the scheduler routine
 	commWithSchedulerForBackup *shared.CommWithSchedulerForBackup
+	// used to send restore (start/stop) commands to the scheduler routine
+	commWithSchedulerForRestore *shared.CommWithSchedulerForRestore
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState *shared.BackupJobsState
 }
