@@ -211,7 +211,7 @@ class TestRestAPIReportNotification2(unittest.TestCase):
 
         # verify that the message matches Subject: expectations
         try:
-            matches, email_msg = self.smtp_handler.received_message_matching(".*Subject: backup  "
+            matches, email_msg = self.smtp_handler.received_message_matching(".*Subject: backup "
                                                                              "job \"{}\" has finished.*".format(job_name))
         except UnicodeDecodeError:
             self.fail("3.Did not manage to fully decode the UTF-8 body of the email. Most likely this means that one of"

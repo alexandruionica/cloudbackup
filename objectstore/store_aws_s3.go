@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"golang.org/x/time/rate"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -231,7 +232,37 @@ func (objStore *StoreAwsS3) Delete(existingDbRecord shared.BackedUpFilePropertie
 // Download a particular version of $existingDbRecord and save it at $restorePath; $version is ignored in this
 // implementation but is specified due to being required by the interface specification
 func (objStore *StoreAwsS3) Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error) {
-	// TODO - IMPLEMENT FUNCTIONALITY
+	if existingDbRecord.Type != "file" {
+		return false, nil
+	}
+
+	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	logger.Debugf("Downloading: '%s' having remote version: '%s' from object store: '%s' using bucket: '%s' and"+
+		" full remote path: '%s' to local path: '%s'", existingDbRecord.Path, remoteVersion, objStore.storeName,
+		objStore.storeBucketName, remotePath, restorePath)
+
+	input := &s3.GetObjectInput{
+		Bucket:    aws.String(objStore.storeBucketName),
+		Key:       aws.String(remotePath),
+		VersionId: aws.String(remoteVersion),
+	}
+
+	f, err := os.Create(restorePath)
+	if err != nil {
+		return false, fmt.Errorf("could not create file '%s' for restore: %s", restorePath, err)
+	}
+	defer f.Close()
+
+	downloader := s3manager.NewDownloader(objStore.awsSess)
+	_, err = downloader.DownloadWithContext(objStore.ctx, f, input)
+	if err != nil {
+		if objStore.ctx.Err() == context.Canceled {
+			logger.Infof("received cancellation request while downloading '%s'", remotePath)
+			return true, nil
+		}
+		return false, fmt.Errorf("while downloading '%s' with version '%s' from S3 bucket '%s': %s",
+			remotePath, remoteVersion, objStore.storeBucketName, err)
+	}
 	return false, nil
 }
 

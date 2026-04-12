@@ -4,6 +4,7 @@
 #
 #
 import argparse
+import logging
 import shutil
 import sys
 import unittest
@@ -100,11 +101,12 @@ class TestObjectStoreAzureBlobStorage(unittest.TestCase):
         # adjust cfg contents
         response['result']['backup'][job_index]['target'][0]['type'] = "azure_blob"
         response['result']['backup'][job_index]['target'][0]['bucket'] = bucket
+        # for secret we use the 'bad_secret' string in a base64 encoded form as this is what Azure SDK expects in terms of format
         response['result']['backup'][job_index]['target'][0]['parameters'] = [
             {"name": "storage_account",
              "value": "bad_account_name"},
             {"name": "storage_access_key",
-             "value": "bad_secret"}
+             "value": "YmFkX3NlY3JldAo="}
         ]
 
         # send to server updated config

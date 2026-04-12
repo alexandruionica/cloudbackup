@@ -25,7 +25,7 @@ var logger = log.WithFields(log.Fields{
 // prefixed with $ApiPrefix in the calling function
 var ReadAccess = map[string][]string{
 	//"POST": []string{"aaa", "bbb"},
-	"GET":  {"/config", "/backup/list"},
+	"GET":  {"/config", "/backup/list", "/restore/list"},
 	"POST": {"/backup/dryrun", "/backup/watch", "/report/backup/list"},
 }
 
@@ -33,6 +33,7 @@ var ReadAccess = map[string][]string{
 func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *shared.RuntimeConfig, addr string,
 	httpsEnabled bool, SslCertPath string, SslKeyPath string,
 	commWithSchedulerForBackup *shared.CommWithSchedulerForBackup,
+	commWithSchedulerForRestore *shared.CommWithSchedulerForRestore,
 	backupJobsState *shared.BackupJobsState) *SrvData {
 
 	return &SrvData{rcvCfgChange: rcvCfgChange,
@@ -45,12 +46,13 @@ func New(rcvCfgChange chan bool, sndCfgChange chan bool, globalcfg *shared.Runti
 			//ReadTimeout:  30 * time.Second,
 			//WriteTimeout: 30 * time.Second,
 		},
-		SslCertPath:                SslCertPath,
-		SslKeyPath:                 SslKeyPath,
-		httpsEnabled:               httpsEnabled,
-		Mutex:                      &sync.RWMutex{},
-		commWithSchedulerForBackup: commWithSchedulerForBackup,
-		backupJobsState:            backupJobsState,
+		SslCertPath:                 SslCertPath,
+		SslKeyPath:                  SslKeyPath,
+		httpsEnabled:                httpsEnabled,
+		Mutex:                       &sync.RWMutex{},
+		commWithSchedulerForBackup:  commWithSchedulerForBackup,
+		commWithSchedulerForRestore: commWithSchedulerForRestore,
+		backupJobsState:             backupJobsState,
 	}
 }
 
@@ -88,6 +90,9 @@ func (srv *SrvData) Start() {
 	router.POST(ApiPrefix+"/backup/dryrun", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupDryRun)))
 	router.POST(ApiPrefix+"/backup/watch", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupWatch)))
 	router.POST(ApiPrefix+"/backup/target/test", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupTargetTest)))
+	router.POST(ApiPrefix+"/restore/start", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreStart)))
+	router.POST(ApiPrefix+"/restore/stop", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreStop)))
+	router.GET(ApiPrefix+"/restore/list", srv.BasicAuth(srv.CheckAccess(srv.handlerGetRestoreList)))
 	router.POST(ApiPrefix+"/report/notification/test", srv.BasicAuth(srv.CheckAccess(srv.handlerPostNotificationTest)))
 	router.POST(ApiPrefix+"/report/backup/list", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportBackupList)))
 	router.POST(ApiPrefix+"/report/backup/show", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportBackupShow)))

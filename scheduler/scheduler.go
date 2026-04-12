@@ -9,6 +9,7 @@ import (
 	"cloudbackup/database/dbops"
 	"cloudbackup/notifications"
 	"cloudbackup/objectstore"
+	"cloudbackup/restore"
 	"cloudbackup/shared"
 	"cloudbackup/watcher"
 	"context"
@@ -29,14 +30,16 @@ var logger = log.WithFields(log.Fields{
 })
 
 func Start(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
+	SchedulerCommRestore *shared.CommWithSchedulerForRestore,
 	backupJobsState *shared.BackupJobsState, configuration *shared.RuntimeConfig) {
 	// start component which listens for messages from http handlers and starts / stops backups & restores according to requests
-	go eventProcessor(cfgChange, SchedulerCommBackup, backupJobsState, configuration)
+	go eventProcessor(cfgChange, SchedulerCommBackup, SchedulerCommRestore, backupJobsState, configuration)
 	// components which relays to clients real time info about the file/dir/symlink currently being backed up or restores
 	go watcher.Start(backupJobsState.Watcher)
 }
 
 func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
+	SchedulerCommRestore *shared.CommWithSchedulerForRestore,
 	backupJobsState *shared.BackupJobsState, configuration *shared.RuntimeConfig) {
 	globals.Stats.IncrementRoutines("other")
 	defer globals.Stats.DecrementRoutines("other")
@@ -83,6 +86,21 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 					logger.Warnf("Scheduler response for '%s' request for backup job '%s' having request "+
 						"id '%s' has timed out after 5 seconds as no receiver was ready", receivedBackupCommand.Command,
 						receivedBackupCommand.Name, receivedBackupCommand.Id)
+				}
+			}
+		case receivedRestoreCommand := <-SchedulerCommRestore.ReceivedCommand:
+			{
+				logger.Debugf("Scheduler received restore command: %+v", receivedRestoreCommand)
+				serverConfigCopy := configuration.GetCopyWithLock(loggingContext + ".eventProcessor")
+				select {
+				case SchedulerCommRestore.SendResponse <- processRestoreCommand(receivedRestoreCommand, backupJobsState,
+					serverConfigCopy):
+					logger.Debugf("Scheduler response for '%s' restore request for job '%s' having request id '%s'",
+						receivedRestoreCommand.Command, receivedRestoreCommand.Name, receivedRestoreCommand.Id)
+				case <-time.After(5 * time.Second):
+					logger.Warnf("Scheduler response for '%s' restore request for job '%s' having request id '%s' "+
+						"has timed out after 5 seconds as no receiver was ready", receivedRestoreCommand.Command,
+						receivedRestoreCommand.Name, receivedRestoreCommand.Id)
 				}
 			}
 			//default:
@@ -539,8 +557,7 @@ func waitForAllBackupToBeStopped(backupJobsState *shared.BackupJobsState) {
 // returns: string with UUID if successful to generate, error object if an error is encountered (if this is the case
 // then the value of the UUID string should be ignored)
 func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serverConfigCopy shared.CfgTemplate, jobType string) (string, error) {
-	// TODO - when implementing restore or purge jobs , add support in this function too
-	if jobType != "backup" {
+	if jobType != "backup" && jobType != "restore" {
 		logger.Warnf("generating UUIDs for job of type '%s' is not supported", jobType)
 		return "", errors.New(shared.ErrUnknownJobType)
 	}
@@ -563,13 +580,12 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 		log.WithFields(log.Fields{"context": loggingContext + ".GenerateJobUuid"}).Debug("Acquiring read lock before " +
 			"reading running backup jobs struct")
 		backupJobsState.Lock.RLock()
-		// TODO - add separate if block for "restore" and "purge" type jobs
-		if jobType == "backup" {
-			for _, job := range backupJobsState.Running {
-				if job.BackupJobId == jobUuid {
-					logger.Debugf("Found uuid '%s' already in the list of running backup jobs", jobUuid)
-					continue
-				}
+		// Both backup and restore entries live in the same Running[] slice, so we simply check all
+		// of them for a uuid clash regardless of the requested jobType.
+		for _, job := range backupJobsState.Running {
+			if job.BackupJobId == jobUuid {
+				logger.Debugf("Found uuid '%s' already in the list of running jobs", jobUuid)
+				continue
 			}
 		}
 		backupJobsState.Lock.RUnlock()
@@ -603,4 +619,120 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 	// if we got here then we could not generate an unique UUID after 20 attempts so we'll give up
 	logger.Warnf("Tried 20 times to generate a unique job id for '%s' job '%s'", jobType, Name)
 	return "", errors.New(shared.ErrCouldNotGenerateJobId)
+}
+
+// processRestoreCommand handles start/stop commands targeted at restore jobs.
+func processRestoreCommand(cmd shared.ReceiveRestoreCommand, backupJobsState *shared.BackupJobsState,
+	serverConfigCopy shared.CfgTemplate) shared.ResponseRestoreCommand {
+	switch cmd.Command {
+	case "start":
+		{
+			restoreJobUuid, err := GenerateJobUuid(cmd.Name, backupJobsState, serverConfigCopy, "restore")
+			if err != nil {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true, Message: err.Error()}
+			}
+			err = backupJobsState.MarkRestoreRunning(cmd.Name, loggingContext+".processRestoreCommand", restoreJobUuid)
+			if err != nil {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true, Message: err.Error()}
+			}
+			go runRestore(cmd, restoreJobUuid, serverConfigCopy, backupJobsState)
+			return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, RestoreJobId: restoreJobUuid}
+		}
+	case "stop":
+		{
+			if !backupJobsState.IsRunning(cmd.Name, cmd.RestoreJobId, loggingContext+".processRestoreCommand") {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true, Message: shared.ErrJobAlreadyStopped}
+			}
+			if backupJobsState.IsStopping(cmd.Name, cmd.RestoreJobId, loggingContext+".processRestoreCommand") {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true, Message: shared.ErrJobAlreadyStopping}
+			}
+			cancelFunc, err := backupJobsState.GetCancelFunctionForJob(cmd.Name, cmd.RestoreJobId)
+			if err != nil {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true, Message: shared.ErrJobNotFoundInRunningState}
+			}
+			err = backupJobsState.MarkStopped(cmd.Name, loggingContext+".processRestoreCommand", cmd.RestoreJobId, false)
+			if err != nil {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true, Message: err.Error()}
+			}
+			logger.Infof("Signalling restore job having name '%s' with id '%s' to stop", cmd.Name, cmd.RestoreJobId)
+			cancelFunc()
+			return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, RestoreJobId: cmd.RestoreJobId}
+		}
+	default:
+		return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true,
+			Message: fmt.Sprintf("Scheduler received restore command '%s' which is not one of 'start' or 'stop'", cmd.Command)}
+	}
+}
+
+// runRestore orchestrates a single restore job end to end: it calls into the restore package to
+// perform the work, records the final outcome in the database, clears the state entry and tells
+// any attached watch clients that the job has finished.
+func runRestore(cmd shared.ReceiveRestoreCommand, restoreJobUuid string, serverConfigCopy shared.CfgTemplate,
+	backupJobsState *shared.BackupJobsState) {
+	globals.Stats.IncrementRoutines("runRestore")
+	defer globals.Stats.DecrementRoutines("runRestore")
+	logger.Infof("Starting restore job for backup '%s' with allocated job id '%s'", cmd.Name, restoreJobUuid)
+
+	req := restore.Request{
+		JobName:            cmd.Name,
+		RestoreJobId:       restoreJobUuid,
+		SourceBackupJobId:  cmd.SourceBackupJobId,
+		TargetName:         cmd.TargetName,
+		Files:              cmd.Files,
+		AllFiles:           cmd.AllFiles,
+		RestoreDirOverride: cmd.RestoreDirOverride,
+	}
+	result := restore.Do(cmd.Name, req, serverConfigCopy, backupJobsState)
+	cleanupAfterRestore(cmd.Name, restoreJobUuid, result, serverConfigCopy, backupJobsState)
+}
+
+// cleanupAfterRestore persists the final job state, releases the cancel context, removes the
+// entry from the running jobs slice and notifies watch clients.
+func cleanupAfterRestore(jobName string, restoreJobUuid string, result restore.Result,
+	serverConfigCopy shared.CfgTemplate, backupJobsState *shared.BackupJobsState) {
+
+	if result.Err != nil {
+		logger.Errorf("Restore '%s' having id '%s' finished with error: %s", jobName, restoreJobUuid, result.Err)
+	} else {
+		logger.Infof("Restore '%s' having id '%s' finished with state '%s' at '%s'", jobName, restoreJobUuid,
+			result.State, result.RestoredDirectory)
+	}
+
+	// build a minimal report from the current BackupJobsState entry so later API calls can
+	// see basic counters/end time.
+	jobStateCopy := shared.BackupJobStatus{}
+	for _, j := range backupJobsState.GetRestoresRunning(loggingContext + ".cleanupAfterRestore") {
+		if j.Name == jobName && j.BackupJobId == restoreJobUuid {
+			jobStateCopy = j
+			break
+		}
+	}
+	jobStateCopy.EndTime = time.Now()
+	jobStateCopy.State = result.State
+
+	jobReport := ""
+	b, err := json.Marshal(jobStateCopy)
+	if err != nil {
+		logger.Warnf("Could not json encode final restore state: %s", err)
+	} else {
+		jobReport = string(b)
+	}
+
+	if err := restore.FinalizeJobRecord(serverConfigCopy, jobName, restoreJobUuid, result.State, jobReport, backupJobsState); err != nil {
+		logger.Warnf("Could not update the jobs table entry for restore '%s' id '%s': %s", jobName, restoreJobUuid, err)
+	}
+
+	watcher.TellClientsJobFinished("restore", jobName, restoreJobUuid, backupJobsState.WatchMsgReceiver,
+		result.State == "cancelled", result.State == "failed")
+
+	cancelFunc, err := backupJobsState.GetCancelFunctionForJob(jobName, restoreJobUuid)
+	if err != nil {
+		logger.Warnf("While cleaning up restore '%s' id '%s', could not fetch cancel func: %s", jobName, restoreJobUuid, err)
+	} else {
+		cancelFunc()
+	}
+
+	if err := backupJobsState.MarkStopped(jobName, loggingContext+".cleanupAfterRestore", restoreJobUuid, true); err != nil {
+		logger.Warnf("Could not mark restore '%s' id '%s' as stopped: %s", jobName, restoreJobUuid, err)
+	}
 }

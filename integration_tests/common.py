@@ -288,6 +288,8 @@ def wait_for_socket(base_url, max_count=600, sleep_seconds=0.1):
     counter = 0
     while counter < max_count:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Use SO_REUSEADDR to allow immediate restart
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind((ipaddr, port))
         except OSError:

@@ -25,11 +25,13 @@ func TestNew(t *testing.T) {
 	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
+	commWithSchedulerForRestore := &shared.CommWithSchedulerForRestore{}
+	commWithSchedulerForRestore.Init()
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := &shared.BackupJobsState{}
 
 	result := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "",
-		commWithSchedulerForBackup, backupJobsState)
+		commWithSchedulerForBackup, commWithSchedulerForRestore, backupJobsState)
 	// we just ensure that we have the same type in the result as what we expect
 	if reflect.ValueOf(compare).Kind() != reflect.ValueOf(result).Kind() {
 		t.Errorf("Variable type returned by New()")
@@ -51,11 +53,13 @@ func TestStartAndCloseHttp(t *testing.T) {
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
+	commWithSchedulerForRestore := &shared.CommWithSchedulerForRestore{}
+	commWithSchedulerForRestore.Init()
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := &shared.BackupJobsState{}
 
 	srv := New(make(chan bool), make(chan bool), cfgResult, addr, false, "", "",
-		commWithSchedulerForBackup, backupJobsState)
+		commWithSchedulerForBackup, commWithSchedulerForRestore, backupJobsState)
 	srv.Start()
 	// check several times is port is being listened on
 	err := testutils.WaitForServerToStart("127.0.0.1", "8080", t)
@@ -97,11 +101,13 @@ func TestStartAndCloseHttps(t *testing.T) {
 	cfgResult, _ := config.Load(path, false, &sync.RWMutex{})
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
+	commWithSchedulerForRestore := &shared.CommWithSchedulerForRestore{}
+	commWithSchedulerForRestore.Init()
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := &shared.BackupJobsState{}
 
 	srv := New(make(chan bool), make(chan bool), cfgResult, addrSsl, true, sslCert, sslKey,
-		commWithSchedulerForBackup, backupJobsState)
+		commWithSchedulerForBackup, commWithSchedulerForRestore, backupJobsState)
 	srv.Start()
 
 	// check several times is port is being listened on
