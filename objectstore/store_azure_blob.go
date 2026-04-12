@@ -11,9 +11,11 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/mattn/go-ieproxy"
 	"golang.org/x/time/rate"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -230,7 +232,57 @@ func (objStore *StoreAzureBlob) Delete(existingDbRecord shared.BackedUpFilePrope
 }
 
 func (objStore *StoreAzureBlob) Get(existingDbRecord shared.BackedUpFileProperties, restorePath string, version int64, remoteVersion string, metadata bool) (cancelled bool, err error) {
-	return false, fmt.Errorf("no implemented yet for backend of type: '%s'", objStore.storeType)
+	if existingDbRecord.Type != "file" {
+		return false, nil
+	}
+
+	isDeleteMarker := len(remoteVersion) > 0 && remoteVersion[0] == 'd'
+	remotePath, _ := calculateAzureStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata, version, isDeleteMarker)
+	logger.Debugf("Downloading: '%s' having remote version: '%s' from object store: '%s' using container: '%s' and"+
+		" full remote path: '%s' to local path: '%s'", existingDbRecord.Path, remoteVersion, objStore.storeName,
+		objStore.storeBucketName, remotePath, restorePath)
+
+	blobURL := objStore.azureContainerURL.NewBlockBlobURL(remotePath)
+	downloadResponse, err := blobURL.Download(objStore.ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
+	if err != nil {
+		if objStore.ctx.Err() == context.Canceled {
+			logger.Infof("received cancellation request while downloading '%s'", remotePath)
+			return true, nil
+		}
+		return false, fmt.Errorf("while trying to download '%s' with version '%s' from Azure container '%s': %s",
+			remotePath, remoteVersion, objStore.storeBucketName, err)
+	}
+
+	bodyStream := downloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: 20})
+	defer bodyStream.Close()
+
+	f, err := os.Create(restorePath)
+	if err != nil {
+		return false, fmt.Errorf("could not create file '%s' for restore: %s", restorePath, err)
+	}
+	defer f.Close()
+
+	buf := make([]byte, 1024*1024)
+	for {
+		n, readErr := bodyStream.Read(buf)
+		if n > 0 {
+			if _, writeErr := f.Write(buf[:n]); writeErr != nil {
+				return false, fmt.Errorf("while writing restored content to '%s': %s", restorePath, writeErr)
+			}
+		}
+		if readErr != nil {
+			if errors.Is(readErr, io.EOF) {
+				break
+			}
+			if objStore.ctx.Err() == context.Canceled {
+				logger.Infof("received cancellation request while downloading '%s'", remotePath)
+				return true, nil
+			}
+			return false, fmt.Errorf("while reading download stream for '%s': %s", remotePath, readErr)
+		}
+	}
+
+	return false, nil
 }
 
 func (objStore *StoreAzureBlob) Validate() (string, error) {
