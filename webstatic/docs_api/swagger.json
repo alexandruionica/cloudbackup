@@ -471,6 +471,148 @@
         "security": []
       }
     },
+    "/restore/start": {
+      "post": {
+        "tags": [
+          "restore"
+        ],
+        "summary": "Start a restore now.",
+        "description": "Start a restore for the given backup definition. The selected backup definition must not have a backup or restore already running. The request must reference an existing backup job id (source_backup_job_id) from which the files will be fetched. Either \"all_files\" must be true or \"files\" must contain at least one path. The two are mutually exclusive. If \"target_name\" is omitted then the first target defined for the backup definition is used. If \"restore_dir\" is omitted then files are written under the server's default restore directory in \"<restore_dir>/<name>/<restore_job_id>/\" form.",
+        "operationId": "RestoreStart",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "restore request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RestoreJobStartInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseRestoreStart"
+            }
+          },
+          "400": {
+            "description": "Invalid request, mutually exclusive options used, or a job is already running for the given name",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "404": {
+            "description": "No backup definition matches the provided name",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/restore/stop": {
+      "post": {
+        "tags": [
+          "restore"
+        ],
+        "summary": "Stop a running restore.",
+        "description": "Stop a running restore. You need to specify only the name of the backup definition for which the restore is running. Optionally you can also supply a restore_job_id and the restore will only be stopped if both name and id match the running job.",
+        "operationId": "RestoreStop",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup definition for which to stop the restore (and optionally the restore_job_id)",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RestoreJobStopInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseRestoreStart"
+            }
+          },
+          "400": {
+            "description": "The request was malformed or no matching restore is currently running",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/restore/list": {
+      "get": {
+        "tags": [
+          "restore"
+        ],
+        "summary": "List currently running restore jobs.",
+        "description": "Returns the list of currently running restore jobs. Unlike /backup/list this endpoint does NOT emit placeholder entries for backup definitions which have no restore in progress, since restores are ephemeral and have no persistent \"stopped\" state.",
+        "operationId": "RestoreJobsList",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseBackupList"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/report/notification/test": {
       "post": {
         "tags": [
@@ -1532,7 +1674,7 @@
         },
         "BuildDate": {
           "type": "string",
-          "example": "2021-12-10T09:46:08.000Z",
+          "example": "2021-12-10T09:46:08+00:00",
           "description": "UTC Date and time when the CloudBackup server was built from source code"
         },
         "OS": {
@@ -1597,6 +1739,71 @@
       "required": [
         "name",
         "job_id"
+      ]
+    },
+    "RestoreJobStartInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server",
+          "description": "Name of the backup definition from which to restore. There must not be a backup or restore already running for this name."
+        },
+        "source_backup_job_id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$",
+          "description": "UUID of the backup job run from which the files will be fetched. Use /report/backup/list to discover available job ids."
+        },
+        "target_name": {
+          "type": "string",
+          "example": "aws_1",
+          "description": "Optional. Name of the target (as defined in the backup definition's \"target\" list) from which to fetch the files. If empty then the first target is used."
+        },
+        "files": {
+          "type": "array",
+          "description": "Optional list of absolute source paths to restore. Mutually exclusive with \"all_files\". Paths must match the local_path values that were recorded by the original backup. If both this and \"all_files\" are absent the request is rejected.",
+          "items": {
+            "type": "string"
+          },
+          "example": [
+            "/etc/hosts",
+            "/var/log/syslog"
+          ]
+        },
+        "all_files": {
+          "type": "boolean",
+          "example": false,
+          "description": "When true, every file/dir/symlink recorded for source_backup_job_id is restored. Mutually exclusive with \"files\"."
+        },
+        "restore_dir": {
+          "type": "string",
+          "example": "/tmp/restored",
+          "description": "Optional per-request override of the destination directory. When set, files are written under this directory directly. When unset, the server-configured restore_dir (or \"<data_dir>/restores\") is used and the destination becomes \"<restore_dir>/<name>/<restore_job_id>/\"."
+        }
+      },
+      "required": [
+        "name",
+        "source_backup_job_id"
+      ]
+    },
+    "RestoreJobStopInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server",
+          "description": "Name of the backup definition for which the running restore should be stopped."
+        },
+        "restore_job_id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$",
+          "description": "Optional. When supplied, the restore is only stopped if both the name and the restore_job_id match."
+        }
+      },
+      "required": [
+        "name"
       ]
     },
     "ReportBackupListInput": {
@@ -1779,6 +1986,36 @@
         }
       }
     },
+    "ResultRestoreJobStart": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server"
+        },
+        "restore_job_id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
+        }
+      }
+    },
+    "ApiResponseRestoreStart": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "success"
+        },
+        "message": {
+          "type": "string",
+          "example": "success"
+        },
+        "result": {
+          "$ref": "#/definitions/ResultRestoreJobStart"
+        }
+      }
+    },
     "ApiResponseBackupDryRun": {
       "$ref": "#/definitions/ResultBackupJobDryRun"
     },
@@ -1861,10 +2098,7 @@
           "example": "success"
         },
         "result": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ResultReportVersion"
-          }
+          "$ref": "#/definitions/ResultReportVersion"
         }
       }
     }
