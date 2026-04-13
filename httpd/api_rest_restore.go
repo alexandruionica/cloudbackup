@@ -3,6 +3,7 @@ package httpd
 import (
 	"cloudbackup/daemon/globals"
 	"cloudbackup/shared"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -196,4 +197,141 @@ func (srvSrc SrvData) handlerGetRestoreList(w http.ResponseWriter, r *http.Reque
 	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerGetRestoreList")
 	JSONSuccessWithResult(w, "success", "success",
 		srvCopy.backupJobsState.GetRestoresRunning(loggingContext+".handlerGetRestoreList"))
+}
+
+// RestoreWatchRequest is the JSON body accepted by POST /restore/watch.
+type RestoreWatchRequest struct {
+	Name         string `json:"name"`
+	RestoreJobId string `json:"restore_job_id"`
+}
+
+// handlerPostRestoreWatch streams Server-Sent Events with real-time progress of a running
+// restore job. The implementation mirrors handlerPostBackupWatch so that clients can use the
+// same SSE parsing logic for both backup and restore watching.
+func (srvSrc SrvData) handlerPostRestoreWatch(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		return
+	}
+	var decoded RestoreWatchRequest
+	if err := json.Unmarshal(bodyBytes, &decoded); err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
+	if decoded.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, "'name' key is mandatory. The name"+
+			" is needed in order to know what restore job you're requesting to watch")
+		return
+	}
+
+	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostRestoreWatch")
+
+	if !srvCopy.backupJobsState.IsRunning(decoded.Name, decoded.RestoreJobId, loggingContext+".handlerPostRestoreWatch") {
+		var errorMsg string
+		if decoded.RestoreJobId != "" && srvCopy.backupJobsState.IsRunning(decoded.Name, "", loggingContext+".handlerPostRestoreWatch") {
+			errorMsg = fmt.Sprintf("Restore for job having name '%s' and a restore job id of '%s' is not "+
+				"running so it can't be watched. There is a running restore job for the same name but with a "+
+				"different job id", decoded.Name, decoded.RestoreJobId)
+		} else {
+			errorMsg = fmt.Sprintf("Restore for job having name '%s' is not running.", decoded.Name)
+		}
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, errorMsg)
+		return
+	}
+
+	if srvCopy.backupJobsState.IsStopping(decoded.Name, decoded.RestoreJobId, loggingContext+".handlerPostRestoreWatch") {
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Restore for job having "+
+			"name '%s' is stopping so it can't be watched any more.", decoded.Name))
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+		logger.Debugf("HTTP2 Streaming unsupported in handlerPostRestoreWatch()")
+		return
+	}
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		msg := fmt.Sprintf("Could not generate a UUID so the watch operation can't proceed. The encountered error is: %s", err)
+		logger.Error(msg)
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, msg)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	jobid := ""
+	if decoded.RestoreJobId != "" {
+		jobid = decoded.RestoreJobId
+	} else {
+		jobid, err = srvCopy.backupJobsState.GetRunningBackupJobId(decoded.Name, loggingContext+".handlerPostRestoreWatch")
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData, fmt.Sprintf("Restore for job having "+
+				"name '%s' has started stopping so it can't be watched any more.", decoded.Name))
+			return
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	commChan := make(chan shared.WatchMessage, 500)
+	clientUUID := u.String()
+	err = srvCopy.backupJobsState.Watcher.AddConsumer("restore", decoded.Name, jobid, commChan, ctx, cancel,
+		r.RemoteAddr, clientUUID)
+	if err != nil {
+		_, _ = fmt.Fprintf(w, "data: %s\n", err.Error()) // #nosec
+		close(commChan)
+		return
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			{
+				srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
+				_, _ = fmt.Fprintf(w, "data: %s\n", "Backup server has been requested to exit. All running "+
+					"jobs are being stopped.") // #nosec
+				close(commChan)
+				return
+			}
+		case <-r.Context().Done():
+			{
+				srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
+				close(commChan)
+				return
+			}
+		case message := <-commChan:
+			{
+				if message.JobCompleted || message.JobAborted || message.JobFailed {
+					srvCopy.backupJobsState.Watcher.RemoveConsumer(r.RemoteAddr, clientUUID)
+					if message.JobAborted {
+						_, _ = fmt.Fprintf(w, "data: %s\n", "Restore job was cancelled while it was running") // #nosec
+					}
+					if message.JobFailed {
+						_, _ = fmt.Fprintf(w, "data: %s\n", "Restore job failed to start. Check server logs for details") // #nosec
+					}
+					if message.JobCompleted {
+						_, _ = fmt.Fprintf(w, "data: %s\n", "Restore job has finished") // #nosec
+					}
+					close(commChan)
+					return
+				}
+				if message.ObjectType == "dir" {
+					message.ObjectType = "directory"
+				}
+				jsonMsg, err := json.Marshal(message)
+				if err != nil {
+					logger.Warnf("Could not json encode message received from restore job live status. Error was: '%s'", err)
+				} else {
+					_, _ = fmt.Fprintf(w, "data: %s\n", jsonMsg) // #nosec
+					flusher.Flush()
+				}
+			}
+		}
+	}
 }

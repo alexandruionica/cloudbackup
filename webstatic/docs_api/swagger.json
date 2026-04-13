@@ -613,6 +613,65 @@
         "security": []
       }
     },
+    "/restore/watch": {
+      "post": {
+        "tags": [
+          "restore"
+        ],
+        "summary": "Watch a live restore job.",
+        "description": "Continuously watches a specific restore job in order to show file, directory and symlinks restore progress. This is a best effort operation meaning that events will get discarded and not sent to the client if either the server produces more events per second than it can handle or if the client can't receive quickly enough events produced by the server. The response is http2 Server Side Events and requires a client capable of consuming it. Response codes != 200 will be regular json while response code 200 will be followed by http2 SSE. Each received event for the 200 status code will be in the format \"data: {json object}\" except the last line at the end of the input which will be one of \"data: Restore job has finished\" or \"data: Restore job failed to start. Check server logs for details\" or \"data: Restore job was cancelled while it was running\". The SSE message format is identical to the backup watch endpoint so clients can use the same parsing logic for both.",
+        "operationId": "RestoreWatch",
+        "produces": [
+          "text/event-stream",
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup definition and optional restore job id to watch",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RestoreWatchInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "x-produces": "text/event-stream",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseBackupWatch"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "404": {
+            "description": "No restore job matches the provided name",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "x-produces": "application/json",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/report/notification/test": {
       "post": {
         "tags": [
@@ -1812,6 +1871,25 @@
           "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
           "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$",
           "description": "Optional. When supplied, the restore is only stopped if both the name and the restore_job_id match."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "RestoreWatchInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server",
+          "description": "Name of the backup definition for which a restore is running and should be watched."
+        },
+        "restore_job_id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$",
+          "description": "Optional. UUID of the restore job to watch. If omitted, the currently running restore job for the given name is watched."
         }
       },
       "required": [

@@ -26,7 +26,7 @@ var logger = log.WithFields(log.Fields{
 var ReadAccess = map[string][]string{
 	//"POST": []string{"aaa", "bbb"},
 	"GET":  {"/config", "/backup/list", "/restore/list"},
-	"POST": {"/backup/dryrun", "/backup/watch", "/report/backup/list"},
+	"POST": {"/backup/dryrun", "/backup/watch", "/restore/watch", "/report/backup/list"},
 }
 
 // pseudo constructor to setup a new http server
@@ -93,6 +93,7 @@ func (srv *SrvData) Start() {
 	router.POST(ApiPrefix+"/restore/start", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreStart)))
 	router.POST(ApiPrefix+"/restore/stop", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreStop)))
 	router.GET(ApiPrefix+"/restore/list", srv.BasicAuth(srv.CheckAccess(srv.handlerGetRestoreList)))
+	router.POST(ApiPrefix+"/restore/watch", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreWatch)))
 	router.POST(ApiPrefix+"/report/notification/test", srv.BasicAuth(srv.CheckAccess(srv.handlerPostNotificationTest)))
 	router.POST(ApiPrefix+"/report/backup/list", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportBackupList)))
 	router.POST(ApiPrefix+"/report/backup/show", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportBackupShow)))
