@@ -223,7 +223,6 @@ class TestRestoreGcpStorage(unittest.TestCase):
                                  "MD5 mismatch for '{}': original={} restored={}".format(
                                      source_path, original_md5, restored_md5))
 
-
     def test_restore_by_directory(self):
         """Restore using a directory path in the 'files' parameter and verify that all contents
         of the directory are restored recursively, while files outside the directory are not."""
