@@ -54,6 +54,8 @@ type Result struct {
 func Do(jobName string, req Request, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState) Result {
 
+	req.Files = sanitizeFilePaths(req.Files)
+
 	ctx, err := backupJobsState.GetContextForJob(jobName, req.RestoreJobId)
 	if err != nil {
 		return Result{State: "failed", Err: fmt.Errorf("restore job was not found in the running state: %w", err)}
@@ -350,6 +352,39 @@ func applyExclusions(items []remoteItem, exclusions []string) ([]remoteItem, err
 		filtered = append(filtered, item)
 	}
 	return filtered, nil
+}
+
+// sanitizeFilePaths strips trailing path separators from user-supplied file paths so that they
+// match the way paths are stored in the database (without trailing separators). Both forward
+// slashes and backslashes are stripped because the server OS may differ from the client OS that
+// originally created the backup. Root paths ("/" on Unix, "X:\" on Windows) are preserved.
+func sanitizeFilePaths(paths []string) []string {
+	result := make([]string, len(paths))
+	for i, p := range paths {
+		result[i] = stripTrailingSeparators(p)
+	}
+	return result
+}
+
+// stripTrailingSeparators removes trailing '/' and '\' characters from a path while preserving
+// root paths like "/" or "C:\".
+func stripTrailingSeparators(path string) string {
+	for len(path) > 0 {
+		last := path[len(path)-1]
+		if last != '/' && last != '\\' {
+			return path
+		}
+		// Preserve Unix root "/"
+		if path == "/" {
+			return path
+		}
+		// Preserve Windows root like "C:\" or "c:/"
+		if len(path) == 3 && path[1] == ':' {
+			return path
+		}
+		path = path[:len(path)-1]
+	}
+	return path
 }
 
 // restoreOne restores a single item and returns true on success. All errors are recorded into
