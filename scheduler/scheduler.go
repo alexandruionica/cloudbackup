@@ -681,6 +681,7 @@ func runRestore(cmd shared.ReceiveRestoreCommand, restoreJobUuid string, serverC
 		Files:              cmd.Files,
 		AllFiles:           cmd.AllFiles,
 		RestoreDirOverride: cmd.RestoreDirOverride,
+		Exclusions:         cmd.Exclusions,
 	}
 	result := restore.Do(cmd.Name, req, serverConfigCopy, backupJobsState)
 	cleanupAfterRestore(cmd.Name, restoreJobUuid, result, serverConfigCopy, backupJobsState)

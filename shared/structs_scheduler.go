@@ -114,6 +114,9 @@ type ReceiveRestoreCommand struct {
 	// package computes a default of "<config.RestoreDir>/<Name>/<RestoreJobId>/". Clients
 	// that pass an absolute path here must ensure it exists and is writable.
 	RestoreDirOverride string
+	// optional list of doublestar glob patterns. Files whose local_path matches any pattern
+	// are excluded from the restore. Uses the same matching as backup exclusions.
+	Exclusions []string
 }
 
 // ResponseRestoreCommand is the reply the scheduler sends back to the HTTP handler.

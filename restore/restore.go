@@ -5,6 +5,7 @@ import (
 	"cloudbackup/database/dbops"
 	"cloudbackup/objectstore"
 	"cloudbackup/shared"
+	"cloudbackup/utils"
 	"context"
 	"database/sql"
 	"errors"
@@ -35,6 +36,7 @@ type Request struct {
 	Files              []string
 	AllFiles           bool
 	RestoreDirOverride string
+	Exclusions         []string
 }
 
 // Result reports how the restore job ended so the caller (scheduler) can produce the right final
@@ -110,6 +112,14 @@ func Do(jobName string, req Request, serverConfigCopy shared.CfgTemplate,
 	if err != nil {
 		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir}
 	}
+
+	if len(req.Exclusions) > 0 {
+		items, err = applyExclusions(items, req.Exclusions)
+		if err != nil {
+			return Result{State: "failed", Err: fmt.Errorf("error applying exclusions: %w", err), RestoredDirectory: restoreDir}
+		}
+	}
+
 	if len(items) == 0 {
 		return Result{State: "failed", Err: errors.New("no files matched the restore request"), RestoredDirectory: restoreDir}
 	}
@@ -220,10 +230,10 @@ type remoteItem struct {
 }
 
 // fetchItems returns the list of remote files associated with the source backup job id that match
-// the restore request (all files, or a specific subset by local_path).
+// the restore request (all files, or a specific subset by local_path). When specific files are
+// requested and any of them turn out to be directories, all children of those directories are
+// included recursively.
 func fetchItems(db *sql.DB, req Request) ([]remoteItem, error) {
-	var rows *sql.Rows
-	var err error
 	base := `SELECT rf.uuid, rf.local_path, rf.type, rf.link_target, rf.size, rf.mtime, rf.ctime,
 		rf.owner, rf.permissions, rf.checksum, rf.checksum_type, rf.encrypted, rf.version,
 		rf.remote_version, rf.delete_marker
@@ -231,18 +241,69 @@ func fetchItems(db *sql.DB, req Request) ([]remoteItem, error) {
 		WHERE bc.job_id = ?`
 
 	if req.AllFiles || len(req.Files) == 0 {
-		rows, err = db.Query(base+" ORDER BY rf.type DESC, rf.local_path ASC", req.SourceBackupJobId)
-	} else {
-		placeholders := make([]string, len(req.Files))
-		args := make([]interface{}, 0, len(req.Files)+1)
-		args = append(args, req.SourceBackupJobId)
-		for i, f := range req.Files {
-			placeholders[i] = "?"
-			args = append(args, f)
-		}
-		q := base + " AND rf.local_path IN (" + strings.Join(placeholders, ",") + ") ORDER BY rf.type DESC, rf.local_path ASC"
-		rows, err = db.Query(q, args...) // #nosec - placeholders are hardcoded "?" characters
+		return queryItems(db, base+" ORDER BY rf.type DESC, rf.local_path ASC", req.SourceBackupJobId)
 	}
+
+	// First pass: fetch items that match the requested paths exactly.
+	placeholders := make([]string, len(req.Files))
+	args := make([]interface{}, 0, len(req.Files)+1)
+	args = append(args, req.SourceBackupJobId)
+	for i, f := range req.Files {
+		placeholders[i] = "?"
+		args = append(args, f)
+	}
+	q := base + " AND rf.local_path IN (" + strings.Join(placeholders, ",") + ") ORDER BY rf.type DESC, rf.local_path ASC"
+	exactItems, err := queryItems(db, q, args...) // #nosec - placeholders are hardcoded "?" characters
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect directory paths so we can recursively include their children.
+	var dirPaths []string
+	for _, item := range exactItems {
+		if item.typ == "dir" {
+			dirPaths = append(dirPaths, item.localPath)
+		}
+	}
+	if len(dirPaths) == 0 {
+		return exactItems, nil
+	}
+
+	// Second pass: fetch all children of the discovered directories using prefix matching.
+	// A child of "/foo/bar" is any row whose local_path starts with "/foo/bar/".
+	seen := make(map[string]struct{}, len(exactItems))
+	for _, item := range exactItems {
+		seen[item.uuid] = struct{}{}
+	}
+	childArgs := make([]interface{}, 0, len(dirPaths)+1)
+	childArgs = append(childArgs, req.SourceBackupJobId)
+	childClauses := make([]string, len(dirPaths))
+	for i, dp := range dirPaths {
+		childClauses[i] = "rf.local_path LIKE ? ESCAPE '\\'"
+		// Escape any existing '%', '_', or '\' in the directory path so they are matched literally.
+		escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(dp)
+		childArgs = append(childArgs, escaped+string(filepath.Separator)+"%")
+	}
+	childQuery := base + " AND (" + strings.Join(childClauses, " OR ") + ") ORDER BY rf.type DESC, rf.local_path ASC"
+	childItems, err := queryItems(db, childQuery, childArgs...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Merge, deduplicating in case an explicitly requested path was also a child of another
+	// requested directory.
+	for _, child := range childItems {
+		if _, exists := seen[child.uuid]; !exists {
+			seen[child.uuid] = struct{}{}
+			exactItems = append(exactItems, child)
+		}
+	}
+	return exactItems, nil
+}
+
+// queryItems executes a query and scans the rows into a slice of remoteItem.
+func queryItems(db *sql.DB, query string, args ...interface{}) ([]remoteItem, error) {
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("while querying the database for files to restore: %w", err)
 	}
@@ -270,6 +331,25 @@ func fetchItems(db *sql.DB, req Request) ([]remoteItem, error) {
 		return nil, fmt.Errorf("while enumerating remote_files rows: %w", err)
 	}
 	return results, nil
+}
+
+// applyExclusions filters out items whose localPath matches any of the exclusion patterns. It uses
+// the same doublestar glob matching as the backup exclusion logic (utils.IsPathExcluded) so that
+// users can write the same patterns for both backup and restore exclusions.
+func applyExclusions(items []remoteItem, exclusions []string) ([]remoteItem, error) {
+	filtered := make([]remoteItem, 0, len(items))
+	for _, item := range items {
+		excluded, pattern, err := utils.IsPathExcluded(exclusions, item.localPath)
+		if err != nil {
+			return nil, fmt.Errorf("exclusion pattern error for path '%s': %w", item.localPath, err)
+		}
+		if excluded {
+			logger.Debugf("excluding '%s' from restore (matched pattern '%s')", item.localPath, pattern)
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered, nil
 }
 
 // restoreOne restores a single item and returns true on success. All errors are recorded into
