@@ -1549,6 +1549,7 @@ definitions:
         example:
           - /etc/hosts
           - /var/log/syslog
+          - /data
       all_files:
         type: boolean
         example: false
@@ -1557,6 +1558,14 @@ definitions:
         type: string
         example: /tmp/restored
         description: Optional per-request override of the destination directory. When set, files are written under this directory directly. When unset, the server-configured restore_dir (or "<data_dir>/restores") is used and the destination becomes "<restore_dir>/<name>/<restore_job_id>/".
+      exclusions:
+        type: array
+        description: Optional list of Bourne-Again shell like globing and globstar. Files whose local_path matches any pattern are excluded from the restore. Uses the same shell-like globbing as backup exclusions (e.g. "**/*.log", "/data/cache/**", "/tmp/file?.txt").
+        items:
+          type: string
+        example:
+          - "**/*.log"
+          - "/data/cache/**"
     required:
       - name
       - source_backup_job_id

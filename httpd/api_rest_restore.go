@@ -20,6 +20,7 @@ type RestoreJobRequest struct {
 	Files             []string `json:"files,omitempty"`
 	AllFiles          bool     `json:"all_files,omitempty"`
 	RestoreDir        string   `json:"restore_dir,omitempty"`
+	Exclusions        []string `json:"exclusions,omitempty"`
 }
 
 // RestoreJobStopRequest is the JSON body accepted by POST /restore/stop.
@@ -99,6 +100,7 @@ func (srvSrc SrvData) handlerPostRestoreStart(w http.ResponseWriter, r *http.Req
 		Files:              decoded.Files,
 		AllFiles:           decoded.AllFiles,
 		RestoreDirOverride: decoded.RestoreDir,
+		Exclusions:         decoded.Exclusions,
 	}
 	httpUser, _, _ := r.BasicAuth()
 	select {
