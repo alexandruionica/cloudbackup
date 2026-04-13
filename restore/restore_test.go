@@ -687,3 +687,73 @@ func TestApplyExclusionsWithFetchItems(t *testing.T) {
 		t.Errorf("fetch+exclude: got %v, want %v", got, want)
 	}
 }
+
+// --- stripTrailingSeparators / sanitizeFilePaths tests ---
+
+func TestStripTrailingSeparators(t *testing.T) {
+	cases := []struct {
+		input string
+		want  string
+	}{
+		// Unix paths
+		{"/home/data/", "/home/data"},
+		{"/home/data//", "/home/data"},
+		{"/home/data///", "/home/data"},
+		{"/home/data", "/home/data"},
+		{"/", "/"},  // Unix root preserved
+		{"//", "/"}, // double-slash collapses to root
+		// Windows paths
+		{`C:\Users\Someone\`, `C:\Users\Someone`},
+		{`C:\Users\Someone\\`, `C:\Users\Someone`},
+		{`C:\`, `C:\`}, // Windows root preserved
+		{`D:\`, `D:\`}, // different drive letter
+		{`c:\`, `c:\`}, // lowercase drive letter
+		// Mixed separators (client on Windows, path entered with forward slashes)
+		{"C:/Users/Someone/", "C:/Users/Someone"},
+		{"C:/", "C:/"}, // Windows root with forward slash preserved
+		// No trailing separator
+		{"/etc/hosts", "/etc/hosts"},
+		{`C:\Windows\System32`, `C:\Windows\System32`},
+		// Edge cases
+		{"", ""},
+	}
+	for _, c := range cases {
+		got := stripTrailingSeparators(c.input)
+		if got != c.want {
+			t.Errorf("stripTrailingSeparators(%q) = %q, want %q", c.input, got, c.want)
+		}
+	}
+}
+
+func TestSanitizeFilePaths(t *testing.T) {
+	input := []string{"/data/", "/etc/hosts", `C:\Users\`, "/var/log//"}
+	got := sanitizeFilePaths(input)
+	want := []string{"/data", "/etc/hosts", `C:\Users`, "/var/log"}
+	if !equalStringSlices(got, want) {
+		t.Errorf("sanitizeFilePaths: got %v, want %v", got, want)
+	}
+}
+
+func TestSanitizeFilePathsWithFetchItems(t *testing.T) {
+	// Verify that trailing-slash paths match DB entries after sanitization.
+	db := newTestDB(t)
+	defer db.Close()
+
+	insertItem(t, db, "u1", "/home/data", "dir")
+	insertItem(t, db, "u2", "/home/data/file.txt", "file")
+
+	// Simulate user input with trailing slash — should still match and expand.
+	sanitized := sanitizeFilePaths([]string{"/home/data/"})
+	items, err := fetchItems(db, Request{
+		SourceBackupJobId: testJobID,
+		Files:             sanitized,
+	})
+	if err != nil {
+		t.Fatalf("fetchItems after sanitize: %v", err)
+	}
+	got := localPaths(items)
+	wantPaths := []string{"/home/data", "/home/data/file.txt"}
+	if !equalStringSlices(got, wantPaths) {
+		t.Errorf("sanitize+fetch: got %v, want %v", got, wantPaths)
+	}
+}
