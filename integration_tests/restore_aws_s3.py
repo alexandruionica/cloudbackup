@@ -221,6 +221,72 @@ class TestRestoreAwsS3(unittest.TestCase):
                                      source_path, original_md5, restored_md5))
 
 
+    def test_restore_by_directory(self):
+        """Restore using a directory path in the 'files' parameter and verify that all contents
+        of the directory are restored recursively, while files outside the directory are not."""
+        bucket, s3_region, aws_key, aws_secret = get_s3_config_from_env()
+        self.assertIsNotNone(bucket, "Environment variable CLD_S3_BUCKET is not set")
+        job_name = "first_backup"
+
+        # step 1: configure S3 target and run backup
+        self._configure_s3_target(job_name)
+        logging.info("Running backup to S3 for directory restore test")
+        backup_job_id = self._run_backup_and_wait(job_name)
+
+        # step 2: restore only a subdirectory — use a trailing separator to also exercise
+        # the server-side path sanitisation
+        subdir_to_restore = self.tmpdir + os.sep + "dir1" + os.sep + "dir2" + os.sep
+        logging.info("Starting directory restore from S3 for path '{}'".format(subdir_to_restore))
+        restore_dir2 = tempfile.mkdtemp(prefix="integration_test_restore_dir_dest_")
+        self.to_delete.append(restore_dir2)
+        url = self.base_url + self.api_root + '/restore/start'
+        req = {
+            "name": job_name,
+            "source_backup_job_id": backup_job_id,
+            "files": [subdir_to_restore],
+            "restore_dir": restore_dir2,
+        }
+        r = requests.post(url=url, auth=(self.username, self.password), json=req)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url)
+        self.assertIn("result", response)
+        restore_job_id = response['result']['restore_job_id']
+        self._wait_for_restore_completion(job_name, restore_job_id)
+
+        # step 3: verify items inside the requested directory were restored
+        subdir_no_trailing = subdir_to_restore.rstrip(os.sep)
+        for source_path, file_type in self.filelist.items():
+            relative_path = source_path.lstrip(os.sep)
+            restored_path = os.path.join(restore_dir2, relative_path)
+            is_inside = source_path == subdir_no_trailing or source_path.startswith(subdir_no_trailing + os.sep)
+            # Parent directories of the restored subtree are created as a side effect of
+            # os.MkdirAll when writing files, so they will exist on disk even though they
+            # were not explicitly restored. Skip the "must not exist" check for ancestors.
+            is_ancestor = subdir_no_trailing.startswith(source_path + os.sep)
+            if is_inside:
+                self.assertTrue(os.path.exists(restored_path),
+                                "Expected restored item '{}' (type={}) to exist at '{}' but it does "
+                                "not".format(source_path, file_type, restored_path))
+                if file_type == "dir":
+                    self.assertTrue(os.path.isdir(restored_path),
+                                    "Expected '{}' to be a directory".format(restored_path))
+                elif file_type == "file":
+                    self.assertTrue(os.path.isfile(restored_path),
+                                    "Expected '{}' to be a regular file".format(restored_path))
+                    original_md5 = get_md5_sum(source_path)
+                    restored_md5 = get_md5_sum(restored_path)
+                    self.assertEqual(original_md5, restored_md5,
+                                     "MD5 mismatch for '{}': original={} restored={}".format(
+                                         source_path, original_md5, restored_md5))
+            elif not is_ancestor:
+                # items outside the requested directory (and not ancestors of it) must NOT
+                # have been restored
+                self.assertFalse(os.path.exists(restored_path),
+                                 "Item '{}' is outside the requested directory '{}' but was "
+                                 "restored at '{}'".format(source_path, subdir_no_trailing,
+                                                           restored_path))
+
+
 def get_args():
     parser = argparse.ArgumentParser(description='Integration tests for restore from AWS S3')
     parser.add_argument('-v', '--verbose', required=False, action="store_true", default=False,
