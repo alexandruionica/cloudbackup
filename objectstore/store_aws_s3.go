@@ -6,19 +6,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"golang.org/x/time/rate"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
+	"golang.org/x/time/rate"
 )
 
 type StoreAwsS3 struct {
@@ -42,12 +44,12 @@ type StoreAwsS3 struct {
 	// S3 storage class
 	storageClass string
 	region       string
-	// AWS client session
-	awsSess *session.Session
+	// AWS SDK v2 config
+	awsCfg aws.Config
 	// AWS managed uploader which does a lot of work (retries/multipart upload/etc)
-	awsUploader *s3manager.Uploader
-	// AWS S3 session
-	awsS3Svc *s3.S3
+	awsUploader *manager.Uploader
+	// AWS S3 client
+	awsS3Client *s3.Client
 }
 
 func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup, target shared.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreAwsS3, error) {
@@ -76,28 +78,39 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 	GetStringParameter("AWS_SECRET_ACCESS_KEY", &result.awsSecretAccessKey, target.Parameters, "")
 	GetStringParameter("storage_class", &result.storageClass, target.Parameters, "")
 	GetStringParameter("region", &result.region, target.Parameters, "")
-	var awsConfig aws.Config
+
+	var loadOpts []func(*awsconfig.LoadOptions) error
+
 	// if we have a key id and secret then use them
 	if result.awsSecretAccessKey != "" && result.awsAccessKeyId != "" {
 		logger.Debugf("Using user specified credentials")
-		awsConfig = aws.Config{
-			Credentials: credentials.NewStaticCredentials(result.awsAccessKeyId, result.awsSecretAccessKey, ""),
-		}
-		// we don't have a key id and session so we'll fall back to the SDK's defaults
+		loadOpts = append(loadOpts, awsconfig.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(result.awsAccessKeyId, result.awsSecretAccessKey, ""),
+		))
+		// we don't have a key id and secret so we'll fall back to the SDK's defaults
 	} else {
 		logger.Debugf("no credentials specified in the config, so defaulting to the defaults of the AWS SDK")
-		awsConfig = aws.Config{}
 	}
 
-	awsConfig.Region = aws.String(result.region)
-	awsConfig.HTTPClient = newRateLimitedHttpClientForAWS(ctx, rateLimitBucket, ratelimit, burst)
+	// set initial region; if the user didn't specify one, default to us-east-1 as we need a region hint for bucket region detection
+	initialRegion := result.region
+	if initialRegion == "" {
+		initialRegion = "us-east-1"
+	}
+	loadOpts = append(loadOpts, awsconfig.WithRegion(initialRegion))
 
-	// once created, DO NOT MODIFY the session object
-	result.awsSess, err = session.NewSessionWithOptions(session.Options{Config: awsConfig})
+	// The v2 SDK accepts a standard *http.Client via config.WithHTTPClient, making rate limiting integration clean.
+	httpClient := newRateLimitedHttpClientForAWS(ctx, rateLimitBucket, ratelimit, burst)
+	loadOpts = append(loadOpts, awsconfig.WithHTTPClient(httpClient))
+
+	result.awsCfg, err = awsconfig.LoadDefaultConfig(ctx, loadOpts...)
 	if err != nil {
-		return result, fmt.Errorf("could not setup AWS session for target '%s' belonging to backup '%s' due "+
+		return result, fmt.Errorf("could not setup AWS config for target '%s' belonging to backup '%s' due "+
 			"to error: %s", target.Name, backupConfig.Name, err)
 	}
+
+	// create initial S3 client for region detection
+	result.awsS3Client = s3.NewFromConfig(result.awsCfg)
 
 	// try to determine programmatically the region; if not found then it will fallback to the user specified one; for
 	// this specific call, we don't need an authenticated session
@@ -106,9 +119,11 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 		return result, err
 	}
 
-	result.awsUploader = s3manager.NewUploader(result.awsSess)
-	// Create a S3 client with additional configuration
-	result.awsS3Svc = s3.New(result.awsSess, aws.NewConfig().WithRegion(result.region))
+	// re-create S3 client and uploader with the detected region
+	result.awsS3Client = s3.NewFromConfig(result.awsCfg, func(o *s3.Options) {
+		o.Region = result.region
+	})
+	result.awsUploader = manager.NewUploader(result.awsS3Client)
 
 	return result, nil
 }
@@ -130,7 +145,7 @@ func (objStore *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, ve
 		defer reader.Close()
 
 		// upload using Multipart uploads and the S3 upload manager
-		result, err := objStore.awsUploader.UploadWithContext(objStore.ctx, &s3manager.UploadInput{
+		result, err := objStore.awsUploader.Upload(objStore.ctx, &s3.PutObjectInput{
 			Bucket: aws.String(objStore.storeBucketName),
 			Key:    aws.String(remotePath),
 			Body:   &reader,
@@ -175,16 +190,16 @@ func (objStore *StoreAwsS3) MarkDeleted(existingDbRecord shared.BackedUpFileProp
 	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
 
-	inputDelete := &s3.DeleteObjectInput{
+	result, err := objStore.awsS3Client.DeleteObject(objStore.ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(objStore.storeBucketName),
 		Key:    aws.String(remotePath),
-	}
-	result, err := objStore.awsS3Svc.DeleteObject(inputDelete)
+	})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
 			return "0", false, fmt.Errorf("while trying to place a delete marker on '%s' "+
 				"from S3 bucket '%s' received error "+
-				"code '%s' and error message: '%s'", remotePath, objStore.storeBucketName, aerr.Code(), aerr.Message())
+				"code '%s' and error message: '%s'", remotePath, objStore.storeBucketName, apiErr.ErrorCode(), apiErr.ErrorMessage())
 		} else {
 			return "0", false, fmt.Errorf("while trying to place a delete marker on '%s'"+
 				" from S3 bucket '%s' received error "+
@@ -211,16 +226,16 @@ func (objStore *StoreAwsS3) Delete(existingDbRecord shared.BackedUpFilePropertie
 	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
 
-	inputDelete := &s3.DeleteObjectInput{
+	_, err := objStore.awsS3Client.DeleteObject(objStore.ctx, &s3.DeleteObjectInput{
 		Bucket:    aws.String(objStore.storeBucketName),
 		Key:       aws.String(remotePath),
 		VersionId: aws.String(remoteVersion),
-	}
-	_, err := objStore.awsS3Svc.DeleteObject(inputDelete)
+	})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
 			return fmt.Errorf("while trying to delete '%s' with version '%s' from S3 bucket '%s' received error "+
-				"code '%s' and error message: '%s'", remotePath, remoteVersion, objStore.storeBucketName, aerr.Code(), aerr.Message())
+				"code '%s' and error message: '%s'", remotePath, remoteVersion, objStore.storeBucketName, apiErr.ErrorCode(), apiErr.ErrorMessage())
 		} else {
 			return fmt.Errorf("while trying to delete '%s' with version '%s' from S3 bucket '%s' received error "+
 				"message: '%s'", remotePath, remoteVersion, objStore.storeBucketName, err)
@@ -253,8 +268,8 @@ func (objStore *StoreAwsS3) Get(existingDbRecord shared.BackedUpFileProperties, 
 	}
 	defer f.Close()
 
-	downloader := s3manager.NewDownloader(objStore.awsSess)
-	_, err = downloader.DownloadWithContext(objStore.ctx, f, input)
+	downloader := manager.NewDownloader(objStore.awsS3Client)
+	_, err = downloader.Download(objStore.ctx, f, input)
 	if err != nil {
 		if objStore.ctx.Err() == context.Canceled {
 			logger.Infof("received cancellation request while downloading '%s'", remotePath)
@@ -327,22 +342,16 @@ func (objStore *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled boo
 	var errMsg string
 	logger.Debugf("Checking if S3 bucket '%s' has versioning enabled and MFA delete disabled", objStore.storeBucketName)
 
-	input := &s3.GetBucketVersioningInput{
+	result, err := objStore.awsS3Client.GetBucketVersioning(objStore.ctx, &s3.GetBucketVersioningInput{
 		Bucket: aws.String(objStore.storeBucketName),
-	}
-
-	result, err := objStore.awsS3Svc.GetBucketVersioning(input)
+	})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			default:
-				errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, aerr.Error())
-				logger.Errorf(errMsg)
-				return versioningEnabled, mfaDeleteEnabled, errors.New(aerr.Error())
-			}
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
+			errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, apiErr.ErrorMessage())
+			logger.Errorf(errMsg)
+			return versioningEnabled, mfaDeleteEnabled, fmt.Errorf("%s (code: %s)", apiErr.ErrorMessage(), apiErr.ErrorCode())
 		} else {
-			// Print the error, cast err to awserr.Error to get the Code and
-			// Message from an error.
 			errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, err.Error())
 			logger.Errorf(errMsg)
 			return versioningEnabled, mfaDeleteEnabled, err
@@ -350,17 +359,13 @@ func (objStore *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled boo
 	}
 
 	if result != nil {
-		if result.Status != nil {
-			if strings.ToLower(*(result.Status)) == "enabled" {
-				versioningEnabled = true
-				logger.Debugf("S3 bucket '%s' has versioning enabled", objStore.storeBucketName)
-			}
+		if result.Status == types.BucketVersioningStatusEnabled {
+			versioningEnabled = true
+			logger.Debugf("S3 bucket '%s' has versioning enabled", objStore.storeBucketName)
 		}
-		if result.MFADelete != nil {
-			if strings.ToLower(*(result.MFADelete)) == "enabled" {
-				mfaDeleteEnabled = true
-				logger.Debugf("S3 bucket '%s' has MFA delete enabled", objStore.storeBucketName)
-			}
+		if result.MFADelete == types.MFADeleteStatusEnabled {
+			mfaDeleteEnabled = true
+			logger.Debugf("S3 bucket '%s' has MFA delete enabled", objStore.storeBucketName)
 		}
 	}
 	if !versioningEnabled {
@@ -375,23 +380,20 @@ func (objStore *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled boo
 }
 
 func (objStore *StoreAwsS3) checkBucketHasStaticWebsiteEnabled() (staticWebsiteEnabled bool, err error) {
-	input := &s3.GetBucketWebsiteInput{
+	_, err = objStore.awsS3Client.GetBucketWebsite(objStore.ctx, &s3.GetBucketWebsiteInput{
 		Bucket: aws.String(objStore.storeBucketName),
-	}
-
-	_, err = objStore.awsS3Svc.GetBucketWebsite(input)
+	})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case "NoSuchWebsiteConfiguration":
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.ErrorCode() == "NoSuchWebsiteConfiguration" {
 				// all is good as we don't want the bucket to have Static website support enabled
 				return false, nil
-			default:
-				errMsg := fmt.Sprintf("While checking that the S3 bucket '%s' does not have static website "+
-					"hosting enabled, encountered error: %s", objStore.storeBucketName, aerr.Error())
-				logger.Errorf(errMsg)
-				return false, errors.New(aerr.Error())
 			}
+			errMsg := fmt.Sprintf("While checking that the S3 bucket '%s' does not have static website "+
+				"hosting enabled, encountered error: %s", objStore.storeBucketName, apiErr.ErrorMessage())
+			logger.Errorf(errMsg)
+			return false, fmt.Errorf("%s (code: %s)", apiErr.ErrorMessage(), apiErr.ErrorCode())
 		} else {
 			errMsg := fmt.Sprintf("While checking that the S3 bucket '%s' does not have static website "+
 				"hosting enabled, encountered error: %s", objStore.storeBucketName, err.Error())
@@ -408,17 +410,18 @@ func (objStore *StoreAwsS3) checkBucketHasStaticWebsiteEnabled() (staticWebsiteE
 func (objStore *StoreAwsS3) testUploadAndDelete() error {
 	uploadPath := objStore.storePrefix + "/" + "test.txt"
 	fakeReader := strings.NewReader(fmt.Sprintf("target privilege and settings validation - %s", time.Now().String()))
-	input := &s3.PutObjectInput{
-		Body:   aws.ReadSeekCloser(fakeReader),
+
+	logger.Debugf("Uploading test file to '%s' in order to validate PUT permission for S3 bucket '%s'", uploadPath, objStore.storeBucketName)
+	result, err := objStore.awsS3Client.PutObject(objStore.ctx, &s3.PutObjectInput{
+		Body:   fakeReader,
 		Bucket: aws.String(objStore.storeBucketName),
 		Key:    aws.String(uploadPath),
-	}
-	logger.Debugf("Uploading test file to '%s' in order to validate PUT permission for S3 bucket '%s'", uploadPath, objStore.storeBucketName)
-	result, err := objStore.awsS3Svc.PutObject(input)
+	})
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
 			return fmt.Errorf("while trying to upload a test file to '%s' is S3 bucket '%s' received error "+
-				"code '%s' and error message: '%s'", uploadPath, objStore.storeBucketName, aerr.Code(), aerr.Message())
+				"code '%s' and error message: '%s'", uploadPath, objStore.storeBucketName, apiErr.ErrorCode(), apiErr.ErrorMessage())
 		} else {
 			return fmt.Errorf("while trying to upload a test file to '%s' in S3 bucket '%s' received error "+
 				"message: '%s'", uploadPath, objStore.storeBucketName, err)
@@ -431,17 +434,17 @@ func (objStore *StoreAwsS3) testUploadAndDelete() error {
 		return fmt.Errorf("AWS S3 upload for test file to '%s' in S3 bucket '%s' did not return a version so "+
 			"the delete operation can not proceed", uploadPath, objStore.storeBucketName)
 	} else {
-		inputDelete := &s3.DeleteObjectInput{
+		logger.Debugf("Deleting test file '%s' from S3 bucket '%s' in order to validate DELETE permissions", uploadPath, objStore.storeBucketName)
+		_, err := objStore.awsS3Client.DeleteObject(objStore.ctx, &s3.DeleteObjectInput{
 			Bucket:    aws.String(objStore.storeBucketName),
 			Key:       aws.String(uploadPath),
 			VersionId: aws.String(*(result.VersionId)),
-		}
-		logger.Debugf("Deleting test file '%s' from S3 bucket '%s' in order to validate DELETE permissions", uploadPath, objStore.storeBucketName)
-		_, err := objStore.awsS3Svc.DeleteObject(inputDelete)
+		})
 		if err != nil {
-			if aerr, ok := err.(awserr.Error); ok {
+			var apiErr smithy.APIError
+			if errors.As(err, &apiErr) {
 				return fmt.Errorf("while trying to delte test file '%s' from S3 bucket '%s' received error "+
-					"code '%s' and error message: '%s'", uploadPath, objStore.storeBucketName, aerr.Code(), aerr.Message())
+					"code '%s' and error message: '%s'", uploadPath, objStore.storeBucketName, apiErr.ErrorCode(), apiErr.ErrorMessage())
 			} else {
 				return fmt.Errorf("while trying to delete test file '%s' from S3 bucket '%s' received error "+
 					"message: '%s'", uploadPath, objStore.storeBucketName, err)
@@ -456,15 +459,10 @@ func (objStore *StoreAwsS3) testUploadAndDelete() error {
 
 // queries the S3 bucket and tries to find its region; if it fails it will default to the one specified in the configuration file (if any)
 func (objStore *StoreAwsS3) getRegionFromBucket() error {
-	var errMsg, region string
-	var err error
+	var errMsg string
 	logger.Debugf("Attempting to figure out region for S3 bucket '%s'", objStore.storeBucketName)
-	// if the user did not specify a region, default to us-east-1 as we need to specify a region hint
-	if objStore.region == "" {
-		region, err = s3manager.GetBucketRegion(objStore.ctx, objStore.awsSess, objStore.storeBucketName, "us-east-1")
-	} else {
-		region, err = s3manager.GetBucketRegion(objStore.ctx, objStore.awsSess, objStore.storeBucketName, objStore.region)
-	}
+
+	region, err := manager.GetBucketRegion(objStore.ctx, objStore.awsS3Client, objStore.storeBucketName)
 	if err != nil {
 		errMsg = fmt.Sprintf("unable to find bucket %s's region due to error: %s", objStore.storeBucketName, err)
 		logger.Debug(errMsg)
@@ -515,8 +513,8 @@ func calculateAwsS3RemotePath(prefix string, path string, metadata bool) string 
 	}
 }
 
-// returns a HTTP client which can then be passed to the AWS S3 sdk, when initialising the SDK.
-// This rate limiter limits the HTTP POST method which means in practice it limits uploads only
+// returns an HTTP client with a rate-limiting transport that limits upload bandwidth.
+// This client is passed to the AWS SDK v2 via config.WithHTTPClient
 func newRateLimitedHttpClientForAWS(ctx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64) *http.Client {
 	logger.Debug("Setting up new HTTP client capable of rate limiting")
 
