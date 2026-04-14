@@ -7,19 +7,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Azure/azure-pipeline-go/pipeline"
-	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/mattn/go-ieproxy"
-	"golang.org/x/time/rate"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/mattn/go-ieproxy"
+	"golang.org/x/time/rate"
 )
 
 // Microsoft Azure Blob storage account
@@ -43,12 +42,8 @@ type StoreAzureBlob struct {
 	// accounts and withing the storage accounts you create containers (which are like S3 buckets) and then withing a
 	// container to upload / download contant to/from
 	azureAccountName string
-	// Azure Pipeline- think of it as the base client wrapper which is then used to upload / download / perform other operations
-	azurePipeline pipeline.Pipeline
-	// Azure Blob Storage URL - this thing is used to interact with the container (but not to upload / download from containers)
-	azureServiceURL azblob.ServiceURL
-	// Azure Container URL object which wraps the above Azure Pipeline - this is what is used to upload / download from containers
-	azureContainerURL azblob.ContainerURL
+	// Azure SDK client used for all blob operations (upload, download, delete) and service-level queries
+	azureClient *azblob.Client
 }
 
 func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBackup, target shared.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreAzureBlob, error) {
@@ -82,48 +77,30 @@ func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBac
 		logger.Errorf("invalid credentials. When initialising the Azure blob storage account, received error: %s", err)
 	}
 
-	httpSenderFactory := newCloudBackupHTTPClientFactory(ctx, rateLimitBucket, ratelimit, burst)
-	result.azurePipeline = azblob.NewPipeline(credential, azblob.PipelineOptions{HTTPSender: httpSenderFactory})
+	// The new Azure SDK accepts a standard *http.Client as Transport in ClientOptions, which makes rate limiting
+	// integration much cleaner than the old pipeline factory approach. We pass our rate-limited HTTP client directly.
+	httpClient := newRateLimitedHttpClientForAzure(ctx, rateLimitBucket, ratelimit, burst)
+	clientOptions := &azblob.ClientOptions{}
+	clientOptions.Transport = httpClient
 
+	var serviceURL string
 	var primaryBlobServiceEndpoint string
 	GetStringParameter("primary_blob_service_endpoint", &primaryBlobServiceEndpoint, target.Parameters, "")
-	var ContainerURL, ServiceURL *url.URL
 	if primaryBlobServiceEndpoint != "" {
-		ServiceURL, err = url.Parse(primaryBlobServiceEndpoint)
-		if err != nil {
-			return result, fmt.Errorf("while constructing the Azure Storage Service URL using the supplied "+
-				"'primary_blob_service_endpoint' parameter, the following error was encountered: %s", err)
-		}
-
-		ContainerURL, err = url.Parse(primaryBlobServiceEndpoint + "/" + result.storeBucketName)
-		if err != nil {
-			return result, fmt.Errorf("while constructing the Azure Storage Container URL using the supplied "+
-				"'primary_blob_service_endpoint' parameter, the following error was encountered: %s", err)
-		}
+		serviceURL = primaryBlobServiceEndpoint
 	} else {
 		// Using the default storage account blob service URL endpoint as the user did not specify any
-		ServiceURL, err = url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net", result.azureAccountName))
-		if err != nil {
-			return result, fmt.Errorf("while constructing the Azure Storage Service URL, encountered error: %s", err)
-		}
-
-		ContainerURL, err = url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s",
-			result.azureAccountName, result.storeBucketName))
-		if err != nil {
-			return result, fmt.Errorf("while constructing the Azure Storage Container URL, encountered error: %s", err)
-		}
+		serviceURL = fmt.Sprintf("https://%s.blob.core.windows.net/", result.azureAccountName)
 	}
 
 	// according to https://blogs.msdn.microsoft.com/windowsazurestorage/2011/02/17/windows-azure-blob-md5-overview/ MD5
 	// checksumming is not needed if HTTPS is used as transfport (and we enforce it's use)
 
-	// Create an ServiceURL object that wraps the service URL and a request pipeline. This is used to make request to
-	// the overall storage account
 	logger.Debugf("Setting up connection to Azure Blob Storage")
-	result.azureServiceURL = azblob.NewServiceURL(*ServiceURL, result.azurePipeline)
-
-	// Create a ContainerURL object that wraps the container URL and a request pipeline to make requests.
-	result.azureContainerURL = azblob.NewContainerURL(*ContainerURL, result.azurePipeline)
+	result.azureClient, err = azblob.NewClientWithSharedKeyCredential(serviceURL, credential, clientOptions)
+	if err != nil {
+		return result, fmt.Errorf("while creating the Azure Blob Storage client, encountered error: %s", err)
+	}
 	logger.Debugf("Done setting up connection to Azure Blob Storage")
 
 	return result, nil
@@ -136,7 +113,6 @@ func (objStore *StoreAzureBlob) Upload(DbRecord shared.BackedUpFileProperties, v
 	remotePath, remoteVersion := calculateAzureStorageRemotePath(objStore.storePrefix, DbRecord.Path, metadata, version, false)
 	logger.Debugf("Uploading: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", DbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
-	blobURL := objStore.azureContainerURL.NewBlockBlobURL(remotePath)
 
 	if DbRecord.Type == "file" {
 		// setup io.Reader (this handles reporting and optional rate limiting)
@@ -148,9 +124,11 @@ func (objStore *StoreAzureBlob) Upload(DbRecord shared.BackedUpFileProperties, v
 		defer reader.Close()
 
 		// upload
-		_, err = azblob.UploadStreamToBlockBlob(objStore.ctx, &reader, blobURL, azblob.UploadStreamToBlockBlobOptions{
-			BufferSize: 5 * 1024 * 1024,
-			MaxBuffers: 3})
+		_, err = objStore.azureClient.UploadStream(objStore.ctx, objStore.storeBucketName, remotePath, &reader,
+			&azblob.UploadStreamOptions{
+				BlockSize:   5 * 1024 * 1024,
+				Concurrency: 3,
+			})
 		if err != nil {
 			if objStore.ctx.Err() == context.Canceled {
 				msg := fmt.Sprintf("received cancellation request while uploading content of '%s'", DbRecord.Path)
@@ -186,13 +164,14 @@ func (objStore *StoreAzureBlob) MarkDeleted(existingDbRecord shared.BackedUpFile
 
 	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
-	blobURL := objStore.azureContainerURL.NewBlockBlobURL(remotePath)
 
 	fakeReader := strings.NewReader("") // zero bytes content
 	// upload aka place the marker which is a 0 bytes file
-	_, err = azblob.UploadStreamToBlockBlob(objStore.ctx, fakeReader, blobURL, azblob.UploadStreamToBlockBlobOptions{
-		BufferSize: 5 * 1024,
-		MaxBuffers: 3})
+	_, err = objStore.azureClient.UploadStream(objStore.ctx, objStore.storeBucketName, remotePath, fakeReader,
+		&azblob.UploadStreamOptions{
+			BlockSize:   5 * 1024,
+			Concurrency: 3,
+		})
 	if err != nil {
 		if objStore.ctx.Err() == context.Canceled {
 			msg := fmt.Sprintf("received cancellation request while placing a delete marker for '%s'", existingDbRecord.Path)
@@ -220,9 +199,8 @@ func (objStore *StoreAzureBlob) Delete(existingDbRecord shared.BackedUpFilePrope
 	}
 	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
-	blobURL := objStore.azureContainerURL.NewBlockBlobURL(remotePath)
 
-	_, err := blobURL.Delete(objStore.ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+	_, err := objStore.azureClient.DeleteBlob(objStore.ctx, objStore.storeBucketName, remotePath, nil)
 	if err != nil {
 		return fmt.Errorf("while trying to delete the file '%s' from Azure Blobs container(bucket)"+
 			" '%s' received error message: '%s'", existingDbRecord.Path, objStore.storeBucketName, err)
@@ -242,8 +220,7 @@ func (objStore *StoreAzureBlob) Get(existingDbRecord shared.BackedUpFileProperti
 		" full remote path: '%s' to local path: '%s'", existingDbRecord.Path, remoteVersion, objStore.storeName,
 		objStore.storeBucketName, remotePath, restorePath)
 
-	blobURL := objStore.azureContainerURL.NewBlockBlobURL(remotePath)
-	downloadResponse, err := blobURL.Download(objStore.ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
+	downloadResponse, err := objStore.azureClient.DownloadStream(objStore.ctx, objStore.storeBucketName, remotePath, nil)
 	if err != nil {
 		if objStore.ctx.Err() == context.Canceled {
 			logger.Infof("received cancellation request while downloading '%s'", remotePath)
@@ -253,7 +230,7 @@ func (objStore *StoreAzureBlob) Get(existingDbRecord shared.BackedUpFileProperti
 			remotePath, remoteVersion, objStore.storeBucketName, err)
 	}
 
-	bodyStream := downloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: 20})
+	bodyStream := downloadResponse.Body
 	defer bodyStream.Close()
 
 	f, err := os.Create(restorePath)
@@ -290,13 +267,14 @@ func (objStore *StoreAzureBlob) Validate() (string, error) {
 	failureMsg := ""
 
 	// check static website hosting is not enabled
-	serviceProperties, err := objStore.azureServiceURL.GetProperties(objStore.ctx)
+	serviceClient := objStore.azureClient.ServiceClient()
+	serviceProperties, err := serviceClient.GetProperties(objStore.ctx, nil)
 	if err != nil {
 		failedValidation = true
 		failureMsg += fmt.Sprintf("While fetching the properties of Azure storage account '%s', encountered "+
 			"error: %s ", objStore.azureAccountName, err)
 	} else {
-		if serviceProperties.StaticWebsite != nil && serviceProperties.StaticWebsite.Enabled {
+		if serviceProperties.StaticWebsite != nil && serviceProperties.StaticWebsite.Enabled != nil && *serviceProperties.StaticWebsite.Enabled {
 			failedValidation = true
 			failureMsg += "Static website hosting is enabled on the container (bucket) which is going to used for " +
 				"backups. Refusing to start as this may lead to the backups data being accessed by third parties. "
@@ -325,15 +303,14 @@ func (objStore *StoreAzureBlob) testUploadGetDelete() error {
 	uploadMsg := fmt.Sprintf("target privilege and settings validation - %s", time.Now().String())
 	fakeReader := strings.NewReader(uploadMsg)
 
-	// prepares target filename in the object store
-	blobURL := objStore.azureContainerURL.NewBlockBlobURL(uploadPath)
-
 	// upload
 	logger.Debugf("Uploading test file to '%s' in order to validate PUT permission for Azure container(bucket) '%s'",
 		uploadPath, objStore.storeBucketName)
-	_, err := azblob.UploadStreamToBlockBlob(objStore.ctx, fakeReader, blobURL, azblob.UploadStreamToBlockBlobOptions{
-		BufferSize: 2 * 1024 * 1024,
-		MaxBuffers: 3})
+	_, err := objStore.azureClient.UploadStream(objStore.ctx, objStore.storeBucketName, uploadPath, fakeReader,
+		&azblob.UploadStreamOptions{
+			BlockSize:   2 * 1024 * 1024,
+			Concurrency: 3,
+		})
 	if err != nil {
 		return fmt.Errorf("while finishing up the upload of a test file to '%s' in Azure container(bucket) '%s' "+
 			"received error message: '%s'", uploadPath, objStore.storeBucketName, err)
@@ -343,13 +320,12 @@ func (objStore *StoreAzureBlob) testUploadGetDelete() error {
 
 	// download
 	logger.Debugf("Downloading test file '%s' from Azure container(bucket) '%s'", uploadPath, objStore.storeBucketName)
-	downloadResponse, err := blobURL.Download(objStore.ctx, 0, azblob.CountToEnd, azblob.BlobAccessConditions{}, false)
+	downloadResponse, err := objStore.azureClient.DownloadStream(objStore.ctx, objStore.storeBucketName, uploadPath, nil)
 	if err != nil {
 		return fmt.Errorf("while trying to setup a download for a test file from '%s' in Azure container(bucket)"+
 			" '%s' received error message: '%s'", uploadPath, objStore.storeBucketName, err)
 	} else {
-		// NOTE: automatically retries are performed if the connection fails
-		bodyStream := downloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: 20})
+		bodyStream := downloadResponse.Body
 		// read the body into a buffer
 		downloadedData := bytes.Buffer{}
 		_, err = downloadedData.ReadFrom(bodyStream)
@@ -367,7 +343,7 @@ func (objStore *StoreAzureBlob) testUploadGetDelete() error {
 
 	// delete
 	logger.Debugf("Deleting test file '%s' from Azure container(bucket) '%s'", uploadPath, objStore.storeBucketName)
-	_, err = blobURL.Delete(objStore.ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+	_, err = objStore.azureClient.DeleteBlob(objStore.ctx, objStore.storeBucketName, uploadPath, nil)
 	if err != nil {
 		return fmt.Errorf("while trying to delete the test file from '%s' in Azure container(bucket)"+
 			" '%s' received error message: '%s'", uploadPath, objStore.storeBucketName, err)
@@ -408,13 +384,13 @@ func calculateAzureStorageRemotePath(prefix string, path string, metadata bool, 
 
 //
 
-// returns a HTTP client which can then be passed to the Azure sdk via the Azure Pipeline factory, when initialising the SDK.
-// This rate limiter limits the HTTP POST method which means in practice it limits uploads only
+// returns an HTTP client with a rate-limiting transport that limits upload bandwidth.
+// This client is passed to the Azure SDK via ClientOptions.Transport
 func newRateLimitedHttpClientForAzure(ctx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64) *http.Client {
 	logger.Debug("Setting up new HTTP client capable of rate limiting")
 
 	wrappedTransport := &wrapAroundTransport{
-		origTransport: &http.Transport{ // Transport definition copied from function newDefaultHTTPClient() which is part of vendor/github.com/Azure/azure-pipeline-go/pipeline/core.go
+		origTransport: &http.Transport{
 			Proxy: ieproxy.GetProxyFunc(),
 			// We use Dial instead of DialContext as DialContext has been reported to cause slower performance.
 			Dial /*Context*/ : (&net.Dialer{
@@ -430,8 +406,6 @@ func newRateLimitedHttpClientForAzure(ctx context.Context, bucket *rate.Limiter,
 			DisableKeepAlives:      false,
 			DisableCompression:     false,
 			MaxResponseHeaderBytes: 0,
-			//ResponseHeaderTimeout:  time.Duration{},
-			//ExpectContinueTimeout:  time.Duration{},
 		},
 		ctx:       ctx,
 		bucket:    bucket,
@@ -440,21 +414,4 @@ func newRateLimitedHttpClientForAzure(ctx context.Context, bucket *rate.Limiter,
 	}
 
 	return &http.Client{Transport: wrappedTransport}
-}
-
-// the below function is a copy of newDefaultHTTPClientFactory() from vendor/github.com/Azure/azure-pipeline-go/pipeline/core.go
-//
-//	with only altered the call to init a new http.Client which is replaced with our own call which produces an almost
-//	identical client but with a http.Transport which does rate limiting. Because if this there is tight coupling to both
-//	vendor/github.com/Azure/azure-pipeline-go and github.com/Azure/azure-storage-blob-go/azblob so changes to any of them may lead to trouble
-func newCloudBackupHTTPClientFactory(CloudbackupCtx context.Context, bucket *rate.Limiter, rateLimit uint64, burst uint64) pipeline.Factory {
-	return pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
-		return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
-			r, err := newRateLimitedHttpClientForAzure(CloudbackupCtx, bucket, rateLimit, burst).Do(request.WithContext(ctx))
-			if err != nil {
-				err = pipeline.NewError(err, "HTTP request failed")
-			}
-			return pipeline.NewHTTPResponse(r), err
-		}
-	})
 }
