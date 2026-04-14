@@ -10,7 +10,7 @@ then
    exit 1
 fi
 
-AWS_SDK=$(grep github.com/aws/aws-sdk-go go.mod  | awk {'print $2'})
+AWS_SDK=$(grep 'github.com/aws/aws-sdk-go-v2 ' go.mod  | awk {'print $2'})
 GCP_STORAGE_SDK=$(grep cloud.google.com/go/storage go.mod  | awk {'print $2'})
 AZURE_BLOB_STORAGE_SDK=$(grep github.com/Azure/azure-sdk-for-go/sdk/storage/azblob go.mod  | awk {'print $2'})
 
