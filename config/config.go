@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/exp/utf8string"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -104,7 +104,7 @@ func Save(runtimeCfg *shared.RuntimeConfig, newConfig shared.CfgTemplate) error 
 		return fmt.Errorf("could not marshall YAML when preparing for write the configuration "+
 			"file. The error received was: %s", err.Error())
 	}
-	if err := ioutil.WriteFile(runtimeCfg.Path, toWrite, 0600); err != nil {
+	if err := os.WriteFile(runtimeCfg.Path, toWrite, 0600); err != nil {
 		return fmt.Errorf("could not write to configuration file '%s' . Received error was: %s",
 			runtimeCfg.Path, err)
 	}
@@ -1116,7 +1116,7 @@ func SaveSanitizedCfgToTmpFile(serverConfigCopy shared.CfgTemplate) (string, err
 			"file. The error received was: %s", err), err
 	}
 	filePath := filepath.Join(serverConfigCopy.DataDir, "config.yaml")
-	err = ioutil.WriteFile(filePath, toWrite, 0600)
+	err = os.WriteFile(filePath, toWrite, 0600)
 	if err != nil {
 		return fmt.Sprintf("While trying to save a copy of the configuration "+
 			"file, encountered error: %s", err), err

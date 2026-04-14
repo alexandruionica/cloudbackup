@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -366,7 +365,7 @@ func (objStore *StoreGcpStorage) testUploadGetDelete() error {
 	}
 
 	logger.Debugf("Downloading test file '%s' from GCP bucket '%s'", uploadPath, objStore.storeBucketName)
-	data, err := ioutil.ReadAll(rc)
+	data, err := io.ReadAll(rc)
 	if err != nil {
 		err2 := rc.Close()
 		if err2 != nil {

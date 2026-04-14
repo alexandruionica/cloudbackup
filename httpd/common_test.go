@@ -6,7 +6,7 @@ import (
 	"cloudbackup/testutils"
 	"encoding/json"
 	"github.com/julienschmidt/httprouter"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -39,7 +39,7 @@ func TestBasicAuth1(t *testing.T) {
 	auth(w, req, []httprouter.Param{})
 
 	resp := w.Result()
-	// body, _ := ioutil.ReadAll(resp.Body)
+	// body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != 401 {
 		t.Fatalf("HTTP response when not supplying validation was not 401 but %d", resp.StatusCode)
@@ -251,7 +251,7 @@ func TestCheckAccess2(t *testing.T) {
 	acc(w, req, []httprouter.Param{})
 
 	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 {
 		t.Fatalf("calling CheckAccess() on authenticated session with valid 'write' access user should return "+
@@ -288,7 +288,7 @@ func TestCheckAccess3(t *testing.T) {
 	acc(w, req, []httprouter.Param{})
 
 	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != 403 {
 		t.Fatalf("calling CheckAccess() on authenticated session with 'read' access user is NOT granted access"+
@@ -326,7 +326,7 @@ func TestCheckAccess4(t *testing.T) {
 	acc(w, req, []httprouter.Param{})
 
 	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 {
 		t.Fatalf("calling CheckAccess() on authenticated session with 'read' access user is granted access"+
@@ -393,7 +393,7 @@ func TestJSONError1(t *testing.T) {
 	JSONError(w, 300, codestring, messagestring)
 
 	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != 300 {
 		t.Fatalf("calling JSONError() passing http code '300' but got as reply HTTP code '%d' and response "+
@@ -435,7 +435,7 @@ func TestJSONSuccess1(t *testing.T) {
 	JSONSuccess(w, codestring, messagestring)
 
 	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 {
 		t.Fatalf("reply from JSONSuccess() didn't have http code '200' but got as reply HTTP code '%d' and "+
@@ -484,7 +484,7 @@ func TestJSONSuccessWithResult1(t *testing.T) {
 	JSONSuccessWithResult(w, codestring, messagestring, resultStruct)
 
 	resp := w.Result()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != 200 {
 		t.Fatalf("reply from JSONSuccessWithResult() didn't have http code '200' but got as reply HTTP code '%d' and "+

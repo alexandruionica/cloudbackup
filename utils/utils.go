@@ -10,7 +10,6 @@ import (
 	"github.com/bmatcuk/doublestar"
 	log "github.com/sirupsen/logrus"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -137,7 +136,7 @@ func StringInSlice(str string, list []string) bool {
 // create a file in the tmpdir and populate it with whatever content was provided. The user must delete the file
 // afterwards. Returns a string with is the full path of the file
 func SetupTmpFileWithContent(content []byte, prefix string) (string, error) {
-	tmpfile, err := ioutil.TempFile("", prefix)
+	tmpfile, err := os.CreateTemp("", prefix)
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +154,7 @@ func SetupTmpFileWithContent(content []byte, prefix string) (string, error) {
 // create a directory in the tmpdir. The user must delete the file
 // afterwards. Returns a string with is the full path of the directory
 func SetupTmpDir(prefix string, t *testing.T) string {
-	tmpdir, err := ioutil.TempDir("", prefix)
+	tmpdir, err := os.MkdirTemp("", prefix)
 	if err != nil {
 		t.Fatal(err)
 	}
