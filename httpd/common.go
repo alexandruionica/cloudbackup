@@ -12,7 +12,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -315,7 +315,7 @@ func ValidateJsonHTTPInput(w http.ResponseWriter, r *http.Request) (bodyBytes []
 		return bodyBytes, errors.New(msg)
 	}
 	// Buffer the request body so we can process it multiple times.
-	bodyBytes, err = ioutil.ReadAll(r.Body)
+	bodyBytes, err = io.ReadAll(r.Body)
 	if err != nil {
 		msg := fmt.Sprintf("Error reading request body with containing new config. The encountered error"+
 			" was: %s", err)

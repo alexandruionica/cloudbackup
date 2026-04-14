@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dustin/go-humanize"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -29,7 +29,7 @@ func ValidateServerResponse(resp *http.Response) ([]byte, error) {
 		}
 	}()
 	// check we can read the body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Debugf("%s %+v", err, resp)
 		return body, fmt.Errorf("cloud not process the response body received from the server. "+

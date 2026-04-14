@@ -1,7 +1,6 @@
 package password
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -57,7 +56,7 @@ func TestCheckPasswordHash3(t *testing.T) {
 func TestReadPassFromCli1(t *testing.T) {
 	content := []byte("testpassword\n")
 	// we will use a file as a mock stdin
-	tmpfile, err := ioutil.TempFile("", "unittest_password_user_test_")
+	tmpfile, err := os.CreateTemp("", "unittest_password_user_test_")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,7 +90,7 @@ func TestReadPassFromCli1(t *testing.T) {
 func TestReadPassFromCli2(t *testing.T) {
 	content := []byte("\n")
 	// we will use a file as a mock stdin
-	tmpfile, err := ioutil.TempFile("", "unittest_password_user_test_")
+	tmpfile, err := os.CreateTemp("", "unittest_password_user_test_")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -132,7 +131,7 @@ func TestReadPassFromCli3(t *testing.T) {
 func TestReadPassFromCli4(t *testing.T) {
 	content := []byte("testpassword\n")
 	// we will use a file as a mock stdin
-	tmpfile, err := ioutil.TempFile("", "unittest_password_user_test_")
+	tmpfile, err := os.CreateTemp("", "unittest_password_user_test_")
 	if err != nil {
 		log.Fatal(err)
 	}

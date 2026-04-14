@@ -8,7 +8,6 @@ import (
 	"cloudbackup/utils"
 	"fmt"
 	"github.com/gofrs/uuid"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -58,7 +57,7 @@ func TestRunPrePostScript1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Results file '%s' does not exist. Test shell script did not execute as expected", resultsFile)
 	}
-	result, err := ioutil.ReadFile(resultsFile)
+	result, err := os.ReadFile(resultsFile)
 	if err != nil {
 		t.Fatalf("Could not read contents of results file '%s'", resultsFile)
 	}
@@ -100,7 +99,7 @@ func TestRunPrePostScript2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Results file '%s' does not exist. Test shell script did not execute as expected", resultsFile)
 	}
-	result, err := ioutil.ReadFile(resultsFile)
+	result, err := os.ReadFile(resultsFile)
 	if err != nil {
 		t.Fatalf("Could not read contents of results file '%s'", resultsFile)
 	}

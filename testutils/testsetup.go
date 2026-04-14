@@ -5,7 +5,6 @@ import (
 	"cloudbackup/utils"
 	"fmt"
 	"github.com/gofrs/uuid"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -310,14 +309,14 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// /tmp/$RANDOM/file1
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644) // #nosec
+	err = os.WriteFile(path+string(filepath.Separator)+"file1", []byte(`text for file1`), 0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
 		t.Fatal(err)
 	}
 
 	// /tmp/$RANDOM/dir1/dir2/dir3/file2.txt
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
 		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file2.txt", []byte(`text for file2.txt`),
 		0644) // #nosec
 	if err != nil {
@@ -325,7 +324,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 		t.Fatal(err)
 	}
 	// /tmp/$RANDOM/dir1/dir2/dir3/file3
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
 		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file3", []byte(`text for file3`), 0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -333,7 +332,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// /tmp/$RANDOM/dir1/dir2/dir3/file4
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
 		string(filepath.Separator)+"dir3"+string(filepath.Separator)+"file4", []byte(`text for file4`), 0644) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -341,7 +340,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// /tmp/$RANDOM/dir1/dir2/file5
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
 		string(filepath.Separator)+"file5", []byte(`text for file5`), 0640) // #nosec
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -349,7 +348,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// /tmp/$RANDOM/dir1/dir2/file6
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+"dir2"+
 		string(filepath.Separator)+"file6", []byte(`text for file6`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -365,7 +364,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// /tmp/$RANDOM/dir1/file7
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
 		"file7", []byte(`text for file7`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -373,7 +372,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// unicode in filename /tmp/$RANDOM/dir1/file8世界⌘ä
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
 		"file8世界⌘ä", []byte(`text for file8世界⌘ä`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -389,7 +388,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// plain file name in unicode dirname /tmp/$RANDOM/dir1/dir6öüÂș/file9
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
 		"dir6öüÂș"+string(filepath.Separator)+"file9", []byte(`text for file9`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
@@ -397,7 +396,7 @@ func SetupBackupDir(testName string, t *testing.T) string {
 	}
 
 	// unicode file name in unicode dirname /tmp/$RANDOM/dir1/dir6öüÂș/file10ŹżÇù.txt
-	err = ioutil.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
+	err = os.WriteFile(path+string(filepath.Separator)+"dir1"+string(filepath.Separator)+
 		"dir6öüÂș"+string(filepath.Separator)+"file10ŹżÇù.txt", []byte(`text for file10ŹżÇù.txt`), 0600)
 	if err != nil {
 		_ = os.RemoveAll(path) // #nosec
