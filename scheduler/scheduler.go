@@ -455,10 +455,7 @@ func cleanupAfterBackup(jobName string, jobUuid string, backupConfig shared.Conf
 	}
 
 	// tell any connected Watch clients to exit
-	backupFailed := false
-	if backupError != nil {
-		backupFailed = true
-	}
+	backupFailed := backupError != nil
 	watcher.TellClientsJobFinished("backup", jobName, jobUuid, backupJobsState.WatchMsgReceiver, cancelled, backupFailed)
 
 	// in case the backup completed successfully then nothing called the cancel() function and if we don't do it then

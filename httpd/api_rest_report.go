@@ -429,7 +429,7 @@ func getRowsForHandlerPostReportBackupShow(dbData shared.DbData, jobName string,
 		msg := fmt.Sprintf("Job report for backup "+
 			"definition '%s' having job id '%s' could not be retreived because the job is marked as 'crashed' and no "+
 			"report is available for it", jobName, jobId)
-		logger.Debugf(msg)
+		logger.Debug(msg)
 		return shared.BackupJobStatus{}, numRows, errors.New(msg)
 	}
 
@@ -573,7 +573,7 @@ func getDbAccess(srvSrc SrvData, jobName string, w http.ResponseWriter, logConte
 	if err != nil {
 		if err.Error() == database.ErrTimedOut {
 			logger.Debugf("Timed out while trying to get database access from '%s' being ran for job definition '%s'", logContext, jobName)
-			msg := "Timed out while trying to get database access. Please try again later."
+			msg := "timed out while trying to get database access, please try again later"
 			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable, msg)
 			return shared.DbData{}, nil, errors.New(msg)
 		} else {
@@ -605,7 +605,7 @@ func getDbAccess(srvSrc SrvData, jobName string, w http.ResponseWriter, logConte
 func checkIfBackupJobIdIsUsable(dbData shared.DbData, jobName string, jobId string) error {
 	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListFindJobQuery, jobName, jobId)
 	if err != nil {
-		return fmt.Errorf("While querying the database in order validate that job id '%s' belonging to  backup "+
+		return fmt.Errorf("while querying the database in order validate that job id '%s' belonging to  backup "+
 			"definition '%s' is usable, the following error was encountered: %s", jobId, jobName, err)
 	}
 	defer func() {

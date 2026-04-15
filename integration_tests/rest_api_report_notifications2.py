@@ -129,9 +129,9 @@ class TestRestAPIReportNotification2(unittest.TestCase):
                                  "was: {}".format(email_msg))
 
         # verify that the message matches body(data) expectations
-        matches, email_msg = self.smtp_handler.received_message_matching(".*Receiving this email proves that the backup"
-                                                                         " server's SMTP\(email\) settings are "
-                                                                         "correct.*")
+        matches, email_msg = self.smtp_handler.received_message_matching(r".*Receiving this email proves that the backup"
+                                                                         r" server's SMTP\(email\) settings are "
+                                                                         r"correct.*")
         self.assertTrue(matches, "email doesn't match body(data) expectations. What we received "
                                  "was: {}".format(email_msg))
 

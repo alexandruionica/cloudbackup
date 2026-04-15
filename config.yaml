@@ -20,8 +20,8 @@ user:
     access: read
 # host and port for the HTTP server; if HTTPS server is enabled then http server is automatically disabled.
 # By default HTTP server is enabled and HTTPS is disabled
-#http:
-#  bind_address: "127.0.0.1:8080"
+http:
+  bind_address: "127.0.0.1:8080"
 #https:
 #  enabled: true
 #  bind_address: "127.0.0.1:8443"
@@ -30,8 +30,8 @@ user:
 backup:
   - name: first_backup
     paths:
-      #- /etc/systemd
-      - /etc
+      - /etc/vim/
+      #- /home/aionica/Downloads/FreeBSD-11.1-RELEASE-amd64-dvd1.iso
     # Bourne-Again shell like globing and globstar is supported in the below "exclusions" section.
     # Term	     Meaning
     # *	         matches any sequence of non-path-separators
@@ -53,45 +53,92 @@ backup:
     #  expected
     exclusions:
       - /etc/systemd/system
+      - /etc/alternatives
     dereference: false
+    #checksum: true
     target:
-      - name: aws_1
-        type: test_null
-        user: BLABLA
-        pass: zzzz
+      - name: gcp_1
+        type: gcp_storage
         # rate limit uploads to the object store. Specified rate in bytes per second or using a unit like KB/MB/GB etc (Example: 231 KB).
         # Leave unset or set to 0 to have unlimited rate
-        ratelimit: 101 KB
-        bucket: 'myawesome-backup'
+        #ratelimit: 100 KB
+        bucket: 'cloudbackup-tests'
         prefix: 'backup/backups-for-server-51'
-        storage_class: standard
+        parameters:
+          - name: type
+            value: service_account
+          - name: project_id
+            value: cloudbackup-493100
+          - name: private_key_id
+            value: ***REMOVED***
+          - name: private_key
+            # MUST BE SURROUNDED BY DOUBLE QUOTES (NOT SINGLE QUOTES)
+            value: "***REMOVED***"
+          - name: client_email
+            value: cloudbackup-integration-tests@cloudbackup-493100.iam.gserviceaccount.com
+          - name: client_id
+            value: 111404560788247469734
+          - name: auth_uri
+            value: 'https://accounts.google.com/o/oauth2/auth'
+          - name: token_uri
+            value: 'https://oauth2.googleapis.com/token'
+          - name: auth_provider_x509_cert_url
+            value: 'https://www.googleapis.com/oauth2/v1/certs'
+          - name: client_x509_cert_url
+            value: 'https://www.googleapis.com/robot/v1/metadata/x509/cloudbackup-integration-tests%40cloudbackup-493100.iam.gserviceaccount.com'
+          - name: storage_class
+            value: regional
+#          - name: disable_crc32c_hash
+#            value: yes
+#      - name: aws_2
+#        type: test_null
+#        user: BLABLA
+#        pass: zzzz
+#        # rate limit uploads to the object store. Specified rate in bytes per second or using a unit like KB/MB/GB etc (Example: 231 KB).
+#        # Leave unset or set to 0 to have unlimited rate
+#        ratelimit: 100000 KB
+#        bucket: 'myawesome-backup'
+#        prefix: 'backup/backups-for-server-51'
+#        storage_class: STANDARD
     schedule:
       - '05 01 * * *'
   - name: second_backup
     paths:
-      - /var/log
-      - /var/www/html/data/
+      - /etc/
+      - /usr/local/etc
+      #- /home/aionica/Downloads/FreeBSD-11.1-RELEASE-amd64-dvd1.iso
     # do not follow symbolic links (defaults to true)
     dereference: false
     # use the file's checksum in order to establish if a backup is needed (defaults to false)
-    checksum: true
+    #checksum: true
     target:
       - name: aws_2
-        type: aws_s3
-        user: JOHNDOE
-        pass: qwqe
-        bucket: 'some-stuff-goes-here'
+        type: test_null
+        ratelimit: 1 KB
+        bucket: 'aionica-tests'
         prefix: 'backup/backups-for-server-51'
-        storage_class: 'infrequent-access'
-      - name: google_1
-        type: gcp_storage
-        user: JANEDOE
-        pass: 34324fd
-        bucket: 'my-google-bucket'
-        prefix: 'backup/backups-for-server-51'
-        storage_class: standard
-    encrypt: true
-    encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
+        parameters:
+          - name: AWS_ACCESS_KEY_ID
+            value: ***REMOVED***
+          - name: AWS_SECRET_ACCESS_KEY
+            value: ***REMOVED***
+          - name: storage_class
+            value: STANDARD
+          - name: region
+            value: us-east-1
+#      - name: google_1
+#        type: gcp_storage
+#        bucket: 'my-google-bucket'
+#        prefix: 'backup/backups-for-server-51'
+#        parameters:
+#          - name: AWS_ACCESS_KEY_ID
+#            value: AKIAIOSFODNN7EXAMPLE
+#          - name: AWS_SECRET_ACCESS_KEY
+#            value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+#          - name: storage_class
+#            value: STANDARD
+#    encrypt: true
+#    encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
     schedule:
       - '00 08 01 * *'
       - '00 08 06 * *'
@@ -99,3 +146,53 @@ backup:
     versions_max_num: 10
     # defaults to 0 which means unlimited age
     versions_max_age: 6w
+  - name: third_backup
+    paths:
+      - /etc/vim/
+      #- /home/aionica/Downloads/FreeBSD-11.1-RELEASE-amd64-dvd1.iso
+    # do not follow symbolic links (defaults to true)
+    dereference: false
+    # use the file's checksum in order to establish if a backup is needed (defaults to false)
+    #checksum: true
+    target:
+      - name: azure
+        type: azure_blob
+        #ratelimit: 100 KB
+        bucket: 'cloudbackup-aionica-tests'
+        prefix: 'backup/backups-for-server-51'
+        parameters:
+          - name: storage_account
+            value: cloudbackuptests
+          - name: storage_access_key
+            value: '***REMOVED***'
+    #    encrypt: true
+    #    encrypt_pass: '044ewfsoi423092l;dfksdl;fksl;dfks;ld0492'
+    schedule:
+      - '00 08 01 * *'
+      - '00 08 06 * *'
+    # defaults to 0 which means unlimited number of versions
+    versions_max_num: 10
+    # defaults to 0 which means unlimited age
+    versions_max_age: 6w
+#    pre_run_script: /usr/bin/id
+#notification:
+#  email:
+#    - server: smtp.gmail.com
+#      port: 587
+#      to: alexandru@ionica.eu
+#      type:
+#        - started
+#        - finished
+#        - failed
+#        - cancelled
+#        - crashed
+#      user: alexandru.ionica.nas@gmail.com
+#      pass: ',,Uob:LF7FtLtNEHtP4}'
+#  script:
+#    - path: /tmp/lala.sh
+#      type:
+#        - started
+#        - finished
+#        - failed
+#        - cancelled
+#        - crashed

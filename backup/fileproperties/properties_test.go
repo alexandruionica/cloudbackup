@@ -24,10 +24,7 @@ func testGetcTime(t *testing.T, path string, timestart time.Time, dereference bo
 	if err != nil {
 		t.Fatalf("Could not get os.Lstat() for %s due to err: %s", path, err)
 	}
-	isSymlink := false
-	if utils.FileType(stat) == "symlink" {
-		isSymlink = true
-	}
+	isSymlink := utils.FileType(stat) == "symlink"
 
 	time.Sleep(20 * time.Millisecond)
 	time1stTest := time.Now()

@@ -13,7 +13,7 @@ import (
 func TestStop1(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,
@@ -40,7 +40,7 @@ func TestSendMsgToWatcher1(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, 1000)
 	clientMsgChan := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,
@@ -151,7 +151,7 @@ func TestSendMsgToWatcher2(t *testing.T) {
 	clientMsgChan1 := make(chan shared.WatchMessage, 1000)
 	clientMsgChan2 := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,
@@ -255,7 +255,7 @@ func TestSendMsgToClients1(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, 1000)
 	clientMsgChan := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,
@@ -307,7 +307,7 @@ func TestSendMsgToClients2(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, ChanSize)
 	clientMsgChan := make(chan shared.WatchMessage, ChanSize)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,
@@ -358,7 +358,7 @@ func TestTellClientsJobFinished1(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, 1000)
 	clientMsgChan := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,
@@ -421,7 +421,7 @@ func TestTellClientsJobFinished2(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, 1000)
 	clientMsgChan := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,
@@ -487,7 +487,7 @@ func TestTellClientsJobFinished3(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, 1000)
 	clientMsgChan := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,

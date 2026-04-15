@@ -6,6 +6,7 @@ import (
 	"cloudbackup/utils"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -293,8 +294,8 @@ func TestCreateDb2_1(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected CreateDb() to produce an error but it didn't")
 	}
-	if err.Error() != expectedErr {
-		t.Fatalf("CreateDb() was expected to return error: '%s' but it returned: '%s'", expectedErr, err)
+	if !strings.Contains(err.Error(), expectedErr) {
+		t.Fatalf("CreateDb() was expected to return an error containing: '%s' but it returned: '%s'", expectedErr, err)
 	}
 	err = db.Close()
 	if err != nil {

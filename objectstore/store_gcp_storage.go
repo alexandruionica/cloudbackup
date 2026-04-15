@@ -78,7 +78,7 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		}
 		// This rate limiter limits the HTTP POST method which means in practice it limits uploads only
 		rateLimitedHttpClient := newRateLimitedHttpClientForGcp(ctx, rateLimitBucket, ratelimit, burst, credentialsJsonBlob)
-		result.gcpStorageClient, err = gcpStorage.NewClient(ctx, option.WithCredentialsJSON(credentialsJsonBlob), option.WithHTTPClient(rateLimitedHttpClient))
+		result.gcpStorageClient, err = gcpStorage.NewClient(ctx, option.WithAuthCredentialsJSON(option.ServiceAccount, credentialsJsonBlob), option.WithHTTPClient(rateLimitedHttpClient))
 		if err != nil {
 			return &StoreGcpStorage{}, fmt.Errorf("failed to create GCP client using provided credentials due to error: %s", err)
 		}
@@ -154,7 +154,7 @@ func (objStore *StoreGcpStorage) Upload(DbRecord shared.BackedUpFileProperties, 
 			msg := fmt.Sprintf("upload of '%s' was reported "+
 				"successful but the upload response does not contain a file version. This means the backed up copy is "+
 				"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", DbRecord.Path)
-			logger.Errorf(msg)
+			logger.Error(msg)
 			return strconv.FormatInt(version, 10), false, errors.New(msg)
 		}
 	} else {
@@ -451,7 +451,7 @@ func makeCredentialsJson(params []shared.ConfigBackupTargetParams) ([]byte, erro
 			gcpCred.ClientX509CertUrl = param.Value
 		}
 	}
-	result, err := json.Marshal(gcpCred)
+	result, err := json.Marshal(gcpCred) //nolint:gosec // this payload is the credential we hand to the GCP SDK; not a leak
 	if err != nil {
 		logger.Warningf("Could not json encode provided GCP credentials due to error: %s", err)
 		return nil, err
@@ -497,7 +497,7 @@ func newRateLimitedHttpClientForGcp(ctx context.Context, bucket *rate.Limiter, r
 	var err error
 	// how we call gcpTransport.NewTransport is tied deeply to the implementation of the GCP APIs in GO. If that library changes, it may affect us
 	if len(credentialBlob) > 0 {
-		httpTransport, err = gcpTransport.NewTransport(ctx, http.DefaultTransport, option.WithScopes(gcpStorage.ScopeFullControl), option.WithCredentialsJSON(credentialBlob))
+		httpTransport, err = gcpTransport.NewTransport(ctx, http.DefaultTransport, option.WithScopes(gcpStorage.ScopeFullControl), option.WithAuthCredentialsJSON(option.ServiceAccount, credentialBlob))
 	} else {
 		httpTransport, err = gcpTransport.NewTransport(ctx, http.DefaultTransport, option.WithScopes(gcpStorage.ScopeFullControl))
 	}

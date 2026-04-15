@@ -349,11 +349,11 @@ func (objStore *StoreAwsS3) checkBucketVersioningAndMFA() (versioningEnabled boo
 		var apiErr smithy.APIError
 		if errors.As(err, &apiErr) {
 			errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, apiErr.ErrorMessage())
-			logger.Errorf(errMsg)
+			logger.Error(errMsg)
 			return versioningEnabled, mfaDeleteEnabled, fmt.Errorf("%s (code: %s)", apiErr.ErrorMessage(), apiErr.ErrorCode())
 		} else {
 			errMsg = fmt.Sprintf("While checking if the S3 bucket '%s' has versioning enabled, encountered error: %s", objStore.storeBucketName, err.Error())
-			logger.Errorf(errMsg)
+			logger.Error(errMsg)
 			return versioningEnabled, mfaDeleteEnabled, err
 		}
 	}
@@ -392,12 +392,12 @@ func (objStore *StoreAwsS3) checkBucketHasStaticWebsiteEnabled() (staticWebsiteE
 			}
 			errMsg := fmt.Sprintf("While checking that the S3 bucket '%s' does not have static website "+
 				"hosting enabled, encountered error: %s", objStore.storeBucketName, apiErr.ErrorMessage())
-			logger.Errorf(errMsg)
+			logger.Error(errMsg)
 			return false, fmt.Errorf("%s (code: %s)", apiErr.ErrorMessage(), apiErr.ErrorCode())
 		} else {
 			errMsg := fmt.Sprintf("While checking that the S3 bucket '%s' does not have static website "+
 				"hosting enabled, encountered error: %s", objStore.storeBucketName, err.Error())
-			logger.Errorf(errMsg)
+			logger.Error(errMsg)
 			return false, err
 		}
 	} else {
@@ -474,7 +474,7 @@ func (objStore *StoreAwsS3) getRegionFromBucket() error {
 			msg := fmt.Sprintf("unable to find bucket %s's region and there is no 'region' parameter defined in the "+
 				"configuration file for this particular backup target. Please specify a 'region' parameter and a value"+
 				" for it.", objStore.storeBucketName)
-			logger.Errorf(msg)
+			logger.Error(msg)
 			return errors.New(msg)
 		}
 	}

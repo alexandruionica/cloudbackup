@@ -37,16 +37,10 @@ type Client struct {
 func Load(path string, debug bool, cliUsername string, cliPassword string, cliAddress string) (Client, string, error) {
 	var Config = Client{}
 	var err error
-	fileCheckRequired := false
-
 	// if a mix of command line options + env vars supplies all needed options then don't check if the config file
 	// exists
-	if !CheckIfOptionOrEnvVars(cliUsername, EnvPrefix+"_Username", EnvPrefix+"_USERNAME") {
-		fileCheckRequired = true
-	}
-	if !CheckIfOptionOrEnvVars(cliPassword, EnvPrefix+"_Password", EnvPrefix+"_PASSWORD") {
-		fileCheckRequired = true
-	}
+	fileCheckRequired := !CheckIfOptionOrEnvVars(cliUsername, EnvPrefix+"_Username", EnvPrefix+"_USERNAME") ||
+		!CheckIfOptionOrEnvVars(cliPassword, EnvPrefix+"_Password", EnvPrefix+"_PASSWORD")
 	if !CheckIfOptionOrEnvVars(cliAddress, EnvPrefix+"_Address", EnvPrefix+"_ADDRESS") {
 		fileCheckRequired = true
 	}

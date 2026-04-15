@@ -186,10 +186,8 @@ func (objStore *StoreAzureBlob) MarkDeleted(existingDbRecord shared.BackedUpFile
 }
 
 func (objStore *StoreAzureBlob) Delete(existingDbRecord shared.BackedUpFileProperties, version int64, remoteVersion string, metadata bool) error {
-	deleteMarker := false
-	if strings.HasPrefix(remoteVersion, "d") { // the Upload() function prefixes the returned version with "v" while the MarkDeleted() prefixes with "d"
-		deleteMarker = true
-	}
+	// the Upload() function prefixes the returned version with "v" while the MarkDeleted() prefixes with "d"
+	deleteMarker := strings.HasPrefix(remoteVersion, "d")
 	// Azure Blob doesn't support versioning so we use our own scheme of  "d" + $version appended together with a "." to the file name
 	remotePath, remoteVersion := calculateAzureStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata, version, deleteMarker)
 
