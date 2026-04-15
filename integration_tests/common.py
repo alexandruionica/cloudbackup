@@ -20,7 +20,7 @@ from aiosmtpd.controller import Controller
 logging.basicConfig(format='%(asctime)-15s %(levelname)s: %(message)s', level=logging.INFO)
 
 if platform.system().lower() == 'windows':
-    cmd_default = ".\cloudbackup.exe"
+    cmd_default = r".\cloudbackup.exe"
 else:
     cmd_default = "./cloudbackup"
 working_server_config_file_content = '''# global settings affect all backups and can't be specified per backup with different values
@@ -396,10 +396,10 @@ def setup_tmp_config_file_and_tmp_dirs(suffix, config_file_content=working_serve
     server_config = config_file_content.replace("data_dir: ./tmp/", "data_dir: " + data_dir, 1)
     # ensure windows compatible paths are in the config on MS Windows
     if platform.system().lower() == 'windows':
-        server_config = server_config.replace("- /something", '- c:\something', 1)
-        server_config = server_config.replace("- /var/lib", '- c:\Windows\system', 1)
-        server_config = server_config.replace("- /var/log", '- c:\Program Files', 1)
-        server_config = server_config.replace("- /var/www/html/data/", '- C:\Windows\system32', 1)
+        server_config = server_config.replace("- /something", r'- c:\something', 1)
+        server_config = server_config.replace("- /var/lib", r'- c:\Windows\system', 1)
+        server_config = server_config.replace("- /var/log", r'- c:\Program Files', 1)
+        server_config = server_config.replace("- /var/www/html/data/", r'- C:\Windows\system32', 1)
     tmpfile = os.fdopen(tmphandle, "w")
     tmpfile.write(server_config)
     tmpfile.close()

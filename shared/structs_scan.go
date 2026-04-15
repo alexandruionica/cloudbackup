@@ -121,7 +121,7 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 		}
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // cancel is stored on the job status and invoked via Cancel()/MarkStopped()
 	jobs.DryRunning = append(jobs.DryRunning, BackupJobStatus{
 		Name:        name,
 		State:       "evaluating",

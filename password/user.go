@@ -28,7 +28,7 @@ func ReadPassFromCli() (string, error) {
 		return "", err
 	}
 	if utf8.RuneCountInString(string(pass[:])) == 0 {
-		msg := "Error! you have provided an empty password"
+		msg := "error: you have provided an empty password"
 		fmt.Println(msg)
 		return "", errors.New(msg)
 	}

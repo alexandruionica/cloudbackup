@@ -308,7 +308,7 @@ func TestAddConsumer1(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, 1000)
 	clientMsgChan := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,
@@ -354,7 +354,7 @@ func TestAddConsumerAndRemoveConsumer(t *testing.T) {
 	serverMsgChan := make(chan shared.WatchMessage, 1000)
 	clientMsgChan := make(chan shared.WatchMessage, 1000)
 
-	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background())
+	ctxMultiplexer, cancelMultiplexer := context.WithCancel(context.Background()) //nolint:gosec // cancelMultiplexer is invoked later in the test
 	multiplexer := &shared.WatchMultiplexer{
 		Mutex:          &sync.RWMutex{},
 		Ctx:            ctxMultiplexer,

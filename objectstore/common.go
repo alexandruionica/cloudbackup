@@ -24,7 +24,7 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
-var CouldNotConvertRate = errors.New("could not convert rate to numeric value")
+var ErrCouldNotConvertRate = errors.New("could not convert rate to numeric value")
 
 // When adding a new object store or adjusting the parameters (from the Backup > Target > Parameters section) in order
 // to add secrets, you MUST also adjust cloudbackup/config/CopyPasswordsFromOldConfigBackup() and
@@ -202,7 +202,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 				// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
 				// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 				// messages to be sent to watch clients
-				if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+				if readBytes != 0 || handle.fileSize <= 0 || handle.readBytes != handle.fileSize {
 					if handle.incrementRateCounter {
 						handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 							handle.objectStoreType, int64(readBytes), handle.path,
@@ -227,7 +227,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
 					// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 					// messages to be sent to watch clients
-					if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+					if readBytes != 0 || handle.fileSize <= 0 || handle.readBytes != handle.fileSize {
 						if handle.incrementRateCounter {
 							handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 								handle.objectStoreType, int64(readBytes), handle.path,
@@ -277,7 +277,7 @@ func (handle *FileReader) Read(p []byte) (int, error) {
 					// don't update counters if JustReadBytes == 0 && fileSIze > 0 && readBytesSoFar == fileSize . This is
 					// needed because it seems there always is a 0 bytes read at the end of a file and this causes extra
 					// messages to be sent to watch clients
-					if !(readBytes == 0 && handle.fileSize > 0 && handle.readBytes == handle.fileSize) {
+					if readBytes != 0 || handle.fileSize <= 0 || handle.readBytes != handle.fileSize {
 						if handle.incrementRateCounter {
 							handle.backupJobsState.IncrementRateCounter(handle.backupJobName, handle.objectStoreName,
 								handle.objectStoreType, int64(readBytes), handle.path,
@@ -321,7 +321,7 @@ func setupRateLimiterBucket(rateLimitStr string, targetName string, backupConfig
 	if err != nil {
 		logger.Errorf("While trying to convert the rate limit '%s' to a "+
 			"number the following error was encountered: %s", rateLimitStr, err)
-		return rateLimitBucket, 0, 0, CouldNotConvertRate
+		return rateLimitBucket, 0, 0, ErrCouldNotConvertRate
 	}
 	if ratelimit > 0 {
 		// if rateLimitVal > 9223372036854775807 conversion to int64 from uint64 will return a negative number

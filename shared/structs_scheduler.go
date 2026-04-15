@@ -386,7 +386,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			return errors.New(ErrJobAlreadyRunning)
 		}
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // cancel is stored on the job status and invoked via Cancel()/MarkStopped()
 	jobs.Running = append(jobs.Running, BackupJobStatus{
 		JobType:     "backup",
 		Name:        name,
@@ -473,7 +473,7 @@ func (jobs *BackupJobsState) MarkRestoreRunning(name string, logContext string, 
 			return errors.New(ErrJobAlreadyRunning)
 		}
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // cancel is stored on the job status and invoked via Cancel()/MarkStopped()
 	jobs.Running = append(jobs.Running, BackupJobStatus{
 		JobType:     "restore",
 		Name:        name,

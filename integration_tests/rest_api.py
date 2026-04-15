@@ -110,7 +110,7 @@ class TestRestAPI(unittest.TestCase):
             if 'pass' in line.lower():
                 pass_field = line.split(':')[1]
                 password = pass_field.split('"')[1]
-                re_result = re.match('^(\*+)|()$', password)
+                re_result = re.match(r'^(\*+)|()$', password)
                 self.assertTrue(re_result, "output from GET {} has on line {} a password which doesn't seem to "
                                            "be obfuscated:\n{}".format(self.base_url + self.api_root + '/config',
                                                                        line_num, line))

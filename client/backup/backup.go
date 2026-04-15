@@ -302,12 +302,12 @@ func Watch(config clientConfig.Client, jsonOutput bool, jobName string, JobId st
 		}
 		if bytes.HasPrefix(line, []byte("data: ")) {
 			if jsonOutput {
-				fmt.Printf(string(line)[6:])
+				fmt.Print(string(line)[6:])
 			} else {
 				var decodedJsonMessage shared.WatchMessage
 				err := json.Unmarshal(line[6:], &decodedJsonMessage)
 				if err != nil {
-					fmt.Printf("\n" + string(line)[6:])
+					fmt.Print("\n" + string(line)[6:])
 				} else {
 					if seq == 0 {
 						if seq+1 < decodedJsonMessage.Sequence {
@@ -400,12 +400,12 @@ func DryRun(config clientConfig.Client, jsonOutput bool, jobName string) {
 		}
 		if bytes.HasPrefix(line, []byte("data: ")) {
 			if jsonOutput {
-				fmt.Printf(string(line)[6:])
+				fmt.Print(string(line)[6:])
 			} else {
 				var decodedJsonMessage shared.ScanEvalItemReport
 				err := json.Unmarshal(line[6:], &decodedJsonMessage)
 				if err != nil {
-					fmt.Printf(string(line)[6:])
+					fmt.Print(string(line)[6:])
 				} else {
 					marker := " "
 					incl := "include"

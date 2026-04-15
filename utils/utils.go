@@ -283,7 +283,7 @@ func GzipFile(srcFilePath string, dstFilePath string) error {
 // squashes forward slashes in a given string. For example "aa/#bb//#cc///#dd////#eeee" gets returned as "aa/#bb/#cc/#dd/#eeee"
 func SquashForwardSlashes(in string) string {
 	for strings.Contains(in, "//") {
-		in = strings.Replace(in, "//", "/", -1)
+		in = strings.ReplaceAll(in, "//", "/")
 	}
 	return in
 }

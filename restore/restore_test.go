@@ -172,7 +172,7 @@ func equalStringSlices(a, b []string) bool {
 		return false
 	}
 	for i := range a {
-		if a[i] != b[i] {
+		if a[i] != b[i] { //nolint:gosec // len(a) == len(b) checked above
 			return false
 		}
 	}
@@ -500,7 +500,7 @@ func makeItems(entries ...string) []remoteItem {
 		items = append(items, remoteItem{
 			uuid:      fmt.Sprintf("u%d", i/2),
 			localPath: entries[i],
-			typ:       entries[i+1],
+			typ:       entries[i+1], //nolint:gosec // len(entries) is even (checked above)
 		})
 	}
 	return items

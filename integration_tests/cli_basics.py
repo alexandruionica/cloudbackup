@@ -54,7 +54,7 @@ class TestCliBasics(unittest.TestCase):
             if 'pass' in line.lower():
                 pass_field = line.split(':')[1]
                 password = pass_field.split('"')[1]
-                re_result = re.match('^(\*+)|()$', password)
+                re_result = re.match(r'^(\*+)|()$', password)
                 self.assertTrue(re_result, "output from './cloudbackup server config dump -c config.yaml' has on line "
                                            "{} a password which doesn't seem to be "
                                            "obfuscated:\n{}".format(line_num, line))
@@ -127,7 +127,7 @@ class TestCliBasics(unittest.TestCase):
 
     # ./cloudbackup misc hash-password
     def test_cmd_hash_password(self):
-        test_password = 'ui7Ahtae\Quai5ia\W;oo"ri'
+        test_password = 'ui7Ahtae\\Quai5ia\\W;oo"ri'
         proc = run_interactive_shell_cmd(self.cmd + " misc hash-password")
         stdout_data, stderr_data = proc.communicate(str.encode(test_password + '\n'))
         if proc.poll() is None:
@@ -136,7 +136,7 @@ class TestCliBasics(unittest.TestCase):
                          .format(self.cmd + " hash-password", proc.returncode))
         for line in stdout_data.decode("utf-8").split('\n'):
             if 'The hashed password is:' in line:
-                re_result = re.search('\$2.*', line)
+                re_result = re.search(r'\$2.*', line)
                 self.assertTrue(re_result)
                 bcrypthash = re_result.group(0).strip()
                 # check that generated hash matches initial password
@@ -256,7 +256,7 @@ class TestCliBasics(unittest.TestCase):
             if 'pass' in line.lower():
                 pass_field = line.split(':')[1]
                 password = pass_field.split('"')[1]
-                re_result = re.match('^(\*+)|()$', password)
+                re_result = re.match(r'^(\*+)|()$', password)
                 self.assertTrue(re_result, "output from './cloudbackup client config dump -c config.yaml' has on line "
                                            "{} a password which doesn't seem to be "
                                            "obfuscated:\n{}".format(line_num, line))

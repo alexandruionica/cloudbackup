@@ -1,9 +1,29 @@
-linters-settings:
-  gosec:
-    excludes:
-      - G115 # Potential integer overflow when converting between integer types
-      - G101 # Look for hard coded credentials
-      - G112 # if applying the sugested fixes, leads to event streaming timeing out after whatever limit was set
-issues:
-  exclude:
-    - "printf: non-constant format string in call to" # TODO - look at this again as it may need some work
+version: "2"
+linters:
+  settings:
+    gosec:
+      excludes:
+        - G115 # Potential integer overflow when converting between integer types
+        - G101 # Look for hard coded credentials
+        - G112 # if applying the sugested fixes, leads to event streaming timeing out after whatever limit was set
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: 'printf: non-constant format string in call to' # TODO - look at this again as it may need some work
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
