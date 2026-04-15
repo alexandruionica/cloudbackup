@@ -17,3 +17,4 @@ ubuntu-xenial-16.04-cloudimg-console.log
 .creds
 .creds.ps1
 .claude/
+config_server_with_secrets.yaml
