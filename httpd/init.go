@@ -26,7 +26,7 @@ var logger = log.WithFields(log.Fields{
 var ReadAccess = map[string][]string{
 	//"POST": []string{"aaa", "bbb"},
 	"GET":  {"/config", "/backup/list", "/restore/list"},
-	"POST": {"/backup/dryrun", "/backup/watch", "/restore/watch", "/report/backup/list"},
+	"POST": {"/backup/dryrun", "/backup/watch", "/restore/watch", "/report/backup/list", "/report/restore/list"},
 }
 
 // pseudo constructor to setup a new http server
@@ -98,6 +98,8 @@ func (srv *SrvData) Start() {
 	router.POST(ApiPrefix+"/report/backup/list", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportBackupList)))
 	router.POST(ApiPrefix+"/report/backup/show", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportBackupShow)))
 	router.POST(ApiPrefix+"/report/backup/file/list", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportBackupFileList)))
+	router.POST(ApiPrefix+"/report/restore/list", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportRestoreList)))
+	router.POST(ApiPrefix+"/report/restore/show", srv.BasicAuth(srv.CheckAccess(srv.handlerPostReportRestoreShow)))
 	router.GET(ApiPrefix+"/report/version", srv.BasicAuth(srv.CheckAccess(srv.handlerVersion)))
 
 	// put a write lock and update the router - by this point all routes should have been added

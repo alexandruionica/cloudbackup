@@ -445,6 +445,274 @@ func getRowsForHandlerPostReportBackupShow(dbData shared.DbData, jobName string,
 	return result, numRows, nil
 }
 
+// -----------------------------------------------------------------------------
+// Restore report handlers — mirror backup report list/show but query type='restore'
+// -----------------------------------------------------------------------------
+
+type ReportRestoreList struct {
+	// Backup definition name (restore jobs are stored against the same name)
+	Name string `json:"name"`
+	// pagination token
+	Next string `json:"next"`
+	// max results per page
+	MaxResults uint64 `json:"max_results"`
+	// select only reports which have a start_time >= $FromStartTime
+	FromStartTime string `json:"from_start_time"`
+	// select only reports which have a start_time <= $UntilStartTime
+	UntilStartTime string `json:"until_start_time"`
+}
+
+type ReportRestoreJob struct {
+	Name  string `json:"name"`
+	JobId string `json:"job_id"`
+}
+
+func (srvSrc SrvData) handlerPostReportRestoreList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		return
+	}
+	var decodedJson ReportRestoreList
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
+	if decodedJson.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
+			" is needed in order to know what backup definition you're requesting restore reports for"))
+		return
+	}
+	jobName := decodedJson.Name
+
+	var limit uint64 = LimitReportResultsDefault
+	if decodedJson.MaxResults > LimitReportResults {
+		limit = LimitReportResults
+	} else if decodedJson.MaxResults > 0 {
+		limit = decodedJson.MaxResults
+	}
+
+	var FromStartTime, UntilStartTime int64
+	if decodedJson.FromStartTime == "" {
+		FromStartTime = time.Now().AddDate(0, 0, -30).UnixNano()
+	} else {
+		tmpTime, err := time.Parse(time.RFC3339Nano, decodedJson.FromStartTime)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'from_start_time' could not be parsed into a time object which "+
+					"is RFC3339 with nanoseconds compliant due to error: %s", decodedJson.FromStartTime, err.Error()))
+			return
+		}
+		FromStartTime = tmpTime.UnixNano()
+	}
+
+	if decodedJson.UntilStartTime == "" {
+		UntilStartTime = time.Now().UnixNano()
+	} else {
+		tmpTime, err := time.Parse(time.RFC3339Nano, decodedJson.UntilStartTime)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'until_start_time' could not be parsed into a time object which "+
+					"is RFC3339 with nanoseconds compliant due to error: %s", decodedJson.UntilStartTime, err.Error()))
+			return
+		}
+		UntilStartTime = tmpTime.UnixNano()
+		if UntilStartTime < FromStartTime {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'until_start_time' represents a value which is earlier "+
+					"than 'from_start_time' 's own value of %s", decodedJson.UntilStartTime,
+					time.Unix(0, FromStartTime).Format(time.RFC3339Nano)))
+			return
+		}
+	}
+
+	var offset uint64 = 0
+	if decodedJson.Next != "" {
+		limit, offset, FromStartTime, UntilStartTime, err = decodeNextTokenOfReportBackupList(decodedJson.Next)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+			return
+		}
+	}
+
+	dbData, backupJobsState, err := getDbAccess(srvSrc, jobName, w, loggingContext+".handlerPostReportRestoreList")
+	if err == nil {
+		defer dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
+	} else {
+		return
+	}
+
+	dbResults, err := getRowsForHandlerPostReportRestoreList(dbData, jobName, limit, offset, FromStartTime, UntilStartTime)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+		return
+	}
+
+	next := ""
+	if uint64(len(dbResults)) == limit {
+		next = buildNextTokenOfReportBackupList(limit, offset+limit, FromStartTime, UntilStartTime)
+	}
+
+	JSONSuccessWithResultPaginated(w, "success", "success", next, dbResults)
+}
+
+func getRowsForHandlerPostReportRestoreList(dbData shared.DbData, jobName string, limit uint64, offset uint64, earliestStart int64, latestStart int64) ([]ReportBackupListDbResults, error) {
+	results := make([]ReportBackupListDbResults, 0)
+	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportRestoreJobsListQuery, jobName, earliestStart,
+		latestStart, limit, offset)
+	if err != nil {
+		logger.Errorf("While querying the database in order to get the list of restore reports, the "+
+			"following error was encountered: %s", err)
+		return results, err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() the database query used to get the list of restore reports for "+
+				"backup definition '%s', the following error was encountered: %s", jobName, err)
+		}
+	}()
+
+	var tmpStartTime, tmpEndTime int64
+	for rows.Next() {
+		rowResult := ReportBackupListDbResults{}
+		err := rows.Scan(&rowResult.Name, &rowResult.JobId, &tmpStartTime, &tmpEndTime, &rowResult.State)
+		if err != nil {
+			logger.Errorf("While retrieving the database records in order to build restore report list for backup "+
+				"definition '%s', the following error was encountered: '%s'", jobName, err)
+			return results, err
+		}
+		rowResult.StartTime = time.Unix(0, tmpStartTime).Format(time.RFC3339Nano)
+		rowResult.EndTime = time.Unix(0, tmpEndTime).Format(time.RFC3339Nano)
+		results = append(results, rowResult)
+	}
+	if err = rows.Err(); err != nil {
+		logger.Errorf("While enumerating the results of querying the database in order to build restore report list for "+
+			"backup definition '%s', the following error was encountered: '%s'", jobName, err)
+		return results, err
+	}
+
+	return results, nil
+}
+
+func (srvSrc SrvData) handlerPostReportRestoreShow(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		return
+	}
+	var decodedJson ReportRestoreJob
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
+	if decodedJson.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
+			" is needed in order to know what backup definition you're requesting restore reports for"))
+		return
+	}
+	jobName := decodedJson.Name
+
+	if decodedJson.JobId == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprintf("'job_id' key is mandatory. The job id"+
+			" is needed in order to know what specific restore job run of backup definition '%s' you're requesting reports for", jobName))
+		return
+	}
+	jobId := decodedJson.JobId
+
+	dbData, backupJobsState, err := getDbAccess(srvSrc, jobName, w, loggingContext+".handlerPostReportRestoreShow")
+	if err == nil {
+		defer dbops.CloseStatementsAndDisconnectFromDb(dbData, backupJobsState)
+	} else {
+		return
+	}
+
+	dbResult, numResults, err := getRowsForHandlerPostReportRestoreShow(dbData, jobName, jobId)
+	if err != nil {
+		if numResults == 0 {
+			JSONError(w, http.StatusNotFound, HttpErrNotFound, err.Error())
+			return
+		}
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+		return
+	}
+
+	JSONSuccessWithResult(w, "success", "success", dbResult)
+}
+
+func getRowsForHandlerPostReportRestoreShow(dbData shared.DbData, jobName string, jobId string) (shared.BackupJobStatus, int, error) {
+	rows, err := dbData.Db.Query(dbData.PreparedStatements.ReportRestoreJobsShowQuery, jobName, jobId)
+	if err != nil {
+		logger.Errorf("While querying the database in order to get report for restore job '%s' having job id '%s', the "+
+			"following error was encountered: %s", jobName, jobId, err)
+		return shared.BackupJobStatus{}, 0, err
+	}
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logger.Warnf("While trying to Close() the database query used to get the job report for "+
+				"restore job '%s' having job id '%s', the following error was encountered: %s", jobName, jobId, err)
+		}
+	}()
+
+	numRows := 0
+	var rawResult, state string
+	for rows.Next() {
+		numRows += 1
+		err := rows.Scan(&rawResult, &state)
+		if err != nil {
+			logger.Errorf("While retrieving the database record with the job report for restore "+
+				"job '%s' having job id '%s', the following error was encountered: '%s'", jobName, jobId, err)
+			return shared.BackupJobStatus{}, 0, err
+		}
+	}
+	if err = rows.Err(); err != nil {
+		logger.Errorf("While enumerating the results of querying the database in order to build report for "+
+			"restore job '%s', the following error was encountered: '%s'", jobName, err)
+		return shared.BackupJobStatus{}, 0, err
+	}
+
+	if numRows == 0 {
+		msg := fmt.Sprintf("The database query used to retrieve the job report for restore "+
+			"job '%s' having job id '%s' didn't return any result. Please check that the supplied job id is "+
+			"correct", jobName, jobId)
+		logger.Error(msg)
+		return shared.BackupJobStatus{}, numRows, errors.New(msg)
+	}
+	if numRows != 1 {
+		msg := fmt.Sprintf("The database query used to retrieve the job report for restore "+
+			"job '%s' having job id '%s' returned %d results. This is an internal error as only one result is "+
+			"expected", jobName, jobId, numRows)
+		logger.Error(msg)
+		return shared.BackupJobStatus{}, numRows, errors.New(msg)
+	}
+
+	if state == "crashed" && rawResult == "" {
+		msg := fmt.Sprintf("Job report for restore "+
+			"job '%s' having job id '%s' could not be retrieved because the job is marked as 'crashed' and no "+
+			"report is available for it", jobName, jobId)
+		logger.Debug(msg)
+		return shared.BackupJobStatus{}, numRows, errors.New(msg)
+	}
+
+	var result shared.BackupJobStatus
+	err = json.Unmarshal([]byte(rawResult), &result)
+	if err != nil {
+		msg := fmt.Sprintf("The database query used to retrieve the job report for restore "+
+			"job '%s' having job id '%s' returned a result which is corrupted", jobName, jobId)
+		logger.Error(msg)
+		return shared.BackupJobStatus{}, numRows, errors.New(msg)
+	}
+
+	return result, numRows, nil
+}
+
 func (srvSrc SrvData) handlerPostReportBackupFileList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	globals.Stats.IncrementRoutines("httpd_handlers")
 	defer globals.Stats.DecrementRoutines("httpd_handlers")
@@ -684,7 +952,7 @@ func getRowsForHandlerPostReportBackupFileListWithJobId(dbData shared.DbData, jo
 	var rows *sql.Rows
 
 	if descend {
-		rows, err = dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobIdAndDescend, jobId, parentDir, parentDir+pathSeparator, limit, offset)
+		rows, err = dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobIdAndDescend, jobId, parentDir, parentDir+pathSeparator+"%", limit, offset)
 	} else {
 		rows, err = dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobId, jobId, parentDir, limit, offset)
 	}

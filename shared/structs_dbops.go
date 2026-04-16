@@ -48,5 +48,7 @@ type DbPreparedStatements struct {
 	ReportBackupJobsFileListFindJobQuery        string
 	ReportBackupJobsFileListWithJobId           string
 	ReportBackupJobsFileListWithJobIdAndDescend string
+	ReportRestoreJobsListQuery                  string
+	ReportRestoreJobsShowQuery                  string
 	TopItemsInsert                              string
 }

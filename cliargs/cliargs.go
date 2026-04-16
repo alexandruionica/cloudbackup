@@ -7,6 +7,7 @@ import (
 	clientBackupTarget "cloudbackup/client/backup/target"
 	clientConfig "cloudbackup/client/config"
 	clientNotification "cloudbackup/client/notification"
+	clientRestore "cloudbackup/client/restore"
 	"cloudbackup/config"
 	"cloudbackup/daemon"
 	"cloudbackup/misc"
@@ -74,6 +75,7 @@ type ArgsCommandMiscHash struct{}
 type ArgsCommandClient struct {
 	Config        ArgsCommandClientConfig        `command:"config" description:"Client configuration file related options"`
 	Backup        ArgsCommandClientBackup        `command:"backup" description:"Interact with backup jobs (start/stop/status)"`
+	Restore       ArgsCommandClientRestore       `command:"restore" description:"Interact with restore jobs (start/stop/list/watch)"`
 	Notification  ArgsCommandClientNotification  `command:"notification" description:"Interact with server generated notifications"`
 	Version       ArgsCommandClientVersion       `command:"version" description:"Client version"`
 	ServerVersion ArgsCommandClientServerVersion `command:"server-version" description:"Retrieve and show server version"`
@@ -583,5 +585,250 @@ func (command *ArgsCommandClientBackupReportShow) Execute(args []string) error {
 	}
 
 	clientBackupReport.Show(clConfig, command.Json, command.Job.Name, command.JobId)
+	return nil
+}
+
+// -----------------------------------------------------------------------------
+// Restore commands
+// -----------------------------------------------------------------------------
+
+type ArgsCommandClientRestore struct {
+	Start  ArgsCommandClientRestoreStart  `command:"start" description:"Start a restore job. You may supply files explicitly via --file, use --all-files to restore everything, or omit both to launch an interactive TUI file browser for selecting files from the chosen backup job run."`
+	Stop   ArgsCommandClientRestoreStop   `command:"stop" description:"Stop a running restore job"`
+	List   ArgsCommandClientRestoreList   `command:"list" description:"List all currently running restore jobs"`
+	Watch  ArgsCommandClientRestoreWatch  `command:"watch" description:"Continuously watches a specific restore job in order to show file, directory and symlinks restore progress. Uses the same SSE protocol as backup watch"`
+	Report ArgsCommandClientRestoreReport `command:"report" description:"Access reports of previously ran restore jobs"`
+}
+
+type ArgsCommandClientRestoreReport struct {
+	List ArgsCommandClientRestoreReportList `command:"list" description:"List available reports of previously ran restore jobs"`
+	Show ArgsCommandClientRestoreReportShow `command:"show" description:"Show report of a previously ran restore job"`
+}
+
+type ArgsCommandClientRestoreReportList struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup definition for which to show the list of available restore reports. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
+	StartTime string `long:"from-start-time" description:"Select only reports which have a job start_time which equals or is newer than the supplied value. If unspecified then a value equal to '30 days ago' will be used. Date+time format is RFC3339 with nanosecond support"`
+	EndTime   string `long:"until-start-time" description:"Select only reports which have a job start_time which equals or is up to (earlier than) the supplied value. If unspecified then a value equal to 'now' will be used. Date+time format is RFC3339 with nanosecond support"`
+}
+
+type ArgsCommandClientRestoreReportShow struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup definition for which to show the restore report. This needs to match a backup job as defined in the configuration of the server"`
+	} `positional-args:"yes" required:"yes"`
+	JobId string `short:"i" long:"job-id" required:"yes" description:"Id of the restore job for which to show the report"`
+}
+
+type ArgsCommandClientRestoreStart struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup definition from which to restore. This needs to match a backup definition on the server"`
+	} `positional-args:"yes" required:"yes"`
+	SourceJobId    string   `short:"i" long:"job-id" required:"yes" description:"UUID of the previously ran backup job run from which the files will be fetched. Use 'backup report list' to discover available job ids"`
+	Target         string   `long:"target" description:"Optional name of the target (as defined in the backup definition) from which to fetch files. If empty, the first target is used"`
+	RestoreDir     string   `long:"restore-dir" description:"Optional override of the server side destination directory into which to write restored files"`
+	Files          []string `long:"file" description:"Absolute source path to restore. May be specified multiple times. Mutually exclusive with --all-files"`
+	AllFiles       bool     `long:"all-files" description:"Restore every file, directory and symlink recorded for the source job id. Mutually exclusive with --file"`
+	Exclusions     []string `long:"exclusion" description:"Bourne-Again shell like globing pattern for files to exclude from the restore. May be specified multiple times"`
+	NonInteractive bool     `short:"N" long:"non-interactive" description:"Do not launch the interactive TUI file browser even if no --file and no --all-files were supplied. In that case the request is rejected"`
+	Watch          bool     `short:"w" long:"watch" description:"If the restore is successfully started then watch the restore job in order to show progress"`
+}
+
+type ArgsCommandClientRestoreStop struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output unstructured plaintext"`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup definition for which the running restore should be stopped"`
+	} `positional-args:"yes" required:"yes"`
+	RestoreJobId string `short:"i" long:"restore-job-id" description:"Optional UUID of the restore job. If supplied, the restore is only stopped if both name and id match the running job"`
+}
+
+type ArgsCommandClientRestoreList struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation was successful then print JSON response as received from server. If this option is not specified then the response is processed and the output is in a table like format"`
+}
+
+type ArgsCommandClientRestoreWatch struct {
+	ArgsCommandClientBackupCommonOptions
+	Json bool `long:"json" description:"If the operation is successful then print JSON responses as they are received from server. If this option is not specified then the response is processed and the output is a plaintext table."`
+	Job  struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup definition for which a restore is running and should be watched"`
+	} `positional-args:"yes" required:"yes"`
+	RestoreJobId string `short:"i" long:"restore-job-id" description:"Optional UUID of the restore job to watch. If omitted, the currently running restore job for the given name is watched"`
+}
+
+func (command *ArgsCommandClientRestoreStart) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+
+	if command.AllFiles && len(command.Files) > 0 {
+		fmt.Println("--all-files and --file are mutually exclusive")
+		os.Exit(1)
+	}
+
+	files := command.Files
+	allFiles := command.AllFiles
+
+	// If neither was supplied, launch the TUI browser (unless --non-interactive was set).
+	if !allFiles && len(files) == 0 {
+		if command.NonInteractive {
+			fmt.Println("Neither --all-files nor --file were supplied and --non-interactive prevents the TUI " +
+				"file browser from running. Either supply files or remove --non-interactive.")
+			os.Exit(1)
+		}
+		selected, err := clientRestore.Browse(clConfig, command.Job.Name, command.SourceJobId)
+		if err != nil {
+			fmt.Printf("File browser did not complete successfully: %s\n", err)
+			os.Exit(1)
+		}
+		if len(selected) == 0 {
+			fmt.Println("No files were selected. Aborting restore.")
+			os.Exit(1)
+		}
+		files = selected
+		fmt.Printf("Selected %d items for restore.\n", len(files))
+	}
+
+	clientRestore.Start(clConfig, command.Json, command.Job.Name, command.SourceJobId, command.Target,
+		command.RestoreDir, files, allFiles, command.Exclusions, command.Watch)
+	return nil
+}
+
+func (command *ArgsCommandClientRestoreStop) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientRestore.Stop(clConfig, command.Json, command.Job.Name, command.RestoreJobId)
+	return nil
+}
+
+func (command *ArgsCommandClientRestoreList) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientRestore.List(clConfig, command.Json)
+	return nil
+}
+
+func (command *ArgsCommandClientRestoreWatch) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+	clientRestore.Watch(clConfig, command.Json, command.Job.Name, command.RestoreJobId)
+	return nil
+}
+
+func (command *ArgsCommandClientRestoreReportList) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+
+	var FromStartTime, UntilStartTime time.Time
+	if command.StartTime == "" {
+		FromStartTime = time.Now().AddDate(0, 0, -30)
+	} else {
+		FromStartTime, err = time.Parse(time.RFC3339Nano, command.StartTime)
+		if err != nil {
+			fmt.Printf("Provided value '%s' for '--from-start-time' could not be parsed into a time object which "+
+				"is RFC3339 with nanoseconds compliant due to error: %s", command.StartTime, err.Error())
+			os.Exit(1)
+		}
+	}
+
+	if command.EndTime == "" {
+		UntilStartTime = time.Now()
+	} else {
+		UntilStartTime, err = time.Parse(time.RFC3339Nano, command.EndTime)
+		if err != nil {
+			fmt.Printf("Provided value '%s' for '--until-start-time' could not be parsed into a time object which "+
+				"is RFC3339 with nanoseconds compliant due to error: %s", command.EndTime, err.Error())
+			os.Exit(1)
+		}
+	}
+
+	if UntilStartTime.Before(FromStartTime) {
+		fmt.Printf("Provided value '%s' for '--until-start-time' represents a value which is earlier "+
+			"than '--from-start-time' 's own value of %s . Please specify a value which is equal or older for "+
+			"'--until-start-time'", UntilStartTime, FromStartTime)
+		os.Exit(1)
+	}
+
+	clientRestore.ReportList(clConfig, command.Json, command.Job.Name, FromStartTime, UntilStartTime)
+	return nil
+}
+
+func (command *ArgsCommandClientRestoreReportShow) Execute(args []string) error {
+	loggingArgs := misc.LoggingArgs{
+		Quiet:   true,
+		Debug:   command.Debug,
+		TextLog: !command.JsonLog,
+	}
+	misc.SetupLogging(loggingArgs)
+
+	clConfig, path, err := clientConfig.Load(command.ConfigFile, command.Debug, command.Username, command.Password, command.Address)
+	if err != nil {
+		fmt.Printf("Client configuration using file %s and optional environment variables and command line "+
+			"switches did not pass validation\nThe encountered error was: %s\n", path, err)
+		os.Exit(1)
+	}
+
+	clientRestore.ReportShow(clConfig, command.Json, command.Job.Name, command.JobId)
 	return nil
 }
