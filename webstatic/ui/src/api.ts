@@ -27,6 +27,7 @@ export interface ObjectStoreRates {
 export interface BackupJobStatus {
   name: string;
   state: JobState;
+  job_type?: 'backup' | 'restore' | '';
   start_time?: string;
   end_time?: string;
   platform?: string;
@@ -173,15 +174,147 @@ export async function getVersion(c: Connection): Promise<ServerVersion | null> {
   return r.result ?? null;
 }
 
-/**
- * Stream live watch events for a job. Uses fetch() streaming because the native
- * EventSource cannot POST a request body nor send an Authorization header.
- * Returns a function that cancels the stream.
- */
-export function watchBackup(
+// ---------------------------------------------------------------------------
+// Restore endpoints
+// ---------------------------------------------------------------------------
+
+export interface RestoreStartInput {
+  name: string;
+  source_backup_job_id: string;
+  target_name?: string;
+  files?: string[];
+  all_files?: boolean;
+  restore_dir?: string;
+  exclusions?: string[];
+}
+
+export interface ResultRestoreJobStart {
+  name: string;
+  restore_job_id: string;
+}
+
+export async function listRestores(c: Connection): Promise<BackupJobStatus[]> {
+  const r = await jsonRequest<ApiResponse<BackupJobStatus[]>>(c, '/restore/list', 'GET');
+  return r.result ?? [];
+}
+
+export async function startRestore(c: Connection, input: RestoreStartInput): Promise<ResultRestoreJobStart> {
+  const r = await jsonRequest<ApiResponse<ResultRestoreJobStart>>(c, '/restore/start', 'POST', input);
+  if (!r.result) throw new Error('Server returned no result');
+  return r.result;
+}
+
+export async function stopRestore(c: Connection, name: string, restoreJobId?: string): Promise<void> {
+  const body: Record<string, string> = { name };
+  if (restoreJobId) body.restore_job_id = restoreJobId;
+  await jsonRequest<ApiResponse<unknown>>(c, '/restore/stop', 'POST', body);
+}
+
+export async function resumeRestore(
+  c: Connection, name: string, targetName: string, restoreJobId: string,
+): Promise<ResultRestoreJobStart> {
+  const r = await jsonRequest<ApiResponse<ResultRestoreJobStart>>(c, '/restore/resume', 'POST', {
+    name, target_name: targetName, restore_job_id: restoreJobId,
+  });
+  if (!r.result) throw new Error('Server returned no result');
+  return r.result;
+}
+
+export async function listRestoreReports(c: Connection, name: string, next?: string): Promise<ReportListPage> {
+  const body: Record<string, unknown> = { name };
+  if (next) body.next = next;
+  const r = await jsonRequest<ReportListApiResponse>(c, '/report/restore/list', 'POST', body);
+  return { items: r.result ?? [], next: r.next ?? '' };
+}
+
+export async function showRestoreReport(c: Connection, name: string, jobId: string): Promise<BackupJobStatus> {
+  const r = await jsonRequest<ApiResponse<BackupJobStatus>>(
+    c, '/report/restore/show', 'POST', { name, job_id: jobId },
+  );
+  if (!r.result) throw new Error('Server returned no result');
+  return r.result;
+}
+
+// File-list browsing for picking restore selections. Mirrors the per-directory
+// pagination semantics used by client/restore/browse.go.
+export interface FileListInstance {
+  job_id: string;
+  job_name: string;
+  job_start_time: string;
+  target: string;
+  size: number;
+  type: 'file' | 'directory' | 'symlink' | string;
+  upload_date: string;
+  deleted: boolean;
+}
+
+export interface FileListEntry {
+  path: string;
+  parent: string;
+  instances: FileListInstance[];
+}
+
+interface FileListApiResponse {
+  code: string;
+  message: string;
+  next?: string;
+  result?: FileListEntry[];
+}
+
+export interface FileListPage {
+  items: FileListEntry[];
+  next: string;
+}
+
+export async function listBackupFiles(
   c: Connection,
   name: string,
   jobId: string,
+  path: string,
+  descend: boolean,
+  next?: string,
+): Promise<FileListPage> {
+  const body: Record<string, unknown> = { name, job_id: jobId, path, descend };
+  if (next) body.next = next;
+  const r = await jsonRequest<FileListApiResponse>(c, '/report/backup/file/list', 'POST', body);
+  return { items: r.result ?? [], next: r.next ?? '' };
+}
+
+// Server config — used by the restore UI to learn the list of targets defined
+// for a given backup definition (needed both for target selection at start
+// time and for resume which requires target_name).
+export interface ConfigBackupTarget {
+  name: string;
+  type?: string;
+  [k: string]: unknown;
+}
+
+export interface ConfigBackup {
+  name: string;
+  target?: ConfigBackupTarget[];
+  [k: string]: unknown;
+}
+
+export interface FullConfig {
+  backup?: ConfigBackup[];
+  [k: string]: unknown;
+}
+
+export async function getConfig(c: Connection): Promise<FullConfig | null> {
+  const r = await jsonRequest<ApiResponse<FullConfig>>(c, '/config', 'GET');
+  return r.result ?? null;
+}
+
+/**
+ * Stream live watch events from one of the SSE endpoints. The cloudbackup
+ * server emits "data: <json>\n" lines (single LF, not the standard "\n\n"
+ * SSE terminator). Trailing terminator messages start with "Backup job ",
+ * "Restore job " or "Completed run".
+ */
+function streamSseEvents(
+  c: Connection,
+  path: string,
+  body: Record<string, unknown>,
   onEvent: (e: WatchEvent) => void,
   onClose: (reason: string) => void,
   onError: (err: Error) => void,
@@ -189,25 +322,20 @@ export function watchBackup(
   const ctrl = new AbortController();
   (async () => {
     try {
-      const res = await fetch(url(c, '/backup/watch'), {
+      const res = await fetch(url(c, path), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
           ...authHeader(c),
         },
-        body: JSON.stringify({ name, job_id: jobId }),
+        body: JSON.stringify(body),
         signal: ctrl.signal,
       });
       if (!res.ok || !res.body) {
         const text = await res.text().catch(() => '');
         throw new Error(`HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ''}`);
       }
-      // The CloudBackup server emits one SSE event per line as
-      // "data: <json>\n" (single LF, not the standard "\n\n" event
-      // terminator), matching what the CLI client in
-      // client/backup/backup.go parses with ReadBytes('\n'). So we split
-      // on '\n' and treat each "data:" line as a complete event.
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buf = '';
@@ -216,7 +344,7 @@ export function watchBackup(
         if (!line.startsWith('data:')) return false;
         const data = line.replace(/^data:\s?/, '');
         if (!data) return false;
-        if (data.startsWith('Backup job ') || data.startsWith('Completed run')) {
+        if (data.startsWith('Backup job ') || data.startsWith('Restore job ') || data.startsWith('Completed run')) {
           onClose(data);
           return true;
         }
@@ -245,4 +373,30 @@ export function watchBackup(
     }
   })();
   return () => ctrl.abort();
+}
+
+export function watchBackup(
+  c: Connection,
+  name: string,
+  jobId: string,
+  onEvent: (e: WatchEvent) => void,
+  onClose: (reason: string) => void,
+  onError: (err: Error) => void,
+): () => void {
+  return streamSseEvents(c, '/backup/watch', { name, job_id: jobId }, onEvent, onClose, onError);
+}
+
+export function watchRestore(
+  c: Connection,
+  name: string,
+  restoreJobId: string,
+  onEvent: (e: WatchEvent) => void,
+  onClose: (reason: string) => void,
+  onError: (err: Error) => void,
+): () => void {
+  return streamSseEvents(
+    c, '/restore/watch',
+    { name, restore_job_id: restoreJobId },
+    onEvent, onClose, onError,
+  );
 }

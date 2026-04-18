@@ -68,34 +68,78 @@ export async function getVersion(c) {
     const r = await jsonRequest(c, '/report/version', 'GET');
     return r.result ?? null;
 }
+export async function listRestores(c) {
+    const r = await jsonRequest(c, '/restore/list', 'GET');
+    return r.result ?? [];
+}
+export async function startRestore(c, input) {
+    const r = await jsonRequest(c, '/restore/start', 'POST', input);
+    if (!r.result)
+        throw new Error('Server returned no result');
+    return r.result;
+}
+export async function stopRestore(c, name, restoreJobId) {
+    const body = { name };
+    if (restoreJobId)
+        body.restore_job_id = restoreJobId;
+    await jsonRequest(c, '/restore/stop', 'POST', body);
+}
+export async function resumeRestore(c, name, targetName, restoreJobId) {
+    const r = await jsonRequest(c, '/restore/resume', 'POST', {
+        name, target_name: targetName, restore_job_id: restoreJobId,
+    });
+    if (!r.result)
+        throw new Error('Server returned no result');
+    return r.result;
+}
+export async function listRestoreReports(c, name, next) {
+    const body = { name };
+    if (next)
+        body.next = next;
+    const r = await jsonRequest(c, '/report/restore/list', 'POST', body);
+    return { items: r.result ?? [], next: r.next ?? '' };
+}
+export async function showRestoreReport(c, name, jobId) {
+    const r = await jsonRequest(c, '/report/restore/show', 'POST', { name, job_id: jobId });
+    if (!r.result)
+        throw new Error('Server returned no result');
+    return r.result;
+}
+export async function listBackupFiles(c, name, jobId, path, descend, next) {
+    const body = { name, job_id: jobId, path, descend };
+    if (next)
+        body.next = next;
+    const r = await jsonRequest(c, '/report/backup/file/list', 'POST', body);
+    return { items: r.result ?? [], next: r.next ?? '' };
+}
+export async function getConfig(c) {
+    const r = await jsonRequest(c, '/config', 'GET');
+    return r.result ?? null;
+}
 /**
- * Stream live watch events for a job. Uses fetch() streaming because the native
- * EventSource cannot POST a request body nor send an Authorization header.
- * Returns a function that cancels the stream.
+ * Stream live watch events from one of the SSE endpoints. The cloudbackup
+ * server emits "data: <json>\n" lines (single LF, not the standard "\n\n"
+ * SSE terminator). Trailing terminator messages start with "Backup job ",
+ * "Restore job " or "Completed run".
  */
-export function watchBackup(c, name, jobId, onEvent, onClose, onError) {
+function streamSseEvents(c, path, body, onEvent, onClose, onError) {
     const ctrl = new AbortController();
     (async () => {
         try {
-            const res = await fetch(url(c, '/backup/watch'), {
+            const res = await fetch(url(c, path), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'text/event-stream',
                     ...authHeader(c),
                 },
-                body: JSON.stringify({ name, job_id: jobId }),
+                body: JSON.stringify(body),
                 signal: ctrl.signal,
             });
             if (!res.ok || !res.body) {
                 const text = await res.text().catch(() => '');
                 throw new Error(`HTTP ${res.status}${text ? `: ${text.slice(0, 200)}` : ''}`);
             }
-            // The CloudBackup server emits one SSE event per line as
-            // "data: <json>\n" (single LF, not the standard "\n\n" event
-            // terminator), matching what the CLI client in
-            // client/backup/backup.go parses with ReadBytes('\n'). So we split
-            // on '\n' and treat each "data:" line as a complete event.
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let buf = '';
@@ -106,7 +150,7 @@ export function watchBackup(c, name, jobId, onEvent, onClose, onError) {
                 const data = line.replace(/^data:\s?/, '');
                 if (!data)
                     return false;
-                if (data.startsWith('Backup job ') || data.startsWith('Completed run')) {
+                if (data.startsWith('Backup job ') || data.startsWith('Restore job ') || data.startsWith('Completed run')) {
                     onClose(data);
                     return true;
                 }
@@ -141,4 +185,10 @@ export function watchBackup(c, name, jobId, onEvent, onClose, onError) {
         }
     })();
     return () => ctrl.abort();
+}
+export function watchBackup(c, name, jobId, onEvent, onClose, onError) {
+    return streamSseEvents(c, '/backup/watch', { name, job_id: jobId }, onEvent, onClose, onError);
+}
+export function watchRestore(c, name, restoreJobId, onEvent, onClose, onError) {
+    return streamSseEvents(c, '/restore/watch', { name, restore_job_id: restoreJobId }, onEvent, onClose, onError);
 }

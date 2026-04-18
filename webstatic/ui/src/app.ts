@@ -2,8 +2,11 @@ import { html } from 'htm/preact';
 import { render } from 'preact';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import {
-  getVersion, listBackups, listReports, showReport, startBackup, stopBackup, watchBackup,
-  type BackupJobStatus, type Connection, type ReportListItem, type ServerVersion, type WatchEvent,
+  getConfig, getVersion, listBackupFiles, listBackups, listReports, listRestoreReports,
+  listRestores, resumeRestore, showReport, showRestoreReport, startBackup, startRestore,
+  stopBackup, stopRestore, watchBackup, watchRestore,
+  type BackupJobStatus, type ConfigBackup, type ConfigBackupTarget, type Connection,
+  type FileListEntry, type ReportListItem, type ServerVersion, type WatchEvent,
 } from './api.js';
 
 const STORAGE_KEY = 'cloudbackup.connection';
@@ -64,22 +67,40 @@ function isRunning(state: string): boolean {
   return state === 'running' || state === 'started' || state === 'stopping';
 }
 
+// "stopped" and "crashed" restore reports can be resumed (see restore.go:Resume).
+function isResumable(state: string): boolean {
+  return state === 'stopped' || state === 'crashed';
+}
+
+interface WatchTarget {
+  kind: 'backup' | 'restore';
+  name: string;
+  jobId: string;
+  title: string;
+}
+
 function App() {
   const [conn, setConn] = useState<Connection>(loadConnection);
   const [jobs, setJobs] = useState<BackupJobStatus[]>([]);
+  const [restoresByName, setRestoresByName] = useState<Record<string, BackupJobStatus>>({});
   const [version, setVersion] = useState<ServerVersion | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [connOpen, setConnOpen] = useState(false);
-  const [watchTarget, setWatchTarget] = useState<BackupJobStatus | null>(null);
+  const [watchTarget, setWatchTarget] = useState<WatchTarget | null>(null);
   const [reportsFor, setReportsFor] = useState<BackupJobStatus | null>(null);
+  const [restoreReportsFor, setRestoreReportsFor] = useState<BackupJobStatus | null>(null);
+  const [restoreStartFor, setRestoreStartFor] = useState<BackupJobStatus | null>(null);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await listBackups(conn);
+      const [list, restores] = await Promise.all([listBackups(conn), listRestores(conn)]);
       setJobs(list);
+      const map: Record<string, BackupJobStatus> = {};
+      for (const r of restores) map[r.name] = r;
+      setRestoresByName(map);
       setError(null);
     } catch (e: any) {
       setError(e?.message || String(e));
@@ -128,6 +149,14 @@ function App() {
     finally { setBusy(b => ({ ...b, [name]: false })); }
   }, [conn, refresh]);
 
+  const onStopRestore = useCallback(async (name: string, restoreJobId?: string) => {
+    const key = name + '::restore';
+    setBusy(b => ({ ...b, [key]: true }));
+    try { await stopRestore(conn, name, restoreJobId); await refresh(); }
+    catch (e: any) { setError(e?.message || String(e)); }
+    finally { setBusy(b => ({ ...b, [key]: false })); }
+  }, [conn, refresh]);
+
   const onSaveConn = useCallback((c: Connection) => {
     saveConnection(c);
     setConn(c);
@@ -168,31 +197,55 @@ function App() {
           <${JobCard}
             key=${j.name}
             job=${j}
+            restore=${restoresByName[j.name]}
             busy=${!!busy[j.name]}
+            restoreBusy=${!!busy[j.name + '::restore']}
             onStart=${() => onStart(j.name)}
             onStop=${() => onStop(j.name, j.job_id)}
-            onWatch=${() => setWatchTarget(j)}
+            onWatch=${() => setWatchTarget({ kind: 'backup', name: j.name, jobId: j.job_id || '', title: j.name })}
             onReports=${() => setReportsFor(j)}
+            onRestore=${() => setRestoreStartFor(j)}
+            onWatchRestore=${(rid: string) => setWatchTarget({ kind: 'restore', name: j.name, jobId: rid, title: j.name + ' (restore)' })}
+            onStopRestore=${(rid: string) => onStopRestore(j.name, rid)}
+            onRestoreReports=${() => setRestoreReportsFor(j)}
           />
         `)}
       </div>
     </main>
     ${connOpen ? html`<${ConnectionModal} conn=${conn} onClose=${() => setConnOpen(false)} onSave=${onSaveConn} />` : null}
-    ${watchTarget ? html`<${WatchModal} conn=${conn} job=${watchTarget} onClose=${() => setWatchTarget(null)} />` : null}
+    ${watchTarget ? html`<${WatchModal} conn=${conn} target=${watchTarget} onClose=${() => setWatchTarget(null)} />` : null}
     ${reportsFor ? html`<${ReportsModal} conn=${conn} job=${reportsFor} onClose=${() => setReportsFor(null)} />` : null}
+    ${restoreReportsFor ? html`<${RestoreReportsModal}
+        conn=${conn}
+        job=${restoreReportsFor}
+        restoreInProgress=${!!restoresByName[restoreReportsFor.name]}
+        onClose=${() => setRestoreReportsFor(null)}
+        onResumed=${() => { setRestoreReportsFor(null); void refresh(); }} />` : null}
+    ${restoreStartFor ? html`<${RestoreStartModal}
+        conn=${conn}
+        job=${restoreStartFor}
+        onClose=${() => setRestoreStartFor(null)}
+        onStarted=${() => { setRestoreStartFor(null); void refresh(); }} />` : null}
   `;
 }
 
 function JobCard(props: {
   job: BackupJobStatus;
+  restore?: BackupJobStatus;
   busy: boolean;
+  restoreBusy: boolean;
   onStart: () => void;
   onStop: () => void;
   onWatch: () => void;
   onReports: () => void;
+  onRestore: () => void;
+  onWatchRestore: (jobId: string) => void;
+  onStopRestore: (jobId: string) => void;
+  onRestoreReports: () => void;
 }) {
-  const { job, busy } = props;
+  const { job, busy, restore, restoreBusy } = props;
   const running = isRunning(job.state);
+  const restoreRunning = !!restore && isRunning(restore.state);
   const s = job.stats_counters || {};
   const examined = (s.examined_files || 0) + (s.examined_directories || 0) + (s.examined_symlinks || 0);
   const uploaded = (s.uploaded_files || 0) + (s.uploaded_directories || 0) + (s.uploaded_symlinks || 0);
@@ -228,9 +281,31 @@ function JobCard(props: {
           <button class="danger" disabled=${busy} onClick=${props.onStop}>Stop</button>
           <button onClick=${props.onWatch}>Watch progress</button>
         ` : html`
-          <button class="primary" disabled=${busy} onClick=${props.onStart}>Start now</button>
+          <button class="primary" disabled=${busy || restoreRunning} onClick=${props.onStart}>Start now</button>
         `}
         <button onClick=${props.onReports}>Reports</button>
+      </div>
+      <div class="restore-row">
+        <div class="restore-row-head">
+          <span class="restore-label">Restore</span>
+          ${restoreRunning ? html`<span class=${'state ' + restore!.state}>${restore!.state}</span>` : html`<span class="state">idle</span>`}
+        </div>
+        ${restoreRunning ? html`
+          <div class="meta">
+            ${restore!.job_id ? html`<span><strong>Restore id:</strong> <code>${restore!.job_id}</code></span>` : null}
+            <span><strong>Started:</strong> ${fmtTime(restore!.start_time)}</span>
+            ${restore!.stats_text?.current_file ? html`<span class="muted" title=${restore!.stats_text.current_file}>${restore!.stats_text.current_file}</span>` : null}
+          </div>
+        ` : null}
+        <div class="actions">
+          ${restoreRunning ? html`
+            <button class="danger" disabled=${restoreBusy} onClick=${() => props.onStopRestore(restore!.job_id || '')}>Stop restore</button>
+            <button onClick=${() => props.onWatchRestore(restore!.job_id || '')}>Watch restore</button>
+          ` : html`
+            <button class="primary" disabled=${running} onClick=${props.onRestore}>Restore…</button>
+          `}
+          <button onClick=${props.onRestoreReports}>Restore reports</button>
+        </div>
       </div>
     </div>
   `;
@@ -285,8 +360,8 @@ function ConnectionModal(props: { conn: Connection; onClose: () => void; onSave:
   `;
 }
 
-function WatchModal(props: { conn: Connection; job: BackupJobStatus; onClose: () => void }) {
-  const { conn, job } = props;
+function WatchModal(props: { conn: Connection; target: WatchTarget; onClose: () => void }) {
+  const { conn, target } = props;
   const [events, setEvents] = useState<WatchEvent[]>([]);
   const [status, setStatus] = useState<string>('connecting…');
   const [err, setErr] = useState<string | null>(null);
@@ -294,19 +369,19 @@ function WatchModal(props: { conn: Connection; job: BackupJobStatus; onClose: ()
   const stickRef = useRef<boolean>(true);
 
   useEffect(() => {
-    if (!job.job_id) { setStatus('no job id — job is not running'); return; }
+    if (!target.jobId) { setStatus('no job id — job is not running'); return; }
     setStatus('streaming');
-    const cancel = watchBackup(
+    const handler = target.kind === 'backup' ? watchBackup : watchRestore;
+    const cancel = handler(
       conn,
-      job.name,
-      job.job_id,
+      target.name,
+      target.jobId,
       (e) => {
         setEvents(prev => {
-          // Collapse successive events for the same item into a single
-          // line: the server emits one event per upload progress step
-          // for a given file and all of those share the same sequence
-          // number, so we replace the last entry in place rather than
-          // appending a new line.
+          // Collapse successive events for the same item (same sequence)
+          // into a single line — the server emits one event per upload
+          // progress step for a given file, all sharing the same sequence
+          // number.
           const last = prev.length ? prev[prev.length - 1] : undefined;
           if (last && last.sequence === e.sequence) {
             const next = prev.slice();
@@ -322,7 +397,7 @@ function WatchModal(props: { conn: Connection; job: BackupJobStatus; onClose: ()
       (error) => { setErr(error.message); setStatus('error'); },
     );
     return () => cancel();
-  }, [conn, job.name, job.job_id]);
+  }, [conn, target.kind, target.name, target.jobId]);
 
   useEffect(() => {
     if (stickRef.current && listRef.current) {
@@ -339,14 +414,14 @@ function WatchModal(props: { conn: Connection; job: BackupJobStatus; onClose: ()
     <div class="modal-backdrop" onClick=${(e: Event) => { if (e.target === e.currentTarget) props.onClose(); }}>
       <div class="modal" role="dialog" aria-modal="true">
         <header>
-          <h2>Watching: ${job.name}</h2>
+          <h2>Watching: ${target.title}</h2>
           <button onClick=${props.onClose}>Close</button>
         </header>
         <div class="body">
           <p class="muted" style="margin:0 0 8px 0">
             Status: <strong>${status}</strong>
             ${' '}· Events: <strong>${events.length}</strong>
-            ${' '}· Job id: <code>${job.job_id || '-'}</code>
+            ${' '}· Job id: <code>${target.jobId || '-'}</code>
           </p>
           ${err ? html`<div class="error">${err}</div>` : null}
           <div class="events" ref=${listRef} onScroll=${onScroll}>
@@ -594,6 +669,489 @@ function ReportDetail(props: { detail: BackupJobStatus; loading: boolean }) {
           </div>
         </div>
       `)}
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Restore: report list / detail + resume
+// ---------------------------------------------------------------------------
+
+function RestoreReportsModal(props: {
+  conn: Connection;
+  job: BackupJobStatus;
+  restoreInProgress: boolean;
+  onClose: () => void;
+  onResumed: () => void;
+}) {
+  const { conn, job } = props;
+  const [items, setItems] = useState<ReportListItem[]>([]);
+  const [nextToken, setNextToken] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<BackupJobStatus | null>(null);
+  const [detailJobId, setDetailJobId] = useState<string>('');
+  const [detailState, setDetailState] = useState<string>('');
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [resuming, setResuming] = useState(false);
+  const [targets, setTargets] = useState<ConfigBackupTarget[]>([]);
+  const [pickedTarget, setPickedTarget] = useState<string>('');
+
+  const loadPage = useCallback(async (token?: string) => {
+    setLoading(true);
+    try {
+      const r = await listRestoreReports(conn, job.name, token);
+      setItems(prev => token ? prev.concat(r.items) : r.items);
+      setNextToken(r.next);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [conn, job.name]);
+
+  useEffect(() => { void loadPage(); }, [loadPage]);
+
+  // Targets from /config — needed because the resume API requires
+  // target_name and the report-list rows do not carry it.
+  useEffect(() => {
+    let stopped = false;
+    (async () => {
+      try {
+        const cfg = await getConfig(conn);
+        if (stopped) return;
+        const b = (cfg?.backup ?? []).find(x => x.name === job.name);
+        const t = b?.target ?? [];
+        setTargets(t);
+        if (t.length === 1) setPickedTarget(t[0].name);
+      } catch {
+        // non-fatal: resume just becomes unavailable
+      }
+    })();
+    return () => { stopped = true; };
+  }, [conn, job.name]);
+
+  const openDetail = useCallback(async (jobId: string, state: string) => {
+    setDetailLoading(true);
+    setDetailJobId(jobId);
+    setDetailState(state);
+    setError(null);
+    try {
+      const d = await showRestoreReport(conn, job.name, jobId);
+      setDetail(d);
+    } catch (e: any) {
+      // 'crashed' restores may have no stored report — surface message but keep the resume option.
+      setDetail(null);
+      setError(e?.message || String(e));
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [conn, job.name]);
+
+  const backToList = () => {
+    setDetail(null);
+    setDetailJobId('');
+    setDetailState('');
+    setError(null);
+  };
+
+  const onResume = useCallback(async (jobId: string) => {
+    if (!pickedTarget) {
+      setError('Please pick a target to resume from');
+      return;
+    }
+    setResuming(true);
+    setError(null);
+    try {
+      await resumeRestore(conn, job.name, pickedTarget, jobId);
+      props.onResumed();
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setResuming(false);
+    }
+  }, [conn, job.name, pickedTarget, props]);
+
+  const showingDetail = !!detail || !!detailJobId;
+  const canResumeCurrent = showingDetail && isResumable(detailState);
+  return html`
+    <div class="modal-backdrop" onClick=${(e: Event) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class="modal modal-wide" role="dialog" aria-modal="true">
+        <header>
+          <h2>${showingDetail ? html`Restore report: ${job.name}` : html`Restore reports: ${job.name}`}</h2>
+          <div style="display:flex;gap:8px">
+            ${showingDetail ? html`<button onClick=${backToList}>← Back to list</button>` : null}
+            <button onClick=${props.onClose}>Close</button>
+          </div>
+        </header>
+        <div class="body">
+          ${error ? html`<div class="error">${error}</div>` : null}
+          ${canResumeCurrent ? html`
+            <div class="resume-bar">
+              <span class="muted">This restore is in <strong>${detailState}</strong> state and can be resumed.</span>
+              ${targets.length > 1 ? html`
+                <label class="muted" style="text-transform:none;letter-spacing:0">Target:
+                  <select value=${pickedTarget} onChange=${(e: any) => setPickedTarget(e.currentTarget.value)}>
+                    <option value="">(pick one)</option>
+                    ${targets.map(t => html`<option value=${t.name}>${t.name}${t.type ? ' — ' + t.type : ''}</option>`)}
+                  </select>
+                </label>
+              ` : null}
+              <button class="primary" disabled=${resuming || props.restoreInProgress || !pickedTarget}
+                      onClick=${() => onResume(detailJobId)}>
+                ${resuming ? 'Resuming…' : 'Resume restore'}
+              </button>
+              ${props.restoreInProgress ? html`<span class="muted">A restore for this job is already running.</span>` : null}
+            </div>
+          ` : null}
+          ${showingDetail
+            ? (detail ? html`<${ReportDetail} detail=${detail} loading=${detailLoading} />` : html`
+                <div class="muted">${detailLoading ? html`<span class="spinner"></span> Loading…` : 'No report payload available.'}</div>
+              `)
+            : html`<${RestoreReportList}
+                items=${items}
+                loading=${loading}
+                nextToken=${nextToken}
+                resumable=${(s: string) => isResumable(s)}
+                onOpen=${(jobId: string, state: string) => openDetail(jobId, state)}
+                onLoadMore=${() => loadPage(nextToken)} />`}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function RestoreReportList(props: {
+  items: ReportListItem[];
+  loading: boolean;
+  nextToken: string;
+  resumable: (state: string) => boolean;
+  onOpen: (jobId: string, state: string) => void;
+  onLoadMore: () => void;
+}) {
+  const { items, loading, nextToken } = props;
+  return html`
+    ${items.length === 0 && !loading ? html`
+      <div class="empty" style="padding:24px">No restore reports found for this backup job.</div>
+    ` : null}
+    ${items.length > 0 ? html`
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Restore Job Id</th>
+            <th>State</th>
+            <th>Duration</th>
+            <th>Start time</th>
+            <th>End time</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(it => html`
+            <tr class="clickable" onClick=${() => props.onOpen(it.job_id, it.state)}>
+              <td><code>${it.job_id}</code></td>
+              <td><span class=${'state ' + it.state}>${it.state}</span></td>
+              <td>${fmtDuration(it.start_time, it.end_time)}</td>
+              <td>${fmtTime(it.start_time)}</td>
+              <td>${fmtTime(it.end_time)}</td>
+              <td>${props.resumable(it.state) ? html`<span class="resumable-tag">resumable</span>` : null}</td>
+            </tr>
+          `)}
+        </tbody>
+      </table>
+    ` : null}
+    <div class="report-actions">
+      ${loading ? html`<span class="muted"><span class="spinner"></span> Loading…</span>` : null}
+      ${nextToken && !loading ? html`<button onClick=${props.onLoadMore}>Load more</button>` : null}
+    </div>
+  `;
+}
+
+// ---------------------------------------------------------------------------
+// Restore start: pick source backup -> pick files (or all) -> options -> submit
+// ---------------------------------------------------------------------------
+
+interface FileTreeItem {
+  path: string;
+  parent: string;
+  isDir: boolean;
+  size: number;
+}
+
+function fileEntryToItem(e: FileListEntry): FileTreeItem | null {
+  if (!e.instances || e.instances.length === 0) return null;
+  const inst = e.instances[0];
+  const t = (inst.type || '').toLowerCase();
+  return {
+    path: e.path,
+    parent: e.parent,
+    isDir: t === 'directory' || t === 'dir',
+    size: inst.size || 0,
+  };
+}
+
+function RestoreStartModal(props: {
+  conn: Connection;
+  job: BackupJobStatus;
+  onClose: () => void;
+  onStarted: () => void;
+}) {
+  const { conn, job } = props;
+  // Step 1: source backup selection.
+  const [sourceJobs, setSourceJobs] = useState<ReportListItem[]>([]);
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [sourceJobId, setSourceJobId] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  // Step 2: file selection.
+  const [allFiles, setAllFiles] = useState<boolean>(false);
+  const [cwd, setCwd] = useState<string>(''); // '' == virtual root
+  const [stack, setStack] = useState<string[]>([]);
+  const [entries, setEntries] = useState<FileTreeItem[]>([]);
+  const [browsing, setBrowsing] = useState(false);
+  const [browseErr, setBrowseErr] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Record<string, true>>({});
+
+  // Step 3: options.
+  const [targets, setTargets] = useState<ConfigBackupTarget[]>([]);
+  const [targetName, setTargetName] = useState<string>('');
+  const [restoreDir, setRestoreDir] = useState<string>('');
+  const [exclusionsText, setExclusionsText] = useState<string>('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Load list of past finished/stopped backup jobs to pick a source.
+  useEffect(() => {
+    let stopped = false;
+    setSourceLoading(true);
+    (async () => {
+      try {
+        const r = await listReports(conn, job.name);
+        if (stopped) return;
+        setSourceJobs(r.items);
+        // Auto-pick the most recent finished one when present.
+        const finished = r.items.find(x => x.state === 'finished');
+        const candidate = finished || r.items[0];
+        if (candidate) setSourceJobId(candidate.job_id);
+      } catch (e: any) {
+        if (!stopped) setError(e?.message || String(e));
+      } finally {
+        if (!stopped) setSourceLoading(false);
+      }
+    })();
+    return () => { stopped = true; };
+  }, [conn, job.name]);
+
+  // Targets for the dropdown.
+  useEffect(() => {
+    let stopped = false;
+    (async () => {
+      try {
+        const cfg = await getConfig(conn);
+        if (stopped) return;
+        const b: ConfigBackup | undefined = (cfg?.backup ?? []).find(x => x.name === job.name);
+        setTargets(b?.target ?? []);
+      } catch { /* non-fatal */ }
+    })();
+    return () => { stopped = true; };
+  }, [conn, job.name]);
+
+  // Browse helper. cwd == '' means virtual root: ask server with descend=true,
+  // then client-side filter to top-level entries (parent not in returned set).
+  const loadDir = useCallback(async (path: string) => {
+    if (!sourceJobId) return;
+    setBrowsing(true);
+    setBrowseErr(null);
+    try {
+      const descend = path === '';
+      const r = await listBackupFiles(conn, job.name, sourceJobId, path, descend);
+      const items: FileTreeItem[] = [];
+      const pathSet = new Set<string>();
+      for (const e of r.items) pathSet.add(e.path);
+      for (const e of r.items) {
+        if (e.path === path && path !== '') continue;
+        const item = fileEntryToItem(e);
+        if (!item) continue;
+        if (descend) {
+          // Only surface backup-root entries: their parent is not also in the result set.
+          if (pathSet.has(item.parent)) continue;
+        }
+        items.push(item);
+      }
+      items.sort((a, b) => {
+        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+        return a.path.localeCompare(b.path);
+      });
+      setEntries(items);
+    } catch (e: any) {
+      setBrowseErr(e?.message || String(e));
+    } finally {
+      setBrowsing(false);
+    }
+  }, [conn, job.name, sourceJobId]);
+
+  // When source job changes (or all_files toggled off), reload from root.
+  useEffect(() => {
+    if (allFiles) return;
+    setEntries([]);
+    setStack([]);
+    setCwd('');
+    if (sourceJobId) void loadDir('');
+  }, [sourceJobId, allFiles, loadDir]);
+
+  const enterDir = useCallback((path: string) => {
+    setStack(s => [...s, cwd]);
+    setCwd(path);
+    void loadDir(path);
+  }, [cwd, loadDir]);
+
+  const goUp = useCallback(() => {
+    if (stack.length === 0) return;
+    const parent = stack[stack.length - 1];
+    setStack(s => s.slice(0, -1));
+    setCwd(parent);
+    void loadDir(parent);
+  }, [stack, loadDir]);
+
+  const toggleSelect = useCallback((path: string) => {
+    setSelected(prev => {
+      const next = { ...prev };
+      if (next[path]) delete next[path]; else next[path] = true;
+      return next;
+    });
+  }, []);
+
+  const selectedPaths = useMemo(() => Object.keys(selected).sort(), [selected]);
+
+  const onSubmit = useCallback(async () => {
+    setError(null);
+    if (!sourceJobId) { setError('Please pick a source backup job to restore from.'); return; }
+    if (!allFiles && selectedPaths.length === 0) {
+      setError('Pick at least one file or directory, or check "Restore all files".');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const exclusions = exclusionsText.split('\n').map(s => s.trim()).filter(Boolean);
+      await startRestore(conn, {
+        name: job.name,
+        source_backup_job_id: sourceJobId,
+        target_name: targetName || undefined,
+        restore_dir: restoreDir || undefined,
+        files: allFiles ? undefined : selectedPaths,
+        all_files: allFiles || undefined,
+        exclusions: exclusions.length ? exclusions : undefined,
+      });
+      props.onStarted();
+    } catch (e: any) {
+      setError(e?.message || String(e));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [conn, job.name, sourceJobId, targetName, restoreDir, exclusionsText, allFiles, selectedPaths, props]);
+
+  return html`
+    <div class="modal-backdrop" onClick=${(e: Event) => { if (e.target === e.currentTarget) props.onClose(); }}>
+      <div class="modal modal-wide" role="dialog" aria-modal="true">
+        <header>
+          <h2>Restore from: ${job.name}</h2>
+          <button onClick=${props.onClose}>Close</button>
+        </header>
+        <div class="body">
+          ${error ? html`<div class="error">${error}</div>` : null}
+          <div class="form-row">
+            <label>Source backup job (the run from which to fetch files)</label>
+            ${sourceLoading ? html`<span class="muted"><span class="spinner"></span> Loading available backup runs…</span>` : null}
+            <select value=${sourceJobId} onChange=${(e: any) => setSourceJobId(e.currentTarget.value)} disabled=${sourceLoading}>
+              <option value="">— select —</option>
+              ${sourceJobs.map(it => html`
+                <option value=${it.job_id}>${fmtTime(it.start_time)} · ${it.state} · ${it.job_id.slice(0, 8)}…</option>
+              `)}
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label>What to restore</label>
+            <label class="muted" style="text-transform:none;letter-spacing:0;display:flex;align-items:center;gap:6px">
+              <input type="checkbox" style="min-width:auto;width:auto" checked=${allFiles}
+                     onChange=${(e: any) => setAllFiles(e.currentTarget.checked)} />
+              Restore <strong>all files</strong> recorded for this backup run
+            </label>
+          </div>
+
+          ${!allFiles ? html`
+            <div class="form-row">
+              <label>Pick files and/or directories
+                <span class="muted" style="text-transform:none;letter-spacing:0">(${selectedPaths.length} selected)</span>
+              </label>
+              <div class="browser">
+                <div class="browser-bar">
+                  <button onClick=${goUp} disabled=${stack.length === 0 || browsing}>↑ Up</button>
+                  <span class="browser-cwd" title=${cwd || '(roots)'}><code>${cwd || '(backup roots)'}</code></span>
+                  <button onClick=${() => loadDir(cwd)} disabled=${browsing || !sourceJobId}>Refresh</button>
+                </div>
+                ${browseErr ? html`<div class="error" style="margin:8px 0">${browseErr}</div>` : null}
+                <div class="browser-list">
+                  ${browsing && entries.length === 0 ? html`<div class="muted"><span class="spinner"></span> Loading…</div>` : null}
+                  ${!browsing && entries.length === 0 && !browseErr ? html`<div class="muted">empty</div>` : null}
+                  ${entries.map(e => html`
+                    <div class="browser-row">
+                      <input type="checkbox" checked=${!!selected[e.path]}
+                             onChange=${() => toggleSelect(e.path)}
+                             title=${'Select ' + e.path} />
+                      ${e.isDir ? html`
+                        <button class="browser-name dir" onClick=${() => enterDir(e.path)} title=${'Open ' + e.path}>
+                          <span class="icon">📁</span><span class="path">${e.path}</span>
+                        </button>
+                      ` : html`
+                        <span class="browser-name">
+                          <span class="icon">📄</span><span class="path" title=${e.path}>${e.path}</span>
+                          <span class="muted size">${fmtBytes(e.size)}</span>
+                        </span>
+                      `}
+                    </div>
+                  `)}
+                </div>
+                ${selectedPaths.length > 0 ? html`
+                  <details class="browser-selected">
+                    <summary>${selectedPaths.length} selected (click to view)</summary>
+                    <ul>${selectedPaths.map(p => html`
+                      <li><code>${p}</code> <button class="link-btn" onClick=${() => toggleSelect(p)}>remove</button></li>
+                    `)}</ul>
+                  </details>
+                ` : null}
+              </div>
+            </div>
+          ` : null}
+
+          <div class="form-row">
+            <label>Target (object store) — optional, defaults to first</label>
+            <select value=${targetName} onChange=${(e: any) => setTargetName(e.currentTarget.value)}>
+              <option value="">(default: first defined target)</option>
+              ${targets.map(t => html`<option value=${t.name}>${t.name}${t.type ? ' — ' + t.type : ''}</option>`)}
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label>Restore directory override (server-side path, optional)</label>
+            <input type="text" value=${restoreDir} onInput=${(e: any) => setRestoreDir(e.currentTarget.value)}
+                   placeholder="leave empty to use the server's configured restore_dir" />
+          </div>
+
+          <div class="form-row">
+            <label>Exclusion patterns — optional, one per line</label>
+            <textarea rows="3" class="ta" value=${exclusionsText}
+                      onInput=${(e: any) => setExclusionsText(e.currentTarget.value)}
+                      placeholder="e.g. **/*.log&#10;/data/cache/**"></textarea>
+          </div>
+        </div>
+        <div class="footer">
+          <button onClick=${props.onClose} disabled=${submitting}>Cancel</button>
+          <button class="primary" onClick=${onSubmit} disabled=${submitting || !sourceJobId}>
+            ${submitting ? 'Starting…' : 'Start restore'}
+          </button>
+        </div>
+      </div>
     </div>
   `;
 }
