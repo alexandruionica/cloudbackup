@@ -626,3 +626,46 @@ def check_backup_report(self, job_name, job_id, expected_num_files, expected_num
         self.assertEqual(response['result']['stats_counters'][counter], 0,
                          "expected value of counter named '{}' in the backup report was 0 but instead {} was "
                          "found".format(counter, response['result']['stats_counters'][counter]))
+
+
+# fetches restore report via /report/restore/show and checks that the restore counters match expectations
+def check_restore_report(self, job_name, restore_job_id, expected_num_files, expected_num_dirs,
+                         expected_num_symlinks):
+    logging.info("Getting report of restore job and checking it matches expectations")
+    req = {"name": job_name,
+           "job_id": restore_job_id,
+           }
+    url = self.base_url + self.api_root + '/report/restore/show'
+    r = requests.post(url=url, auth=(self.username, self.password), json=req)
+    self.assertEqual(r.status_code, 200, url + " " + r.text)
+    response = self.ValidatedAndDecodeResponse(r, url)
+    self.assertIn("result", response, "Response for {} is missing the 'result' key. Response was:"
+                                      " {}".format(url, r.text))
+    self.assertEqual(response['code'], "success", "For {} response['code'] doesn't equal 'success'. Response was:"
+                                                  " {}".format(url, r.text))
+    self.assertEqual(response['message'], "success", "For {} response['message'] doesn't equal 'success'. Response"
+                                                     " was: {}".format(url, r.text))
+    self.assertEqual(response['result']['job_id'], restore_job_id, "job_id in restore report is {} but we were "
+                                                                   "expecting it to be {}".format(
+                                                                       response['result']['job_id'], restore_job_id))
+    self.assertEqual(response['result']['name'], job_name, "name in restore report is {} but we were expecting it "
+                                                           "to be {}".format(response['result']['name'], job_name))
+    self.assertEqual(response['result']['state'], "finished", "expected restore state to be 'finished' but the "
+                                                              "report shows it as {}".format(
+                                                                  response['result']['state']))
+    self.assertEqual(response['result']['stats_counters']['restored_files'], expected_num_files,
+                     "expected number of files to have been restored is {} but the report "
+                     "shows {}".format(expected_num_files,
+                                       response['result']['stats_counters']['restored_files']))
+    self.assertEqual(response['result']['stats_counters']['restored_directories'], expected_num_dirs,
+                     "expected number of directories to have been restored is {} but the report "
+                     "shows {}".format(expected_num_dirs,
+                                       response['result']['stats_counters']['restored_directories']))
+    self.assertEqual(response['result']['stats_counters']['restored_symlinks'], expected_num_symlinks,
+                     "expected number of symlinks to have been restored is {} but the report "
+                     "shows {}".format(expected_num_symlinks,
+                                       response['result']['stats_counters']['restored_symlinks']))
+    for counter in ["failed_to_restore_files", "skipped_delete_markers"]:
+        self.assertEqual(response['result']['stats_counters'][counter], 0,
+                         "expected value of counter named '{}' in the restore report was 0 but instead {} was "
+                         "found".format(counter, response['result']['stats_counters'][counter]))

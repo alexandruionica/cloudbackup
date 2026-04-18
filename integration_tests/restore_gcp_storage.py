@@ -223,6 +223,25 @@ class TestRestoreGcpStorage(unittest.TestCase):
                                  "MD5 mismatch for '{}': original={} restored={}".format(
                                      source_path, original_md5, restored_md5))
 
+        # step 5: verify restore report counters match what was backed up
+        check_restore_report(self, job_name, restore_job_id, expected_num_files, expected_num_dirs,
+                             expected_num_symlinks)
+
+        # step 6: count files, directories, and symlinks under the restored subtree and verify the
+        # numbers match what was counted on the source side before the backup ran
+        restored_source_root = os.path.join(self.restore_dir, self.tmpdir.lstrip(os.sep))
+        restored_f, restored_d, restored_s = count_files_folders_links(restored_source_root,
+                                                                       backup_cfg["dereference"])
+        self.assertEqual(restored_f, expected_num_files,
+                         "restored tree at '{}' has {} files but the source had {}".format(
+                             restored_source_root, restored_f, expected_num_files))
+        self.assertEqual(restored_d, expected_num_dirs,
+                         "restored tree at '{}' has {} directories but the source had {}".format(
+                             restored_source_root, restored_d, expected_num_dirs))
+        self.assertEqual(restored_s, expected_num_symlinks,
+                         "restored tree at '{}' has {} symlinks but the source had {}".format(
+                             restored_source_root, restored_s, expected_num_symlinks))
+
     def test_restore_by_directory(self):
         """Restore using a directory path in the 'files' parameter and verify that all contents
         of the directory are restored recursively, while files outside the directory are not."""
