@@ -50,3 +50,32 @@ type DbPreparedStatements struct {
 	ReportBackupJobsFileListWithJobIdAndDescend string
 	TopItemsInsert                              string
 }
+
+// RestoreDbData is the equivalent of DbData for a per-target restore database.
+type RestoreDbData struct {
+	Db                 *sql.DB
+	Name               string
+	Connected          bool
+	PreparedStatements RestoreDbPreparedStatements
+}
+
+// RestoreDbPreparedStatements holds prepared statements and SQL text used by
+// the restore-tracking database. Populated by database/dbops.PrepareRestore().
+type RestoreDbPreparedStatements struct {
+	InsertJob            string
+	UpdateJobFinal       string
+	UpdateJobState       string
+	JobExists            string
+	JobFetch             string
+	InsertManifestRow    string
+	SetFileState         string
+	LoadPendingManifest  string
+	BumpCounter          string
+	InitCounterRow       string
+	ReadCounters         string
+	ReportJobsListQuery  string
+	ReportJobShowQuery   string
+	ReportFilesListQuery string
+	FindCrashedJobsQuery string
+	MarkCrashedJobQuery  string
+}

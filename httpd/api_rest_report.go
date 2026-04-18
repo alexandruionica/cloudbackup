@@ -15,6 +15,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -445,6 +446,356 @@ func getRowsForHandlerPostReportBackupShow(dbData shared.DbData, jobName string,
 	return result, numRows, nil
 }
 
+// -----------------------------------------------------------------------------
+// Restore report handlers — mirror backup report list/show but query type='restore'
+// -----------------------------------------------------------------------------
+
+type ReportRestoreList struct {
+	// Backup definition name (restore jobs are stored against the same name)
+	Name string `json:"name"`
+	// pagination token
+	Next string `json:"next"`
+	// max results per page
+	MaxResults uint64 `json:"max_results"`
+	// select only reports which have a start_time >= $FromStartTime
+	FromStartTime string `json:"from_start_time"`
+	// select only reports which have a start_time <= $UntilStartTime
+	UntilStartTime string `json:"until_start_time"`
+}
+
+type ReportRestoreJob struct {
+	Name  string `json:"name"`
+	JobId string `json:"job_id"`
+}
+
+func (srvSrc SrvData) handlerPostReportRestoreList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		return
+	}
+	var decodedJson ReportRestoreList
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
+	if decodedJson.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
+			" is needed in order to know what backup definition you're requesting restore reports for"))
+		return
+	}
+	jobName := decodedJson.Name
+
+	var limit uint64 = LimitReportResultsDefault
+	if decodedJson.MaxResults > LimitReportResults {
+		limit = LimitReportResults
+	} else if decodedJson.MaxResults > 0 {
+		limit = decodedJson.MaxResults
+	}
+
+	var FromStartTime, UntilStartTime int64
+	if decodedJson.FromStartTime == "" {
+		FromStartTime = time.Now().AddDate(0, 0, -30).UnixNano()
+	} else {
+		tmpTime, err := time.Parse(time.RFC3339Nano, decodedJson.FromStartTime)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'from_start_time' could not be parsed into a time object which "+
+					"is RFC3339 with nanoseconds compliant due to error: %s", decodedJson.FromStartTime, err.Error()))
+			return
+		}
+		FromStartTime = tmpTime.UnixNano()
+	}
+
+	if decodedJson.UntilStartTime == "" {
+		UntilStartTime = time.Now().UnixNano()
+	} else {
+		tmpTime, err := time.Parse(time.RFC3339Nano, decodedJson.UntilStartTime)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'until_start_time' could not be parsed into a time object which "+
+					"is RFC3339 with nanoseconds compliant due to error: %s", decodedJson.UntilStartTime, err.Error()))
+			return
+		}
+		UntilStartTime = tmpTime.UnixNano()
+		if UntilStartTime < FromStartTime {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson,
+				fmt.Sprintf("Provided value '%s' for 'until_start_time' represents a value which is earlier "+
+					"than 'from_start_time' 's own value of %s", decodedJson.UntilStartTime,
+					time.Unix(0, FromStartTime).Format(time.RFC3339Nano)))
+			return
+		}
+	}
+
+	var offset uint64 = 0
+	if decodedJson.Next != "" {
+		limit, offset, FromStartTime, UntilStartTime, err = decodeNextTokenOfReportBackupList(decodedJson.Next)
+		if err != nil {
+			JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+			return
+		}
+	}
+
+	backupConfig, dataDir, backupJobsState, ok := resolveBackupConfigForRestoreReport(srvSrc, jobName, w, loggingContext+".handlerPostReportRestoreList")
+	if !ok {
+		return
+	}
+
+	dbResults, err := getRowsForHandlerPostReportRestoreList(dataDir, backupConfig, backupJobsState, limit, offset, FromStartTime, UntilStartTime)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+		return
+	}
+
+	next := ""
+	if uint64(len(dbResults)) == limit {
+		next = buildNextTokenOfReportBackupList(limit, offset+limit, FromStartTime, UntilStartTime)
+	}
+
+	JSONSuccessWithResultPaginated(w, "success", "success", next, dbResults)
+}
+
+// resolveBackupConfigForRestoreReport validates that the requested backup definition exists in
+// the config, returns the list of its targets (needed to locate per-target restore DBs) and the
+// current BackupJobsState. On failure it writes an error to $w and returns ok=false.
+func resolveBackupConfigForRestoreReport(srvSrc SrvData, jobName string, w http.ResponseWriter, logContext string) (shared.ConfigBackup, string, *shared.BackupJobsState, bool) {
+	srvCopy := srvSrc.GetCopyWithLock(logContext)
+	configCopy := srvCopy.globalcfg.GetCopyWithLock(logContext)
+	configCopy.Mutex.RLock()
+	dataDir := configCopy.DataDir
+	var found bool
+	var backupCfg shared.ConfigBackup
+	for _, b := range configCopy.Backup {
+		if b.Name == jobName {
+			backupCfg = b
+			found = true
+			break
+		}
+	}
+	configCopy.Mutex.RUnlock()
+	if !found {
+		msg := fmt.Sprintf("No backup job definition was found matching name: %s", jobName)
+		JSONError(w, http.StatusNotFound, HttpErrNotFound, msg)
+		return shared.ConfigBackup{}, "", nil, false
+	}
+	backupJobsState := srvSrc.GetJobState(logContext)
+	return backupCfg, dataDir, backupJobsState, true
+}
+
+// getRowsForHandlerPostReportRestoreList aggregates restore-job rows across all per-target
+// restore databases for the supplied backup definition. Pagination is applied to the merged,
+// sorted result set. Each per-target DB is opened and closed in isolation so a missing DB file
+// (no restore has ever run for that target) is silently skipped.
+func getRowsForHandlerPostReportRestoreList(dataDir string, backupCfg shared.ConfigBackup,
+	backupJobsState *shared.BackupJobsState, limit uint64, offset uint64, earliestStart int64,
+	latestStart int64) ([]ReportBackupListDbResults, error) {
+
+	merged := make([]ReportBackupListDbResults, 0)
+	for _, t := range backupCfg.Target {
+		rows, err := queryOneTargetRestoreJobsList(dataDir, backupCfg.Name, t.Name, backupJobsState, earliestStart, latestStart)
+		if err != nil {
+			return nil, err
+		}
+		merged = append(merged, rows...)
+	}
+	// Stable sort by StartTime ASC to mirror the legacy "ORDER BY start_time" semantics.
+	sort.SliceStable(merged, func(i, j int) bool {
+		return merged[i].StartTime < merged[j].StartTime
+	})
+	// Apply offset + limit on the merged result.
+	if offset >= uint64(len(merged)) {
+		return []ReportBackupListDbResults{}, nil
+	}
+	end := offset + limit
+	if end > uint64(len(merged)) {
+		end = uint64(len(merged))
+	}
+	return merged[offset:end], nil
+}
+
+// queryOneTargetRestoreJobsList opens the restore DB for one (backup, target) pair and returns
+// the jobs rows that fall in the supplied start-time window. Returns an empty slice (no error)
+// when the DB file does not exist yet (no restore has ever been started for that target).
+func queryOneTargetRestoreJobsList(dataDir string, backupName string, targetName string,
+	backupJobsState *shared.BackupJobsState, earliestStart int64, latestStart int64) ([]ReportBackupListDbResults, error) {
+
+	dbPath, err := database.GetRestoreDbFilePath(dataDir, backupName, targetName)
+	if err != nil {
+		return nil, err
+	}
+	exists, err := database.DbFileExists(dbPath)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return []ReportBackupListDbResults{}, nil
+	}
+	dbKey := database.GetRestoreDbKey(backupName, targetName)
+	db, err := database.OpenDb(dataDir, dbKey, true, backupJobsState, 15*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("opening restore DB for backup '%s' target '%s': %w", backupName, targetName, err)
+	}
+	defer database.DisconnectFromDb(dbKey, backupJobsState, db)
+
+	stmts, err := dbops.PrepareRestore(db)
+	if err != nil {
+		return nil, err
+	}
+	// Over-fetch: no LIMIT/OFFSET. Pagination is applied on the merged result in the caller.
+	rows, err := db.Query(stmts.ReportJobsListQuery, backupName, earliestStart, latestStart, uint64(1<<62), 0)
+	if err != nil {
+		return nil, fmt.Errorf("querying restore DB for backup '%s' target '%s': %w", backupName, targetName, err)
+	}
+	defer func() {
+		if cErr := rows.Close(); cErr != nil {
+			logger.Warnf("While closing restore-jobs query rows for backup '%s' target '%s': %s", backupName, targetName, cErr)
+		}
+	}()
+
+	results := make([]ReportBackupListDbResults, 0)
+	var dbBackupName, dbTargetName string
+	var tmpStartTime, tmpEndTime int64
+	for rows.Next() {
+		var row ReportBackupListDbResults
+		if err := rows.Scan(&dbBackupName, &dbTargetName, &row.JobId, &tmpStartTime, &tmpEndTime, &row.State); err != nil {
+			return nil, err
+		}
+		row.Name = dbBackupName
+		row.StartTime = time.Unix(0, tmpStartTime).Format(time.RFC3339Nano)
+		row.EndTime = time.Unix(0, tmpEndTime).Format(time.RFC3339Nano)
+		results = append(results, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (srvSrc SrvData) handlerPostReportRestoreShow(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		return
+	}
+	var decodedJson ReportRestoreJob
+	err = json.Unmarshal(bodyBytes, &decodedJson)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
+	if decodedJson.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprint("'name' key is mandatory. The name"+
+			" is needed in order to know what backup definition you're requesting restore reports for"))
+		return
+	}
+	jobName := decodedJson.Name
+
+	if decodedJson.JobId == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, fmt.Sprintf("'job_id' key is mandatory. The job id"+
+			" is needed in order to know what specific restore job run of backup definition '%s' you're requesting reports for", jobName))
+		return
+	}
+	jobId := decodedJson.JobId
+
+	backupConfig, dataDir, backupJobsState, ok := resolveBackupConfigForRestoreReport(srvSrc, jobName, w, loggingContext+".handlerPostReportRestoreShow")
+	if !ok {
+		return
+	}
+
+	dbResult, numResults, err := getRowsForHandlerPostReportRestoreShow(dataDir, backupConfig, backupJobsState, jobId)
+	if err != nil {
+		if numResults == 0 {
+			JSONError(w, http.StatusNotFound, HttpErrNotFound, err.Error())
+			return
+		}
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+		return
+	}
+
+	JSONSuccessWithResult(w, "success", "success", dbResult)
+}
+
+// getRowsForHandlerPostReportRestoreShow walks every target's restore DB looking for a row with
+// the supplied jobId. The first match wins. Returns (result, 0, err) when no match is found so
+// the caller can distinguish "not found" from "internal error".
+func getRowsForHandlerPostReportRestoreShow(dataDir string, backupCfg shared.ConfigBackup,
+	backupJobsState *shared.BackupJobsState, jobId string) (shared.BackupJobStatus, int, error) {
+
+	for _, t := range backupCfg.Target {
+		result, found, err := lookupRestoreJobShowInOneTarget(dataDir, backupCfg.Name, t.Name, backupJobsState, jobId)
+		if err != nil {
+			return shared.BackupJobStatus{}, 1, err
+		}
+		if found {
+			return result, 1, nil
+		}
+	}
+	msg := fmt.Sprintf("The database query used to retrieve the job report for restore "+
+		"job '%s' having job id '%s' didn't return any result. Please check that the supplied job id is "+
+		"correct", backupCfg.Name, jobId)
+	logger.Error(msg)
+	return shared.BackupJobStatus{}, 0, errors.New(msg)
+}
+
+// lookupRestoreJobShowInOneTarget opens one (backup, target) restore DB (if the file exists) and
+// looks for a row with the supplied jobId. Returns (result, true, nil) when found and parsed
+// successfully, (zero, false, nil) when the DB file is missing or the row is not present, and
+// a non-nil error when something went wrong (e.g. the stored report is corrupt or the job is
+// still marked 'crashed' with no report).
+func lookupRestoreJobShowInOneTarget(dataDir string, backupName string, targetName string,
+	backupJobsState *shared.BackupJobsState, jobId string) (shared.BackupJobStatus, bool, error) {
+
+	dbPath, err := database.GetRestoreDbFilePath(dataDir, backupName, targetName)
+	if err != nil {
+		return shared.BackupJobStatus{}, false, err
+	}
+	exists, err := database.DbFileExists(dbPath)
+	if err != nil {
+		return shared.BackupJobStatus{}, false, err
+	}
+	if !exists {
+		return shared.BackupJobStatus{}, false, nil
+	}
+	dbKey := database.GetRestoreDbKey(backupName, targetName)
+	db, err := database.OpenDb(dataDir, dbKey, true, backupJobsState, 15*time.Second)
+	if err != nil {
+		return shared.BackupJobStatus{}, false, fmt.Errorf("opening restore DB for backup '%s' target '%s': %w", backupName, targetName, err)
+	}
+	defer database.DisconnectFromDb(dbKey, backupJobsState, db)
+
+	stmts, err := dbops.PrepareRestore(db)
+	if err != nil {
+		return shared.BackupJobStatus{}, false, err
+	}
+	row := db.QueryRow(stmts.ReportJobShowQuery, backupName, jobId)
+	var rawResult, state string
+	if err := row.Scan(&rawResult, &state); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return shared.BackupJobStatus{}, false, nil
+		}
+		return shared.BackupJobStatus{}, false, err
+	}
+	if state == "crashed" && rawResult == "" {
+		msg := fmt.Sprintf("Job report for restore job '%s' having job id '%s' could not be retrieved because "+
+			"the job is marked as 'crashed' and no report is available for it", backupName, jobId)
+		logger.Debug(msg)
+		return shared.BackupJobStatus{}, true, errors.New(msg)
+	}
+	var result shared.BackupJobStatus
+	if err := json.Unmarshal([]byte(rawResult), &result); err != nil {
+		msg := fmt.Sprintf("The database query used to retrieve the job report for restore "+
+			"job '%s' having job id '%s' returned a result which is corrupted", backupName, jobId)
+		logger.Error(msg)
+		return shared.BackupJobStatus{}, true, errors.New(msg)
+	}
+	return result, true, nil
+}
+
 func (srvSrc SrvData) handlerPostReportBackupFileList(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	globals.Stats.IncrementRoutines("httpd_handlers")
 	defer globals.Stats.DecrementRoutines("httpd_handlers")
@@ -684,7 +1035,7 @@ func getRowsForHandlerPostReportBackupFileListWithJobId(dbData shared.DbData, jo
 	var rows *sql.Rows
 
 	if descend {
-		rows, err = dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobIdAndDescend, jobId, parentDir, parentDir+pathSeparator, limit, offset)
+		rows, err = dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobIdAndDescend, jobId, parentDir, parentDir+pathSeparator+"%", limit, offset)
 	} else {
 		rows, err = dbData.Db.Query(dbData.PreparedStatements.ReportBackupJobsFileListWithJobId, jobId, parentDir, limit, offset)
 	}

@@ -94,9 +94,9 @@ type CommWithSchedulerForRestore struct {
 // ReceiveRestoreCommand is the message sent from HTTP handlers to the scheduler for a restore operation.
 type ReceiveRestoreCommand struct {
 	Id string
-	// one of "start" or "stop"
+	// one of "start", "stop" or "resume"
 	Command string
-	// uuid of the restore job. Makes sense only for "stop" command
+	// uuid of the restore job. Required for "stop" and "resume"; ignored for "start"
 	RestoreJobId string
 	// name of the backup definition to restore from (as defined in the config file)
 	Name string
@@ -605,6 +605,23 @@ MainLoop:
 			SendMsgToWatcher(msg, jobs.WatchMsgReceiver)
 
 			break
+		}
+	}
+}
+
+// SeedCounter overwrites an existing StatsCounters entry to a specific value. It is used when a
+// restore resume reads the counter state from the per-target restore database and needs to
+// pre-populate the in-memory counters so that watch clients see a consistent total including the
+// work done before the crash. No watch message is emitted (seeding is not an observable event).
+func (jobs *BackupJobsState) SeedCounter(BackupJobName string, JobId string, counterName string, value uint64) {
+	jobs.Lock.Lock()
+	defer jobs.Lock.Unlock()
+	for _, job := range jobs.Running {
+		if BackupJobName == job.Name && (JobId == "" || job.BackupJobId == JobId) {
+			if _, ok := job.StatsCounters[counterName]; ok {
+				job.StatsCounters[counterName] = value
+			}
+			return
 		}
 	}
 }

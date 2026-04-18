@@ -672,6 +672,132 @@
         "security": []
       }
     },
+    "/report/restore/list": {
+      "post": {
+        "tags": [
+          "report"
+        ],
+        "summary": "List available reports for previously ran restore jobs.",
+        "description": "List available reports for previously ran restore jobs of a given backup definition. Restore jobs are stored in the same database as the backup definition they restore from.",
+        "operationId": "ReportRestoreList",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup job definition for which to list available restore reports",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ReportRestoreListInput"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseReportRestoreList"
+            }
+          },
+          "400": {
+            "description": "The request was malformed or mandatory key + value pairs were missing from the request or were incorrect",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "404": {
+            "description": "No backup definition matches the provided name",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "503": {
+            "description": "The request should be retried later",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/report/restore/show": {
+      "post": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Show report for a restore job which ran in the past.",
+        "description": "Retrieve the report for a restore job which ran in the past and is no longer in a running state.",
+        "operationId": "ReportRestoreShow",
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "description": "name of the backup definition and restore job id",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RestoreJobNameAndRequiredId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseReportRestoreShow"
+            }
+          },
+          "400": {
+            "description": "The request was malformed or mandatory key + value pairs were missing from the request or were incorrect",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "404": {
+            "description": "No backup definition matches the provided name or no restore job matches the provided job id",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/report/notification/test": {
       "post": {
         "tags": [
@@ -2161,6 +2287,99 @@
       }
     },
     "ApiResponseReportBackupShow": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "success"
+        },
+        "message": {
+          "type": "string",
+          "example": "success"
+        },
+        "result": {
+          "$ref": "#/definitions/ResultBackupJobStatus"
+        }
+      }
+    },
+    "ReportRestoreListInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server",
+          "description": "Name of the backup job definition for which the restore report list is requested"
+        },
+        "next": {
+          "type": "string",
+          "example": "NTAwOjUwMAo=",
+          "description": "Pagination token received from a previous request. Leave empty otherwise."
+        },
+        "max_results": {
+          "type": "integer",
+          "example": 100,
+          "description": "maximum results to return in one response. If more results are available then a $next token will be returned in the response and it is expected said $next token will be supplied for a subsequent request. If a $next token is specified then the value of $max_results will be ignored. Default value is 100 and the maximum value is 1000."
+        },
+        "from_start_time": {
+          "type": "string",
+          "example": "2018-06-02T16:38:55.676712775+10:00",
+          "description": "Select only reports which have a job start_time which equals or is newer than the supplied value. If unspecified then a value equal to \"30 days ago\" will be used. If the $next parameter is supplied then this field will be ignored. Date+time format is RFC3339 with nanosecond support."
+        },
+        "until_start_time": {
+          "type": "string",
+          "example": "2018-06-22T13:21:37.136712172+10:00",
+          "description": "Select only reports which have a job start_time which equals or is up to (earlier than) the supplied value. If unspecified then a value equal to \"now\" will be used. If the $next parameter is supplied then this field will be ignored. Date+time format is RFC3339 with nanosecond support."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "RestoreJobNameAndRequiredId": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "example": "generic-server",
+          "description": "Name of the backup job definition from which the restore was performed"
+        },
+        "job_id": {
+          "type": "string",
+          "example": "163A61FE-2205-4EB2-A0CB-B19A033C1CE3",
+          "description": "UUID of the restore job run for which to show the report",
+          "pattern": "^([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}|)$"
+        }
+      },
+      "required": [
+        "name",
+        "job_id"
+      ]
+    },
+    "ApiResponseReportRestoreList": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "success"
+        },
+        "message": {
+          "type": "string",
+          "example": "success"
+        },
+        "next": {
+          "type": "string",
+          "example": "NTAwOjUwMAo=",
+          "description": "Next token. Non empty values signal that this is a partial, paginated result and subsequent requests are required in order to get the full result set."
+        },
+        "result": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResultReportBackupList"
+          }
+        }
+      }
+    },
+    "ApiResponseReportRestoreShow": {
       "type": "object",
       "properties": {
         "code": {

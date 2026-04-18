@@ -221,7 +221,7 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 		"rf INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND rf.parent=? ORDER BY local_path ASC LIMIT ? OFFSET ?"
 
 	PreparedStatements.ReportBackupJobsFileListWithJobIdAndDescend = "SELECT local_path, parent, upload_date, rf.target, type, size, delete_marker FROM remote_files " +
-		"rf INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND (rf.parent=? OR rf.parent LIKE '?%') ORDER BY local_path ASC LIMIT ? OFFSET ?"
+		"rf INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND (rf.parent=? OR rf.parent LIKE ?) ORDER BY local_path ASC LIMIT ? OFFSET ?"
 
 	// adds an entry for each top level item in the config file (backup.paths[]) which is being processed
 	PreparedStatements.TopItemsInsert = "INSERT INTO top_items (job_id, path, type) VALUES (?, ?, ?)"
