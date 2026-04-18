@@ -150,7 +150,7 @@ func ReportShow(config clientConfig.Client, jsonOutput bool, jobName, jobId stri
 		}
 		os.Exit(0)
 	}
-	clientCommon.PrintBackupStatus(decoded.Result, true)
+	clientCommon.PrintRestoreStatus(decoded.Result, true)
 }
 
 func printRestoreReportList(decoded ReportListResponse, showHeader bool) {

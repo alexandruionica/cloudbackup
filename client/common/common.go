@@ -141,3 +141,34 @@ func PrintBackupStatus(decodedJson shared.BackupJobStatus, alwaysExpand bool) {
 	}
 	fmt.Printf("Next scheduled run for this job: %s\n", nextRun)
 }
+
+// PrintRestoreStatus is the restore-side counterpart of PrintBackupStatus. Restore jobs track a
+// different, much smaller set of counters (populated in restore/restore.go and seeded in
+// shared.BackupJobsState.MarkRestoreRunning), so reusing PrintBackupStatus would render every
+// value as 0. alwaysExpand mirrors the backup printer: when false, only running jobs show the
+// expanded body.
+func PrintRestoreStatus(decodedJson shared.BackupJobStatus, alwaysExpand bool) {
+	fmt.Printf("Name: %s\n", decodedJson.Name)
+	fmt.Printf("State: %s\n", decodedJson.State)
+	if decodedJson.State == "running" || alwaysExpand {
+		fmt.Printf("Current operation: %s\n", decodedJson.StatsText["current_operation"])
+		fmt.Printf("Job id: %s\n", decodedJson.BackupJobId)
+		fmt.Printf("Start time: %s\n", decodedJson.StartTime.String())
+		if !decodedJson.EndTime.IsZero() && decodedJson.State != "running" {
+			fmt.Printf("End time: %s\n", decodedJson.EndTime.String())
+			fmt.Printf("Duration: %s\n", decodedJson.EndTime.Sub(decodedJson.StartTime).Round(time.Second))
+		} else {
+			fmt.Printf("Duration so far: %s\n", time.Since(decodedJson.StartTime).Round(time.Second))
+		}
+		fmt.Printf(" 1 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate1Min)))
+		fmt.Printf(" 5 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate5Min)))
+		fmt.Printf("15 minute rate: %s/s\n", humanize.Bytes(uint64(decodedJson.Rate15Min)))
+		fmt.Printf("Files restored: %d\n", decodedJson.StatsCounters["restored_files"])
+		fmt.Printf("Directories restored: %d\n", decodedJson.StatsCounters["restored_directories"])
+		fmt.Printf("Symlinks restored: %d\n", decodedJson.StatsCounters["restored_symlinks"])
+		fmt.Printf("Files that failed to restore: %d\n", decodedJson.StatsCounters["failed_to_restore_files"])
+		fmt.Printf("Items skipped because they were marked deleted: %d\n", decodedJson.StatsCounters["skipped_delete_markers"])
+		fmt.Printf("Bytes written to disk for restored files: %s\n", humanize.Bytes(decodedJson.StatsCounters["bytes_restored"]))
+		fmt.Printf("Current file being processed: %s\n", decodedJson.StatsText["current_file"])
+	}
+}
