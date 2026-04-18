@@ -184,6 +184,14 @@ func ValidateBackup(backups []shared.ConfigBackup, logError bool) error {
 			return errors.New(msg)
 		}
 
+		// The backup name is embedded in per-target restore DB filenames using "__" as a
+		// separator (see database.RestoreDbSeparator), and it is also used directly as a
+		// file name for the backup DB. Reject names that would make the filename ambiguous
+		// or would escape the data directory.
+		if err := validateBackupOrTargetName("Backup", backup.Name, logError); err != nil {
+			return err
+		}
+
 		if backup.Encrypt && backup.EncryptPass == "" {
 			msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'encrypt=true' but 'encrypt_pass' is not"+
 				" set. Set a password or disable encryption", i, backup.Name)
@@ -321,6 +329,13 @@ func ValidateBackupTarget(targets []shared.ConfigBackupTarget, logError bool, Ba
 			return errors.New(msg)
 		} else {
 			names = append(names, target.Name)
+		}
+
+		// Target names are embedded in per-target restore DB filenames using "__" as a
+		// separator. Reject names containing "__" or path separators so the filename
+		// split is unambiguous and cannot escape the data directory.
+		if err := validateBackupOrTargetName("Target", target.Name, logError); err != nil {
+			return err
 		}
 
 		// check ratelimit is valid
@@ -828,6 +843,42 @@ func ValidateUser(config shared.CfgTemplate, logError bool, hiddenPass bool) err
 				return errors.New(msg)
 			}
 		}
+	}
+	return nil
+}
+
+// validateBackupOrTargetName rejects names that would produce ambiguous or unsafe
+// on-disk filenames for the per-target restore SQLite databases. Per restore DB
+// naming (restore__<backupName>__<targetName>.sqlite), the separator token MUST NOT
+// appear inside either component, and neither component may contain a path
+// separator since that would let a crafted name escape the data directory.
+// $kind is "Backup" or "Target" and is used solely in the error message.
+func validateBackupOrTargetName(kind string, name string, logError bool) error {
+	if strings.Contains(name, database.RestoreDbSeparator) {
+		msg := fmt.Sprintf("%s 'name=%s' contains the reserved substring '%s' which is used internally as a "+
+			"separator in restore database filenames. Choose a different name",
+			kind, name, database.RestoreDbSeparator)
+		if logError {
+			logger.Error(msg)
+		}
+		return errors.New(msg)
+	}
+	if strings.ContainsAny(name, `/\`) {
+		msg := fmt.Sprintf("%s 'name=%s' contains a path separator character (one of '/' or '\\'). %s names are "+
+			"used as filename components and are not allowed to contain path separators",
+			kind, name, kind)
+		if logError {
+			logger.Error(msg)
+		}
+		return errors.New(msg)
+	}
+	if name == "." || name == ".." {
+		msg := fmt.Sprintf("%s 'name=%s' is a reserved name that cannot be used because it would produce an "+
+			"ambiguous filename", kind, name)
+		if logError {
+			logger.Error(msg)
+		}
+		return errors.New(msg)
 	}
 	return nil
 }

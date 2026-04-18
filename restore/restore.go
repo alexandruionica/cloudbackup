@@ -8,6 +8,7 @@ import (
 	"cloudbackup/utils"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -45,12 +46,21 @@ type Result struct {
 	State             string
 	Err               error
 	RestoredDirectory string
+	// TargetName is filled in once the restore package has resolved which target the job is
+	// actually reading from (important when the caller omitted TargetName from the Request and the
+	// default first-target fallback kicked in). cleanupAfterRestore needs this to locate the
+	// correct per-target restore database when it writes the final jobs-table row.
+	TargetName string
 }
 
 // Do runs a restore job end to end. It opens the backup's SQLite database, resolves the list of
-// files to restore, downloads each file into RestoredDirectory, and updates counters in
-// backupJobsState as it goes. It MUST be invoked after backupJobsState.MarkRestoreRunning has been
-// called for (jobName, restoreJobId) so that ctx/cancel/counters exist in Running[].
+// files to restore, persists the manifest and per-file progress into a per-target restore
+// database, downloads each file into RestoredDirectory, and updates counters both in the restore
+// DB (for durability) and in backupJobsState (for live watch streams). It MUST be invoked after
+// backupJobsState.MarkRestoreRunning has been called for (jobName, restoreJobId) so that
+// ctx/cancel/counters exist in Running[]. Do() is idempotent: calling it again with a
+// RestoreJobId that already has a row in the restore DB becomes a resume — only rows with state
+// != 'done' are re-attempted.
 func Do(jobName string, req Request, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState) Result {
 
@@ -70,6 +80,9 @@ func Do(jobName string, req Request, serverConfigCopy shared.CfgTemplate,
 	if err != nil {
 		return Result{State: "failed", Err: err}
 	}
+	// Make sure the resolved target name is available to the caller so cleanupAfterRestore can
+	// find the right per-target restore DB when it writes the final job row.
+	req.TargetName = target.Name
 
 	// Only the chosen target is initialised — no reason to spin up connections to stores we are not
 	// going to read from for this restore.
@@ -77,53 +90,74 @@ func Do(jobName string, req Request, serverConfigCopy shared.CfgTemplate,
 	singleTargetConfig.Target = []shared.ConfigBackupTarget{target}
 	objectStores, err := objectstore.GetObjectStores(ctx, singleTargetConfig, backupJobsState)
 	if err != nil {
-		return Result{State: "failed", Err: fmt.Errorf("could not initialise the object store for target '%s': %w", target.Name, err)}
+		return Result{State: "failed", Err: fmt.Errorf("could not initialise the object store for target '%s': %w", target.Name, err), TargetName: target.Name}
 	}
 	if len(objectStores) != 1 {
-		return Result{State: "failed", Err: fmt.Errorf("expected exactly one object store for target '%s' but got %d", target.Name, len(objectStores))}
+		return Result{State: "failed", Err: fmt.Errorf("expected exactly one object store for target '%s' but got %d", target.Name, len(objectStores)), TargetName: target.Name}
 	}
 	objStore := objectStores[0]
 
 	restoreDir, err := resolveRestoreDir(req, serverConfigCopy, jobName)
 	if err != nil {
-		return Result{State: "failed", Err: err}
+		return Result{State: "failed", Err: err, TargetName: target.Name}
 	}
 	if err := os.MkdirAll(restoreDir, 0o755); err != nil {
-		return Result{State: "failed", Err: fmt.Errorf("could not create restore directory '%s': %w", restoreDir, err)}
+		return Result{State: "failed", Err: fmt.Errorf("could not create restore directory '%s': %w", restoreDir, err), TargetName: target.Name}
 	}
 
-	db, err := database.Start(serverConfigCopy.DataDir, jobName, backupJobsState)
+	serverConfigCopy.Mutex.RLock()
+	dataDir := serverConfigCopy.DataDir
+	serverConfigCopy.Mutex.RUnlock()
+
+	// Backup DB is still needed for source-job validation and manifest resolution.
+	backupDb, err := database.Start(dataDir, jobName, backupJobsState)
 	if err != nil {
-		return Result{State: "failed", Err: fmt.Errorf("could not open database for backup definition '%s': %w", jobName, err), RestoredDirectory: restoreDir}
+		return Result{State: "failed", Err: fmt.Errorf("could not open database for backup definition '%s': %w", jobName, err), RestoredDirectory: restoreDir, TargetName: target.Name}
 	}
-	defer database.DisconnectFromDb(jobName, backupJobsState, db)
+	defer database.DisconnectFromDb(jobName, backupJobsState, backupDb)
 
-	if err := validateSourceJobId(db, jobName, req.SourceBackupJobId); err != nil {
-		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir}
+	if err := validateSourceJobId(backupDb, jobName, req.SourceBackupJobId); err != nil {
+		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir, TargetName: target.Name}
 	}
 
-	jobStartTime, err := backupJobsState.GetStartTime(jobName, req.RestoreJobId, loggingContext+".Do")
+	// Restore DB is per-(backup, target) and holds the manifest, per-file state and counters.
+	restoreDb, err := database.StartRestoreDb(dataDir, jobName, target.Name, backupJobsState)
 	if err != nil {
-		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir}
+		return Result{State: "failed", Err: fmt.Errorf("could not open restore database for backup '%s' target '%s': %w", jobName, target.Name, err), RestoredDirectory: restoreDir, TargetName: target.Name}
 	}
-	if err := dbops.AddJobDetails(db, req.RestoreJobId, jobName, "restore", jobStartTime); err != nil {
-		return Result{State: "failed", Err: fmt.Errorf("could not add restore job record to database: %w", err), RestoredDirectory: restoreDir}
-	}
+	restoreDbKey := database.GetRestoreDbKey(jobName, target.Name)
+	defer database.DisconnectFromDb(restoreDbKey, backupJobsState, restoreDb)
 
-	items, err := fetchItems(db, req)
+	stmts, err := dbops.PrepareRestore(restoreDb)
 	if err != nil {
-		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir}
+		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir, TargetName: target.Name}
 	}
 
-	if len(req.Exclusions) > 0 {
-		items, err = applyExclusions(items, req.Exclusions)
-		if err != nil {
-			return Result{State: "failed", Err: fmt.Errorf("error applying exclusions: %w", err), RestoredDirectory: restoreDir}
+	// A row for this job id in the restore DB means this is a resume of a previously started
+	// restore. The manifest is already on disk; we only need to seed the in-memory counters and
+	// flip the state back to 'started'.
+	isResume, err := dbops.RestoreJobExists(restoreDb, stmts, req.RestoreJobId)
+	if err != nil {
+		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir, TargetName: target.Name}
+	}
+
+	if !isResume {
+		if err := initFreshRestoreJob(restoreDb, stmts, backupDb, req, jobName, target.Name, restoreDir, backupJobsState); err != nil {
+			return Result{State: "failed", Err: err, RestoredDirectory: restoreDir, TargetName: target.Name}
+		}
+	} else {
+		if err := resumeRestoreJob(restoreDb, stmts, req.RestoreJobId, jobName, backupJobsState); err != nil {
+			return Result{State: "failed", Err: err, RestoredDirectory: restoreDir, TargetName: target.Name}
 		}
 	}
 
+	items, err := dbops.LoadPendingManifest(restoreDb, stmts, req.RestoreJobId)
+	if err != nil {
+		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir, TargetName: target.Name}
+	}
 	if len(items) == 0 {
-		return Result{State: "failed", Err: errors.New("no files matched the restore request"), RestoredDirectory: restoreDir}
+		// Resume landed on an already-complete job. Treat as a no-op success.
+		return Result{State: "finished", RestoredDirectory: restoreDir, TargetName: target.Name}
 	}
 
 	backupJobsState.UpdateStatsText(jobName, "current_operation", "Restoring files", "", "")
@@ -132,29 +166,218 @@ func Do(jobName string, req Request, serverConfigCopy shared.CfgTemplate,
 	for _, item := range items {
 		select {
 		case <-ctx.Done():
-			return Result{State: "cancelled", RestoredDirectory: restoreDir}
+			backupJobsState.UpdateStatsText(jobName, "current_operation", "", "", "")
+			return Result{State: "cancelled", RestoredDirectory: restoreDir, TargetName: target.Name}
 		default:
 		}
 
-		if item.deleteMarker {
-			backupJobsState.IncrementCounter(jobName, "skipped_delete_markers", item.localPath, item.typ, "restore", "")
+		if item.DeleteMarker {
+			now := time.Now().UnixNano()
+			backupJobsState.IncrementCounter(jobName, "skipped_delete_markers", item.LocalPath, item.Type, "restore", "")
+			if err := dbops.BumpCounter(restoreDb, stmts, req.RestoreJobId, "skipped_delete_markers", 1); err != nil {
+				logger.Warnf("Could not bump skipped_delete_markers counter in restore DB: %s", err)
+			}
+			if err := dbops.SetFileState(restoreDb, stmts, req.RestoreJobId, item.FileUuid, "skipped", "", now, now); err != nil {
+				logger.Warnf("Could not set file state to 'skipped' in restore DB: %s", err)
+			}
 			continue
 		}
 
-		if restoreOne(ctx, objStore, item, restoreDir, jobName, backupJobsState) {
+		startTimeNs := time.Now().UnixNano()
+		if err := dbops.SetFileState(restoreDb, stmts, req.RestoreJobId, item.FileUuid, "in_progress", "", startTimeNs, 0); err != nil {
+			logger.Warnf("Could not set file state to 'in_progress' in restore DB: %s", err)
+		}
+
+		outcome := restoreOne(ctx, objStore, item, restoreDir, jobName, backupJobsState)
+		endTimeNs := time.Now().UnixNano()
+
+		switch outcome.state {
+		case "done":
+			if err := dbops.SetFileState(restoreDb, stmts, req.RestoreJobId, item.FileUuid, "done", "", startTimeNs, endTimeNs); err != nil {
+				logger.Warnf("Could not set file state to 'done' in restore DB: %s", err)
+			}
+			switch item.Type {
+			case "dir":
+				_ = dbops.BumpCounter(restoreDb, stmts, req.RestoreJobId, "restored_directories", 1)
+			case "symlink":
+				_ = dbops.BumpCounter(restoreDb, stmts, req.RestoreJobId, "restored_symlinks", 1)
+			case "file":
+				_ = dbops.BumpCounter(restoreDb, stmts, req.RestoreJobId, "restored_files", 1)
+				if item.Size > 0 {
+					_ = dbops.BumpCounter(restoreDb, stmts, req.RestoreJobId, "bytes_restored", item.Size)
+				}
+			}
 			restoredAny = true
+		case "cancelled":
+			// Context cancellation: leave the row with whatever state the last SetFileState
+			// wrote (normally 'in_progress'). A later resume will retry it. We do not flip it
+			// to 'cancelled' because the in-flight download may still be writing to disk.
+			backupJobsState.UpdateStatsText(jobName, "current_operation", "", "", "")
+			return Result{State: "cancelled", RestoredDirectory: restoreDir, TargetName: target.Name}
+		default: // "failed"
+			if err := dbops.SetFileState(restoreDb, stmts, req.RestoreJobId, item.FileUuid, "failed", outcome.errMsg, startTimeNs, endTimeNs); err != nil {
+				logger.Warnf("Could not set file state to 'failed' in restore DB: %s", err)
+			}
+			if err := dbops.BumpCounter(restoreDb, stmts, req.RestoreJobId, "failed_to_restore_files", 1); err != nil {
+				logger.Warnf("Could not bump failed_to_restore_files counter in restore DB: %s", err)
+			}
 		}
 	}
 
 	backupJobsState.UpdateStatsText(jobName, "current_operation", "", "", "")
 
 	if ctx.Err() == context.Canceled {
-		return Result{State: "cancelled", RestoredDirectory: restoreDir}
+		return Result{State: "cancelled", RestoredDirectory: restoreDir, TargetName: target.Name}
 	}
 	if !restoredAny {
-		return Result{State: "failed", Err: errors.New("all files failed to restore"), RestoredDirectory: restoreDir}
+		return Result{State: "failed", Err: errors.New("all files failed to restore"), RestoredDirectory: restoreDir, TargetName: target.Name}
 	}
-	return Result{State: "finished", RestoredDirectory: restoreDir}
+	return Result{State: "finished", RestoredDirectory: restoreDir, TargetName: target.Name}
+}
+
+// initFreshRestoreJob writes the jobs-table row, resolves the manifest from the backup DB,
+// applies exclusions, and persists each manifest item with state 'pending' in the restore DB.
+func initFreshRestoreJob(restoreDb *sql.DB, stmts shared.RestoreDbPreparedStatements, backupDb *sql.DB,
+	req Request, jobName string, targetName string, restoreDir string, backupJobsState *shared.BackupJobsState) error {
+
+	jobStartTime, err := backupJobsState.GetStartTime(jobName, req.RestoreJobId, loggingContext+".initFreshRestoreJob")
+	if err != nil {
+		return err
+	}
+
+	requestFilesJson, err := json.Marshal(req.Files)
+	if err != nil {
+		return fmt.Errorf("could not encode request file list for restore job: %w", err)
+	}
+	exclusionsJson, err := json.Marshal(req.Exclusions)
+	if err != nil {
+		return fmt.Errorf("could not encode exclusions for restore job: %w", err)
+	}
+	if err := dbops.InsertRestoreJob(restoreDb, stmts, req.RestoreJobId, jobName, targetName, req.SourceBackupJobId,
+		jobStartTime.UnixNano(), restoreDir, req.AllFiles, string(requestFilesJson), string(exclusionsJson), runtime.GOOS); err != nil {
+		return fmt.Errorf("could not add restore job record to database: %w", err)
+	}
+
+	items, err := fetchItems(backupDb, req)
+	if err != nil {
+		return err
+	}
+	if len(req.Exclusions) > 0 {
+		items, err = applyExclusions(items, req.Exclusions)
+		if err != nil {
+			return fmt.Errorf("error applying exclusions: %w", err)
+		}
+	}
+	if len(items) == 0 {
+		return errors.New("no files matched the restore request")
+	}
+
+	rows := make([]dbops.RestoreFileRow, 0, len(items))
+	for _, it := range items {
+		rows = append(rows, dbops.RestoreFileRow{
+			FileUuid:      it.uuid,
+			LocalPath:     it.localPath,
+			Type:          it.typ,
+			LinkTarget:    it.linkTarget,
+			Size:          it.size,
+			Mtime:         it.mtime,
+			Ctime:         it.ctime,
+			Owner:         it.owner,
+			Permissions:   it.permissions,
+			Checksum:      it.checksum,
+			ChecksumType:  it.checksumType,
+			Encrypted:     it.encrypted,
+			Version:       it.version,
+			RemoteVersion: it.remoteVersion,
+			DeleteMarker:  it.deleteMarker,
+		})
+	}
+	if err := dbops.InsertManifestBatch(restoreDb, stmts, req.RestoreJobId, rows); err != nil {
+		return fmt.Errorf("could not persist restore manifest: %w", err)
+	}
+	return nil
+}
+
+// resumeRestoreJob pre-seeds the in-memory counters from the restore DB and flips the job row
+// state from 'crashed' (or whatever it was) back to 'started'.
+func resumeRestoreJob(restoreDb *sql.DB, stmts shared.RestoreDbPreparedStatements, restoreJobId string,
+	jobName string, backupJobsState *shared.BackupJobsState) error {
+
+	counters, err := dbops.ReadCounters(restoreDb, stmts, restoreJobId)
+	if err != nil {
+		return fmt.Errorf("could not read counters from restore DB for resume: %w", err)
+	}
+	for k, v := range counters {
+		backupJobsState.SeedCounter(jobName, restoreJobId, k, v)
+	}
+	if err := dbops.UpdateRestoreJobState(restoreDb, stmts, restoreJobId, "started"); err != nil {
+		return fmt.Errorf("could not flip restore job state back to 'started': %w", err)
+	}
+	return nil
+}
+
+// Resume is a thin wrapper invoked by the scheduler when a caller asks to resume a
+// previously-crashed restore. It reads the jobs row out of the per-target restore database,
+// rebuilds a Request from its stored fields, and hands off to Do() which detects the existing
+// row and skips the manifest resolution step. It MUST be invoked after MarkRestoreRunning so
+// ctx/cancel/counters exist in Running[].
+func Resume(jobName string, restoreJobId string, targetName string, serverConfigCopy shared.CfgTemplate,
+	backupJobsState *shared.BackupJobsState) Result {
+
+	serverConfigCopy.Mutex.RLock()
+	dataDir := serverConfigCopy.DataDir
+	serverConfigCopy.Mutex.RUnlock()
+
+	restoreDb, err := database.StartRestoreDb(dataDir, jobName, targetName, backupJobsState)
+	if err != nil {
+		return Result{State: "failed", Err: fmt.Errorf("could not open restore database for backup '%s' target '%s': %w", jobName, targetName, err), TargetName: targetName}
+	}
+	restoreDbKey := database.GetRestoreDbKey(jobName, targetName)
+
+	stmts, err := dbops.PrepareRestore(restoreDb)
+	if err != nil {
+		database.DisconnectFromDb(restoreDbKey, backupJobsState, restoreDb)
+		return Result{State: "failed", Err: err, TargetName: targetName}
+	}
+	rec, err := dbops.FetchRestoreJob(restoreDb, stmts, restoreJobId)
+	if err != nil {
+		database.DisconnectFromDb(restoreDbKey, backupJobsState, restoreDb)
+		if errors.Is(err, sql.ErrNoRows) {
+			return Result{State: "failed", Err: fmt.Errorf("no restore job with id '%s' in restore database for backup '%s' target '%s'", restoreJobId, jobName, targetName), TargetName: targetName}
+		}
+		return Result{State: "failed", Err: err, TargetName: targetName}
+	}
+	if rec.State != "crashed" && rec.State != "stopped" {
+		database.DisconnectFromDb(restoreDbKey, backupJobsState, restoreDb)
+		return Result{State: "failed", Err: fmt.Errorf("restore job '%s' cannot be resumed because its current state is '%s' (expected 'crashed' or 'stopped')", restoreJobId, rec.State), TargetName: targetName}
+	}
+	// Close the DB before calling Do() because Do() will re-open it via StartRestoreDb.
+	database.DisconnectFromDb(restoreDbKey, backupJobsState, restoreDb)
+
+	var requestFiles []string
+	if rec.RequestFiles != "" && rec.RequestFiles != "null" {
+		if err := json.Unmarshal([]byte(rec.RequestFiles), &requestFiles); err != nil {
+			return Result{State: "failed", Err: fmt.Errorf("could not decode stored request_files for resume: %w", err), TargetName: targetName}
+		}
+	}
+	var exclusions []string
+	if rec.Exclusions != "" && rec.Exclusions != "null" {
+		if err := json.Unmarshal([]byte(rec.Exclusions), &exclusions); err != nil {
+			return Result{State: "failed", Err: fmt.Errorf("could not decode stored exclusions for resume: %w", err), TargetName: targetName}
+		}
+	}
+
+	req := Request{
+		JobName:            jobName,
+		RestoreJobId:       restoreJobId,
+		SourceBackupJobId:  rec.SourceBackupJobId,
+		TargetName:         rec.TargetName,
+		Files:              requestFiles,
+		AllFiles:           rec.AllFiles,
+		RestoreDirOverride: rec.RestoreDir,
+		Exclusions:         exclusions,
+	}
+	return Do(jobName, req, serverConfigCopy, backupJobsState)
 }
 
 // pickTarget returns the ConfigBackupTarget matching $targetName. If $targetName is empty it
@@ -387,53 +610,61 @@ func stripTrailingSeparators(path string) string {
 	return path
 }
 
-// restoreOne restores a single item and returns true on success. All errors are recorded into
-// the restore job counters; failures do not abort the whole restore (per the "per-file failure"
-// design decision).
-func restoreOne(ctx context.Context, objStore objectstore.ObjectStore, item remoteItem,
-	restoreDir string, jobName string, backupJobsState *shared.BackupJobsState) bool {
+// restoreOneOutcome describes how a single-item restore attempt ended. It lets the outer loop
+// persist the correct per-file state and counter deltas in the restore DB without having to
+// duplicate the in-memory counter logic that restoreOne already owns.
+type restoreOneOutcome struct {
+	state  string // "done", "failed", "cancelled"
+	errMsg string
+}
 
-	destPath := mapPathIntoRestoreDir(restoreDir, item.localPath)
-	backupJobsState.UpdateStatsText(jobName, "current_file", item.localPath, "", "")
+// restoreOne restores a single item. It continues to own the in-memory IncrementCounter calls
+// (so existing watch streams keep working) and returns an outcome that the caller persists to
+// the restore DB.
+func restoreOne(ctx context.Context, objStore objectstore.ObjectStore, item dbops.RestoreFileRow,
+	restoreDir string, jobName string, backupJobsState *shared.BackupJobsState) restoreOneOutcome {
 
-	switch item.typ {
+	destPath := mapPathIntoRestoreDir(restoreDir, item.LocalPath)
+	backupJobsState.UpdateStatsText(jobName, "current_file", item.LocalPath, "", "")
+
+	switch item.Type {
 	case "dir":
 		if err := os.MkdirAll(destPath, 0o755); err != nil {
 			logger.Warnf("could not create directory '%s' for restore: %s", destPath, err)
-			backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.localPath, item.typ, "restore", err.Error())
-			return false
+			backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.LocalPath, item.Type, "restore", err.Error())
+			return restoreOneOutcome{state: "failed", errMsg: err.Error()}
 		}
-		backupJobsState.IncrementCounter(jobName, "restored_directories", item.localPath, item.typ, "restore", "")
-		return true
+		backupJobsState.IncrementCounter(jobName, "restored_directories", item.LocalPath, item.Type, "restore", "")
+		return restoreOneOutcome{state: "done"}
 	case "symlink":
 		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 			logger.Warnf("could not create parent directory for symlink '%s': %s", destPath, err)
-			backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.localPath, item.typ, "restore", err.Error())
-			return false
+			backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.LocalPath, item.Type, "restore", err.Error())
+			return restoreOneOutcome{state: "failed", errMsg: err.Error()}
 		}
-		if err := os.Symlink(item.linkTarget, destPath); err != nil && !errors.Is(err, os.ErrExist) {
-			logger.Warnf("could not create symlink '%s' -> '%s': %s", destPath, item.linkTarget, err)
-			backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.localPath, item.typ, "restore", err.Error())
-			return false
+		if err := os.Symlink(item.LinkTarget, destPath); err != nil && !errors.Is(err, os.ErrExist) {
+			logger.Warnf("could not create symlink '%s' -> '%s': %s", destPath, item.LinkTarget, err)
+			backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.LocalPath, item.Type, "restore", err.Error())
+			return restoreOneOutcome{state: "failed", errMsg: err.Error()}
 		}
-		backupJobsState.IncrementCounter(jobName, "restored_symlinks", item.localPath, item.typ, "restore", "")
-		return true
+		backupJobsState.IncrementCounter(jobName, "restored_symlinks", item.LocalPath, item.Type, "restore", "")
+		return restoreOneOutcome{state: "done"}
 	case "file":
 		if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 			logger.Warnf("could not create parent directory for file '%s': %s", destPath, err)
-			backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.localPath, item.typ, "restore", err.Error())
-			return false
+			backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.LocalPath, item.Type, "restore", err.Error())
+			return restoreOneOutcome{state: "failed", errMsg: err.Error()}
 		}
 		dbRecord := shared.BackedUpFileProperties{
-			Path:         item.localPath,
-			Type:         item.typ,
-			LinkTarget:   item.linkTarget,
-			Size:         item.size,
-			Owner:        item.owner,
-			Permissions:  item.permissions,
-			Checksum:     item.checksum,
-			ChecksumType: item.checksumType,
-			Encrypted:    item.encrypted,
+			Path:         item.LocalPath,
+			Type:         item.Type,
+			LinkTarget:   item.LinkTarget,
+			Size:         item.Size,
+			Owner:        item.Owner,
+			Permissions:  item.Permissions,
+			Checksum:     item.Checksum,
+			ChecksumType: item.ChecksumType,
+			Encrypted:    item.Encrypted,
 		}
 		// The object store Get() implementations are synchronous and do not accept a context.
 		// Wrap the call in a goroutine so a cancel request returns immediately; the in-flight
@@ -444,29 +675,29 @@ func restoreOne(ctx context.Context, objStore objectstore.ObjectStore, item remo
 		}
 		resCh := make(chan getResult, 1)
 		go func() {
-			cancelled, err := objStore.Get(dbRecord, destPath, item.version, item.remoteVersion, false)
+			cancelled, err := objStore.Get(dbRecord, destPath, item.Version, item.RemoteVersion, false)
 			resCh <- getResult{cancelled: cancelled, err: err}
 		}()
 		select {
 		case <-ctx.Done():
-			logger.Infof("restore cancelled while downloading '%s'; allowing the in-flight download to leak", item.localPath)
-			return false
+			logger.Infof("restore cancelled while downloading '%s'; allowing the in-flight download to leak", item.LocalPath)
+			return restoreOneOutcome{state: "cancelled"}
 		case res := <-resCh:
 			if res.err != nil {
-				logger.Warnf("failed to restore file '%s': %s", item.localPath, res.err)
-				backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.localPath, item.typ, "restore", res.err.Error())
-				return false
+				logger.Warnf("failed to restore file '%s': %s", item.LocalPath, res.err)
+				backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.LocalPath, item.Type, "restore", res.err.Error())
+				return restoreOneOutcome{state: "failed", errMsg: res.err.Error()}
 			}
 			if res.cancelled {
-				return false
+				return restoreOneOutcome{state: "cancelled"}
 			}
-			backupJobsState.IncrementCounter(jobName, "restored_files", item.localPath, item.typ, "restore", "")
-			return true
+			backupJobsState.IncrementCounter(jobName, "restored_files", item.LocalPath, item.Type, "restore", "")
+			return restoreOneOutcome{state: "done"}
 		}
 	default:
-		logger.Warnf("skipping restore of '%s' due to unknown type '%s'", item.localPath, item.typ)
-		backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.localPath, item.typ, "restore", "unknown type")
-		return false
+		logger.Warnf("skipping restore of '%s' due to unknown type '%s'", item.LocalPath, item.Type)
+		backupJobsState.IncrementCounter(jobName, "failed_to_restore_files", item.LocalPath, item.Type, "restore", "unknown type")
+		return restoreOneOutcome{state: "failed", errMsg: "unknown type"}
 	}
 }
 
@@ -488,14 +719,26 @@ func mapPathIntoRestoreDir(restoreDir string, sourcePath string) string {
 	return filepath.Join(restoreDir, strings.TrimPrefix(clean, "/"))
 }
 
-// FinalizeJobRecord updates the jobs table row after the restore finishes so that its state
-// reflects the final outcome and a basic report is stored.
-func FinalizeJobRecord(cfg shared.CfgTemplate, jobName string, restoreJobId string, state string, report string,
-	backupJobsState *shared.BackupJobsState) error {
-	db, err := database.Start(cfg.DataDir, jobName, backupJobsState)
+// FinalizeJobRecord updates the jobs-table row in the per-target restore database after the
+// restore finishes so that its state reflects the final outcome and a basic report is stored.
+// It is the restore-side equivalent of dbops.UpdateJobDetails(..., "restore", ...).
+func FinalizeJobRecord(cfg shared.CfgTemplate, jobName string, targetName string, restoreJobId string, state string,
+	report string, backupJobsState *shared.BackupJobsState) error {
+
+	cfg.Mutex.RLock()
+	dataDir := cfg.DataDir
+	cfg.Mutex.RUnlock()
+
+	db, err := database.StartRestoreDb(dataDir, jobName, targetName, backupJobsState)
 	if err != nil {
 		return err
 	}
-	defer database.DisconnectFromDb(jobName, backupJobsState, db)
-	return dbops.UpdateJobDetails(db, restoreJobId, jobName, "restore", time.Now(), state, report)
+	dbKey := database.GetRestoreDbKey(jobName, targetName)
+	defer database.DisconnectFromDb(dbKey, backupJobsState, db)
+
+	stmts, err := dbops.PrepareRestore(db)
+	if err != nil {
+		return err
+	}
+	return dbops.UpdateRestoreJobFinal(db, stmts, restoreJobId, time.Now().UnixNano(), state, report)
 }

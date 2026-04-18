@@ -31,6 +31,8 @@ Help Options:
   job_name:             Name of the backup job to dry run. This needs to match a backup job as defined in the configuration of the server
 ```
 
+A bash completion file is provided.
+
 ![command](img/command_expanded.png)
 
 # Backup Target(Object Store) Types

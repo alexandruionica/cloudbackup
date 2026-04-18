@@ -71,3 +71,45 @@ func TestRestoreStopRejectsMissingName(t *testing.T) {
 		t.Fatalf("expected 400, got %d", w.Result().StatusCode)
 	}
 }
+
+// postRestoreResume drives handlerPostRestoreResume with the given JSON body. The handler
+// short-circuits on input validation errors before touching the scheduler/config so the test
+// can pass an almost-empty SrvData.
+func postRestoreResume(t *testing.T, body string) *http.Response {
+	t.Helper()
+	srv := SrvData{Mutex: &sync.RWMutex{}}
+	req := httptest.NewRequest("POST", "http://example.com/api/v1/restore/resume",
+		bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	srv.handlerPostRestoreResume(w, req, []httprouter.Param{})
+	return w.Result()
+}
+
+func TestRestoreResumeRejectsInvalidJson(t *testing.T) {
+	resp := postRestoreResume(t, `not json`)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestRestoreResumeRejectsMissingName(t *testing.T) {
+	resp := postRestoreResume(t, `{"target_name":"t","restore_job_id":"r"}`)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestRestoreResumeRejectsMissingTargetName(t *testing.T) {
+	resp := postRestoreResume(t, `{"name":"n","restore_job_id":"r"}`)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestRestoreResumeRejectsMissingRestoreJobId(t *testing.T) {
+	resp := postRestoreResume(t, `{"name":"n","target_name":"t"}`)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}

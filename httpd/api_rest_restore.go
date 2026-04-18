@@ -30,6 +30,15 @@ type RestoreJobStopRequest struct {
 	RestoreJobId string `json:"restore_job_id"`
 }
 
+// RestoreJobResumeRequest is the JSON body accepted by POST /restore/resume. It identifies a
+// previously-crashed restore job by (name, target_name, restore_job_id), so the scheduler can
+// locate the correct per-target restore DB and hand execution to restore.Resume.
+type RestoreJobResumeRequest struct {
+	Name         string `json:"name"`
+	TargetName   string `json:"target_name"`
+	RestoreJobId string `json:"restore_job_id"`
+}
+
 // RestoreJobResponse is what successful /restore/start responses return in the "result" field.
 type RestoreJobResponse struct {
 	Name         string `json:"name"`
@@ -186,6 +195,93 @@ func (srvSrc SrvData) handlerPostRestoreStop(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	JSONSuccessWithResult(w, "success", "Successfully requested restore to be stopped",
+		RestoreJobResponse{Name: decoded.Name, RestoreJobId: result.RestoreJobId})
+}
+
+func (srvSrc SrvData) handlerPostRestoreResume(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	globals.Stats.IncrementRoutines("httpd_handlers")
+	defer globals.Stats.DecrementRoutines("httpd_handlers")
+	bodyBytes, err := ValidateJsonHTTPInput(w, r)
+	if err != nil {
+		return
+	}
+	var decoded RestoreJobResumeRequest
+	if err := json.Unmarshal(bodyBytes, &decoded); err != nil {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, err.Error())
+		return
+	}
+	if decoded.Name == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, "'name' key is mandatory")
+		return
+	}
+	if decoded.TargetName == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, "'target_name' key is mandatory")
+		return
+	}
+	if decoded.RestoreJobId == "" {
+		JSONError(w, http.StatusBadRequest, HttpErrInvalidJson, "'restore_job_id' key is mandatory")
+		return
+	}
+
+	srvCopy := srvSrc.GetCopyWithLock(loggingContext + ".handlerPostRestoreResume")
+	configCopy := srvCopy.globalcfg.GetCopyWithLock(loggingContext + ".handlerPostRestoreResume")
+	found := false
+	configCopy.Mutex.RLock()
+	for _, b := range configCopy.Backup {
+		if b.Name == decoded.Name {
+			found = true
+			break
+		}
+	}
+	configCopy.Mutex.RUnlock()
+	if !found {
+		JSONError(w, http.StatusNotFound, HttpErrNotFound, fmt.Sprintf("No backup job found matching name: %s", decoded.Name))
+		return
+	}
+
+	if srvCopy.backupJobsState.IsRunning(decoded.Name, "", loggingContext+".handlerPostRestoreResume") {
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData,
+			fmt.Sprintf("A job (backup or restore) for '%s' is already running.", decoded.Name))
+		return
+	}
+
+	u, err := uuid.NewV4()
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalServerError, err.Error())
+		return
+	}
+	command := shared.ReceiveRestoreCommand{
+		Id:           u.String(),
+		Command:      "resume",
+		Name:         decoded.Name,
+		TargetName:   decoded.TargetName,
+		RestoreJobId: decoded.RestoreJobId,
+	}
+	httpUser, _, _ := r.BasicAuth()
+	select {
+	case srvCopy.commWithSchedulerForRestore.ReceivedCommand <- command:
+	case <-time.After(5 * time.Second):
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalError,
+			"Sending restore resume to scheduler timed out after 5 seconds")
+		return
+	}
+	logger.Infof("Restore resume for '%s' (restore_job_id '%s') requested by '%s' from '%s'",
+		decoded.Name, decoded.RestoreJobId, httpUser, r.RemoteAddr)
+
+	var result shared.ResponseRestoreCommand
+	select {
+	case result = <-srvCopy.commWithSchedulerForRestore.SendResponse:
+	case <-time.After(20 * time.Second):
+		JSONError(w, http.StatusInternalServerError, HttpErrInternalError,
+			"Did not receive a response from the scheduler within 20 seconds")
+		return
+	}
+	if result.Err {
+		JSONError(w, http.StatusBadRequest, HttpErrIncorrectClientData,
+			fmt.Sprintf("Could not resume restore for '%s': %s", decoded.Name, result.Message))
+		return
+	}
+	JSONSuccessWithResult(w, "success", "Successfully requested restore to be resumed",
 		RestoreJobResponse{Name: decoded.Name, RestoreJobId: result.RestoreJobId})
 }
 

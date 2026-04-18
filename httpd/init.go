@@ -92,6 +92,7 @@ func (srv *SrvData) Start() {
 	router.POST(ApiPrefix+"/backup/target/test", srv.BasicAuth(srv.CheckAccess(srv.handlerPostBackupTargetTest)))
 	router.POST(ApiPrefix+"/restore/start", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreStart)))
 	router.POST(ApiPrefix+"/restore/stop", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreStop)))
+	router.POST(ApiPrefix+"/restore/resume", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreResume)))
 	router.GET(ApiPrefix+"/restore/list", srv.BasicAuth(srv.CheckAccess(srv.handlerGetRestoreList)))
 	router.POST(ApiPrefix+"/restore/watch", srv.BasicAuth(srv.CheckAccess(srv.handlerPostRestoreWatch)))
 	router.POST(ApiPrefix+"/report/notification/test", srv.BasicAuth(srv.CheckAccess(srv.handlerPostNotificationTest)))

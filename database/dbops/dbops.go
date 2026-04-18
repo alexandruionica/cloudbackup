@@ -223,14 +223,6 @@ func Prepare(db *sql.DB) (shared.DbPreparedStatements, error) {
 	PreparedStatements.ReportBackupJobsFileListWithJobIdAndDescend = "SELECT local_path, parent, upload_date, rf.target, type, size, delete_marker FROM remote_files " +
 		"rf INNER JOIN backup_collections bc ON bc.file_uuid=rf.uuid WHERE bc.job_id=? AND (rf.parent=? OR rf.parent LIKE ?) ORDER BY local_path ASC LIMIT ? OFFSET ?"
 
-	// shows previously ran restore jobs (excludes any running jobs)
-	PreparedStatements.ReportRestoreJobsListQuery = "SELECT name, id, start_time, end_time, state FROM jobs WHERE " +
-		"name = ? AND state != 'started' AND type = 'restore' AND start_time >= ? AND start_time <= ? ORDER BY start_time LIMIT ? OFFSET ?"
-
-	// retrieves the job report for a previously ran restore job (excludes any running jobs)
-	PreparedStatements.ReportRestoreJobsShowQuery = "SELECT report, state FROM jobs WHERE " +
-		"name = ? AND id = ? AND state != 'started' AND type = 'restore'"
-
 	// adds an entry for each top level item in the config file (backup.paths[]) which is being processed
 	PreparedStatements.TopItemsInsert = "INSERT INTO top_items (job_id, path, type) VALUES (?, ?, ?)"
 

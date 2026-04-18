@@ -50,6 +50,8 @@ CLI (cliargs) --> Client packages (client/*) --> HTTP --> Daemon (daemon)
 
 ### Key Packages
 
+If adding or removing of key packages is performed then this file should be updated to reflect that.
+
 - **cliargs** -- CLI argument parsing using `jessevdk/go-flags`. Defines command structs with `Execute()` methods that load client config and call into `client/*` packages. Nested command hierarchy: `cloudbackup server|client`, then `client backup|restore|config|notification`, then sub-commands like `start|stop|list|watch|report`.
 - **daemon** -- Server lifecycle: initializes config, DB, HTTP server, and scheduler; wires them together via channels.
 - **httpd** -- REST API handlers using `julienschmidt/httprouter`. Authenticated via HTTP Basic Auth with role-based permissions (full access vs read-only). Key files:
@@ -89,6 +91,8 @@ SQLite with WAL mode, foreign keys enabled, 5s busy timeout. Core tables:
 - `top_items` -- top-level paths being processed.
 
 Each backup definition gets its own SQLite database file (named after the backup definition). Restore jobs write to the same database as the backup they restore from.
+
+If making considerable changes to the database schema then this file should be updated to reflect that.
 
 ### Concurrency Patterns
 
@@ -140,6 +144,10 @@ Any additions or changes to REST API endpoints **must** be reflected in both:
 - `webstatic/docs_api/swagger.json`
 
 Add path entries, request/response definitions, and ensure the JSON file is valid (`python3 -m json.tool swagger.json > /dev/null`).
+
+### CLI documentation
+
+Changes to CLI commands or parameters require that the BASH autocompletion file in completions/cloudbackup.bash is upated to reflect this
 
 ### Cross-Platform Compatibility
 

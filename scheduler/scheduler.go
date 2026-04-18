@@ -618,7 +618,7 @@ func GenerateJobUuid(Name string, backupJobsState *shared.BackupJobsState, serve
 	return "", errors.New(shared.ErrCouldNotGenerateJobId)
 }
 
-// processRestoreCommand handles start/stop commands targeted at restore jobs.
+// processRestoreCommand handles start/stop/resume commands targeted at restore jobs.
 func processRestoreCommand(cmd shared.ReceiveRestoreCommand, backupJobsState *shared.BackupJobsState,
 	serverConfigCopy shared.CfgTemplate) shared.ResponseRestoreCommand {
 	switch cmd.Command {
@@ -655,9 +655,29 @@ func processRestoreCommand(cmd shared.ReceiveRestoreCommand, backupJobsState *sh
 			cancelFunc()
 			return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, RestoreJobId: cmd.RestoreJobId}
 		}
+	case "resume":
+		{
+			if cmd.RestoreJobId == "" {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true,
+					Message: "restore_job_id is required for 'resume' commands"}
+			}
+			if cmd.TargetName == "" {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true,
+					Message: "target_name is required for 'resume' commands so the correct restore database can be located"}
+			}
+			if backupJobsState.IsRunning(cmd.Name, "", loggingContext+".processRestoreCommand") {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true,
+					Message: shared.ErrJobAlreadyRunning}
+			}
+			if err := backupJobsState.MarkRestoreRunning(cmd.Name, loggingContext+".processRestoreCommand", cmd.RestoreJobId); err != nil {
+				return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true, Message: err.Error()}
+			}
+			go runResume(cmd, serverConfigCopy, backupJobsState)
+			return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, RestoreJobId: cmd.RestoreJobId}
+		}
 	default:
 		return shared.ResponseRestoreCommand{Name: cmd.Name, Id: cmd.Id, Command: cmd.Command, Err: true,
-			Message: fmt.Sprintf("Scheduler received restore command '%s' which is not one of 'start' or 'stop'", cmd.Command)}
+			Message: fmt.Sprintf("Scheduler received restore command '%s' which is not one of 'start', 'stop' or 'resume'", cmd.Command)}
 	}
 }
 
@@ -682,6 +702,21 @@ func runRestore(cmd shared.ReceiveRestoreCommand, restoreJobUuid string, serverC
 	}
 	result := restore.Do(cmd.Name, req, serverConfigCopy, backupJobsState)
 	cleanupAfterRestore(cmd.Name, restoreJobUuid, result, serverConfigCopy, backupJobsState)
+}
+
+// runResume orchestrates a resume of a previously-crashed or stopped restore. It delegates to
+// restore.Resume which reads the stored jobs-table row, seeds in-memory counters from the stored
+// restore_counters row, and then re-invokes the main restore loop skipping already-completed
+// files.
+func runResume(cmd shared.ReceiveRestoreCommand, serverConfigCopy shared.CfgTemplate,
+	backupJobsState *shared.BackupJobsState) {
+	globals.Stats.IncrementRoutines("runResume")
+	defer globals.Stats.DecrementRoutines("runResume")
+	logger.Infof("Resuming restore job for backup '%s' target '%s' with restore job id '%s'",
+		cmd.Name, cmd.TargetName, cmd.RestoreJobId)
+
+	result := restore.Resume(cmd.Name, cmd.RestoreJobId, cmd.TargetName, serverConfigCopy, backupJobsState)
+	cleanupAfterRestore(cmd.Name, cmd.RestoreJobId, result, serverConfigCopy, backupJobsState)
 }
 
 // cleanupAfterRestore persists the final job state, releases the cancel context, removes the
@@ -716,7 +751,10 @@ func cleanupAfterRestore(jobName string, restoreJobUuid string, result restore.R
 		jobReport = string(b)
 	}
 
-	if err := restore.FinalizeJobRecord(serverConfigCopy, jobName, restoreJobUuid, result.State, jobReport, backupJobsState); err != nil {
+	if result.TargetName == "" {
+		logger.Warnf("Cannot update the restore DB jobs table entry for restore '%s' id '%s' because the target "+
+			"name was not determined (restore likely failed before target resolution)", jobName, restoreJobUuid)
+	} else if err := restore.FinalizeJobRecord(serverConfigCopy, jobName, result.TargetName, restoreJobUuid, result.State, jobReport, backupJobsState); err != nil {
 		logger.Warnf("Could not update the jobs table entry for restore '%s' id '%s': %s", jobName, restoreJobUuid, err)
 	}
 

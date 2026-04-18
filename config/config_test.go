@@ -1600,3 +1600,37 @@ func TestValidateTargetParametersAreKnown2(t *testing.T) {
 			"unknown parameter; but it didn't error out")
 	}
 }
+
+func TestValidateBackupOrTargetNameAcceptsGoodNames(t *testing.T) {
+	for _, name := range []string{"backup1", "aTarget", "a_single_underscore_is_fine", "x"} {
+		if err := validateBackupOrTargetName("Backup", name, false); err != nil {
+			t.Errorf("name %q unexpectedly rejected: %s", name, err)
+		}
+	}
+}
+
+func TestValidateBackupOrTargetNameRejectsReservedSeparator(t *testing.T) {
+	// The double-underscore is reserved because per-target restore DB files use
+	// it as a separator: restore__<backup>__<target>.sqlite
+	for _, name := range []string{"bad__name", "__leading", "trailing__", "a__b__c"} {
+		if err := validateBackupOrTargetName("Backup", name, false); err == nil {
+			t.Errorf("name %q should have been rejected for containing the reserved separator", name)
+		}
+	}
+}
+
+func TestValidateBackupOrTargetNameRejectsPathSeparators(t *testing.T) {
+	for _, name := range []string{"a/b", "a\\b", "../etc", "./local"} {
+		if err := validateBackupOrTargetName("Target", name, false); err == nil {
+			t.Errorf("name %q should have been rejected for containing a path separator", name)
+		}
+	}
+}
+
+func TestValidateBackupOrTargetNameRejectsDotAndDotDot(t *testing.T) {
+	for _, name := range []string{".", ".."} {
+		if err := validateBackupOrTargetName("Backup", name, false); err == nil {
+			t.Errorf("name %q should have been rejected", name)
+		}
+	}
+}

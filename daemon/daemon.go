@@ -48,6 +48,12 @@ func Start(configFile string, debug bool) {
 		os.Exit(1)
 	}
 
+	// mark any restore jobs that were running at the time of the previous server exit as "crashed"
+	err = database.CheckForCrashedRestoreJobs(configuration.Config, backupJobsState)
+	if err != nil {
+		os.Exit(1)
+	}
+
 	//  struct containing the channels needed to communicate with the scheduler in order to start/stop Backups
 	commWithSchedulerForBackup := &shared.CommWithSchedulerForBackup{}
 	commWithSchedulerForBackup.Init()
