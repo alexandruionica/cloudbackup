@@ -4,6 +4,7 @@
 #
 #
 import argparse
+import json
 import logging
 import os
 import shutil
@@ -269,6 +270,93 @@ class TestRestAPIRestore(unittest.TestCase):
             self.assertNotEqual(entry.get('job_id', ''), restore_job_id,
                                 "Restore job '{}' should no longer appear in /restore/list after "
                                 "completion".format(restore_job_id))
+
+    def test_restore_watch_streams_progress_events(self):
+        """Regression test for the /restore/watch endpoint.
+
+        Before the fix in shared/structs_scheduler.go, every WatchMessage emitted during a restore
+        carried a hardcoded JobType='backup', but restore-watch HTTP subscribers register with
+        JobType='restore'. The multiplexer in watcher/watcher.go filters by JobType equality, so
+        all per-item events were silently dropped and the stream contained only the terminal
+        'Restore job has finished' line. This test verifies that a restore now produces per-item
+        progress events on /restore/watch.
+        """
+        job_name = "first_backup"
+        # step 1: run a backup so the restore has something to reconstruct from
+        backup_job_id = self._run_backup_and_wait(job_name)
+
+        # step 2: start the restore
+        url_start = self.base_url + self.api_root + '/restore/start'
+        start_req = {
+            "name": job_name,
+            "source_backup_job_id": backup_job_id,
+            "all_files": True,
+            "restore_dir": self.restore_dir,
+        }
+        r = requests.post(url=url_start, auth=(self.username, self.password), json=start_req)
+        self.assertEqual(r.status_code, 200, url_start + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url_start)
+        restore_job_id = response['result']['restore_job_id']
+        logging.info("Started restore '{}' with restore_job_id='{}'".format(job_name, restore_job_id))
+
+        # step 3: attach to /restore/watch. The handler blocks until the restore finishes then
+        # closes the connection, so r.text contains the entire SSE stream once requests returns.
+        # /restore/start returned only after MarkRestoreRunning committed, so the job is already
+        # marked as running and the watch subscribe will succeed.
+        url_watch = self.base_url + self.api_root + '/restore/watch'
+        watch_req = {"name": job_name, "restore_job_id": restore_job_id}
+        r = requests.post(url=url_watch, auth=(self.username, self.password), json=watch_req)
+        self.assertEqual(r.status_code, 200, url_watch + " " + r.text)
+        r.encoding = 'utf-8'
+
+        # step 4: the final non-empty line must announce completion
+        non_empty_lines = [ln for ln in r.text.split('\n') if ln]
+        self.assertGreater(len(non_empty_lines), 0, "Restore watch returned an empty response")
+        self.assertEqual(non_empty_lines[-1], "data: Restore job has finished",
+                         "Expected final line 'data: Restore job has finished' but got: "
+                         "{!r}. Full response: {!r}".format(non_empty_lines[-1], r.text))
+
+        # step 5: parse per-item JSON payloads from the SSE stream. Before the fix there were
+        # zero such lines — only the terminal string above.
+        events = []
+        for line in non_empty_lines:
+            if not line.startswith("data: "):
+                continue
+            payload = line[len("data: "):]
+            if not payload.startswith("{"):
+                # terminal/status strings (e.g. 'Restore job has finished') — skip
+                continue
+            try:
+                events.append(json.loads(payload))
+            except json.decoder.JSONDecodeError:
+                self.fail("Could not json-decode watch payload: {!r}".format(payload))
+
+        self.assertGreater(
+            len(events), 0,
+            "Restore watch returned zero per-item events. This regression usually means the "
+            "server publishes WatchMessages with JobType='backup' while restore-watch clients "
+            "subscribe as 'restore', so the multiplexer filter drops every message. Full "
+            "response: {!r}".format(r.text))
+
+        # every streamed event must represent restore-side work; a backup-upload event leaking
+        # through would indicate misrouted filtering in the opposite direction.
+        for ev in events:
+            self.assertNotEqual(
+                ev.get("operation_type"), "upload",
+                "Restore watch received an 'upload' event, indicating backup-side messages were "
+                "misrouted to restore watchers. Event: {!r}".format(ev))
+
+        # step 6: once the watch stream closed, the restore is finished and ephemeral — it must
+        # no longer appear in /restore/list
+        url_list = self.base_url + self.api_root + '/restore/list'
+        r = requests.get(url=url_list, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url_list + " " + r.text)
+        response = self.ValidatedAndDecodeResponse(r, url_list)
+        for entry in response['result']:
+            self.assertNotEqual(
+                entry.get('job_id', ''), restore_job_id,
+                "Restore '{}' should no longer appear in /restore/list after watch stream "
+                "completion".format(restore_job_id))
 
     def test_restore_with_invalid_source_backup_job_id(self):
         """Backup (test_null) -> attempt restore with a made-up source_backup_job_id -> expect failure."""

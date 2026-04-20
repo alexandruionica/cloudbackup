@@ -232,54 +232,48 @@ type BackupJobsStateInterface interface {
 
 // returns a slice with the state of both running and stopped jobs. $cfgCopy MUST be a copy and not a dereference of
 // the actual pointer to the main config (as slices are passed by reference and bad things will happen)
+//
+// The returned slice preserves the order in which backup jobs are declared in the config, regardless of whether
+// any given job is currently running or stopped. Preserving config order keeps the UI listing stable as jobs
+// transition between states (e.g. starting a backup or restore on one job should not cause it to jump to the top).
 func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []BackupJobStatus {
 	result := make([]BackupJobStatus, 0)
-	runningList := map[string]string{}
-	//log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Acquiring read lock before reading running " +
-	//	"backup jobs struct")
+	// running backup-type entries keyed by name for order-independent lookup.
+	// Restore-type entries in jobs.Running are ignored here — they are surfaced
+	// separately via GetRestoresRunning() and overlaid on the backup card in the
+	// UI, so the backup definition itself must still be emitted (as "stopped")
+	// even while a restore is in progress, otherwise the whole card would
+	// disappear from /backup/list.
+	runningBackups := map[string]BackupJobStatus{}
 	jobs.Lock.RLock()
-	defer func() {
-		jobs.Lock.RUnlock()
-		//log.WithFields(log.Fields{"context": logContext + ".Get"}).Debug("Read lock released after reading running " +
-		//	"backup jobs struct")
-	}()
-	// add state of running jobs. Only backup-type entries are surfaced here; restore jobs
-	// (which also live in jobs.Running) are filtered out so that callers of /backup/list
-	// do not see restores masquerading as backups. A matching restore for the same name
-	// still populates runningList so we do not incorrectly emit a "stopped" placeholder
-	// for the backup definition below.
+	defer jobs.Lock.RUnlock()
 	for _, job := range jobs.Running {
 		if job.JobType != "" && job.JobType != "backup" {
-			runningList[job.Name] = job.Name
 			continue
 		}
 		jobCopy := job
-		// init empty maps
 		jobCopy.StatsCounters = make(map[string]uint64)
 		jobCopy.StatsText = make(map[string]string)
-		// copy maps
 		for k, v := range job.StatsCounters {
 			jobCopy.StatsCounters[k] = v
 		}
 		for k, v := range job.StatsText {
 			jobCopy.StatsText[k] = v
 		}
-		// copy ObjectStore rate slice
 		jobCopy.ObjectStoreRates = make([]ObjectStoreRate, len(job.ObjectStoreRates))
 		copy(jobCopy.ObjectStoreRates, job.ObjectStoreRates)
-		//
-		result = append(result, jobCopy)
-		runningList[job.Name] = job.Name
-		// copy ObjectStoreRates slice - unexported struct members should not cause issues with uses of the copy
-		copy(jobCopy.ObjectStoreRates, job.ObjectStoreRates)
+		runningBackups[job.Name] = jobCopy
 	}
 
 	// while "cfgCopy" is a copy, some of the data is pointers so locking is still needed as it may be shared with
 	// other functions (running in other routines)
+	configNames := map[string]bool{}
 	cfgCopy.Mutex.RLock()
-	// add state of stopped jobs (what is not part of running must be stopped)
 	for _, backupJob := range cfgCopy.Backup {
-		if _, foundMatch := runningList[backupJob.Name]; !foundMatch {
+		configNames[backupJob.Name] = true
+		if running, ok := runningBackups[backupJob.Name]; ok {
+			result = append(result, running)
+		} else {
 			result = append(result, BackupJobStatus{
 				Name:  backupJob.Name,
 				State: "stopped",
@@ -288,6 +282,20 @@ func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []Backu
 		}
 	}
 	cfgCopy.Mutex.RUnlock()
+
+	// append any still-running backup jobs whose definitions are no longer in the config
+	// (e.g. config reloaded and removed entries); preserves visibility until they finish
+	for _, job := range jobs.Running {
+		if job.JobType != "" && job.JobType != "backup" {
+			continue
+		}
+		if !configNames[job.Name] {
+			if jobCopy, ok := runningBackups[job.Name]; ok {
+				result = append(result, jobCopy)
+				delete(runningBackups, job.Name)
+			}
+		}
+	}
 	return result
 }
 
@@ -587,9 +595,15 @@ MainLoop:
 			if Error == "" {
 				PercentDone = 100
 			}
+			// use the job's own JobType so restore-watch clients (which register with
+			// JobType="restore") receive the messages — the watcher filters by JobType
+			jobType := job.JobType
+			if jobType == "" {
+				jobType = "backup"
+			}
 			msg := WatchMessage{
 				Sequence:        job.Sequence,
-				JobType:         "backup",
+				JobType:         jobType,
 				JobName:         BackupJobName,
 				JobId:           job.BackupJobId,
 				Path:            Path,
@@ -725,10 +739,16 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				jobs.Running[k].ObjectStoreRates[k2].Rate1Min = jobs.Running[k].ObjectStoreRates[k2]._rate1Min.Rate() / 60
 				jobs.Running[k].ObjectStoreRates[k2].Rate5Min = jobs.Running[k].ObjectStoreRates[k2]._rate5Min.Rate() / 300
 				jobs.Running[k].ObjectStoreRates[k2].Rate15Min = jobs.Running[k].ObjectStoreRates[k2]._rate15Min.Rate() / 900
-				// send message to multiplexer so it can forwarder to connected clients
+				// send message to multiplexer so it can forwarder to connected clients.
+				// use the job's own JobType so restore-watch clients (JobType="restore")
+				// receive the messages — the watcher filters by JobType.
+				jobType := job.JobType
+				if jobType == "" {
+					jobType = "backup"
+				}
 				msg := WatchMessage{
 					Sequence:        job.Sequence,
-					JobType:         "backup",
+					JobType:         jobType,
 					JobName:         BackupJobName,
 					JobId:           job.BackupJobId,
 					Path:            Path,

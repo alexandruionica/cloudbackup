@@ -171,6 +171,12 @@ func Do(jobName string, req Request, serverConfigCopy shared.CfgTemplate,
 		default:
 		}
 
+		// Bump the per-job sequence so each item's WatchMessage carries a unique, monotonically
+		// increasing Sequence. The CLI watch view uses Sequence to distinguish "redraw current
+		// line" from "new line" and to detect dropped messages; without this bump every message
+		// would carry Sequence=0 and the CLI would re-print the column header for every event.
+		backupJobsState.IncrementSequence(jobName)
+
 		if item.DeleteMarker {
 			now := time.Now().UnixNano()
 			backupJobsState.IncrementCounter(jobName, "skipped_delete_markers", item.LocalPath, item.Type, "restore", "")

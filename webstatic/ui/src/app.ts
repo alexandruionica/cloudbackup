@@ -365,8 +365,18 @@ function WatchModal(props: { conn: Connection; target: WatchTarget; onClose: () 
   const [events, setEvents] = useState<WatchEvent[]>([]);
   const [status, setStatus] = useState<string>('connecting…');
   const [err, setErr] = useState<string | null>(null);
+  // "follow" drives both UI (the "Jump to latest" button visibility) and
+  // auto-scroll behavior. Mirror it into a ref so the scroll/effect callbacks
+  // always read the current value without stale-closure issues.
+  const [follow, setFollow] = useState<boolean>(true);
+  const followRef = useRef<boolean>(true);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const stickRef = useRef<boolean>(true);
+  // Flag set immediately before a programmatic scrollTop write so the resulting
+  // scroll event is ignored (otherwise a late-firing event from our own write
+  // could race against a newly-arrived event and incorrectly disable follow).
+  const programmaticScroll = useRef<boolean>(false);
+
+  useEffect(() => { followRef.current = follow; }, [follow]);
 
   useEffect(() => {
     if (!target.jobId) { setStatus('no job id — job is not running'); return; }
@@ -400,14 +410,30 @@ function WatchModal(props: { conn: Connection; target: WatchTarget; onClose: () 
   }, [conn, target.kind, target.name, target.jobId]);
 
   useEffect(() => {
-    if (stickRef.current && listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+    const el = listRef.current;
+    if (!el) return;
+    if (followRef.current) {
+      programmaticScroll.current = true;
+      el.scrollTop = el.scrollHeight;
     }
   }, [events]);
 
   const onScroll = (e: Event) => {
+    if (programmaticScroll.current) {
+      programmaticScroll.current = false;
+      return;
+    }
     const el = e.currentTarget as HTMLDivElement;
-    stickRef.current = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+    if (atBottom !== followRef.current) setFollow(atBottom);
+  };
+
+  const jumpToEnd = () => {
+    const el = listRef.current;
+    if (!el) return;
+    programmaticScroll.current = true;
+    el.scrollTop = el.scrollHeight;
+    setFollow(true);
   };
 
   return html`
@@ -422,6 +448,7 @@ function WatchModal(props: { conn: Connection; target: WatchTarget; onClose: () 
             Status: <strong>${status}</strong>
             ${' '}· Events: <strong>${events.length}</strong>
             ${' '}· Job id: <code>${target.jobId || '-'}</code>
+            ${' '}· Follow: <strong>${follow ? 'on' : 'off'}</strong>
           </p>
           ${err ? html`<div class="error">${err}</div>` : null}
           <div class="events" ref=${listRef} onScroll=${onScroll}>
@@ -437,6 +464,7 @@ function WatchModal(props: { conn: Connection; target: WatchTarget; onClose: () 
           </div>
         </div>
         <div class="footer">
+          ${!follow ? html`<button onClick=${jumpToEnd}>Jump to latest</button>` : null}
           <button onClick=${() => setEvents([])}>Clear</button>
           <button onClick=${props.onClose}>Close</button>
         </div>
