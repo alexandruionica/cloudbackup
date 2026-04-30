@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/jinzhu/configor"
+	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/exp/utf8string"
 	"gopkg.in/yaml.v2"
@@ -244,7 +245,38 @@ func ValidateBackup(backups []shared.ConfigBackup, logError bool) error {
 		if err != nil {
 			return err
 		}
+
+		if err := ValidateBackupSchedule(backup.Schedule, backup.Name, logError); err != nil {
+			return err
+		}
+
 		i += 1
+	}
+	return nil
+}
+
+// ValidateBackupSchedule verifies every entry in a backup's "schedule" list is a valid 5-field
+// cron expression (or one of the supported descriptors like "@daily"). The parser used here is
+// the same one the scheduler uses at runtime, so accepting it during config load guarantees the
+// scheduler will be able to register the entry.
+func ValidateBackupSchedule(schedules []string, backupName string, logError bool) error {
+	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	for _, expr := range schedules {
+		if strings.TrimSpace(expr) == "" {
+			msg := fmt.Sprintf("backup '%s' has an empty schedule entry. Either remove the entry or set a "+
+				"valid cron expression", backupName)
+			if logError {
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
+		if _, err := parser.Parse(expr); err != nil {
+			msg := fmt.Sprintf("backup '%s' has invalid schedule entry '%s': %s", backupName, expr, err)
+			if logError {
+				logger.Error(msg)
+			}
+			return errors.New(msg)
+		}
 	}
 	return nil
 }

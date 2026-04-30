@@ -23,6 +23,19 @@ const loggingContext = "shared"
 // 1000 seems to be a good value to allow for fluctuations
 const watcherChanSize = 1000
 
+// NextRunResolver, when set, returns the soonest scheduled next run for a backup job. The
+// scheduler package installs this at startup so that BackupJobsState.Get can surface NextRun
+// without introducing an import cycle (shared cannot import scheduler). Left nil during tests
+// that don't start the scheduler — callers must handle the zero time.Time value gracefully.
+var NextRunResolver func(name string) time.Time
+
+func resolveNextRun(name string) time.Time {
+	if NextRunResolver == nil {
+		return time.Time{}
+	}
+	return NextRunResolver(name)
+}
+
 //var logger = log.WithFields(log.Fields{
 //	"context": loggingContext,
 //})
@@ -175,7 +188,9 @@ type BackupJobStatus struct {
 	StatsText            map[string]string `json:"stats_text,omitempty"`
 	// used for keeping track of messages when sending real time upload status to connected clients
 	Sequence uint64 `json:"-"`
-	// TODO - to implement this . Lists the UTC time when the next run is scheduled
+	// next time this backup job is scheduled to run, derived from the "schedule:" entries in
+	// the config. Populated by BackupJobsState.Get() via the scheduler-installed NextRunResolver.
+	// Zero value means the job has no schedule or the scheduler is not running.
 	NextRun time.Time `json:"next_run"`
 	// using this context we signal a Backup job task that it should proceed to shutdown now
 	Ctx context.Context `json:"-"`
@@ -262,6 +277,7 @@ func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []Backu
 		}
 		jobCopy.ObjectStoreRates = make([]ObjectStoreRate, len(job.ObjectStoreRates))
 		copy(jobCopy.ObjectStoreRates, job.ObjectStoreRates)
+		jobCopy.NextRun = resolveNextRun(job.Name)
 		runningBackups[job.Name] = jobCopy
 	}
 
@@ -275,9 +291,9 @@ func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []Backu
 			result = append(result, running)
 		} else {
 			result = append(result, BackupJobStatus{
-				Name:  backupJob.Name,
-				State: "stopped",
-				// TODO - add NextRun (see struct definition)
+				Name:    backupJob.Name,
+				State:   "stopped",
+				NextRun: resolveNextRun(backupJob.Name),
 			})
 		}
 	}

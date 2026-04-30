@@ -1634,3 +1634,51 @@ func TestValidateBackupOrTargetNameRejectsDotAndDotDot(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateBackupScheduleAcceptsValidExpressions(t *testing.T) {
+	good := []string{
+		"05 01 * * *",
+		"0 8 1 * *",
+		"@daily",
+		"@hourly",
+		"@every 1m",
+	}
+	for _, expr := range good {
+		if err := ValidateBackupSchedule([]string{expr}, "job", false); err != nil {
+			t.Errorf("expression %q unexpectedly rejected: %s", expr, err)
+		}
+	}
+}
+
+func TestValidateBackupScheduleRejectsBadExpressions(t *testing.T) {
+	bad := []string{
+		"bogus * * * *",
+		"99 * * * *",  // minute out of range
+		"* * * * * *", // 6 fields, not supported by standard parser
+		"@nonsense",
+	}
+	for _, expr := range bad {
+		if err := ValidateBackupSchedule([]string{expr}, "job", false); err == nil {
+			t.Errorf("expression %q should have been rejected", expr)
+		}
+	}
+}
+
+func TestValidateBackupScheduleRejectsEmptyEntry(t *testing.T) {
+	if err := ValidateBackupSchedule([]string{""}, "job", false); err == nil {
+		t.Error("empty schedule entry should have been rejected")
+	}
+	if err := ValidateBackupSchedule([]string{"   "}, "job", false); err == nil {
+		t.Error("whitespace-only schedule entry should have been rejected")
+	}
+}
+
+func TestValidateBackupScheduleAcceptsEmptyList(t *testing.T) {
+	// a backup with no schedule at all is fine — it just won't be triggered automatically
+	if err := ValidateBackupSchedule(nil, "job", false); err != nil {
+		t.Errorf("nil schedule list unexpectedly rejected: %s", err)
+	}
+	if err := ValidateBackupSchedule([]string{}, "job", false); err != nil {
+		t.Errorf("empty schedule list unexpectedly rejected: %s", err)
+	}
+}

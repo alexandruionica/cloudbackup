@@ -20,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -29,16 +30,52 @@ var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
 
+// activeCron holds the running cron manager so other packages (e.g. shared.BackupJobsState.Get)
+// can ask it for the next scheduled run of a given backup job. nil before scheduler.Start has
+// been called and during tests that don't start the scheduler.
+var activeCron *cronManager
+var activeCronMu sync.RWMutex
+
+// NextRunFor returns the soonest scheduled next run for a given backup job name. Returns the
+// zero time.Time if no cron manager is running or the job has no schedule.
+func NextRunFor(name string) time.Time {
+	activeCronMu.RLock()
+	cm := activeCron
+	activeCronMu.RUnlock()
+	if cm == nil {
+		return time.Time{}
+	}
+	return cm.NextRunFor(name)
+}
+
 func Start(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
 	SchedulerCommRestore *shared.CommWithSchedulerForRestore,
 	backupJobsState *shared.BackupJobsState, configuration *shared.RuntimeConfig) {
+	// fan-out channel from eventProcessor to the cron manager. Buffered (size 4) so a config
+	// reload doesn't block the main eventProcessor select while the cron manager is mid-rebuild.
+	cfgChangeToCron := make(chan bool, 4)
+
+	// ctx lets eventProcessor signal the cron manager to exit during shutdown. cancel() is
+	// invoked from the Shutdown branch of eventProcessor before it acks back to the daemon.
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cm := newCronManager(cfgChangeToCron, SchedulerCommBackup, configuration, backupJobsState)
+	activeCronMu.Lock()
+	activeCron = cm
+	activeCronMu.Unlock()
+	// install the resolver so BackupJobsState.Get() can surface NextRun without an import cycle
+	shared.NextRunResolver = NextRunFor
+
 	// start component which listens for messages from http handlers and starts / stops backups & restores according to requests
-	go eventProcessor(cfgChange, SchedulerCommBackup, SchedulerCommRestore, backupJobsState, configuration)
+	go eventProcessor(cfgChange, cfgChangeToCron, cancel, SchedulerCommBackup, SchedulerCommRestore, backupJobsState, configuration)
+	// time-driven scheduler that fires backups defined under the "schedule:" key in config.yaml
+	go cm.run(ctx)
 	// components which relays to clients real time info about the file/dir/symlink currently being backed up or restores
 	go watcher.Start(backupJobsState.Watcher)
 }
 
-func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithSchedulerForBackup,
+func eventProcessor(cfgChange <-chan bool, cfgChangeToCron chan<- bool, cancelCron context.CancelFunc,
+	SchedulerCommBackup *shared.CommWithSchedulerForBackup,
 	SchedulerCommRestore *shared.CommWithSchedulerForRestore,
 	backupJobsState *shared.BackupJobsState, configuration *shared.RuntimeConfig) {
 	globals.Stats.IncrementRoutines("other")
@@ -53,6 +90,8 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 		case <-SchedulerCommBackup.Shutdown:
 			{
 				logger.Debug("Scheduler requested to stop any running backups or restores and then exit")
+				// stop the cron manager first so no new scheduled trigger lands on a soon-to-be-closed channel
+				cancelCron()
 				// TODO - add code to stop restores too (right now only backups are stopped)
 				// while a copy, some of the data is pointers so locking is still needed
 				serverConfigCopy := configuration.GetCopyWithLock(loggingContext + ".eventProcessor")
@@ -69,8 +108,13 @@ func eventProcessor(cfgChange <-chan bool, SchedulerCommBackup *shared.CommWithS
 		case <-cfgChange:
 			{
 				logger.Info("Scheduler reloading configuration")
-
-				// TODO - notify cron scheduler to reload
+				// notify the cron manager to rebuild its registered entries from the new config.
+				// The channel is buffered (cap 4) so a slow cron rebuild can't block this select.
+				select {
+				case cfgChangeToCron <- true:
+				default:
+					logger.Warn("Cron-reload channel full; cron manager will pick up the most recent config on its next reload")
+				}
 			}
 		case receivedBackupCommand = <-SchedulerCommBackup.ReceivedCommand:
 			{

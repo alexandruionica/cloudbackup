@@ -5,6 +5,7 @@
 #
 import argparse
 import bcrypt
+import datetime
 import json
 import logging
 import os
@@ -151,7 +152,15 @@ class TestCliAdvanced(unittest.TestCase):
                                                          "{}".format(cmd_default, result))
         # output is JSON
         decoded = json.loads(result['result'].stdout.decode("utf-8"))
-        # check elements match expectation
+        # next_run is computed from the cron schedule in the server config and so is a moving
+        # target. Validate it independently of the rest of the structure: it must parse and
+        # must be in the future given that first_backup has a schedule configured ('05 01 * * *').
+        next_run_raw = decoded.pop('next_run', None)
+        self.assertIsNotNone(next_run_raw, "Expected 'next_run' key to be present in JSON output")
+        next_run = iso8601.parse_date(next_run_raw)
+        now = iso8601.parse_date(datetime.datetime.now(datetime.timezone.utc).isoformat())
+        self.assertGreater(next_run, now, "Expected 'next_run' to be in the future, got {}".format(next_run_raw))
+        # check the remaining elements match expectation
         expected_result = {
             "end_time": "0001-01-01T00:00:00Z",
             "name": "first_backup",
@@ -161,7 +170,6 @@ class TestCliAdvanced(unittest.TestCase):
             "rate_5min": 0,
             "rate_15min": 0,
             "file_content_bytes_read": 0,
-            "next_run": "0001-01-01T00:00:00Z",
             "platform": ""
         }
         self.assertEqual(decoded, expected_result, "Result from command doesn't match expected JSON output")
