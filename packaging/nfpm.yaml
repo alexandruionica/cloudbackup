@@ -1,0 +1,53 @@
+name: cloudbackup
+arch: amd64
+platform: linux
+version: ${PKG_VERSION}
+release: ${PKG_RELEASE}
+section: utils
+priority: optional
+maintainer: Alexandru Ionica <alexandru@ionica.eu>
+description: |
+  CloudBackup — server/client backup tool with cloud blob store support
+  (AWS S3, Azure Blob Storage, GCP Storage). Runs as a daemon exposing a
+  REST API; ships with a CLI client for on-demand operations.
+vendor: Alexandru Ionica
+homepage: https://github.com/aionica/cloudbackup
+license: see /usr/share/doc/cloudbackup/LICENSE
+
+contents:
+  - src: /src/dist/build/${DISTRO_TAG}/cloudbackup
+    dst: /usr/bin/cloudbackup
+    file_info:
+      mode: 0755
+
+  - src: /src/dist/build/${DISTRO_TAG}/webstatic
+    dst: /usr/share/cloudbackup/webstatic
+    type: tree
+
+  - src: /src/packaging/files/config.yaml.sample
+    dst: /etc/cloudbackup/config.yaml
+    type: config|noreplace
+    file_info:
+      mode: 0640
+
+  - src: /src/packaging/files/cloudbackup.service
+    dst: /usr/lib/systemd/system/cloudbackup.service
+    file_info:
+      mode: 0644
+
+scripts:
+  preinstall: /src/packaging/files/scripts/preinstall.sh
+  postinstall: /src/packaging/files/scripts/postinstall.sh
+  preremove: /src/packaging/files/scripts/preremove.sh
+  postremove: /src/packaging/files/scripts/postremove.sh
+
+overrides:
+  deb:
+    depends:
+      - libc6
+      - adduser
+  rpm:
+    depends:
+      - glibc
+      - shadow-utils
+      - systemd

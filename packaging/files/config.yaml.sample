@@ -1,0 +1,32 @@
+# CloudBackup server configuration
+#
+# After editing this file, restart the service:
+#     sudo systemctl restart cloudbackup
+#
+# To see every available option with comments, run:
+#     cloudbackup server config example
+#
+# To validate a config file:
+#     cloudbackup server config validate -c /etc/cloudbackup/config.yaml
+
+data_dir: /var/lib/cloudbackup
+html_dir: /usr/share/cloudbackup/webstatic
+
+http:
+  bind_address: "127.0.0.1:8080"
+
+# https:
+#   enabled: true
+#   bind_address: "0.0.0.0:8443"
+#   ssl_cert_path: /etc/cloudbackup/cert.crt
+#   ssl_key_path: /etc/cloudbackup/cert.key
+
+# Define at least one user before starting the service. Generate a bcrypt hash with:
+#     cloudbackup misc hash-password
+user:
+  - name: admin
+    pass: REPLACE_WITH_BCRYPT_HASH
+    access: write
+
+# Add backup definitions here. Empty list = nothing scheduled.
+backup: []

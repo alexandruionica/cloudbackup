@@ -85,3 +85,9 @@ deps:
 docs:
 	@echo "############ Regenerating Documentation ############"
 	./generate_docs.sh
+
+# Build .deb and .rpm packages for all supported distros via Docker.
+# Pass DISTROS="deb12 el9" to limit; default is the full matrix.
+packages:
+	@echo "############ Building distribution packages ############"
+	bash packaging/build-all.sh $(DISTROS)

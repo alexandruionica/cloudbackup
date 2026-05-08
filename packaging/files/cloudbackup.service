@@ -1,0 +1,23 @@
+[Unit]
+Description=CloudBackup server
+Documentation=https://github.com/aionica/cloudbackup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cloudbackup
+Group=cloudbackup
+ExecStart=/usr/bin/cloudbackup server start --configfile /etc/cloudbackup/config.yaml
+Restart=on-failure
+RestartSec=5s
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/cloudbackup
+
+[Install]
+WantedBy=multi-user.target

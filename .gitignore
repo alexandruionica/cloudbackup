@@ -1,6 +1,7 @@
 coverage.out
 cloudbackup
 cloudbackup.exe
+dist/
 tmp/
 .idea/
 integration_tests/.venv
