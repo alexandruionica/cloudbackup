@@ -1,6 +1,7 @@
 package cliargs
 
 import (
+	"cloudbackup/cbcrypto/keystore"
 	"cloudbackup/client"
 	clientBackup "cloudbackup/client/backup"
 	clientBackupReport "cloudbackup/client/backup/report"
@@ -10,8 +11,11 @@ import (
 	clientRestore "cloudbackup/client/restore"
 	"cloudbackup/config"
 	"cloudbackup/daemon"
+	"cloudbackup/database"
+	"cloudbackup/database/dbops"
 	"cloudbackup/misc"
 	"cloudbackup/password"
+	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -32,9 +36,19 @@ type Args struct {
 }
 
 type ArgsCommandServer struct {
-	Config  ArgsCommandServerConfig  `command:"config" description:"Server configuration file related options"`
-	Start   ArgsCommandServerStart   `command:"start" description:"Start the backup server"`
-	Version ArgsCommandServerVersion `command:"version" description:"Show server version"`
+	Config        ArgsCommandServerConfig        `command:"config" description:"Server configuration file related options"`
+	Start         ArgsCommandServerStart         `command:"start" description:"Start the backup server"`
+	Version       ArgsCommandServerVersion       `command:"version" description:"Show server version"`
+	ResetKeystore ArgsCommandServerResetKeystore `command:"reset-keystore" description:"Clear the encrypted=1 flag from a backup job's local database. Use after deliberately deleting the keystore sidecar from the bucket; the next backup run will bootstrap a fresh keystore and re-upload all files."`
+}
+
+type ArgsCommandServerResetKeystore struct {
+	ConfigFile string `short:"c" long:"configfile" description:"Server configuration file in YAML format" required:"true"`
+	Job        struct {
+		Name string `positional-arg-name:"job_name" description:"Name of the backup job whose local DB encrypted flags should be cleared"`
+	} `positional-args:"yes" required:"yes"`
+	Yes   bool `short:"y" long:"yes" description:"Skip the interactive confirmation prompt"`
+	Debug bool `short:"d" long:"debug" description:"Enable debug logging"`
 }
 
 type ArgsCommandServerConfig struct {
@@ -275,6 +289,69 @@ func (command *ArgsCommandServerConfigExample) Execute(args []string) error {
 	} else {
 		fmt.Print(misc.SampleUnixServerYamlConfig)
 	}
+	os.Exit(0)
+	return nil
+}
+
+func (command *ArgsCommandServerResetKeystore) Execute(args []string) error {
+	if command.Debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
+	cfg, err := config.Load(command.ConfigFile, command.Debug, &sync.RWMutex{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not load server config file %s: %s\n", command.ConfigFile, err)
+		os.Exit(1)
+	}
+	cfgCopy := cfg.GetCopyWithLock(loggingContext)
+
+	// Confirm the named job actually exists in the loaded config.
+	jobName := command.Job.Name
+	found := false
+	for _, b := range cfgCopy.Backup {
+		if b.Name == jobName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		fmt.Fprintf(os.Stderr, "No backup job named %q in config %s\n", jobName, command.ConfigFile)
+		os.Exit(1)
+	}
+
+	if !command.Yes {
+		fmt.Printf("This will clear the 'encrypted' flag for all files in the local DB for backup job %q.\n", jobName)
+		fmt.Printf("After this, the next backup run will treat all previously-encrypted files as needing re-upload.\n")
+		fmt.Printf("Any previously-encrypted objects already in the bucket will be unrecoverable unless their keystore sidecar is restored.\n")
+		fmt.Printf("Type the job name (%q) to confirm: ", jobName)
+		var confirm string
+		_, _ = fmt.Scanln(&confirm)
+		if confirm != jobName {
+			fmt.Println("Confirmation did not match. Aborting.")
+			os.Exit(1)
+		}
+	}
+
+	// Open the DB and clear the flag.
+	mockState := &shared.BackupJobsState{
+		Lock: &sync.RWMutex{},
+	}
+	db, err := database.Start(cfgCopy.DataDir, jobName, mockState)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open backup DB for job %q at %s: %s\n", jobName, cfgCopy.DataDir, err)
+		os.Exit(1)
+	}
+	defer database.DisconnectFromDb(jobName, mockState, db)
+
+	n, err := dbops.ResetEncryptedFlags(db)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to clear encrypted flags for job %q: %s\n", jobName, err)
+		os.Exit(1)
+	}
+	fmt.Printf("Cleared encrypted=1 flag on %d rows in backup job %q's local DB.\n", n, jobName)
+	fmt.Printf("Make sure the keystore sidecar (%s under each target's prefix) is also removed from the bucket so the next backup re-bootstraps a fresh keystore.\n",
+		keystore.SidecarRelativePath)
 	os.Exit(0)
 	return nil
 }
