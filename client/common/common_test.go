@@ -136,19 +136,6 @@ func TestPrintBackupStatus_RunningStateShowsExpandedSection(t *testing.T) {
 	out := captureStdout(t, func() {
 		PrintBackupStatus(status, false)
 	})
-	for _, expected := range []string{
-		"Examined files: 12",
-		"skipped_reserved_path",     // appears as part of the label string
-		"skipped_too_large_for_target",
-		"keystore_inconsistent",
-		"current_file",              // appears via StatsText line
-		"/etc/hosts",
-	} {
-		if !strings.Contains(out, expected) {
-			// Loosen the assertion: not every label string is verbatim — print what we got.
-			// But we expect at least the human-readable form of the encryption counters.
-		}
-	}
 	if !strings.Contains(out, "Examined files: 12") {
 		t.Errorf("expected counter line for examined_files; output:\n%s", out)
 	}
@@ -164,8 +151,8 @@ func TestPrintBackupStatus_AlwaysExpandShowsBodyEvenForStopped(t *testing.T) {
 		StartTime: time.Now().Add(-time.Hour),
 		EndTime:   time.Now().Add(-30 * time.Minute),
 		StatsCounters: map[string]uint64{
-			"examined_files":  99,
-			"uploaded_files":  50,
+			"examined_files": 99,
+			"uploaded_files": 50,
 		},
 		StatsText: map[string]string{},
 	}

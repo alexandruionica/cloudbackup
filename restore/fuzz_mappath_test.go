@@ -11,12 +11,13 @@ import (
 // to the current GOOS — always returns a path rooted under restoreDir.
 //
 // Findings during development of this fuzz target (recorded so the file documents itself):
-//   1. mapPathIntoRestoreDir does NOT defend against a relative sourcePath containing
-//      ".." segments — "/r" + "../../../etc/passwd" → "/etc/passwd". This is a callable-
-//      contract violation rather than a defect (the function comment specifies an absolute
-//      sourcePath) but worth tightening if any other call site is ever added.
-//   2. Degenerate "absolute" restoreDirs like "/." or "/" cause filepath.Join to normalise
-//      away the prefix. Real callers feed a fully-specified restore directory.
+//  1. mapPathIntoRestoreDir does NOT defend against a relative sourcePath containing
+//     ".." segments — "/r" + "../../../etc/passwd" → "/etc/passwd". This is a callable-
+//     contract violation rather than a defect (the function comment specifies an absolute
+//     sourcePath) but worth tightening if any other call site is ever added.
+//  2. Degenerate "absolute" restoreDirs like "/." or "/" cause filepath.Join to normalise
+//     away the prefix. Real callers feed a fully-specified restore directory.
+//
 // Both findings are skipped below; both are worth tracking in the project's issue tracker.
 //
 // Run with: go test -fuzz=FuzzMapPathIntoRestoreDir -fuzztime=20s ./restore
