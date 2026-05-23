@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // The tests in this file exercise the keystore sidecar bootstrap path against real
@@ -21,16 +23,14 @@ import (
 // All tests in this file skip when their per-provider env vars are unset, just like
 // the existing TestAwsS3ValidateUploadDelete etc. tests in the sibling files.
 //
-// Each test uses a per-run prefix so that concurrent CI lanes don't clash on the
-// sidecar object. The cloud-bucket cleanup of the leftover sidecar object is best-effort
-// — see clean_object_stores_after_tests.py for the global cleanup step.
+// Tests are idempotent: each one deletes any existing sidecar at the canonical
+// bucket key before running so that the bootstrap path always fires and the same
+// password can be used across runs without verifier-failure carryover.
 
-const cloudEncryptionTestPass = "cloud-encryption-test-pass-do-not-reuse-this"
+const cloudEncryptionTestPass = "cloud-encryption-test-stable-pass"
 
-// initStoreFromBackupConfig is a small factory: given a backupConfig (already
-// populated by getAndSet*ConfigFromEnv) it brings up an ObjectStore for the
-// chosen target via GetObjectStores. Used by both the AWS, GCS and Azure cloud
-// encryption tests so we don't duplicate plumbing.
+// initStoreFromBackupConfig brings up an ObjectStore for the chosen target via
+// GetObjectStores. Reused by the AWS, GCS and Azure cloud encryption tests.
 func initStoreFromBackupConfig(t *testing.T, backupConfig shared.ConfigBackup, targetName string) ObjectStore {
 	t.Helper()
 	state := shared.NewJobsState()
@@ -48,10 +48,39 @@ func initStoreFromBackupConfig(t *testing.T, backupConfig shared.ConfigBackup, t
 	return nil
 }
 
+// deleteSidecarBestEffort removes the keystore sidecar at the canonical key for
+// the given store, ignoring "not found" errors. The tests call this before each
+// run so they always exercise the bootstrap path with a clean bucket. The test is
+// in the objectstore package, so we can reach into the unexported SDK clients.
+func deleteSidecarBestEffort(t *testing.T, store ObjectStore) {
+	t.Helper()
+	switch s := store.(type) {
+	case *StoreAwsS3:
+		_, err := s.awsS3Client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(s.storeBucketName),
+			Key:    aws.String(sidecarBucketKey(s.storePrefix)),
+		})
+		if err != nil {
+			t.Logf("best-effort sidecar delete (S3) failed (continuing): %v", err)
+		}
+	case *StoreGcpStorage:
+		err := s.gcpBucketObj.Object(sidecarBucketKey(s.storePrefix)).Delete(s.ctx)
+		if err != nil {
+			t.Logf("best-effort sidecar delete (GCS) failed (continuing): %v", err)
+		}
+	case *StoreAzureBlob:
+		_, err := s.azureClient.DeleteBlob(s.ctx, s.storeBucketName, sidecarBucketKey(s.storePrefix), nil)
+		if err != nil {
+			t.Logf("best-effort sidecar delete (Azure) failed (continuing): %v", err)
+		}
+	default:
+		t.Fatalf("deleteSidecarBestEffort: unknown ObjectStore concrete type %T", store)
+	}
+}
+
 // parallelBootstrap creates two stores from the same backupConfig and calls
-// InitEncryption(AllowBootstrap=true) on both concurrently. Returns a slice of
-// errors observed (one per goroutine) plus the KEK keystore UUIDs they each
-// resolved. The caller asserts the conflict-resolution invariants.
+// InitEncryption(AllowBootstrap=true) on both concurrently. Returns the error
+// observed in each goroutine and the keystore UUIDs they resolved.
 func parallelBootstrap(t *testing.T, backupConfig shared.ConfigBackup, targetName string) (errs []error, uuids []string) {
 	t.Helper()
 	const N = 2
@@ -75,7 +104,6 @@ func parallelBootstrap(t *testing.T, backupConfig shared.ConfigBackup, targetNam
 			}
 		}(i)
 	}
-	// Release both goroutines as close together as possible.
 	close(start)
 	wg.Wait()
 	return errs, uuids
@@ -91,10 +119,14 @@ func TestAwsS3EncryptionParallelBootstrap(t *testing.T) {
 	}
 	rt.Config.Backup[0].Target[0].RateLimit = "0"
 	rt.Config.Backup[0].Encrypt = true
-	rt.Config.Backup[0].EncryptPass = cloudEncryptionTestPass + "-aws-" + fmt.Sprint(time.Now().UnixNano())
+	rt.Config.Backup[0].EncryptPass = cloudEncryptionTestPass + "-aws"
 	const targetName = "aws_enc_1"
 	getAndSetAwsS3ConfigFromEnv(rt, t, targetName)
 	backupConfig := rt.Config.Backup[0]
+
+	// Cleanup any leftover sidecar from a previous run so the bootstrap path always fires.
+	preStore := initStoreFromBackupConfig(t, backupConfig, targetName)
+	deleteSidecarBestEffort(t, preStore)
 
 	errs, uuids := parallelBootstrap(t, backupConfig, targetName)
 	for i, e := range errs {
@@ -119,10 +151,13 @@ func TestGCPEncryptionParallelBootstrap(t *testing.T) {
 	}
 	rt.Config.Backup[0].Target[0].RateLimit = "0"
 	rt.Config.Backup[0].Encrypt = true
-	rt.Config.Backup[0].EncryptPass = cloudEncryptionTestPass + "-gcp-" + fmt.Sprint(time.Now().UnixNano())
+	rt.Config.Backup[0].EncryptPass = cloudEncryptionTestPass + "-gcp"
 	const targetName = "gcp_enc_1"
 	getAndSetGcpStorageConfigFromEnv(rt, t, targetName)
 	backupConfig := rt.Config.Backup[0]
+
+	preStore := initStoreFromBackupConfig(t, backupConfig, targetName)
+	deleteSidecarBestEffort(t, preStore)
 
 	errs, uuids := parallelBootstrap(t, backupConfig, targetName)
 	for i, e := range errs {
@@ -144,10 +179,13 @@ func TestAzureBlobEncryptionParallelBootstrap(t *testing.T) {
 	}
 	rt.Config.Backup[0].Target[0].RateLimit = "0"
 	rt.Config.Backup[0].Encrypt = true
-	rt.Config.Backup[0].EncryptPass = cloudEncryptionTestPass + "-azure-" + fmt.Sprint(time.Now().UnixNano())
+	rt.Config.Backup[0].EncryptPass = cloudEncryptionTestPass + "-azure"
 	const targetName = "azure_enc_1"
 	getAndSetAzureBlobStorageConfigFromEnv(rt, t, targetName)
 	backupConfig := rt.Config.Backup[0]
+
+	preStore := initStoreFromBackupConfig(t, backupConfig, targetName)
+	deleteSidecarBestEffort(t, preStore)
 
 	errs, uuids := parallelBootstrap(t, backupConfig, targetName)
 	for i, e := range errs {
