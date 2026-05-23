@@ -324,6 +324,31 @@ func runBackup(jobName string, jobUuid string, serverConfigCopy shared.CfgTempla
 		}
 	}
 
+	// Bring up per-target keystores for any target whose backup config has encrypt=true.
+	// AllowBootstrap=true: on first encrypted backup we generate and PUT the sidecar.
+	// HasEncryptedFiles: queried from the local DB to detect a lost sidecar — if the DB
+	// says we've uploaded encrypted files before but the bucket has no sidecar, we
+	// refuse to silently re-bootstrap and orphan that data.
+	hasEnc, dbErr := dbops.HasAnyEncryptedFiles(dbData.Db)
+	if dbErr != nil {
+		cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false,
+			fmt.Errorf("checking local DB for previously-encrypted files: %w", dbErr), objectStores)
+		return
+	}
+	for _, objStor := range objectStores {
+		err := objStor.InitEncryption(objectstore.EncryptionInitOptions{
+			HasEncryptedFiles: hasEnc,
+			AllowBootstrap:    true,
+		})
+		if err != nil {
+			StoreName, StoreType := objStor.GetStoreDetails()
+			newErr := fmt.Errorf("while initialising client-side encryption for backup target '%s' of type '%s': %w",
+				StoreName, StoreType, err)
+			cleanupAfterBackup(jobName, jobUuid, backupConfig, serverConfigCopy, backupJobsState, dbData, false, newErr, objectStores)
+			return
+		}
+	}
+
 	// give "watch" clients a chance to connect before the backup starts emitting events
 	time.Sleep(1 * time.Second)
 

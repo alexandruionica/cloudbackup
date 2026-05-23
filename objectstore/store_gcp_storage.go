@@ -15,8 +15,10 @@ import (
 	"time"
 
 	gcpStorage "cloud.google.com/go/storage"
+	"cloudbackup/cbcrypto"
 	"cloudbackup/shared"
 	"golang.org/x/time/rate"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 	gcpTransport "google.golang.org/api/transport/http"
 )
@@ -44,6 +46,7 @@ type StoreGcpStorage struct {
 	gcpBucketObj *gcpStorage.BucketHandle
 	// if to disable the use of CRC32c hashing of files before uploading them (in order for GCP to validate no corruption happened in flight)
 	disableCrc32cHash bool
+	encryptionState
 }
 
 func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBackup, target shared.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreGcpStorage, error) {
@@ -65,6 +68,10 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		rateLimit:       ratelimit,
 		burst:           burst,
 		backupJobsState: backupJobsState,
+		encryptionState: encryptionState{
+			enabled:  backupConfig.Encrypt,
+			password: []byte(backupConfig.EncryptPass),
+		},
 	}
 
 	GetStringParameter("storage_class", &result.storageClass, target.Parameters, "")
@@ -112,11 +119,25 @@ func (objStore *StoreGcpStorage) Upload(DbRecord shared.BackedUpFileProperties, 
 		}
 		defer reader.Close()
 
+		// Wrap with EncryptingReader when encryption is on AND this isn't an internal
+		// cloudbackup state file (DB copy / config copy ship plaintext).
+		var src io.Reader = &reader
+		encrypting := objStore.EncryptionEnabled() && !DbRecord.SkipEncryption
+		if encrypting {
+			er, encErr := cbcrypto.NewEncryptingReader(&reader, objStore.KEK(), objStore.KeystoreUUID())
+			if encErr != nil {
+				return strconv.FormatInt(version, 10), false, fmt.Errorf("wrap with EncryptingReader: %w", encErr)
+			}
+			src = er
+		}
+
 		// upload
 		wc := objStore.gcpBucketObj.Object(remotePath).NewWriter(objStore.ctx)
 
-		// this leads to an extra read of a file, before it is uploaded, in order to compute the hash
-		if !objStore.disableCrc32cHash {
+		// CRC32C is computed over the on-the-wire bytes. When encrypting we cannot pre-compute
+		// it from the plaintext file, so we disable the check; GCS still preserves data integrity
+		// at the storage layer. When not encrypting, the existing pre-read pass still applies.
+		if !objStore.disableCrc32cHash && !encrypting {
 			wc.CRC32C, err = crc32Hash(DbRecord.Path)
 			if err != nil {
 				return "", false, fmt.Errorf("could not calculate CRC32c checksum for '%s'", DbRecord.Path)
@@ -126,7 +147,7 @@ func (objStore *StoreGcpStorage) Upload(DbRecord shared.BackedUpFileProperties, 
 
 		// this operation is async (according to GCP library's docs) so a nil error may still mean a failure will happen.
 		// Use the wc.Close() below in order to be sure the upload is complete
-		if _, err := io.Copy(wc, &reader); err != nil {
+		if _, err := io.Copy(wc, src); err != nil {
 			if objStore.ctx.Err() == context.Canceled {
 				msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
 				logger.Info(msg)
@@ -166,6 +187,85 @@ func (objStore *StoreGcpStorage) Upload(DbRecord shared.BackedUpFileProperties, 
 // GetStoreDetails()(StoreName string, StoreType string)
 func (objStore *StoreGcpStorage) GetStoreDetails() (StoreName string, StoreType string) {
 	return objStore.storeName, objStore.storeType
+}
+
+// GCS max object size: 5 TiB. Resumable upload (used by the SDK Writer) handles chunking
+// internally, so encrypted and plaintext share the same limit.
+const gcsMaxObjectBytes int64 = 5 * 1024 * 1024 * 1024 * 1024
+
+// MaxObjectSize: see ObjectStore.MaxObjectSize.
+func (objStore *StoreGcpStorage) MaxObjectSize(encrypted bool) int64 {
+	return gcsMaxObjectBytes
+}
+
+// InitEncryption: see ObjectStore.InitEncryption.
+func (objStore *StoreGcpStorage) InitEncryption(opts EncryptionInitOptions) error {
+	bump := func(name, msg string) {
+		if objStore.backupJobsState != nil {
+			objStore.backupJobsState.IncrementCounter(objStore.backupName, name, sidecarBucketKey(objStore.storePrefix), "file", "init", msg)
+		}
+	}
+	return objStore.initEncryption(&gcpSidecarIO{store: objStore}, opts, bump)
+}
+
+// gcpSidecarIO bridges the shared keystore lifecycle to the GCS SDK.
+type gcpSidecarIO struct {
+	store *StoreGcpStorage
+}
+
+func (sio *gcpSidecarIO) key() string {
+	return sidecarBucketKey(sio.store.storePrefix)
+}
+
+func (sio *gcpSidecarIO) Fetch() ([]byte, error) {
+	r, err := sio.store.gcpBucketObj.Object(sio.key()).NewReader(sio.store.ctx)
+	if err != nil {
+		if errors.Is(err, gcpStorage.ErrObjectNotExist) {
+			return nil, errSidecarNotFound
+		}
+		return nil, err
+	}
+	defer func() { _ = r.Close() }()
+	body, err := io.ReadAll(io.LimitReader(r, maxSidecarBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > maxSidecarBytes {
+		return nil, fmt.Errorf("sidecar object %q exceeds %d bytes; refusing to read more", sio.key(), maxSidecarBytes)
+	}
+	return body, nil
+}
+
+func (sio *gcpSidecarIO) PutIfNotExists(body []byte) error {
+	// Conditional create: IfGenerationMatch=0 → only PUT if no live object
+	// exists at this key. GCS returns 412 PreconditionFailed when the
+	// object already exists.
+	w := sio.store.gcpBucketObj.Object(sio.key()).If(gcpStorage.Conditions{DoesNotExist: true}).NewWriter(sio.store.ctx)
+	if _, err := w.Write(body); err != nil {
+		_ = w.Close()
+		return err
+	}
+	err := w.Close()
+	if err == nil {
+		return nil
+	}
+	if isGcpPreconditionFailedErr(err) {
+		return errSidecarConflict
+	}
+	return err
+}
+
+// isGcpPreconditionFailedErr reports whether err is the GCS 412 returned
+// when the IfGenerationMatch precondition on a conditional create fails.
+func isGcpPreconditionFailedErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	var gErr *googleapi.Error
+	if errors.As(err, &gErr) {
+		return gErr.Code == http.StatusPreconditionFailed
+	}
+	return false
 }
 
 // place a delete marker on the newest version of a file. This is achieved by deleting the file without specifying a
@@ -268,13 +368,35 @@ func (objStore *StoreGcpStorage) Get(existingDbRecord shared.BackedUpFilePropert
 		}
 	}()
 
-	f, err := os.Create(restorePath)
+	f, err := os.Create(restorePath) // #nosec G304 -- restore path is operator-supplied via REST API and validated upstream
 	if err != nil {
 		return false, fmt.Errorf("could not create file '%s' for restore: %s", restorePath, err)
 	}
 	defer f.Close()
 
-	if _, err := io.Copy(f, rc); err != nil {
+	// If the file was uploaded encrypted, wrap the source with DecryptingReader
+	// and validate the header's keystore_uuid before streaming plaintext to disk.
+	var src io.Reader = rc
+	if existingDbRecord.Encrypted {
+		dr, err := cbcrypto.NewDecryptingReader(rc, objStore.KEK())
+		if err != nil {
+			return false, fmt.Errorf("wrap with DecryptingReader: %w", err)
+		}
+		hdr, err := dr.PeekHeader()
+		if err != nil {
+			return false, fmt.Errorf("parse encrypted header for '%s': %w", remotePath, err)
+		}
+		if hdr.KeystoreUUID != objStore.KeystoreUUID() {
+			msg := fmt.Sprintf("encrypted object '%s' references a different keystore (header UUID %x, current sidecar UUID %x); cannot decrypt", remotePath, hdr.KeystoreUUID, objStore.KeystoreUUID())
+			if objStore.backupJobsState != nil {
+				objStore.backupJobsState.IncrementCounter(objStore.backupName, "decrypt_keystore_mismatch", existingDbRecord.Path, "file", "restore", msg)
+			}
+			return false, errors.New(msg)
+		}
+		src = dr
+	}
+
+	if _, err := io.Copy(f, src); err != nil {
 		if objStore.ctx.Err() == context.Canceled {
 			msg := fmt.Sprintf("received cancellation request while downloading '%s' having version '%s' from "+
 				"object store: '%s' using bucket: '%s' and full remote path: '%s'", existingDbRecord.Path, remoteVersion,

@@ -237,6 +237,16 @@ func UploadAndUpdateDB(operation string, ctx context.Context, path string, stat 
 		var cancelled bool
 		var remoteVersion string
 		if operationType == "upload" {
+			if skip := preUploadReservedPathCheck(DbRecord); skip.Skip() {
+				logger.Warnf("Skipping upload of '%s' to target '%s': %s", path, targetName, skip.Message)
+				backupJobsState.IncrementCounter(backupConfig.Name, skip.CounterName, path, DbRecord.Type, "skip", skip.Message)
+				continue
+			}
+			if skip := preUploadSizeCheck(DbRecord, backupConfig, objectStore); skip.Skip() {
+				logger.Warnf("Skipping upload of '%s' to target '%s': %s", path, targetName, skip.Message)
+				backupJobsState.IncrementCounter(backupConfig.Name, skip.CounterName, path, DbRecord.Type, "skip", skip.Message)
+				continue
+			}
 			remoteVersion, cancelled, err = UploadObject(DbRecord, backupConfig, objectStore, backupJobsState, version, false)
 			if cancelled {
 				JobCancelled = true
@@ -1144,6 +1154,11 @@ func UploadBackupDatabase(jobName string, jobUuid string, backupConfig shared.Co
 				foundError = true
 				foundErrorMsg = err
 			} else {
+				// The DB copy is internal cloudbackup state, not user content: ship it plaintext so an
+				// operator can read it directly from the bucket during disaster recovery without an
+				// extra decrypt step. See shared.BackedUpFileProperties.SkipEncryption.
+				newDbRecord.SkipEncryption = true
+				newDbRecord.Encrypted = false
 				for _, objStore := range objectStores {
 					// versioning wise we use the Unix time (in seconds) as this always increases
 					_, _, err := UploadObject(newDbRecord, backupConfig, objStore, backupJobsState, version, true)
@@ -1192,6 +1207,10 @@ func UploadBackupConfigCopy(sanitisedCfgCopyFile string, jobUuid string, backupC
 		// backup this file.
 		return err
 	} else {
+		// The sanitised config copy is internal cloudbackup state — ship plaintext for the same
+		// recovery-friendliness reason as the DB copy. See shared.BackedUpFileProperties.SkipEncryption.
+		newDbRecord.SkipEncryption = true
+		newDbRecord.Encrypted = false
 		for _, objStore := range objectStores {
 			// versioning wise we use the Unix time (in seconds) as this always increases
 			_, _, err := UploadObject(newDbRecord, backupConfig, objStore, backupJobsState, version, true)

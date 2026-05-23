@@ -1,11 +1,14 @@
 package objectstore
 
 import (
+	"bytes"
+	"cloudbackup/cbcrypto"
 	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -50,6 +53,7 @@ type StoreAwsS3 struct {
 	awsUploader *manager.Uploader
 	// AWS S3 client
 	awsS3Client *s3.Client
+	encryptionState
 }
 
 func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup, target shared.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreAwsS3, error) {
@@ -71,6 +75,10 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 		rateLimit:       ratelimit,
 		burst:           burst,
 		backupJobsState: backupJobsState,
+		encryptionState: encryptionState{
+			enabled:  backupConfig.Encrypt,
+			password: []byte(backupConfig.EncryptPass),
+		},
 	}
 
 	// if any of those parameters was set then read its value and seed the struct
@@ -135,47 +143,184 @@ func (objStore *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, ve
 	logger.Debugf("Uploading: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", newDbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
 
-	if newDbRecord.Type == "file" {
-		// setup io.Reader (this handles reporting and optional rate limiting)
-		reader, err := NewFileReader(newDbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
-			objStore.storeType, 0, objStore.burst, newDbRecord.Size, objStore.ctx, true) // we pass ratelimit as 0 because the rate limiting will be done (if needed) by the http.Client
-		if err != nil {
-			return strconv.FormatInt(version, 10), false, err
-		}
-		defer reader.Close()
-
-		// upload using Multipart uploads and the S3 upload manager
-		result, err := objStore.awsUploader.Upload(objStore.ctx, &s3.PutObjectInput{
-			Bucket: aws.String(objStore.storeBucketName),
-			Key:    aws.String(remotePath),
-			Body:   &reader,
-		})
-		if err != nil {
-			if objStore.ctx.Err() == context.Canceled {
-				msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
-				logger.Info(msg)
-				return strconv.FormatInt(version, 10), true, errors.New(msg)
-			}
-			return strconv.FormatInt(version, 10), false, err
-		}
-		if result != nil && result.VersionID != nil {
-			return *(result.VersionID), false, nil
-		} else {
-			msg := fmt.Sprintf("upload of '%s' was reported "+
-				"successful but the upload response does not contain a file version. This means the backed up copy is "+
-				"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", newDbRecord.Path)
-			logger.Error(msg)
-			return strconv.FormatInt(version, 10), false, errors.New(msg)
-		}
-		// upload using streaming upload (without multipart upload)
-	} else {
+	if newDbRecord.Type != "file" {
 		// directories and symlinks DO NOT GET UPLOADED
 		return strconv.FormatInt(version, 10), false, nil
 	}
+
+	// setup io.Reader (this handles reporting and optional rate limiting; rate is 0 here
+	// because S3 traffic is rate-limited at the HTTP transport via http_rate_limiter.go).
+	reader, err := NewFileReader(newDbRecord.Path, objStore.bucket, objStore.backupJobsState, objStore.backupName, objStore.storeName,
+		objStore.storeType, 0, objStore.burst, newDbRecord.Size, objStore.ctx, true)
+	if err != nil {
+		return strconv.FormatInt(version, 10), false, err
+	}
+	defer reader.Close()
+
+	encrypting := objStore.EncryptionEnabled() && !newDbRecord.SkipEncryption
+
+	if encrypting {
+		return objStore.uploadEncrypted(newDbRecord, version, remotePath, &reader)
+	}
+	return objStore.uploadMultipart(newDbRecord, version, remotePath, &reader)
+}
+
+// uploadMultipart is the original (plaintext) path: hand the file to manager.Uploader
+// which handles multipart upload, retries, and parallelism transparently.
+func (objStore *StoreAwsS3) uploadMultipart(newDbRecord shared.BackedUpFileProperties, version int64, remotePath string, body io.Reader) (string, bool, error) {
+	result, err := objStore.awsUploader.Upload(objStore.ctx, &s3.PutObjectInput{
+		Bucket: aws.String(objStore.storeBucketName),
+		Key:    aws.String(remotePath),
+		Body:   body,
+	})
+	if err != nil {
+		if objStore.ctx.Err() == context.Canceled {
+			msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
+			logger.Info(msg)
+			return strconv.FormatInt(version, 10), true, errors.New(msg)
+		}
+		return strconv.FormatInt(version, 10), false, err
+	}
+	if result != nil && result.VersionID != nil {
+		return *(result.VersionID), false, nil
+	}
+	msg := fmt.Sprintf("upload of '%s' was reported "+
+		"successful but the upload response does not contain a file version. This means the backed up copy is "+
+		"unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown", newDbRecord.Path)
+	logger.Error(msg)
+	return strconv.FormatInt(version, 10), false, errors.New(msg)
+}
+
+// uploadEncrypted streams the file through cbcrypto.EncryptingReader and uploads the
+// ciphertext via single PutObject (NOT multipart): chunked AEAD must be processed as
+// one sequential stream. Trade-off: the body is not seekable so the SDK cannot retry
+// mid-upload on transient errors. A failed upload here returns an error and the
+// caller will retry the whole file on the next backup run.
+func (objStore *StoreAwsS3) uploadEncrypted(newDbRecord shared.BackedUpFileProperties, version int64, remotePath string, body io.Reader) (string, bool, error) {
+	er, err := cbcrypto.NewEncryptingReader(body, objStore.KEK(), objStore.KeystoreUUID())
+	if err != nil {
+		return strconv.FormatInt(version, 10), false, fmt.Errorf("wrap with EncryptingReader: %w", err)
+	}
+	encryptedSize := cbcrypto.EncryptedSize(newDbRecord.Size)
+	result, err := objStore.awsS3Client.PutObject(objStore.ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(objStore.storeBucketName),
+		Key:           aws.String(remotePath),
+		Body:          er,
+		ContentLength: aws.Int64(encryptedSize),
+	})
+	if err != nil {
+		if objStore.ctx.Err() == context.Canceled {
+			msg := fmt.Sprintf("received cancellation request while uploading content to %s", remotePath)
+			logger.Info(msg)
+			return strconv.FormatInt(version, 10), true, errors.New(msg)
+		}
+		return strconv.FormatInt(version, 10), false, err
+	}
+	if result != nil && result.VersionId != nil {
+		return *(result.VersionId), false, nil
+	}
+	msg := fmt.Sprintf("encrypted upload of '%s' was reported successful but the "+
+		"upload response does not contain a file version. This means the backed up copy "+
+		"is unusable and it's unsafe to delete it as the 'version' of the uploaded item is unknown",
+		newDbRecord.Path)
+	logger.Error(msg)
+	return strconv.FormatInt(version, 10), false, errors.New(msg)
 }
 
 func (objStore *StoreAwsS3) GetStoreDetails() (StoreName string, StoreType string) {
 	return objStore.storeName, objStore.storeType
+}
+
+// S3 object-size limits.
+//   - With multipart upload (manager.Uploader, the default for plaintext), an S3 object can be up to 5 TiB.
+//   - Without multipart (single PutObject, used when client-side encryption is on because chunked AEAD
+//     must be processed as a single sequential stream), the hard limit is 5 GiB per object.
+const (
+	s3MaxSinglePutBytes int64 = 5 * 1024 * 1024 * 1024        // 5 GiB
+	s3MaxMultipartBytes int64 = 5 * 1024 * 1024 * 1024 * 1024 // 5 TiB
+)
+
+// MaxObjectSize: see ObjectStore.MaxObjectSize. When $encrypted is true we force single-PUT mode and
+// therefore the 5 GiB cap applies.
+func (objStore *StoreAwsS3) MaxObjectSize(encrypted bool) int64 {
+	if encrypted {
+		return s3MaxSinglePutBytes
+	}
+	return s3MaxMultipartBytes
+}
+
+// InitEncryption: see ObjectStore.InitEncryption.
+func (objStore *StoreAwsS3) InitEncryption(opts EncryptionInitOptions) error {
+	bump := func(name, msg string) {
+		if objStore.backupJobsState != nil {
+			objStore.backupJobsState.IncrementCounter(objStore.backupName, name, sidecarBucketKey(objStore.storePrefix), "file", "init", msg)
+		}
+	}
+	return objStore.initEncryption(&awsS3SidecarIO{store: objStore}, opts, bump)
+}
+
+// awsS3SidecarIO bridges the shared keystore lifecycle to the S3 SDK.
+// Receiver name is "sio" so the standard-library "io" package import isn't
+// shadowed by the receiver identifier.
+type awsS3SidecarIO struct {
+	store *StoreAwsS3
+}
+
+// maxSidecarBytes guards against runaway sidecar reads; production sidecars
+// are ~250 bytes so 64 KiB is far more than enough.
+const maxSidecarBytes = 64 * 1024
+
+func (sio *awsS3SidecarIO) key() string {
+	return sidecarBucketKey(sio.store.storePrefix)
+}
+
+func (sio *awsS3SidecarIO) Fetch() ([]byte, error) {
+	out, err := sio.store.awsS3Client.GetObject(sio.store.ctx, &s3.GetObjectInput{
+		Bucket: aws.String(sio.store.storeBucketName),
+		Key:    aws.String(sio.key()),
+	})
+	if err != nil {
+		var nsk *types.NoSuchKey
+		if errors.As(err, &nsk) {
+			return nil, errSidecarNotFound
+		}
+		// Some configurations surface "object not found" as a generic S3 error
+		// with HTTP 404 rather than the typed NoSuchKey. Inspect API error code.
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) && (apiErr.ErrorCode() == "NoSuchKey" || apiErr.ErrorCode() == "NotFound") {
+			return nil, errSidecarNotFound
+		}
+		return nil, err
+	}
+	defer func() { _ = out.Body.Close() }()
+	body, err := io.ReadAll(io.LimitReader(out.Body, maxSidecarBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > maxSidecarBytes {
+		return nil, fmt.Errorf("sidecar object %q exceeds %d bytes; refusing to read more", sio.key(), maxSidecarBytes)
+	}
+	return body, nil
+}
+
+func (sio *awsS3SidecarIO) PutIfNotExists(body []byte) error {
+	_, err := sio.store.awsS3Client.PutObject(sio.store.ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(sio.store.storeBucketName),
+		Key:         aws.String(sio.key()),
+		Body:        bytes.NewReader(body),
+		IfNoneMatch: aws.String("*"),
+	})
+	if err == nil {
+		return nil
+	}
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.ErrorCode() {
+		case "PreconditionFailed", "ConditionalRequestConflict":
+			return errSidecarConflict
+		}
+	}
+	return err
 }
 
 // place a delete marker on the newest version of a file. This is achieved by deleting the file without specifying a
@@ -262,14 +407,24 @@ func (objStore *StoreAwsS3) Get(existingDbRecord shared.BackedUpFileProperties, 
 		VersionId: aws.String(remoteVersion),
 	}
 
-	f, err := os.Create(restorePath)
+	f, err := os.Create(restorePath) // #nosec G304 -- restore path is operator-supplied via REST API and validated upstream
 	if err != nil {
 		return false, fmt.Errorf("could not create file '%s' for restore: %s", restorePath, err)
 	}
 	defer f.Close()
 
+	if existingDbRecord.Encrypted {
+		return objStore.downloadEncrypted(existingDbRecord, restorePath, remotePath, remoteVersion, input, f)
+	}
+	return objStore.downloadMultipart(restorePath, remotePath, remoteVersion, input, f)
+}
+
+// downloadMultipart is the original (plaintext) path: parallel ranged downloads
+// via manager.NewDownloader — fast for big objects, but incompatible with chunked AEAD
+// which needs sequential read.
+func (objStore *StoreAwsS3) downloadMultipart(restorePath, remotePath, remoteVersion string, input *s3.GetObjectInput, f *os.File) (bool, error) {
 	downloader := manager.NewDownloader(objStore.awsS3Client)
-	_, err = downloader.Download(objStore.ctx, f, input)
+	_, err := downloader.Download(objStore.ctx, f, input)
 	if err != nil {
 		if objStore.ctx.Err() == context.Canceled {
 			logger.Infof("received cancellation request while downloading '%s'", remotePath)
@@ -277,6 +432,46 @@ func (objStore *StoreAwsS3) Get(existingDbRecord shared.BackedUpFileProperties, 
 		}
 		return false, fmt.Errorf("while downloading '%s' with version '%s' from S3 bucket '%s': %s",
 			remotePath, remoteVersion, objStore.storeBucketName, err)
+	}
+	return false, nil
+}
+
+// downloadEncrypted streams the object via single GetObject (sequential),
+// validates the header's keystore_uuid against the cached sidecar UUID, and
+// pipes the body through cbcrypto.NewDecryptingReader into the local file.
+func (objStore *StoreAwsS3) downloadEncrypted(rec shared.BackedUpFileProperties, restorePath, remotePath, remoteVersion string, input *s3.GetObjectInput, f *os.File) (bool, error) {
+	out, err := objStore.awsS3Client.GetObject(objStore.ctx, input)
+	if err != nil {
+		if objStore.ctx.Err() == context.Canceled {
+			logger.Infof("received cancellation request while downloading '%s'", remotePath)
+			return true, nil
+		}
+		return false, fmt.Errorf("while downloading '%s' with version '%s' from S3 bucket '%s': %s",
+			remotePath, remoteVersion, objStore.storeBucketName, err)
+	}
+	defer func() { _ = out.Body.Close() }()
+
+	dr, err := cbcrypto.NewDecryptingReader(out.Body, objStore.KEK())
+	if err != nil {
+		return false, fmt.Errorf("wrap with DecryptingReader: %w", err)
+	}
+	hdr, err := dr.PeekHeader()
+	if err != nil {
+		return false, fmt.Errorf("parse encrypted header for '%s': %w", remotePath, err)
+	}
+	if hdr.KeystoreUUID != objStore.KeystoreUUID() {
+		msg := fmt.Sprintf("encrypted object '%s' references a different keystore (header UUID %x, current sidecar UUID %x); cannot decrypt", remotePath, hdr.KeystoreUUID, objStore.KeystoreUUID())
+		if objStore.backupJobsState != nil {
+			objStore.backupJobsState.IncrementCounter(objStore.backupName, "decrypt_keystore_mismatch", rec.Path, "file", "restore", msg)
+		}
+		return false, errors.New(msg)
+	}
+	if _, err := io.Copy(f, dr); err != nil {
+		if objStore.ctx.Err() == context.Canceled {
+			logger.Infof("received cancellation request while decrypting '%s'", remotePath)
+			return true, nil
+		}
+		return false, fmt.Errorf("while decrypting '%s' into '%s': %w", remotePath, restorePath, err)
 	}
 	return false, nil
 }

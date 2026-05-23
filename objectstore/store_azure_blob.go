@@ -2,6 +2,7 @@ package objectstore
 
 import (
 	"bytes"
+	"cloudbackup/cbcrypto"
 	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"context"
@@ -16,7 +17,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/blob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/bloberror"
 	"github.com/mattn/go-ieproxy"
 	"golang.org/x/time/rate"
 )
@@ -44,6 +48,7 @@ type StoreAzureBlob struct {
 	azureAccountName string
 	// Azure SDK client used for all blob operations (upload, download, delete) and service-level queries
 	azureClient *azblob.Client
+	encryptionState
 }
 
 func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBackup, target shared.ConfigBackupTarget, rateLimitStr string, backupJobsState shared.BackupJobsStateInterface) (*StoreAzureBlob, error) {
@@ -65,6 +70,10 @@ func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBac
 		rateLimit:       ratelimit,
 		burst:           burst,
 		backupJobsState: backupJobsState,
+		encryptionState: encryptionState{
+			enabled:  backupConfig.Encrypt,
+			password: []byte(backupConfig.EncryptPass),
+		},
 	}
 
 	var storageAccessKey string
@@ -123,8 +132,22 @@ func (objStore *StoreAzureBlob) Upload(DbRecord shared.BackedUpFileProperties, v
 		}
 		defer reader.Close()
 
+		// Wrap with EncryptingReader when encryption is on AND this isn't an
+		// internal cloudbackup state file (DB copy / config copy ship plaintext).
+		// Azure's UploadStream reads the body sequentially into per-block buffers
+		// before dispatching parallel block PUTs, so a non-seekable EncryptingReader
+		// is safe here — the SDK never asks the body to rewind.
+		var src io.Reader = &reader
+		if objStore.EncryptionEnabled() && !DbRecord.SkipEncryption {
+			er, encErr := cbcrypto.NewEncryptingReader(&reader, objStore.KEK(), objStore.KeystoreUUID())
+			if encErr != nil {
+				return remoteVersion, false, fmt.Errorf("wrap with EncryptingReader: %w", encErr)
+			}
+			src = er
+		}
+
 		// upload
-		_, err = objStore.azureClient.UploadStream(objStore.ctx, objStore.storeBucketName, remotePath, &reader,
+		_, err = objStore.azureClient.UploadStream(objStore.ctx, objStore.storeBucketName, remotePath, src,
 			&azblob.UploadStreamOptions{
 				BlockSize:   5 * 1024 * 1024,
 				Concurrency: 3,
@@ -148,6 +171,82 @@ func (objStore *StoreAzureBlob) Upload(DbRecord shared.BackedUpFileProperties, v
 // GetStoreDetails()(StoreName string, StoreType string)
 func (objStore *StoreAzureBlob) GetStoreDetails() (StoreName string, StoreType string) {
 	return objStore.storeName, objStore.storeType
+}
+
+// Azure Block Blob max object size: ~190.7 TiB (50000 blocks * 4000 MiB per block, as of the v12
+// REST API). Encryption doesn't change Azure's path — UploadStream handles chunking internally —
+// so encrypted and plaintext share the same limit.
+const azureBlockBlobMaxBytes int64 = 190 * 1024 * 1024 * 1024 * 1024
+
+// MaxObjectSize: see ObjectStore.MaxObjectSize.
+func (objStore *StoreAzureBlob) MaxObjectSize(encrypted bool) int64 {
+	return azureBlockBlobMaxBytes
+}
+
+// InitEncryption: see ObjectStore.InitEncryption.
+func (objStore *StoreAzureBlob) InitEncryption(opts EncryptionInitOptions) error {
+	bump := func(name, msg string) {
+		if objStore.backupJobsState != nil {
+			objStore.backupJobsState.IncrementCounter(objStore.backupName, name, sidecarBucketKey(objStore.storePrefix), "file", "init", msg)
+		}
+	}
+	return objStore.initEncryption(&azureSidecarIO{store: objStore}, opts, bump)
+}
+
+// azureSidecarIO bridges the shared keystore lifecycle to the Azure SDK.
+type azureSidecarIO struct {
+	store *StoreAzureBlob
+}
+
+func (sio *azureSidecarIO) key() string {
+	return sidecarBucketKey(sio.store.storePrefix)
+}
+
+func (sio *azureSidecarIO) Fetch() ([]byte, error) {
+	resp, err := sio.store.azureClient.DownloadStream(sio.store.ctx, sio.store.storeBucketName, sio.key(), nil)
+	if err != nil {
+		// Azure returns BlobNotFound as the error code when the blob does not exist.
+		if isAzureNotFoundErr(err) {
+			return nil, errSidecarNotFound
+		}
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxSidecarBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > maxSidecarBytes {
+		return nil, fmt.Errorf("sidecar object %q exceeds %d bytes; refusing to read more", sio.key(), maxSidecarBytes)
+	}
+	return body, nil
+}
+
+func (sio *azureSidecarIO) PutIfNotExists(body []byte) error {
+	// Conditional create: If-None-Match: * → only PUT if the blob does not
+	// exist. Azure returns "ConditionNotMet" (HTTP 412) when the blob does.
+	etagAny := azcore.ETagAny
+	opts := &azblob.UploadStreamOptions{
+		AccessConditions: &blob.AccessConditions{
+			ModifiedAccessConditions: &blob.ModifiedAccessConditions{
+				IfNoneMatch: &etagAny,
+			},
+		},
+	}
+	_, err := sio.store.azureClient.UploadStream(sio.store.ctx, sio.store.storeBucketName, sio.key(), bytes.NewReader(body), opts)
+	if err == nil {
+		return nil
+	}
+	if bloberror.HasCode(err, bloberror.ConditionNotMet, bloberror.BlobAlreadyExists) {
+		return errSidecarConflict
+	}
+	return err
+}
+
+// isAzureNotFoundErr reports whether err corresponds to an Azure
+// "BlobNotFound" response — distinct from other transport / auth errors.
+func isAzureNotFoundErr(err error) bool {
+	return bloberror.HasCode(err, bloberror.BlobNotFound)
 }
 
 // Mark a file as deleted by uploading a 0 bytes file which has the same name but has the suffix ".d${markerVersion}"
@@ -231,15 +330,37 @@ func (objStore *StoreAzureBlob) Get(existingDbRecord shared.BackedUpFileProperti
 	bodyStream := downloadResponse.Body
 	defer bodyStream.Close()
 
-	f, err := os.Create(restorePath)
+	f, err := os.Create(restorePath) // #nosec G304 -- restore path is operator-supplied via REST API and validated upstream
 	if err != nil {
 		return false, fmt.Errorf("could not create file '%s' for restore: %s", restorePath, err)
 	}
 	defer f.Close()
 
+	// If the file was uploaded encrypted, wrap the body in a DecryptingReader
+	// and validate the header's keystore_uuid before streaming plaintext to disk.
+	var src io.Reader = bodyStream
+	if existingDbRecord.Encrypted {
+		dr, err := cbcrypto.NewDecryptingReader(bodyStream, objStore.KEK())
+		if err != nil {
+			return false, fmt.Errorf("wrap with DecryptingReader: %w", err)
+		}
+		hdr, err := dr.PeekHeader()
+		if err != nil {
+			return false, fmt.Errorf("parse encrypted header for '%s': %w", remotePath, err)
+		}
+		if hdr.KeystoreUUID != objStore.KeystoreUUID() {
+			msg := fmt.Sprintf("encrypted object '%s' references a different keystore (header UUID %x, current sidecar UUID %x); cannot decrypt", remotePath, hdr.KeystoreUUID, objStore.KeystoreUUID())
+			if objStore.backupJobsState != nil {
+				objStore.backupJobsState.IncrementCounter(objStore.backupName, "decrypt_keystore_mismatch", existingDbRecord.Path, "file", "restore", msg)
+			}
+			return false, errors.New(msg)
+		}
+		src = dr
+	}
+
 	buf := make([]byte, 1024*1024)
 	for {
-		n, readErr := bodyStream.Read(buf)
+		n, readErr := src.Read(buf)
 		if n > 0 {
 			if _, writeErr := f.Write(buf[:n]); writeErr != nil {
 				return false, fmt.Errorf("while writing restored content to '%s': %s", restorePath, writeErr)

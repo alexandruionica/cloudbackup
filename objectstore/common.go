@@ -60,6 +60,21 @@ type ObjectStore interface {
 	// store is initialised. This is because when validate() is called, the object store is initialised with a "mock" $backupJobsState
 	// Returns a message string (in case of success) and an error message if something went wrong
 	Validate() (string, error)
+
+	// MaxObjectSize returns the largest on-the-wire object size this target can accept, in bytes.
+	// $encrypted distinguishes between paths that bypass certain SDK capabilities when client-side
+	// encryption is on (notably: S3 disables multipart upload for encrypted objects, capping single
+	// PUT at 5 GiB). For backends where encryption doesn't change the limit, both values are equal.
+	// Callers compare this against the predicted ciphertext size from cbcrypto.EncryptedSize() to
+	// decide whether to skip a file before any I/O.
+	MaxObjectSize(encrypted bool) int64
+
+	// InitEncryption brings up the per-target keystore. No-op if the backup config has
+	// encrypt=false. When encryption is on, fetches the sidecar from the bucket (or bootstraps
+	// a new one when permitted), derives the KEK via argon2id+verifier, and caches it on the
+	// store struct for the daemon's lifetime. Callers must invoke this AFTER Validate() and
+	// BEFORE any Upload/Get on encrypted content. See EncryptionInitOptions for mode flags.
+	InitEncryption(opts EncryptionInitOptions) error
 }
 
 // see description of the NewFileReader() function in order to understand the purpose of this type

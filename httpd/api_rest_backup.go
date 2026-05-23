@@ -6,6 +6,7 @@ import (
 	"cloudbackup/shared"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gofrs/uuid"
 	"github.com/julienschmidt/httprouter"
@@ -634,6 +635,16 @@ func (srvSrc SrvData) handlerPostBackupTargetTest(w http.ResponseWriter, r *http
 			storeName, StoreType := store.GetStoreDetails()
 			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable,
 				fmt.Sprintf("Object store '%s' of type '%s' returned error: %s", storeName, StoreType, err))
+			return
+		}
+		// If encryption is enabled, verify the sidecar's verifier matches the configured password
+		// when a sidecar already exists. AllowBootstrap=false: never create one from this read-only
+		// validation endpoint. A missing sidecar is OK here (first real backup will bootstrap it).
+		err = store.InitEncryption(objectstore.EncryptionInitOptions{AllowBootstrap: false})
+		if err != nil && !errors.Is(err, objectstore.ErrSidecarMissingForRestore) {
+			storeName, StoreType := store.GetStoreDetails()
+			JSONError(w, http.StatusServiceUnavailable, HttpErrServiceUnavailable,
+				fmt.Sprintf("Object store '%s' of type '%s' failed encryption init: %s", storeName, StoreType, err))
 			return
 		}
 		resultMsg = resultMsg + msg + "\n"

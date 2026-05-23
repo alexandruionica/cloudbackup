@@ -4,6 +4,7 @@ import (
 	"cloudbackup/shared"
 	"context"
 	"fmt"
+	"math"
 )
 
 // this object store is used only for when we have errors due to an unknown store being supplied. Beside satisfying
@@ -46,4 +47,18 @@ func (objStore *StoreError) Get(existingDbRecord shared.BackedUpFileProperties, 
 
 func (objStore *StoreError) Validate() (string, error) {
 	return "", fmt.Errorf("unsupported backend of type: '%s'", objStore.storeType)
+}
+
+// MaxObjectSize: see ObjectStore.MaxObjectSize. The error backend returns MaxInt64 so callers
+// reach the Upload() failure path (which is the whole point of this store as a test injector)
+// rather than being short-circuited by a pre-flight size check.
+func (objStore *StoreError) MaxObjectSize(encrypted bool) int64 {
+	return math.MaxInt64
+}
+
+// InitEncryption: no-op. The error store carries no real configuration and never reaches
+// encrypted I/O paths; tests that combine encryption with this store should set up a fake
+// store with the desired KEK state directly.
+func (objStore *StoreError) InitEncryption(opts EncryptionInitOptions) error {
+	return nil
 }

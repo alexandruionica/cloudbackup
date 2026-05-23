@@ -120,6 +120,20 @@ func Do(jobName string, req Request, serverConfigCopy shared.CfgTemplate,
 		return Result{State: "failed", Err: err, RestoredDirectory: restoreDir, TargetName: target.Name}
 	}
 
+	// Bring up encryption for the chosen target. AllowBootstrap=false: restore must NEVER
+	// create a sidecar — if it's missing the encrypted data is unrecoverable and we want to
+	// surface that loudly rather than silently producing a fresh keystore.
+	hasEnc, dbErr := dbops.HasAnyEncryptedFiles(backupDb)
+	if dbErr != nil {
+		return Result{State: "failed", Err: fmt.Errorf("checking local DB for encrypted files: %w", dbErr), RestoredDirectory: restoreDir, TargetName: target.Name}
+	}
+	if err := objStore.InitEncryption(objectstore.EncryptionInitOptions{
+		HasEncryptedFiles: hasEnc,
+		AllowBootstrap:    false,
+	}); err != nil {
+		return Result{State: "failed", Err: fmt.Errorf("initialising client-side encryption for target '%s': %w", target.Name, err), RestoredDirectory: restoreDir, TargetName: target.Name}
+	}
+
 	// Restore DB is per-(backup, target) and holds the manifest, per-file state and counters.
 	restoreDb, err := database.StartRestoreDb(dataDir, jobName, target.Name, backupJobsState)
 	if err != nil {

@@ -30,4 +30,13 @@ type BackedUpFileProperties struct {
 	Encrypted    bool
 	// uuid of backup job which backed up this file
 	JobUuid string
+	// SkipEncryption is a transient (not persisted to SQL) hint that this
+	// particular upload should bypass client-side encryption even when the
+	// owning backup config has encrypt=true. Set by helpers that ship
+	// internal cloudbackup state — the SQLite DB copy (UploadBackupDatabase)
+	// and the sanitised config copy (UploadBackupConfigCopy) — because those
+	// files are not user content and keeping them plaintext means an operator
+	// can read them directly out of the bucket during disaster recovery,
+	// without needing a separate decrypt step before invoking `cloudbackup restore`.
+	SkipEncryption bool
 }
