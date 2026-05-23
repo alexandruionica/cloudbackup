@@ -122,6 +122,10 @@ func PrintBackupStatus(decodedJson shared.BackupJobStatus, alwaysExpand bool) {
 		//
 		fmt.Printf("Errors encountered while building the list of deleted files/symlinks/dirs: %d\n", decodedJson.StatsCounters["failed_to_find_deleted"])
 		fmt.Printf("Errors encountered while making a copy of the metadata database: %d\n", decodedJson.StatsCounters["database_copy_errors"])
+		// client-side-encryption counters
+		fmt.Printf("Files skipped because path collides with the .cbcrypt reserved namespace: %d\n", decodedJson.StatsCounters["skipped_reserved_path"])
+		fmt.Printf("Files skipped because their encrypted size exceeds the target's MaxObjectSize: %d\n", decodedJson.StatsCounters["skipped_too_large_for_target"])
+		fmt.Printf("Keystore inconsistency events (sidecar missing but local DB has encrypted files): %d\n", decodedJson.StatsCounters["keystore_inconsistent"])
 		fmt.Printf("Deleted directories for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_directories"])
 		fmt.Printf("Deleted files for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_files"])
 		fmt.Printf("Deleted symlinks for which updating internal state failed: %d\n", decodedJson.StatsCounters["failed_to_mark_deleted_symlinks"])
@@ -168,6 +172,7 @@ func PrintRestoreStatus(decodedJson shared.BackupJobStatus, alwaysExpand bool) {
 		fmt.Printf("Symlinks restored: %d\n", decodedJson.StatsCounters["restored_symlinks"])
 		fmt.Printf("Files that failed to restore: %d\n", decodedJson.StatsCounters["failed_to_restore_files"])
 		fmt.Printf("Items skipped because they were marked deleted: %d\n", decodedJson.StatsCounters["skipped_delete_markers"])
+		fmt.Printf("Files where the keystore UUID in the header doesn't match the current sidecar: %d\n", decodedJson.StatsCounters["decrypt_keystore_mismatch"])
 		fmt.Printf("Bytes written to disk for restored files: %s\n", humanize.Bytes(decodedJson.StatsCounters["bytes_restored"]))
 		fmt.Printf("Current file being processed: %s\n", decodedJson.StatsText["current_file"])
 	}

@@ -13,6 +13,11 @@ export interface StatsCounters {
   up_to_date_files?: number;
   up_to_date_directories?: number;
   excluded?: number;
+  // client-side-encryption counters
+  skipped_reserved_path?: number;
+  skipped_too_large_for_target?: number;
+  keystore_inconsistent?: number;
+  decrypt_keystore_mismatch?: number;
   [k: string]: number | undefined;
 }
 

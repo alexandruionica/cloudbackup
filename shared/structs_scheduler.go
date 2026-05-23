@@ -468,6 +468,15 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 			"scripts_ran": 0,
 			// how many user supplied scripts are defined (excludes notification scripts)
 			"scripts_num": 0,
+			// client-side-encryption gating: file's local path collides with the reserved
+			// <storePrefix>/.cbcrypt/ namespace; skipped per target, not counted as a failed upload
+			"skipped_reserved_path": 0,
+			// client-side-encryption gating: predicted ciphertext size exceeds the target's
+			// MaxObjectSize(encrypted=true) — typically S3's 5 GiB single-PUT cap when encrypted
+			"skipped_too_large_for_target": 0,
+			// client-side-encryption lifecycle: keystore sidecar missing on the bucket but the local
+			// DB has rows marked encrypted; refused to silently re-bootstrap and orphan that data
+			"keystore_inconsistent": 0,
 		},
 		StatsText: map[string]string{
 			"current_directory": "",
@@ -513,6 +522,10 @@ func (jobs *BackupJobsState) MarkRestoreRunning(name string, logContext string, 
 			"restored_symlinks":       0,
 			"failed_to_restore_files": 0,
 			"skipped_delete_markers":  0,
+			// client-side-encryption: file's header keystore_uuid doesn't match the sidecar's;
+			// surfaced per file at restore so the operator can distinguish "wrong keystore"
+			// from a generic crypto failure
+			"decrypt_keystore_mismatch": 0,
 		},
 		StatsText: map[string]string{
 			"current_file":      "",

@@ -250,6 +250,24 @@ func prepareHtmlEmail(emailTextBody []string, decodedJson shared.BackupJobStatus
 	}
 	result += tr + "Metadata database copy errors" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["database_copy_errors"])
 
+	// client-side-encryption counters: any non-zero value indicates an operational issue and gets the orange highlight.
+	if tdTmp = td; decodedJson.StatsCounters["skipped_reserved_path"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Files skipped (path collides with .cbcrypt/)" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["skipped_reserved_path"])
+	if tdTmp = td; decodedJson.StatsCounters["skipped_too_large_for_target"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Files skipped (encrypted size > target limit)" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["skipped_too_large_for_target"])
+	if tdTmp = td; decodedJson.StatsCounters["keystore_inconsistent"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Keystore inconsistency events" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["keystore_inconsistent"])
+	if tdTmp = td; decodedJson.StatsCounters["decrypt_keystore_mismatch"] > 0 {
+		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"
+	}
+	result += tr + "Decrypt failures (keystore UUID mismatch)" + tdTmp + fmt.Sprintf("%d\n", decodedJson.StatsCounters["decrypt_keystore_mismatch"])
+
 	result += tr + "Examined directories" + td + fmt.Sprintf("%d\n", decodedJson.StatsCounters["examined_directories"])
 	if tdTmp = td; decodedJson.StatsCounters["examined_files"] == 0 {
 		tdTmp = "<td " + tdStyle + " bgcolor='orange'>"

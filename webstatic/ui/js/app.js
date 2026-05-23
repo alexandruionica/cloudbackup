@@ -654,6 +654,15 @@ function ReportDetail(props) {
                 ['Database copy errors', g('database_copy_errors')],
             ],
         },
+        {
+            title: 'Client-side encryption',
+            rows: [
+                ['Files skipped (path collides with .cbcrypt/)', g('skipped_reserved_path')],
+                ['Files skipped (encrypted size > target limit)', g('skipped_too_large_for_target')],
+                ['Keystore inconsistency events', g('keystore_inconsistent')],
+                ['Decrypt failures (keystore UUID mismatch)', g('decrypt_keystore_mismatch')],
+            ],
+        },
     ];
     const currentDir = d.stats_text?.current_directory || '';
     const currentFile = d.stats_text?.current_file || '';
