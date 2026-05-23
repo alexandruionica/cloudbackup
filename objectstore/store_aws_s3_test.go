@@ -44,7 +44,7 @@ func getAndSetAwsS3ConfigFromEnv(srvCfg *shared.RuntimeConfig, t *testing.T, new
 	}
 	aBucket := os.Getenv("CLD_S3_BUCKET")
 	if aBucket == "" {
-		t.Fatalf("Environment variable 'CLD_S3_BUCKET' is not set so the test doesn't know what S3 bucket to use")
+		t.Skipf("Environment variable 'CLD_S3_BUCKET' is not set so the test doesn't know what S3 bucket to use")
 	} else {
 		srvCfg.Config.Backup[0].Target[0].Bucket = aBucket
 	}

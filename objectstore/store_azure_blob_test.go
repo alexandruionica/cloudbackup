@@ -26,7 +26,7 @@ func getAndSetAzureBlobStorageConfigFromEnv(srvCfg *shared.RuntimeConfig, t *tes
 	srvCfg.Config.Backup[0].Target[0].Prefix = "tests/" + runtime.GOOS + "/" + t.Name()
 	storageAccount := os.Getenv("CLD_AZURE_STORAGE_ACCOUNT")
 	if storageAccount == "" {
-		t.Fatalf("Environment variable 'CLD_AZURE_STORAGE_ACCOUNT' is not set so the test doesn't know what " +
+		t.Skipf("Environment variable 'CLD_AZURE_STORAGE_ACCOUNT' is not set so the test doesn't know what " +
 			"Azure Storage account to use")
 	} else {
 		srvCfg.Config.Backup[0].Target[0].Parameters = append(srvCfg.Config.Backup[0].Target[0].Parameters,
@@ -38,7 +38,7 @@ func getAndSetAzureBlobStorageConfigFromEnv(srvCfg *shared.RuntimeConfig, t *tes
 	}
 	StorageAccessKey := os.Getenv("CLD_AZURE_STORAGE_ACCESS_KEY")
 	if StorageAccessKey == "" {
-		t.Fatalf("Environment variable 'CLD_AZURE_STORAGE_ACCESS_KEY' is not set so the test doesn't know what " +
+		t.Skipf("Environment variable 'CLD_AZURE_STORAGE_ACCESS_KEY' is not set so the test doesn't know what " +
 			"Azure Storage account key to use")
 	} else {
 		srvCfg.Config.Backup[0].Target[0].Parameters = append(srvCfg.Config.Backup[0].Target[0].Parameters,
@@ -50,7 +50,7 @@ func getAndSetAzureBlobStorageConfigFromEnv(srvCfg *shared.RuntimeConfig, t *tes
 	}
 	aBucket := os.Getenv("CLD_AZURE_STORAGE_CONTAINER")
 	if aBucket == "" {
-		t.Fatalf("Environment variable 'CLD_AZURE_STORAGE_CONTAINER' is not set so the test doesn't know what " +
+		t.Skipf("Environment variable 'CLD_AZURE_STORAGE_CONTAINER' is not set so the test doesn't know what " +
 			"Azure Storage container(bucket) to use")
 	} else {
 		srvCfg.Config.Backup[0].Target[0].Bucket = aBucket

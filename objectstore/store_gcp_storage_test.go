@@ -31,7 +31,7 @@ func getAndSetGcpStorageConfigFromEnv(srvCfg *shared.RuntimeConfig, t *testing.T
 
 	aBucket := os.Getenv("CLD_GCP_STORAGE_BUCKET")
 	if aBucket == "" {
-		t.Fatalf("Environment variable 'CLD_GCP_STORAGE_BUCKET' is not set so the test doesn't know what GCP Storage bucket to use")
+		t.Skipf("Environment variable 'CLD_GCP_STORAGE_BUCKET' is not set so the test doesn't know what GCP Storage bucket to use")
 	} else {
 		srvCfg.Config.Backup[0].Target[0].Bucket = aBucket
 	}

@@ -333,10 +333,9 @@ func (command *ArgsCommandServerResetKeystore) Execute(args []string) error {
 		}
 	}
 
-	// Open the DB and clear the flag.
-	mockState := &shared.BackupJobsState{
-		Lock: &sync.RWMutex{},
-	}
+	// Open the DB and clear the flag. NewJobsState() initialises the maps that database.OpenDb
+	// touches; a hand-rolled struct with a bare Mutex panics with "assignment to entry in nil map".
+	mockState := shared.NewJobsState()
 	db, err := database.Start(cfgCopy.DataDir, jobName, mockState)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open backup DB for job %q at %s: %s\n", jobName, cfgCopy.DataDir, err)
