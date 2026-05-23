@@ -91,3 +91,90 @@ Run on Linux/Unixes only:
 make docs
 ```
 The documentation is in the `documentation_src` folder but once the server is launched  (`./cloudbackup server start -c config.yaml`) the the documentation can be accessed at http://127.0.0.1:8080/docs or the network reachable IP + port of the server (if one was configured)
+
+# Client-side encryption
+
+cloudbackup can encrypt file contents on the client before uploading to any of the supported cloud backends (AWS S3, Azure Blob, GCP Cloud Storage). When enabled, the bytes that hit the bucket are AES-256-GCM ciphertext keyed by a password the operator controls. The cloud provider never sees plaintext.
+
+## Enabling it
+
+In the server config, set `encrypt: true` and `encrypt_pass: <your-password>` on a backup job:
+
+```yaml
+backup:
+  - name: documents
+    encrypt: true
+    encrypt_pass: "use-a-long-randomly-generated-passphrase"
+    source:
+      - "/home/me/Documents"
+    target:
+      - name: s3-prod
+        type: aws_s3
+        bucket: my-backups
+        prefix: documents/
+```
+
+Validation refuses a config with `encrypt: true` but an empty `encrypt_pass`.
+
+## How it works
+
+- A 32-byte key-encryption-key (KEK) is derived from `encrypt_pass` with **argon2id** (memory=64 MiB, time=3, threads=4) using a random per-target salt.
+- Each file gets a fresh random 32-byte content-encryption-key (CEK), wrapped with the KEK using AES-256-GCM and embedded in the file's encrypted header.
+- The file body is chunked into 64 KiB plaintext blocks, each AES-256-GCM encrypted with a unique nonce; truncation is detected via a last-chunk flag in the nonce.
+- The KEK lives in daemon memory across backup runs; argon2id is invoked once per target lifetime.
+
+## The keystore sidecar
+
+Each encryption-enabled target stores a small YAML object at:
+
+```
+<storePrefix>/.cbcrypt/keystore.v1.yaml
+```
+
+It holds the salt, argon2id parameters, a unique keystore UUID (stamped into every encrypted file's header), and a verifier that lets the daemon detect a wrong password at startup instead of mid-backup.
+
+- All sidecar fields are non-sensitive (the salt is random, the verifier is a known plaintext sealed with the KEK). It can be cleartext.
+- On first encrypted backup, the daemon creates the sidecar using a conditional PUT (`If-None-Match: *` on S3/Azure, `IfGenerationMatch=0` on GCS). If two daemons race, the loser adopts the winner's sidecar.
+- The path segment `.cbcrypt/` is reserved: any local file whose remote-mapped path would land there is skipped and the `skipped_reserved_path` counter is bumped.
+
+## Per-backend trade-offs
+
+- **AWS S3 — single PUT only when encrypted.** Chunked AEAD must be processed as one sequential stream, so the encryption path uses `PutObject` instead of the multipart `Uploader`. The hard limit is therefore **5 GiB per encrypted file**. Files larger than that are skipped per target with the `skipped_too_large_for_target` counter; other targets in the same job can still succeed (e.g., the same file ships fine to Azure or GCP). Because the body is not seekable, the SDK cannot retry mid-upload on transient errors — a failed upload returns an error and the file will be retried on the next backup run.
+- **GCP CRC32C — disabled when encrypting.** GCS computes CRC32C over the on-the-wire bytes; we cannot pre-compute it from the plaintext file once the body is encrypted, so the checksum is disabled when encryption is on for that target. GCS still preserves data integrity at the storage layer.
+- **Azure — no change.** UploadStream reads the body sequentially into per-block buffers before dispatching parallel PUTs, so it's safe with the non-seekable `EncryptingReader`.
+
+## What stays plaintext
+
+The SQLite DB copy and the sanitised config copy that cloudbackup uploads at the end of every backup run are kept **plaintext** in the bucket, even when encryption is on. Rationale: their contents don't add meaningful disclosure beyond the directory tree already visible from the bucket layout, and operators can read them directly during disaster recovery without an extra decryption step. To restore from a fresh machine you only need `[password + bucket access]`.
+
+## New counters in the backup report
+
+| Counter | When |
+|---|---|
+| `skipped_reserved_path` | File's remote path collides with `<storePrefix>/.cbcrypt/` |
+| `skipped_too_large_for_target` | Predicted ciphertext size exceeds the target's `MaxObjectSize(encrypted=true)` |
+| `keystore_inconsistent` | Sidecar missing on the bucket but the local DB has rows marked encrypted — refuses to silently re-bootstrap (would orphan that data) |
+| `decrypt_keystore_mismatch` | File header's `keystore_uuid` doesn't match the sidecar's, surfaced per file at restore time |
+
+## Recovery from a lost sidecar
+
+If the sidecar object is somehow deleted from the bucket while the local DB still references encrypted files, the next backup will fail target init with `keystore_inconsistent`. Recovery options:
+
+1. **Restore the sidecar** from a bucket-side backup if you have one (e.g., S3 object-version restore, GCS soft-delete).
+2. **Accept data loss** — the previously-encrypted objects in the bucket cannot be decrypted without the original salt. Clear the local DB's encrypted flags and start fresh:
+
+```bash
+cloudbackup server reset-keystore -c /etc/cloudbackup/server.yaml <backup-job-name>
+```
+
+This clears `encrypted=1` on every row in that job's local DB. On the next backup, the daemon sees an empty encrypted-files set in the DB, allows bootstrap, generates a brand new sidecar, and re-uploads all files. Previously-encrypted objects already in the bucket are left in place (they will eventually be cleaned up via your bucket lifecycle policy) but cannot be recovered.
+
+## Migration: plaintext → encrypted
+
+Just set `encrypt: true` and `encrypt_pass: ...` on an existing backup job. The next backup run sees the flag mismatch between DB (`encrypted=0` per file) and config (`encrypt=true`) and re-uploads every file under the new keystore. Old plaintext versions remain in version history until the bucket lifecycle policy retires them.
+
+## Known limitations
+
+- **No KEK rotation in v1.** The header carries a `keystore_uuid` field that is forward-compatible with a future scheme that tracks multiple historical UUIDs, but a current "rotate the password" workflow does not exist.
+- **File path tree is visible.** The on-bucket layout mirrors local paths under `<storePrefix>/data/...`, so an observer of the bucket sees what paths were backed up even with encryption on. Encrypting filenames is out of scope for this iteration.
+- **Cloud-cred integration tests for encryption are not yet in `integration_tests/`.** End-to-end coverage of the encryption code paths is provided at the Go unit-test level using the TestNull backend (`objectstore/encryption_e2e_test.go`, `objectstore/store_test_null_encryption_test.go`). Adding Python integration tests under `integration_tests/encrypted_<backend>.py` to validate real-cloud behaviour (conditional PUT race, 5 GiB cap actually firing on S3, etc.) is a follow-up.

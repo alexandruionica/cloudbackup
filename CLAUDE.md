@@ -54,8 +54,10 @@ CLI (cliargs) → Daemon (daemon) → Config + SQLite DB
 - **daemon** — Server lifecycle: initializes config, DB, HTTP server, and scheduler; wires them together via channels.
 - **httpd** — REST API handlers (`api_rest_backup.go`, `api_rest_config.go`, `api_rest_report.go`). Uses `julienschmidt/httprouter`. Authenticated via HTTP Basic Auth with role-based permissions.
 - **scheduler** — Listens on a channel for backup commands from HTTP handlers; manages concurrent backup/restore goroutines.
-- **backup** — Core backup orchestration: diff calculation, upload, restore. Delegates scanning to `backup/scan/` and metadata to `backup/fileproperties/`.
-- **objectstore** — Cloud storage abstraction. Each provider (`store_aws_s3.go`, `store_azure_blob.go`, `store_gcp_storage.go`) implements the common interface defined in `common.go`.
+- **backup** — Core backup orchestration: diff calculation, upload, restore. Delegates scanning to `backup/scan/` and metadata to `backup/fileproperties/`. Per-(file,target) gating helpers in `preupload.go` (size limit, reserved-namespace check).
+- **objectstore** — Cloud storage abstraction. Each provider (`store_aws_s3.go`, `store_azure_blob.go`, `store_gcp_storage.go`) implements the common interface defined in `common.go`. Per-target client-side-encryption lifecycle lives in `encryption.go` (`InitEncryption`, sidecar fetch/bootstrap with conditional PUT).
+- **cbcrypto** — Client-side encryption: streaming AES-256-GCM (`EncryptingReader`, `DecryptingReader`), file header (incl. `keystore_uuid`), argon2id KEK derivation, `EncryptedSize` helper.
+- **cbcrypto/keystore** — YAML sidecar (`<storePrefix>/.cbcrypt/keystore.v1.yaml`) holding salt, KDF params, keystore UUID, and password verifier.
 - **database** — SQLite-backed metadata store using WAL mode. Tracks backup jobs, remote files, and failures. DB operations are in `dbops/`.
 - **config** — Thread-safe YAML config with `GetCopyWithLock()` pattern for safe concurrent reads.
 - **shared** — Shared structs used across packages: config types (`ConfigBackup`, `ConfigBackupTarget`, `ConfigUser`), job state (`BackupJobsState`), and file properties.
