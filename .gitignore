@@ -20,3 +20,4 @@ ubuntu-xenial-16.04-cloudimg-console.log
 config_server_with_secrets.yaml
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+*VirtualBoxVM-*.log

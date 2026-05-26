@@ -3,8 +3,8 @@ GOLANGCI_LINT_VERSION = "1.43.0"
 
 Vagrant.configure("2") do |config|
 
-  config.vm.define "windows2016", autostart: false do |windows|
-    windows.vm.box = "windows2016"
+  config.vm.define "windows2025", autostart: false do |windows|
+    windows.vm.box = "windows2025"
       windows.vm.box_check_update = false
 
       # Settings specific to a windows box
@@ -14,6 +14,8 @@ Vagrant.configure("2") do |config|
       windows.winrm.password = "vagrant"
 
       windows.ssh.insert_key = false
+#       windows.ssh.username = "vagrant"
+#       windows.ssh.password = "vagrant"
 
       windows.vm.synced_folder "../..", "/Users/vagrant/Documents/golang"
 
@@ -22,10 +24,41 @@ Vagrant.configure("2") do |config|
         vb.gui = true
 
          # Customize the amount of memory on the VM:
-         vb.memory = "2048"
+         vb.memory = "4096"
       end
+# Known to work if next 3 manually executed
+#  net use Z: \\vboxsvr\Users_vagrant_Documents_golang
+#  cd Z:\src\cloudbackup
+#  make test
 
-      windows.vm.provision "shell", inline: 'setx GOPATH %USERPROFILE%\Documents\golang\ '
+      # Workaround for a bug in Go's filepath.EvalSymlinks on Windows when the symlink target is a UNC root - https://github.com/golang/go/issues/42079
+    # Point GOPATH at the drive letter we'll mount the share on.
+    windows.vm.provision "shell", inline: 'setx /M GOPATH Y:\\'
+
+    # Ensure Y: is mapped at the start of every interactive PowerShell session
+    # for the vagrant user. NO /persistent:yes — that's what creates the ghost.
+    windows.vm.provision "shell", privileged: true, inline: <<~'PS'
+      $share       = '\\vboxsvr\Users_vagrant_Documents_golang'
+      $profileDir  = 'C:\Users\vagrant\Documents\WindowsPowerShell'
+      $profilePath = Join-Path $profileDir 'profile.ps1'
+      New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+      $marker  = '# vagrant-vbox-share-mount'
+      $snippet = @"
+  $marker
+  if (-not (Test-Path 'Y:\')) {
+    cmd /c "net use Y: $share" > `$null 2>&1
+  }
+  "@
+      if (-not (Test-Path $profilePath) -or
+          -not (Select-String -Path $profilePath -Pattern ([regex]::Escape($marker)) -Quiet)) {
+        Add-Content -Path $profilePath -Value $snippet
+      }
+      # Belt-and-braces: make sure no stale persistent entries linger.
+      Remove-Item HKCU:\Network\Y -Recurse -Force -ErrorAction SilentlyContinue
+      Remove-Item HKCU:\Network\Z -Recurse -Force -ErrorAction SilentlyContinue
+    PS
+
+
   end
 
   config.vm.define "freebsd12.3", autostart: false do |freebsd|

@@ -90,7 +90,25 @@ Run on Linux/Unixes only:
 ```
 make docs
 ```
+
 The documentation is in the `documentation_src` folder but once the server is launched  (`./cloudbackup server start -c config.yaml`) the the documentation can be accessed at http://127.0.0.1:8080/docs or the network reachable IP + port of the server (if one was configured)
+
+
+# Vagrant for local runs on different OSes
+
+Requirements:
+- Virtualbox 7.2
+- Vagrant
+
+For running all tests of Microsoft Windows follow the guide from [in a separate repository](https://bitbucket.org/alexandru_ionica/cloudbackup_infrastructure/src/master/) in order to build a Windows Server 2025 Vagrant box (and import it).
+
+To start run:
+```bash
+vagrant up windows2025
+# the SSH daemon built in Windows 2025 is enabled and configured. You will need to auth with user "vagrant" and password "vagrant"
+vagrant ssh windows2025
+
+```
 
 # Client-side encryption
 
