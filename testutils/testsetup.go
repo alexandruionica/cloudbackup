@@ -255,24 +255,20 @@ func SetupSslCertAndKey(prefix string, t *testing.T) (string, string) {
 }
 
 func WaitForServerToStart(host string, port string, t *testing.T) error {
-	// check several times is port is being listened on
-	counter := 0
-	for {
+	// Poll until the port is accepting connections, up to ~20 seconds. A ConnRefused dial
+	// returns almost instantly on most platforms, so we must sleep between attempts ourselves
+	// instead of leaning on the dial timeout as a rate limiter.
+	const maxAttempts = 200
+	const pollInterval = 100 * time.Millisecond
+	for attempt := 0; attempt < maxAttempts; attempt++ {
 		conn, _ := net.DialTimeout("tcp", net.JoinHostPort(host, port), 100*time.Millisecond) // #nosec
 		if conn != nil {
-			err := conn.Close()
-			if err != nil {
-				return err
-			} else {
-				return nil
-			}
-		} else {
-			if counter > 200 {
-				return fmt.Errorf("ffter 20 seconds of waiting, nothing is listening on %s:%s", host, port)
-			}
+			return conn.Close()
 		}
-		counter += 1
+		time.Sleep(pollInterval)
 	}
+	return fmt.Errorf("after %v of waiting, nothing is listening on %s:%s",
+		time.Duration(maxAttempts)*pollInterval, host, port)
 }
 
 // client config

@@ -523,11 +523,14 @@ func fetchItems(db *sql.DB, req Request) ([]remoteItem, error) {
 	childArgs := make([]interface{}, 0, len(dirPaths)+1)
 	childArgs = append(childArgs, req.SourceBackupJobId)
 	childClauses := make([]string, len(dirPaths))
+	// The escape character is '\', so any literal '\', '%', or '_' in the input must be escaped.
+	// This applies to the path separator too: on Windows it is '\', and an unescaped '\' before
+	// the trailing '%' would consume the wildcard and turn the pattern into a literal-percent match.
+	likeEscaper := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	sep := likeEscaper.Replace(string(filepath.Separator))
 	for i, dp := range dirPaths {
 		childClauses[i] = "rf.local_path LIKE ? ESCAPE '\\'"
-		// Escape any existing '%', '_', or '\' in the directory path so they are matched literally.
-		escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(dp)
-		childArgs = append(childArgs, escaped+string(filepath.Separator)+"%")
+		childArgs = append(childArgs, likeEscaper.Replace(dp)+sep+"%")
 	}
 	childQuery := base + " AND (" + strings.Join(childClauses, " OR ") + ") ORDER BY rf.type DESC, rf.local_path ASC"
 	childItems, err := queryItems(db, childQuery, childArgs...)

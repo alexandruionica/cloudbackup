@@ -14,6 +14,18 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// p rewrites a forward-slash test path to use the OS-native separator. The restore code under
+// test goes through filepath.Separator (LIKE prefix join), filepath.Clean / filepath.Join
+// (mapPathIntoRestoreDir), and doublestar.PathMatch (applyExclusions) — all of which behave
+// differently on Windows. Writing test literals in Unix style and routing them through p() lets
+// the same test exercise the OS-native code path on both platforms.
+func p(unixPath string) string {
+	if filepath.Separator == '/' {
+		return unixPath
+	}
+	return strings.ReplaceAll(unixPath, "/", string(filepath.Separator))
+}
+
 func TestPickTarget(t *testing.T) {
 	cfg := shared.ConfigBackup{
 		Name: "demo",
@@ -88,9 +100,11 @@ func TestMapPathIntoRestoreDir(t *testing.T) {
 
 func TestMapPathIntoRestoreDirNoEscape(t *testing.T) {
 	// Sanity: result should always be under restoreDir, never escape via the leading slash.
-	got := mapPathIntoRestoreDir("/r", "/etc/hosts")
-	if !strings.HasPrefix(got, "/r/") {
-		t.Errorf("mapped path %q should remain under /r/", got)
+	restoreDir := p("/r")
+	got := mapPathIntoRestoreDir(restoreDir, p("/etc/hosts"))
+	wantPrefix := restoreDir + string(filepath.Separator)
+	if !strings.HasPrefix(got, wantPrefix) {
+		t.Errorf("mapped path %q should remain under %q", got, wantPrefix)
 	}
 }
 
@@ -183,16 +197,16 @@ func TestFetchItemsAllFiles(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/data", "dir")
-	insertItem(t, db, "u2", "/data/file1.txt", "file")
-	insertItem(t, db, "u3", "/data/file2.txt", "file")
+	insertItem(t, db, "u1", p("/data"), "dir")
+	insertItem(t, db, "u2", p("/data/file1.txt"), "file")
+	insertItem(t, db, "u3", p("/data/file2.txt"), "file")
 
 	items, err := fetchItems(db, Request{SourceBackupJobId: testJobID, AllFiles: true})
 	if err != nil {
 		t.Fatalf("fetchItems AllFiles: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/data", "/data/file1.txt", "/data/file2.txt"}
+	want := []string{p("/data"), p("/data/file1.txt"), p("/data/file2.txt")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("AllFiles: got %v, want %v", got, want)
 	}
@@ -202,19 +216,19 @@ func TestFetchItemsExactFileMatch(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/data/file1.txt", "file")
-	insertItem(t, db, "u2", "/data/file2.txt", "file")
-	insertItem(t, db, "u3", "/other/file3.txt", "file")
+	insertItem(t, db, "u1", p("/data/file1.txt"), "file")
+	insertItem(t, db, "u2", p("/data/file2.txt"), "file")
+	insertItem(t, db, "u3", p("/other/file3.txt"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/data/file1.txt", "/other/file3.txt"},
+		Files:             []string{p("/data/file1.txt"), p("/other/file3.txt")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems exact: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/data/file1.txt", "/other/file3.txt"}
+	want := []string{p("/data/file1.txt"), p("/other/file3.txt")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("exact match: got %v, want %v", got, want)
 	}
@@ -224,29 +238,30 @@ func TestFetchItemsDirectoryRecursive(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/data", "dir")
-	insertItem(t, db, "u2", "/data/file1.txt", "file")
-	insertItem(t, db, "u3", "/data/sub", "dir")
-	insertItem(t, db, "u4", "/data/sub/file2.txt", "file")
-	insertItem(t, db, "u5", "/data/sub/deep", "dir")
-	insertItem(t, db, "u6", "/data/sub/deep/file3.txt", "file")
-	insertItem(t, db, "u7", "/other/unrelated.txt", "file")
+	insertItem(t, db, "u1", p("/data"), "dir")
+	insertItem(t, db, "u2", p("/data/file1.txt"), "file")
+	insertItem(t, db, "u3", p("/data/sub"), "dir")
+	insertItem(t, db, "u4", p("/data/sub/file2.txt"), "file")
+	insertItem(t, db, "u5", p("/data/sub/deep"), "dir")
+	insertItem(t, db, "u6", p("/data/sub/deep/file3.txt"), "file")
+	insertItem(t, db, "u7", p("/other/unrelated.txt"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/data"},
+		Files:             []string{p("/data")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems dir recursive: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/data", "/data/file1.txt", "/data/sub", "/data/sub/deep", "/data/sub/deep/file3.txt", "/data/sub/file2.txt"}
+	want := []string{p("/data"), p("/data/file1.txt"), p("/data/sub"), p("/data/sub/deep"), p("/data/sub/deep/file3.txt"), p("/data/sub/file2.txt")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("dir recursive: got %v, want %v", got, want)
 	}
 	// /other/unrelated.txt must not appear.
-	for _, p := range got {
-		if p == "/other/unrelated.txt" {
+	unrelated := p("/other/unrelated.txt")
+	for _, gotPath := range got {
+		if gotPath == unrelated {
 			t.Error("unrelated file outside the directory was incorrectly included")
 		}
 	}
@@ -256,22 +271,22 @@ func TestFetchItemsMixedFilesAndDirectories(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/etc", "dir")
-	insertItem(t, db, "u2", "/etc/hosts", "file")
-	insertItem(t, db, "u3", "/etc/conf.d", "dir")
-	insertItem(t, db, "u4", "/etc/conf.d/app.conf", "file")
-	insertItem(t, db, "u5", "/var/log/app.log", "file")
-	insertItem(t, db, "u6", "/other/file.txt", "file")
+	insertItem(t, db, "u1", p("/etc"), "dir")
+	insertItem(t, db, "u2", p("/etc/hosts"), "file")
+	insertItem(t, db, "u3", p("/etc/conf.d"), "dir")
+	insertItem(t, db, "u4", p("/etc/conf.d/app.conf"), "file")
+	insertItem(t, db, "u5", p("/var/log/app.log"), "file")
+	insertItem(t, db, "u6", p("/other/file.txt"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/etc", "/var/log/app.log"},
+		Files:             []string{p("/etc"), p("/var/log/app.log")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems mixed: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/etc", "/etc/conf.d", "/etc/conf.d/app.conf", "/etc/hosts", "/var/log/app.log"}
+	want := []string{p("/etc"), p("/etc/conf.d"), p("/etc/conf.d/app.conf"), p("/etc/hosts"), p("/var/log/app.log")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("mixed: got %v, want %v", got, want)
 	}
@@ -281,22 +296,22 @@ func TestFetchItemsDeduplication(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/data", "dir")
-	insertItem(t, db, "u2", "/data/file1.txt", "file")
-	insertItem(t, db, "u3", "/data/sub", "dir")
-	insertItem(t, db, "u4", "/data/sub/file2.txt", "file")
+	insertItem(t, db, "u1", p("/data"), "dir")
+	insertItem(t, db, "u2", p("/data/file1.txt"), "file")
+	insertItem(t, db, "u3", p("/data/sub"), "dir")
+	insertItem(t, db, "u4", p("/data/sub/file2.txt"), "file")
 
 	// Request both the directory and a file that is a child of it — the child should appear
 	// only once.
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/data", "/data/file1.txt"},
+		Files:             []string{p("/data"), p("/data/file1.txt")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems dedup: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/data", "/data/file1.txt", "/data/sub", "/data/sub/file2.txt"}
+	want := []string{p("/data"), p("/data/file1.txt"), p("/data/sub"), p("/data/sub/file2.txt")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("dedup: got %v, want %v", got, want)
 	}
@@ -316,20 +331,20 @@ func TestFetchItemsDirectoryWithLikeSpecialChars(t *testing.T) {
 	defer db.Close()
 
 	// Directory name contains SQL LIKE wildcards: % and _
-	insertItem(t, db, "u1", "/data_100%done", "dir")
-	insertItem(t, db, "u2", "/data_100%done/report.txt", "file")
+	insertItem(t, db, "u1", p("/data_100%done"), "dir")
+	insertItem(t, db, "u2", p("/data_100%done/report.txt"), "file")
 	// Another path that would match an unescaped LIKE pattern "/data_100%done/%".
-	insertItem(t, db, "u3", "/dataX100Ydone/other.txt", "file")
+	insertItem(t, db, "u3", p("/dataX100Ydone/other.txt"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/data_100%done"},
+		Files:             []string{p("/data_100%done")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems special chars: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/data_100%done", "/data_100%done/report.txt"}
+	want := []string{p("/data_100%done"), p("/data_100%done/report.txt")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("special chars: got %v, want %v", got, want)
 	}
@@ -340,19 +355,19 @@ func TestFetchItemsNonDirectoryFileNotExpanded(t *testing.T) {
 	defer db.Close()
 
 	// A file whose path is a prefix of another file — should NOT trigger recursive expansion.
-	insertItem(t, db, "u1", "/data/app", "file")
-	insertItem(t, db, "u2", "/data/app.log", "file")
-	insertItem(t, db, "u3", "/data/app/config.yaml", "file")
+	insertItem(t, db, "u1", p("/data/app"), "file")
+	insertItem(t, db, "u2", p("/data/app.log"), "file")
+	insertItem(t, db, "u3", p("/data/app/config.yaml"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/data/app"},
+		Files:             []string{p("/data/app")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems non-dir: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/data/app"}
+	want := []string{p("/data/app")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("non-dir expansion: got %v, want %v", got, want)
 	}
@@ -362,22 +377,22 @@ func TestFetchItemsMultipleDirectories(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/etc", "dir")
-	insertItem(t, db, "u2", "/etc/hosts", "file")
-	insertItem(t, db, "u3", "/var", "dir")
-	insertItem(t, db, "u4", "/var/log", "dir")
-	insertItem(t, db, "u5", "/var/log/syslog", "file")
-	insertItem(t, db, "u6", "/home/user/doc.txt", "file")
+	insertItem(t, db, "u1", p("/etc"), "dir")
+	insertItem(t, db, "u2", p("/etc/hosts"), "file")
+	insertItem(t, db, "u3", p("/var"), "dir")
+	insertItem(t, db, "u4", p("/var/log"), "dir")
+	insertItem(t, db, "u5", p("/var/log/syslog"), "file")
+	insertItem(t, db, "u6", p("/home/user/doc.txt"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/etc", "/var"},
+		Files:             []string{p("/etc"), p("/var")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems multi dir: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/etc", "/etc/hosts", "/var", "/var/log", "/var/log/syslog"}
+	want := []string{p("/etc"), p("/etc/hosts"), p("/var"), p("/var/log"), p("/var/log/syslog")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("multi dir: got %v, want %v", got, want)
 	}
@@ -387,17 +402,17 @@ func TestFetchItemsEmptyDirectoryNoChildren(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/empty", "dir")
+	insertItem(t, db, "u1", p("/empty"), "dir")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/empty"},
+		Files:             []string{p("/empty")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems empty dir: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/empty"}
+	want := []string{p("/empty")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("empty dir: got %v, want %v", got, want)
 	}
@@ -407,11 +422,11 @@ func TestFetchItemsNoMatch(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/data/file1.txt", "file")
+	insertItem(t, db, "u1", p("/data/file1.txt"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/nonexistent"},
+		Files:             []string{p("/nonexistent")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems no match: %v", err)
@@ -427,20 +442,20 @@ func TestFetchItemsDirNamePrefixCollision(t *testing.T) {
 
 	// /data is a directory, /data-extra is a separate directory that shares the prefix "/data"
 	// but must NOT be included when restoring /data.
-	insertItem(t, db, "u1", "/data", "dir")
-	insertItem(t, db, "u2", "/data/file.txt", "file")
-	insertItem(t, db, "u3", "/data-extra", "dir")
-	insertItem(t, db, "u4", "/data-extra/other.txt", "file")
+	insertItem(t, db, "u1", p("/data"), "dir")
+	insertItem(t, db, "u2", p("/data/file.txt"), "file")
+	insertItem(t, db, "u3", p("/data-extra"), "dir")
+	insertItem(t, db, "u4", p("/data-extra/other.txt"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/data"},
+		Files:             []string{p("/data")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems prefix collision: %v", err)
 	}
 	got := localPaths(items)
-	want := []string{"/data", "/data/file.txt"}
+	want := []string{p("/data"), p("/data/file.txt")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("prefix collision: got %v, want %v", got, want)
 	}
@@ -451,22 +466,22 @@ func TestFetchItemsLargeDirectoryTree(t *testing.T) {
 	defer db.Close()
 
 	// Build a tree with 3 levels of nesting and multiple files per level.
-	insertItem(t, db, "root", "/tree", "dir")
+	insertItem(t, db, "root", p("/tree"), "dir")
 	var want []string
-	want = append(want, "/tree")
+	want = append(want, p("/tree"))
 	n := 1
 	for i := 0; i < 3; i++ {
-		dirPath := fmt.Sprintf("/tree/l1_%d", i)
+		dirPath := p(fmt.Sprintf("/tree/l1_%d", i))
 		insertItem(t, db, fmt.Sprintf("d1_%d", i), dirPath, "dir")
 		want = append(want, dirPath)
 		n++
 		for j := 0; j < 3; j++ {
-			subdir := fmt.Sprintf("%s/l2_%d", dirPath, j)
+			subdir := dirPath + string(filepath.Separator) + fmt.Sprintf("l2_%d", j)
 			insertItem(t, db, fmt.Sprintf("d2_%d_%d", i, j), subdir, "dir")
 			want = append(want, subdir)
 			n++
 			for k := 0; k < 2; k++ {
-				filePath := fmt.Sprintf("%s/file_%d.txt", subdir, k)
+				filePath := subdir + string(filepath.Separator) + fmt.Sprintf("file_%d.txt", k)
 				insertItem(t, db, fmt.Sprintf("f_%d_%d_%d", i, j, k), filePath, "file")
 				want = append(want, filePath)
 				n++
@@ -476,7 +491,7 @@ func TestFetchItemsLargeDirectoryTree(t *testing.T) {
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/tree"},
+		Files:             []string{p("/tree")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems large tree: %v", err)
@@ -507,7 +522,7 @@ func makeItems(entries ...string) []remoteItem {
 }
 
 func TestApplyExclusionsNoExclusions(t *testing.T) {
-	items := makeItems("/data/file1.txt", "file", "/data/file2.txt", "file")
+	items := makeItems(p("/data/file1.txt"), "file", p("/data/file2.txt"), "file")
 	got, err := applyExclusions(items, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -519,16 +534,16 @@ func TestApplyExclusionsNoExclusions(t *testing.T) {
 
 func TestApplyExclusionsExactPath(t *testing.T) {
 	items := makeItems(
-		"/data/file1.txt", "file",
-		"/data/file2.txt", "file",
-		"/data/file3.log", "file",
+		p("/data/file1.txt"), "file",
+		p("/data/file2.txt"), "file",
+		p("/data/file3.log"), "file",
 	)
-	got, err := applyExclusions(items, []string{"/data/file1.txt"})
+	got, err := applyExclusions(items, []string{p("/data/file1.txt")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	paths := localPaths(got)
-	want := []string{"/data/file2.txt", "/data/file3.log"}
+	want := []string{p("/data/file2.txt"), p("/data/file3.log")}
 	if !equalStringSlices(paths, want) {
 		t.Errorf("exact exclusion: got %v, want %v", paths, want)
 	}
@@ -536,18 +551,18 @@ func TestApplyExclusionsExactPath(t *testing.T) {
 
 func TestApplyExclusionsGlobStar(t *testing.T) {
 	items := makeItems(
-		"/data/file1.txt", "file",
-		"/data/sub/file2.txt", "file",
-		"/data/sub/deep/file3.txt", "file",
-		"/data/keep.log", "file",
+		p("/data/file1.txt"), "file",
+		p("/data/sub/file2.txt"), "file",
+		p("/data/sub/deep/file3.txt"), "file",
+		p("/data/keep.log"), "file",
 	)
 	// ** matches across directory boundaries
-	got, err := applyExclusions(items, []string{"**/*.txt"})
+	got, err := applyExclusions(items, []string{p("**/*.txt")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	paths := localPaths(got)
-	want := []string{"/data/keep.log"}
+	want := []string{p("/data/keep.log")}
 	if !equalStringSlices(paths, want) {
 		t.Errorf("globstar exclusion: got %v, want %v", paths, want)
 	}
@@ -555,17 +570,17 @@ func TestApplyExclusionsGlobStar(t *testing.T) {
 
 func TestApplyExclusionsSingleStar(t *testing.T) {
 	items := makeItems(
-		"/data/file1.txt", "file",
-		"/data/file2.log", "file",
-		"/data/sub/file3.txt", "file",
+		p("/data/file1.txt"), "file",
+		p("/data/file2.log"), "file",
+		p("/data/sub/file3.txt"), "file",
 	)
 	// Single * does NOT cross directory boundaries
-	got, err := applyExclusions(items, []string{"/data/*.txt"})
+	got, err := applyExclusions(items, []string{p("/data/*.txt")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	paths := localPaths(got)
-	want := []string{"/data/file2.log", "/data/sub/file3.txt"}
+	want := []string{p("/data/file2.log"), p("/data/sub/file3.txt")}
 	if !equalStringSlices(paths, want) {
 		t.Errorf("single star exclusion: got %v, want %v", paths, want)
 	}
@@ -573,17 +588,17 @@ func TestApplyExclusionsSingleStar(t *testing.T) {
 
 func TestApplyExclusionsQuestionMark(t *testing.T) {
 	items := makeItems(
-		"/data/file1.txt", "file",
-		"/data/file2.txt", "file",
-		"/data/file10.txt", "file",
+		p("/data/file1.txt"), "file",
+		p("/data/file2.txt"), "file",
+		p("/data/file10.txt"), "file",
 	)
 	// ? matches exactly one character
-	got, err := applyExclusions(items, []string{"/data/file?.txt"})
+	got, err := applyExclusions(items, []string{p("/data/file?.txt")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	paths := localPaths(got)
-	want := []string{"/data/file10.txt"}
+	want := []string{p("/data/file10.txt")}
 	if !equalStringSlices(paths, want) {
 		t.Errorf("question mark exclusion: got %v, want %v", paths, want)
 	}
@@ -591,19 +606,19 @@ func TestApplyExclusionsQuestionMark(t *testing.T) {
 
 func TestApplyExclusionsDirectory(t *testing.T) {
 	items := makeItems(
-		"/data", "dir",
-		"/data/file1.txt", "file",
-		"/data/sub", "dir",
-		"/data/sub/file2.txt", "file",
-		"/other/file3.txt", "file",
+		p("/data"), "dir",
+		p("/data/file1.txt"), "file",
+		p("/data/sub"), "dir",
+		p("/data/sub/file2.txt"), "file",
+		p("/other/file3.txt"), "file",
 	)
 	// Exclude an entire subtree by matching the directory and everything under it
-	got, err := applyExclusions(items, []string{"/data/sub", "/data/sub/**"})
+	got, err := applyExclusions(items, []string{p("/data/sub"), p("/data/sub/**")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	paths := localPaths(got)
-	want := []string{"/data", "/data/file1.txt", "/other/file3.txt"}
+	want := []string{p("/data"), p("/data/file1.txt"), p("/other/file3.txt")}
 	if !equalStringSlices(paths, want) {
 		t.Errorf("directory exclusion: got %v, want %v", paths, want)
 	}
@@ -611,18 +626,18 @@ func TestApplyExclusionsDirectory(t *testing.T) {
 
 func TestApplyExclusionsMultiplePatterns(t *testing.T) {
 	items := makeItems(
-		"/data/file1.txt", "file",
-		"/data/file2.log", "file",
-		"/data/cache", "dir",
-		"/data/cache/tmp.dat", "file",
-		"/data/important.doc", "file",
+		p("/data/file1.txt"), "file",
+		p("/data/file2.log"), "file",
+		p("/data/cache"), "dir",
+		p("/data/cache/tmp.dat"), "file",
+		p("/data/important.doc"), "file",
 	)
-	got, err := applyExclusions(items, []string{"**/*.log", "/data/cache", "/data/cache/**"})
+	got, err := applyExclusions(items, []string{p("**/*.log"), p("/data/cache"), p("/data/cache/**")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	paths := localPaths(got)
-	want := []string{"/data/file1.txt", "/data/important.doc"}
+	want := []string{p("/data/file1.txt"), p("/data/important.doc")}
 	if !equalStringSlices(paths, want) {
 		t.Errorf("multiple patterns: got %v, want %v", paths, want)
 	}
@@ -630,10 +645,10 @@ func TestApplyExclusionsMultiplePatterns(t *testing.T) {
 
 func TestApplyExclusionsNoMatch(t *testing.T) {
 	items := makeItems(
-		"/data/file1.txt", "file",
-		"/data/file2.txt", "file",
+		p("/data/file1.txt"), "file",
+		p("/data/file2.txt"), "file",
 	)
-	got, err := applyExclusions(items, []string{"**/*.log", "/nonexistent"})
+	got, err := applyExclusions(items, []string{p("**/*.log"), p("/nonexistent")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -644,10 +659,10 @@ func TestApplyExclusionsNoMatch(t *testing.T) {
 
 func TestApplyExclusionsAllExcluded(t *testing.T) {
 	items := makeItems(
-		"/data/file1.txt", "file",
-		"/data/file2.txt", "file",
+		p("/data/file1.txt"), "file",
+		p("/data/file2.txt"), "file",
 	)
-	got, err := applyExclusions(items, []string{"**/*.txt"})
+	got, err := applyExclusions(items, []string{p("**/*.txt")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -661,28 +676,28 @@ func TestApplyExclusionsWithFetchItems(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/data", "dir")
-	insertItem(t, db, "u2", "/data/file1.txt", "file")
-	insertItem(t, db, "u3", "/data/file2.log", "file")
-	insertItem(t, db, "u4", "/data/sub", "dir")
-	insertItem(t, db, "u5", "/data/sub/file3.txt", "file")
-	insertItem(t, db, "u6", "/data/sub/file4.log", "file")
+	insertItem(t, db, "u1", p("/data"), "dir")
+	insertItem(t, db, "u2", p("/data/file1.txt"), "file")
+	insertItem(t, db, "u3", p("/data/file2.log"), "file")
+	insertItem(t, db, "u4", p("/data/sub"), "dir")
+	insertItem(t, db, "u5", p("/data/sub/file3.txt"), "file")
+	insertItem(t, db, "u6", p("/data/sub/file4.log"), "file")
 
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
-		Files:             []string{"/data"},
+		Files:             []string{p("/data")},
 	})
 	if err != nil {
 		t.Fatalf("fetchItems: %v", err)
 	}
 
 	// Exclude all .log files
-	filtered, err := applyExclusions(items, []string{"**/*.log"})
+	filtered, err := applyExclusions(items, []string{p("**/*.log")})
 	if err != nil {
 		t.Fatalf("applyExclusions: %v", err)
 	}
 	got := localPaths(filtered)
-	want := []string{"/data", "/data/file1.txt", "/data/sub", "/data/sub/file3.txt"}
+	want := []string{p("/data"), p("/data/file1.txt"), p("/data/sub"), p("/data/sub/file3.txt")}
 	if !equalStringSlices(got, want) {
 		t.Errorf("fetch+exclude: got %v, want %v", got, want)
 	}
@@ -739,11 +754,11 @@ func TestSanitizeFilePathsWithFetchItems(t *testing.T) {
 	db := newTestDB(t)
 	defer db.Close()
 
-	insertItem(t, db, "u1", "/home/data", "dir")
-	insertItem(t, db, "u2", "/home/data/file.txt", "file")
+	insertItem(t, db, "u1", p("/home/data"), "dir")
+	insertItem(t, db, "u2", p("/home/data/file.txt"), "file")
 
 	// Simulate user input with trailing slash — should still match and expand.
-	sanitized := sanitizeFilePaths([]string{"/home/data/"})
+	sanitized := sanitizeFilePaths([]string{p("/home/data/")})
 	items, err := fetchItems(db, Request{
 		SourceBackupJobId: testJobID,
 		Files:             sanitized,
@@ -752,7 +767,7 @@ func TestSanitizeFilePathsWithFetchItems(t *testing.T) {
 		t.Fatalf("fetchItems after sanitize: %v", err)
 	}
 	got := localPaths(items)
-	wantPaths := []string{"/home/data", "/home/data/file.txt"}
+	wantPaths := []string{p("/home/data"), p("/home/data/file.txt")}
 	if !equalStringSlices(got, wantPaths) {
 		t.Errorf("sanitize+fetch: got %v, want %v", got, wantPaths)
 	}
