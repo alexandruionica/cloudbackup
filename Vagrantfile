@@ -43,19 +43,72 @@ Vagrant.configure("2") do |config|
       $profilePath = Join-Path $profileDir 'profile.ps1'
       New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
       $marker  = '# vagrant-vbox-share-mount'
+      # The VBoxSF-Bounce startup task may still be retrying when this
+      # profile runs on the first login after boot, so retry the mount
+      # until Y: actually appears instead of attempting it just once.
       $snippet = @"
   $marker
   if (-not (Test-Path 'Y:\')) {
-    cmd /c "net use Y: $share" > `$null 2>&1
+    for (`$i = 1; `$i -le 12; `$i++) {
+      cmd /c "net use Y: $share" > `$null 2>&1
+      if (Test-Path 'Y:\') { break }
+      Start-Sleep -Seconds 5
+    }
   }
   "@
-      if (-not (Test-Path $profilePath) -or
-          -not (Select-String -Path $profilePath -Pattern ([regex]::Escape($marker)) -Quiet)) {
-        Add-Content -Path $profilePath -Value $snippet
-      }
+      # Overwrite rather than append so `vagrant provision` can upgrade the
+      # snippet in place when this Vagrantfile changes.
+      Set-Content -Path $profilePath -Value $snippet -Encoding ASCII
       # Belt-and-braces: make sure no stale persistent entries linger.
       Remove-Item HKCU:\Network\Y -Recurse -Force -ErrorAction SilentlyContinue
       Remove-Item HKCU:\Network\Z -Recurse -Force -ErrorAction SilentlyContinue
+    PS
+
+    # On Windows Server 2025 the VBoxSF kernel driver's UNC redirector comes
+    # up wedged after a fresh boot: VBoxControl can list the shared folders
+    # but `net use \\vboxsvr\...` fails with system error 64
+    # (ERROR_NETNAME_DELETED). Bouncing VBoxSF and restarting VBoxService
+    # unwedges it, but only after the system has settled past early-boot —
+    # a bounce performed immediately at startup completes without error yet
+    # doesn't actually fix the redirector. Drop a self-verifying bounce
+    # script on disk and register a startup-triggered task that runs it,
+    # retrying with a probe mount until the share is reachable.
+    windows.vm.provision "shell", privileged: true, inline: <<~'PS'
+      $scriptDir  = 'C:\ProgramData\vagrant'
+      $scriptPath = Join-Path $scriptDir 'bounce-vboxsf.ps1'
+      New-Item -ItemType Directory -Force -Path $scriptDir | Out-Null
+
+      $bounceScript = @'
+$ErrorActionPreference = "Continue"
+$probeShare = "\\vboxsvr\Users_vagrant_Documents_golang"
+Start-Sleep -Seconds 30
+for ($i = 1; $i -le 6; $i++) {
+    sc.exe stop  VBoxSF | Out-Null
+    sc.exe start VBoxSF | Out-Null
+    Restart-Service VBoxService -Force
+    Start-Sleep -Seconds 5
+    & net use Z: $probeShare 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        & net use Z: /delete 2>&1 | Out-Null
+        exit 0
+    }
+    Start-Sleep -Seconds 10
+}
+exit 1
+'@
+      Set-Content -Path $scriptPath -Value $bounceScript -Encoding ASCII
+
+      $taskName  = 'VBoxSF-Bounce'
+      $action    = New-ScheduledTaskAction    -Execute 'powershell.exe' `
+                                              -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+      $trigger   = New-ScheduledTaskTrigger   -AtStartup
+      $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest
+      $settings  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries `
+                                                -DontStopIfGoingOnBatteries `
+                                                -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
+      Register-ScheduledTask -TaskName $taskName `
+                             -Action $action -Trigger $trigger `
+                             -Principal $principal -Settings $settings -Force | Out-Null
     PS
 
 
