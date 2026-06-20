@@ -216,17 +216,6 @@ func ValidateBackup(backups []shared.ConfigBackup, logError bool) error {
 			}
 		}
 
-		if backup.VersionsMaxAge != "0" { //nolint:staticcheck
-			// TODO - validate that the AGE string is valid (to figure out what valid means)
-			//msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +
-			//	"'versions_max_age=%s' . Enable versioning or remove the 'versions_max_age' setting", i, backup.Name,
-			//		backup.VersionsMaxAge)
-			//if logError{
-			//	logger.Error(msg)
-			//}
-			//return errors.New(msg)
-		}
-
 		if backup.PreRunScript != "" {
 			err := ValidatePrePostRunScript(backup.PreRunScript, "pre", backup.Name, logError)
 			if err != nil {

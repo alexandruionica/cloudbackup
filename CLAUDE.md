@@ -34,18 +34,18 @@ CloudBackup is a server/client backup tool with cloud blob store support (AWS S3
 ### Request Flow
 
 ```
-CLI (cliargs) → Daemon (daemon) → Config + SQLite DB
-                    ↓
-              HTTP Server (httpd) ←→ Scheduler (scheduler)
-                                          ↓
-                                   Backup core (backup)
-                                          ↓
-                               File scanning (backup/scan)
-                                          ↓
-                              Object store (objectstore)
-                              [AWS S3 / Azure / GCP]
-                                          ↓
-                              DB tracking + Notifications
+CLI (cliargs) → Client packages (client/*) → HTTP → Daemon (daemon) → Config + SQLite DB
+                                                          ↓
+                                          HTTP Server (httpd) ←→ Scheduler (scheduler)
+                                                          ↓
+                                          Backup / Restore core (backup, restore)
+                                                          ↓
+                                          File scanning (backup/scan)
+                                                          ↓
+                                          Object store (objectstore)
+                                          [AWS S3 / Azure / GCP / test_null]
+                                                          ↓
+                                          DB tracking + Notifications
 ```
 
 ### Key Packages

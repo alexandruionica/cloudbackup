@@ -8,7 +8,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"cloudbackup/httpd"
 	log "github.com/sirupsen/logrus"
@@ -19,6 +21,78 @@ const loggingContext = "client.common"
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,
 })
+
+// PrintJobListTable prints a job report list as an aligned "JobId | State | Duration | Start Time | End Time"
+// table. Column widths are sized to the content and the header is printed only when showHeader is true (so
+// paginated callers print it once). Shared by the backup-report and restore-report "list" commands, whose
+// rows are both []httpd.ReportBackupListDbResults.
+func PrintJobListTable(jobs []httpd.ReportBackupListDbResults, showHeader bool) {
+	logger.Debugf("%+v", jobs)
+	JobIdLength, StateLength, DurationLength, StartTimeLength, EndTimeLength := 5, 5, 8, 10, 8 // minimum is the lenght of the column headers
+	for _, job := range jobs {
+		if utf8.RuneCountInString(job.JobId) > JobIdLength {
+			JobIdLength = utf8.RuneCountInString(job.JobId)
+		}
+		if utf8.RuneCountInString(job.State) > StateLength {
+			StateLength = utf8.RuneCountInString(job.State)
+		}
+		if utf8.RuneCountInString(job.StartTime) > StartTimeLength {
+			StartTimeLength = utf8.RuneCountInString(job.StartTime)
+		}
+		if utf8.RuneCountInString(job.EndTime) > EndTimeLength {
+			EndTimeLength = utf8.RuneCountInString(job.EndTime)
+		}
+		conversionErr := false
+		tmpStartTime, err := time.Parse(time.RFC3339Nano, job.StartTime)
+		if err != nil {
+			conversionErr = true
+		}
+		tmpEndTime, err := time.Parse(time.RFC3339Nano, job.EndTime)
+		if err != nil {
+			conversionErr = true
+		}
+		if !conversionErr {
+			if utf8.RuneCountInString(tmpEndTime.Sub(tmpStartTime).Round(time.Second).String()) > DurationLength {
+				DurationLength = utf8.RuneCountInString(tmpEndTime.Sub(tmpStartTime).Round(time.Second).String())
+			}
+		}
+	}
+	// table header
+	tableTemplate := "%" + strconv.Itoa(JobIdLength) + "s | %" + strconv.Itoa(StateLength) + "s | %" +
+		strconv.Itoa(DurationLength) + "s | %" + strconv.Itoa(StartTimeLength) + "s | %" + strconv.Itoa(EndTimeLength) +
+		"s\n"
+	if showHeader {
+		fmt.Printf(tableTemplate, "JobId", "State", "Duration", "Start Time", "End Time")
+	}
+	for _, job := range jobs {
+		conversionErr := false
+		tmpStartTime, err := time.Parse(time.RFC3339Nano, job.StartTime)
+		if err != nil {
+			conversionErr = true
+		}
+		tmpEndTime, err := time.Parse(time.RFC3339Nano, job.EndTime)
+		if err != nil {
+			conversionErr = true
+		}
+		var endTime string
+		if !conversionErr {
+			if tmpEndTime.IsZero() {
+				endTime = "n/a"
+			} else {
+				endTime = job.EndTime
+			}
+		} else {
+			endTime = "n/a"
+		}
+		var duration string
+		if conversionErr {
+			duration = "n/a"
+		} else {
+			duration = tmpEndTime.Sub(tmpStartTime).Round(time.Second).String()
+		}
+		fmt.Printf(tableTemplate, job.JobId, job.State, duration, job.StartTime, endTime)
+	}
+}
 
 // some basic validation of responses received from the Cloudbackup API server
 func ValidateServerResponse(resp *http.Response) ([]byte, error) {
