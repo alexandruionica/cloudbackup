@@ -432,9 +432,9 @@ func AddJobDetails(db *sql.DB, jobId string, jobName string, jobType string, sta
 }
 
 // updates an existing job record in the "jobs" table
-func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, endTime time.Time, JobState string, report string) error {
+func UpdateJobDetails(db *sql.DB, jobId string, jobName string, jobType string, endTime time.Time, jobState string, report string) error {
 	result, err := db.Exec("UPDATE jobs SET end_time = ?, state = ?, report = ? WHERE id = ? AND name = ? "+
-		"AND type = ?", endTime.UnixNano(), JobState, report, jobId, jobName, jobType)
+		"AND type = ?", endTime.UnixNano(), jobState, report, jobId, jobName, jobType)
 	if err != nil {
 		logger.Errorf("While trying to update information about %s job having name '%s' and id '%s' in the "+
 			"database, the following error was encountered: '%s'", jobType, jobName, jobId, err)
@@ -495,19 +495,19 @@ func GetJobPlatform(dbData shared.DbData, jobName string, jobId string) (string,
 
 // setup all Database related prerequisites required for running a backup of files/dirs/symlinks and return a shared.DbData
 // struct containing the DB handlers and prepared statements
-// $BackupJobName must be already marked as "running" in $backupJobsState or otherwise this function will error
+// $backupJobName must be already marked as "running" in $backupJobsState or otherwise this function will error
 // $newJobRun is true if this back job is starting now, or otherwise it should be false (most of the time you want this to be "true")
 // if $Db is not "nil" then it will be used; otherwise an attempt to open the database will be made
-func PrepareDb(BackupJobName string, jobUuid string, serverConfigCopy shared.CfgTemplate,
+func PrepareDb(backupJobName string, jobUuid string, serverConfigCopy shared.CfgTemplate,
 	backupJobsState *shared.BackupJobsState, backupConfig shared.ConfigBackup, newJobRun bool, Db *sql.DB) (shared.DbData, error) {
 	var err error
-	dbData := shared.DbData{Connected: false, Name: BackupJobName}
+	dbData := shared.DbData{Connected: false, Name: backupJobName}
 	if Db != nil {
 		dbData.Db = Db
 		dbData.Connected = true
 	} else {
 		// get DB connection pointer
-		dbData.Db, err = database.Start(serverConfigCopy.DataDir, BackupJobName, backupJobsState)
+		dbData.Db, err = database.Start(serverConfigCopy.DataDir, backupJobName, backupJobsState)
 		// the backup can not run as we can't initialise/connect to the database
 		if err != nil {
 			return dbData, err
@@ -532,13 +532,13 @@ func PrepareDb(BackupJobName string, jobUuid string, serverConfigCopy shared.Cfg
 		}
 
 		// get Job start time
-		jobStartTime, err := backupJobsState.GetStartTime(BackupJobName, jobUuid, loggingContext+".runBackup")
+		jobStartTime, err := backupJobsState.GetStartTime(backupJobName, jobUuid, loggingContext+".runBackup")
 		if err != nil {
 			return dbData, err
 		}
 
 		// add entry to "jobs" DB table
-		err = AddJobDetails(dbData.Db, jobUuid, BackupJobName, "backup", jobStartTime)
+		err = AddJobDetails(dbData.Db, jobUuid, backupJobName, "backup", jobStartTime)
 		if err != nil {
 			return dbData, err
 		}
