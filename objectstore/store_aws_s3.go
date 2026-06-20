@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"cloudbackup/cbcrypto"
 	"cloudbackup/shared"
-	"cloudbackup/utils"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -139,7 +137,7 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 // upload file and return remote version
 func (objStore *StoreAwsS3) Upload(newDbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface, metadata bool) (remoteVersion string, cancelled bool, err error) {
 
-	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, newDbRecord.Path, metadata)
+	remotePath := calculateRemotePath(objStore.storePrefix, newDbRecord.Path, metadata)
 	logger.Debugf("Uploading: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", newDbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
 
@@ -331,7 +329,7 @@ func (objStore *StoreAwsS3) MarkDeleted(existingDbRecord shared.BackedUpFileProp
 		return strconv.FormatInt(markerVersion, 10), false, nil
 	}
 
-	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	remotePath := calculateRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
 
@@ -367,7 +365,7 @@ func (objStore *StoreAwsS3) Delete(existingDbRecord shared.BackedUpFilePropertie
 		// directories and symlinks DO NOT GET UPLOADED so there is nothing to delete
 		return nil
 	}
-	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	remotePath := calculateRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
 
@@ -396,7 +394,7 @@ func (objStore *StoreAwsS3) Get(existingDbRecord shared.BackedUpFileProperties, 
 		return false, nil
 	}
 
-	remotePath := calculateAwsS3RemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	remotePath := calculateRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Downloading: '%s' having remote version: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s' to local path: '%s'", existingDbRecord.Path, remoteVersion, objStore.storeName,
 		objStore.storeBucketName, remotePath, restorePath)
@@ -689,23 +687,6 @@ func (objStore *StoreAwsS3) getRegionFromBucket() error {
 	}
 	objStore.region = region
 	return nil
-}
-
-// for a given $prefix , $path and $metadata (true if file is metadata, false if not) return the remote path
-func calculateAwsS3RemotePath(prefix string, path string, metadata bool) string {
-	if metadata {
-		// when dealing with metadata, we want to store on the remote only the filename, excluding the rest of the local path
-		filename := filepath.Base(path)
-		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
-		remotePath := filepath.ToSlash(prefix + "/" + MetaDataPrepend + "/" + filename)
-		// ensure we don't have double forward slashes
-		return utils.SquashForwardSlashes(remotePath)
-	} else {
-		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
-		remotePath := filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
-		// ensure we don't have double forward slashes
-		return utils.SquashForwardSlashes(remotePath)
-	}
 }
 
 // returns an HTTP client with a rate-limiting transport that limits upload bandwidth.

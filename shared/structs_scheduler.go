@@ -315,8 +315,6 @@ func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []Backu
 	return result
 }
 
-// checks if a given job is running. Returns true if running, false otherwise
-// ("stopping" state is considered running too)
 // GetRestoresRunning returns a snapshot of all currently running restore jobs. Unlike Get(),
 // it does NOT emit placeholder "stopped" entries for backup definitions in the config because
 // restores are ephemeral — they do not have a stable identity that persists across runs, so a

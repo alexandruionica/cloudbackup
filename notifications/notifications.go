@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const loggingContext = "client.notification"
+const loggingContext = "notifications"
 
 var logger = log.WithFields(log.Fields{
 	"context": loggingContext,

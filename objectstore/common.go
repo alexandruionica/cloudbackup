@@ -3,6 +3,7 @@ package objectstore
 import (
 	"cloudbackup/config"
 	"cloudbackup/shared"
+	"cloudbackup/utils"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"hash/crc32"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -25,6 +27,26 @@ var logger = log.WithFields(log.Fields{
 })
 
 var ErrCouldNotConvertRate = errors.New("could not convert rate to numeric value")
+
+// calculateRemotePath returns the remote object path for a given $prefix and local $path.
+// When $metadata is true the file is internal metadata and only its base filename is stored
+// under the metadata prefix; otherwise the full local path is stored under the data prefix.
+// Shared by the AWS S3 and GCP backends, which use an identical path layout (Azure differs as
+// it also encodes its own version scheme into the path, see calculateAzureStorageRemotePath).
+func calculateRemotePath(prefix string, path string, metadata bool) string {
+	if metadata {
+		// when dealing with metadata, we want to store on the remote only the filename, excluding the rest of the local path
+		filename := filepath.Base(path)
+		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
+		remotePath := filepath.ToSlash(prefix + "/" + MetaDataPrepend + "/" + filename)
+		// ensure we don't have double forward slashes
+		return utils.SquashForwardSlashes(remotePath)
+	}
+	// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
+	remotePath := filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
+	// ensure we don't have double forward slashes
+	return utils.SquashForwardSlashes(remotePath)
+}
 
 // When adding a new object store or adjusting the parameters (from the Backup > Target > Parameters section) in order
 // to add secrets, you MUST also adjust cloudbackup/config/CopyPasswordsFromOldConfigBackup() and
