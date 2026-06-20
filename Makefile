@@ -20,16 +20,16 @@ endif
 	@$(GOCMD) version
 	$(GOCMD) build -v -mod=vendor
 test: testcp gotest gotestrace uitest
-alltest: test build inttest
+alltest: test inttest
 uitest:
 	@echo "############ Running: web UI unit tests ############"
-	@node_major=$$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || echo 0); \
-	if [ "$$node_major" -lt 18 ]; then \
-		echo "ERROR: web UI tests require Node.js >= 18 (found $$(node --version 2>/dev/null || echo none))."; \
-		echo "       If using nvm: 'nvm use 20' (or newer) before running make."; \
-		exit 1; \
-	fi
-	cd webstatic/ui && npm test
+ifeq ($(OS),Windows_NT)
+	@echo "Running on Windows"
+	powershell '& .\uitest.ps1'
+else
+	@echo "Running on some kind of Unix"
+	./uitest.sh
+endif
 # test coding practices
 testcp:
 	@$(GOCMD) version
@@ -61,7 +61,7 @@ else
 endif
 	@echo "############ Running: go test - running unit tests with race detection enabled ############"
 	$(GOCMD) test -race -cover ./...
-inttest:
+inttest: build
 	@echo "############ Running integration tests ############"
 ifeq ($(OS),Windows_NT)
 	@echo "Running on Windows"
@@ -85,6 +85,22 @@ deps:
 docs:
 	@echo "############ Regenerating Documentation ############"
 	./generate_docs.sh
+
+# Install Desloppify (https://github.com/peteromallet/desloppify) into a
+# dedicated Python virtualenv. Linux/macOS only; not needed on Windows.
+DESLOPPIFY_VENV=.venv_desloppify
+desloppify:
+ifeq ($(OS),Windows_NT)
+	@echo "Desloppify is not needed on Windows; skipping."
+else
+	@echo "############ Installing Desloppify ############"
+	@if [ ! -x $(DESLOPPIFY_VENV)/bin/python ]; then \
+		echo "Creating virtualenv $(DESLOPPIFY_VENV) ..."; \
+		virtualenv -p python3 $(DESLOPPIFY_VENV); \
+	fi
+	$(DESLOPPIFY_VENV)/bin/pip install -q --upgrade "desloppify[full]"
+	@echo "Desloppify installed: $(DESLOPPIFY_VENV)/bin/desloppify"
+endif
 
 # Build .deb and .rpm packages for all supported distros via Docker.
 # Pass DISTROS="deb12 el9" to limit; default is the full matrix.
