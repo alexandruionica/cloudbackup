@@ -67,10 +67,18 @@ type ConfigBackupTargetParams struct {
 //
 // CopyPasswordsFromOldConfig replaces ***** with actual passwords so whenever the config struct is changed then
 // also config.CopyPasswordsFromOldConfig needs updating; also GetCopyWithLock() needs updating to ensure a deep copy is done
+// Access level values for ConfigUser.Access; AccessWrite implies AccessRead. Use these
+// constants wherever the access vocabulary is validated or enforced so the two cannot drift.
+// (The struct tag default below must remain a string literal — Go tags cannot reference constants.)
+const (
+	AccessRead  = "read"
+	AccessWrite = "write"
+)
+
 type ConfigUser struct {
 	Name string `required:"true" yaml:"name" json:"name"`
 	Pass string `required:"true" yaml:"pass" json:"pass"`
-	// allowed options are read or write (write implies read)
+	// allowed options are AccessRead or AccessWrite (write implies read)
 	Access string `default:"read" yaml:"access" json:"access"`
 }
 

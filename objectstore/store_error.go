@@ -2,7 +2,6 @@ package objectstore
 
 import (
 	"cloudbackup/shared"
-	"context"
 	"fmt"
 	"math"
 )
@@ -14,12 +13,15 @@ type StoreError struct {
 	storeType string
 }
 
-func InitialiseStoreError(ctx context.Context, backupConfig shared.ConfigBackup, storeName string, storeType string, rateLimitVal int64) *StoreError {
+// InitialiseStoreError builds the sentinel "error" store returned for unknown/unsupported
+// backend types (and used in tests to emulate store failures). Unlike the real backend
+// constructors it intentionally takes no ctx/config/rate-limit args — it never opens a
+// connection, so requiring them would be misleading.
+func InitialiseStoreError(storeName string, storeType string) *StoreError {
 	result := &StoreError{
 		storeName: storeName,
 		storeType: storeType,
 	}
-	// actual backends will also setup the connection client in this section
 	return result
 }
 

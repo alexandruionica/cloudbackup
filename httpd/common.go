@@ -154,7 +154,7 @@ func (srvSrc *SrvData) CheckAccess(handle httprouter.Handle) httprouter.Handle {
 		runtimeCfg.Mutex.RLock()
 		for _, user := range runtimeCfg.User {
 			if user.Name == httpUser {
-				if strings.ToLower(user.Access) == "write" {
+				if strings.ToLower(user.Access) == shared.AccessWrite {
 					// "write" grants access to everything
 					hasAccess = true
 					break

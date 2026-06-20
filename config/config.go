@@ -854,8 +854,8 @@ func ValidateUser(config shared.CfgTemplate, logError bool, hiddenPass bool) err
 					return errors.New(msg)
 				}
 			}
-			// Access field has only two options allowed: "read" or "write"
-			if strings.ToLower(user.Access) != "read" && strings.ToLower(user.Access) != "write" {
+			// Access field has only two options allowed: shared.AccessRead or shared.AccessWrite
+			if strings.ToLower(user.Access) != shared.AccessRead && strings.ToLower(user.Access) != shared.AccessWrite {
 				msg := fmt.Sprintf("Username '%s' has field 'access' set to value '%s' but the only two allowed "+
 					"values are 'read' or 'write'", user.Name, user.Access)
 				if logError {
