@@ -956,11 +956,7 @@ func SanitizeCfgTemplate(config shared.CfgTemplate) shared.CfgTemplate {
 
 // checks if a string is made up only of a given character (or substring)
 func CheckStringIsOnly(val string, chars string) bool {
-	if utf8.RuneCountInString(val) > 0 && val == strings.Repeat(chars, utf8.RuneCountInString(val)) {
-		return true
-	} else {
-		return false
-	}
+	return utf8.RuneCountInString(val) > 0 && val == strings.Repeat(chars, utf8.RuneCountInString(val))
 }
 
 // reads passwords from the old config. If the new config has an entry which matches (meaning both have the same name)

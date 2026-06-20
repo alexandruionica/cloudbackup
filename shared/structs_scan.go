@@ -170,7 +170,7 @@ func (jobs *DryRunBackupJobsState) GetCancelFunctionForJob(backupJobName string,
 				CancelFunction = job.Cancel
 				break
 			} else {
-				if backupJobId != "" && job.BackupJobId == backupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					CancelFunction = job.Cancel
 					break
@@ -205,7 +205,7 @@ func (jobs *DryRunBackupJobsState) GetContextForJob(backupJobName string, backup
 				ctx = job.Ctx
 				break
 			} else {
-				if backupJobId != "" && job.BackupJobId == backupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					ctx = job.Ctx
 					break

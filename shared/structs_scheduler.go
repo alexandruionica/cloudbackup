@@ -358,7 +358,7 @@ func (jobs *BackupJobsState) IsRunning(name string, jobId string, logContext str
 			if jobId == "" {
 				return true
 			} else {
-				if jobId != "" && job.BackupJobId == jobId {
+				if job.BackupJobId == jobId {
 					return true
 				}
 			}
@@ -383,7 +383,7 @@ func (jobs *BackupJobsState) IsStopping(name string, jobId string, logContext st
 			if jobId == "" && job.State == "stopping" {
 				return true
 			} else {
-				if jobId != "" && job.BackupJobId == jobId && job.State == "stopping" {
+				if job.BackupJobId == jobId && job.State == "stopping" {
 					return true
 				}
 			}
@@ -569,7 +569,7 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, backupJ
 				}
 				continue
 			} else {
-				if backupJobId != "" && job.BackupJobId == backupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					if !stopped {
 						job.State = "stopping"
@@ -849,7 +849,7 @@ func (jobs *BackupJobsState) GetCancelFunctionForJob(backupJobName string, backu
 				CancelFunction = job.Cancel
 				break
 			} else {
-				if backupJobId != "" && job.BackupJobId == backupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					CancelFunction = job.Cancel
 					break
@@ -888,7 +888,7 @@ func (jobs *BackupJobsState) GetContextForJob(backupJobName string, backupJobId 
 				ctx = job.Ctx
 				break
 			} else {
-				if backupJobId != "" && job.BackupJobId == backupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					ctx = job.Ctx
 					break
@@ -916,7 +916,7 @@ func (jobs *BackupJobsState) GetStartTime(name string, jobId string, logContext 
 			if jobId == "" {
 				return job.StartTime, nil
 			} else {
-				if jobId != "" && job.BackupJobId == jobId {
+				if job.BackupJobId == jobId {
 					return job.StartTime, nil
 				}
 			}
@@ -950,18 +950,10 @@ func (jobs *BackupJobsState) IsCancelled(name string, jobId string, logContext s
 		if name == job.Name {
 			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
 			if jobId == "" {
-				if job.Ctx.Err() == context.Canceled {
-					return true
-				} else {
-					return false
-				}
+				return job.Ctx.Err() == context.Canceled
 			} else {
-				if jobId != "" && job.BackupJobId == jobId {
-					if job.Ctx.Err() == context.Canceled {
-						return true
-					} else {
-						return false
-					}
+				if job.BackupJobId == jobId {
+					return job.Ctx.Err() == context.Canceled
 				}
 			}
 		}
