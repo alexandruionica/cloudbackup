@@ -77,8 +77,8 @@ func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBac
 	}
 
 	var storageAccessKey string
-	GetStringParameter("storage_account", &result.azureAccountName, target.Parameters, "")
-	GetStringParameter("storage_access_key", &storageAccessKey, target.Parameters, "")
+	resolveStringParameter("storage_account", &result.azureAccountName, target.Parameters, "")
+	resolveStringParameter("storage_access_key", &storageAccessKey, target.Parameters, "")
 	// TODO - implement also Azure Metadata service lookup and make key based auth optional
 
 	credential, err := azblob.NewSharedKeyCredential(result.azureAccountName, storageAccessKey)
@@ -94,7 +94,7 @@ func InitialiseStoreAzureBlob(ctx context.Context, backupConfig shared.ConfigBac
 
 	var serviceURL string
 	var primaryBlobServiceEndpoint string
-	GetStringParameter("primary_blob_service_endpoint", &primaryBlobServiceEndpoint, target.Parameters, "")
+	resolveStringParameter("primary_blob_service_endpoint", &primaryBlobServiceEndpoint, target.Parameters, "")
 	if primaryBlobServiceEndpoint != "" {
 		serviceURL = primaryBlobServiceEndpoint
 	} else {

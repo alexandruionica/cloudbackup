@@ -397,7 +397,7 @@ func setupRateLimiterBucket(rateLimitStr string, targetName string, backupConfig
 
 // iterates through $parameters and if it finds .Name matching $searchedParam then it sets its value to
 // $destinationParam . If no match is found and $defaultValue != "" then $destinationParam gets the specified default
-func GetStringParameter(searchedParam string, destinationParam *string, parameters []shared.ConfigBackupTargetParams, defaultValue string) {
+func resolveStringParameter(searchedParam string, destinationParam *string, parameters []shared.ConfigBackupTargetParams, defaultValue string) {
 	found := false
 	for _, entry := range parameters {
 		if strings.EqualFold(searchedParam, entry.Name) {
@@ -412,7 +412,7 @@ func GetStringParameter(searchedParam string, destinationParam *string, paramete
 
 // iterates through $parameters and if it finds .Name matching $searchedParam then it sets its value to
 // $destinationParam . If no match is found then the value of $defaultValue is used to set $destinationParam.If a match is found but it can't be converted to a boolean then $defaultValue is used
-func GetBoolParameter(searchedParam string, destinationParam *bool, parameters []shared.ConfigBackupTargetParams, defaultValue bool) {
+func resolveBoolParameter(searchedParam string, destinationParam *bool, parameters []shared.ConfigBackupTargetParams, defaultValue bool) {
 	found := false
 	for _, entry := range parameters {
 		if strings.EqualFold(searchedParam, entry.Name) {

@@ -72,8 +72,8 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		},
 	}
 
-	GetStringParameter("storage_class", &result.storageClass, target.Parameters, "")
-	GetBoolParameter("disable_crc32c_hash", &result.disableCrc32cHash, target.Parameters, false)
+	resolveStringParameter("storage_class", &result.storageClass, target.Parameters, "")
+	resolveBoolParameter("disable_crc32c_hash", &result.disableCrc32cHash, target.Parameters, false)
 
 	// if we got the credentials in the config then attempt to use them
 	if foundGcpCredentialsInTargetConfig(target.Parameters) {

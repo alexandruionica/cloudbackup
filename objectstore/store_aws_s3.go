@@ -80,10 +80,10 @@ func InitialiseStoreAwsS3(ctx context.Context, backupConfig shared.ConfigBackup,
 	}
 
 	// if any of those parameters was set then read its value and seed the struct
-	GetStringParameter("AWS_ACCESS_KEY_ID", &result.awsAccessKeyId, target.Parameters, "")
-	GetStringParameter("AWS_SECRET_ACCESS_KEY", &result.awsSecretAccessKey, target.Parameters, "")
-	GetStringParameter("storage_class", &result.storageClass, target.Parameters, "")
-	GetStringParameter("region", &result.region, target.Parameters, "")
+	resolveStringParameter("AWS_ACCESS_KEY_ID", &result.awsAccessKeyId, target.Parameters, "")
+	resolveStringParameter("AWS_SECRET_ACCESS_KEY", &result.awsSecretAccessKey, target.Parameters, "")
+	resolveStringParameter("storage_class", &result.storageClass, target.Parameters, "")
+	resolveStringParameter("region", &result.region, target.Parameters, "")
 
 	var loadOpts []func(*awsconfig.LoadOptions) error
 
