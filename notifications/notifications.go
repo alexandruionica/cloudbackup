@@ -30,18 +30,18 @@ func GetNumNotificators(notificationDefs shared.ConfigNotification) int {
 }
 
 // Executes all defined (in the config file) notifications
-// $config is a copy of the server's config file; $JobId is the uuid of the job
-// $JobType is one of "backup", "restore" or "purge"; $JobState is one if "started", "finished", "failed", "cancelled",
+// $config is a copy of the server's config file; $jobId is the uuid of the job
+// $jobType is one of "backup", "restore" or "purge"; $jobState is one if "started", "finished", "failed", "cancelled",
 // "crashed" and "test" ("test" is supposed to be used only when it is tested that notifications deliver as expected)
-// $JobName will be non empty only for backup jobs and it represents the name of the job corresponding to the "backup"
-// entry in the config file; JobReport is a JSON encoded string specific to each job type
+// $jobName will be non empty only for backup jobs and it represents the name of the job corresponding to the "backup"
+// entry in the config file; jobReport is a JSON encoded string specific to each job type
 // Returns: the number of scripts which failed to run; an error object
-func Execute(config shared.CfgTemplate, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) (int, error) {
+func Execute(config shared.CfgTemplate, jobId string, jobType string, jobState string, jobName string, jobReport string, jobError string) (int, error) {
 	numErrors, numNotificators, failedScripts := 0, 0, 0
 	totalErrors := ""
 	for _, emailEntry := range config.Notifications.Email {
 		numNotificators += 1
-		err := sendEmail(emailEntry, JobId, JobType, JobState, JobName, JobReport, JobError)
+		err := sendEmail(emailEntry, jobId, jobType, jobState, jobName, jobReport, jobError)
 		if err != nil {
 			numErrors += 1
 			totalErrors = totalErrors + err.Error() + "; "
@@ -50,7 +50,7 @@ func Execute(config shared.CfgTemplate, JobId string, JobType string, JobState s
 
 	for _, scriptEntry := range config.Notifications.Script {
 		numNotificators += 1
-		err := runScript(scriptEntry, JobId, JobType, JobState, JobName, JobReport, JobError)
+		err := runScript(scriptEntry, jobId, jobType, jobState, jobName, jobReport, jobError)
 		if err != nil {
 			numErrors += 1
 			failedScripts += 1
@@ -68,8 +68,8 @@ func Execute(config shared.CfgTemplate, JobId string, JobType string, JobState s
 // Sends one email ...
 // see description of Execute() for most of parameters except $emailEntry which represents email configuration as
 // described in the configuration file
-func sendEmail(emailEntry shared.ConfigNotificationEmail, JobId string, JobType string, JobState string, JobName string,
-	JobReport string, JobError string) error {
+func sendEmail(emailEntry shared.ConfigNotificationEmail, jobId string, jobType string, jobState string, jobName string,
+	jobReport string, jobError string) error {
 	logger.Debug("Sending email notification")
 
 	e := email.NewEmail()
@@ -80,26 +80,26 @@ func sendEmail(emailEntry shared.ConfigNotificationEmail, JobId string, JobType 
 	}
 	e.To = []string{emailEntry.To}
 	e.Cc = emailEntry.CC
-	e.Subject = fmt.Sprintf("%s job \"%s\" has %s", JobType, JobName, JobState)
+	e.Subject = fmt.Sprintf("%s job \"%s\" has %s", jobType, jobName, jobState)
 	var emailText []string
-	emailText = append(emailText, fmt.Sprintf("%s job \"%s\" having id %s has %s", JobType, JobName, JobId,
-		JobState))
+	emailText = append(emailText, fmt.Sprintf("%s job \"%s\" having id %s has %s", jobType, jobName, jobId,
+		jobState))
 	emailText = append(emailText, "Check backup server logs for more details")
-	switch JobState {
+	switch jobState {
 	case "test":
 		e.Subject = "Notification test"
 		e.Text = []byte(fmt.Sprintf("Receiving this email proves that the backup server's SMTP(email) settings"+
-			" are correct.\nNotification test job having id '%s' has completed successfully.", JobId))
+			" are correct.\nNotification test job having id '%s' has completed successfully.", jobId))
 	case "cancelled":
-		e.Subject = fmt.Sprintf("%s job \"%s\" has been %s", JobType, JobName, JobState)
-		emailText = []string{fmt.Sprintf("%s job \"%s\" having id %s has been %s", JobType, JobName, JobId, JobState)}
+		e.Subject = fmt.Sprintf("%s job \"%s\" has been %s", jobType, jobName, jobState)
+		emailText = []string{fmt.Sprintf("%s job \"%s\" having id %s has been %s", jobType, jobName, jobId, jobState)}
 		emailText = append(emailText, "Check backup server logs for more details")
 		e.Text = []byte(strings.Join(emailText, "\n"))
 	case "failed":
 		{
-			if JobError != "" {
+			if jobError != "" {
 				e.Text = []byte(fmt.Sprintf("Job failed with error: %s\nCheck backup server logs for more details",
-					JobError))
+					jobError))
 			}
 		}
 	case "crashed":
@@ -112,9 +112,9 @@ func sendEmail(emailEntry shared.ConfigNotificationEmail, JobId string, JobType 
 		e.Text = []byte(strings.Join(emailText, "\n"))
 	}
 
-	if JobType == "backup" && JobReport != "" {
+	if jobType == "backup" && jobReport != "" {
 		var decodedJson shared.BackupJobStatus
-		err := json.Unmarshal([]byte(JobReport), &decodedJson)
+		err := json.Unmarshal([]byte(jobReport), &decodedJson)
 		if err != nil {
 			logger.Debugf("While trying to json decode the job report, encountered error: %s", err)
 		} else {
@@ -145,23 +145,23 @@ func sendEmail(emailEntry shared.ConfigNotificationEmail, JobId string, JobType 
 }
 
 // runs a Notification script
-func runScript(scriptEntry shared.ConfigNotificationScript, JobId string, JobType string, JobState string, JobName string, JobReport string, JobError string) error {
+func runScript(scriptEntry shared.ConfigNotificationScript, jobId string, jobType string, jobState string, jobName string, jobReport string, jobError string) error {
 	logger.Infof("Running notification script '%s'", scriptEntry.Path)
-	reportFile, err := utils.SetupTmpFileWithContent([]byte(JobReport), "cloudbackup_job_report_notification_")
+	reportFile, err := utils.SetupTmpFileWithContent([]byte(jobReport), "cloudbackup_job_report_notification_")
 	if err != nil {
 		reportFile = ""
 		logger.Warningf("While trying to setup a temporary file to hold the job report which would be passed "+
 			"to notification script '%s', the following error was encountered: %s", scriptEntry.Path, err)
 	}
 	logger.Debugf("Running (without the single quotes): '%s' '%s' '%s' '%s' '%s' '%s' '%s'", scriptEntry.Path,
-		JobType, JobName, JobId, JobState, JobError, reportFile)
+		jobType, jobName, jobId, jobState, jobError, reportFile)
 	var cmd *exec.Cmd
 	// on Windows, to run Powershell scripts, you need to call powershell.exe itself
 	if strings.ToLower(filepath.Ext(scriptEntry.Path)) == ".ps1" && runtime.GOOS == "windows" {
-		cmd = exec.Command("powershell.exe", "-File", scriptEntry.Path, JobType, JobName, JobId, JobState,
-			JobError, reportFile) // #nosec
+		cmd = exec.Command("powershell.exe", "-File", scriptEntry.Path, jobType, jobName, jobId, jobState,
+			jobError, reportFile) // #nosec
 	} else {
-		cmd = exec.Command(scriptEntry.Path, JobType, JobName, JobId, JobState, JobError, reportFile) // #nosec
+		cmd = exec.Command(scriptEntry.Path, jobType, jobName, jobId, jobState, jobError, reportFile) // #nosec
 	}
 
 	stdoutStderr, err := cmd.CombinedOutput()
