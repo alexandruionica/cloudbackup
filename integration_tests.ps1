@@ -2,54 +2,54 @@ try {
 
 	$TESTSFOLDER='.\integration_tests'
 
-	if(!(Test-Path -Path "$TESTSFOLDER\.venv\Scripts\python.exe"  )){
-	   virtualenv "$TESTSFOLDER\.venv"
+	if(!(Test-Path -Path "$TESTSFOLDER\.venv_windows\Scripts\python.exe"  )){
+	   python -m venv "$TESTSFOLDER\.venv_windows"
 	   if ( $LastExitCode -ne 0 ) {
 		exit $LastExitCode
 	   } 
 	}
 
-	if(!(Test-Path -Path "$TESTSFOLDER\.venv\Scripts\pip.exe"  )){
+	if(!(Test-Path -Path "$TESTSFOLDER\.venv_windows\Scripts\pip.exe"  )){
 	  echo "Error: pip binary is missing. Can't proceed to install dependencies"
 	  exit 5
 	} 
 
 	echo "Installing dependencies needed for Python integration tests ..."
-	& "$TESTSFOLDER\.venv\Scripts\pip.exe" install -q -r ${TESTSFOLDER}\requirements.txt
+	& "$TESTSFOLDER\.venv_windows\Scripts\pip.exe" install -q -r ${TESTSFOLDER}\requirements.txt
 	if ( $LastExitCode -ne 0 ) {
 	  echo "Error installing required python packages in the virtualenv"
 	  exit $LastExitCode
 	}
 
-	& "$TESTSFOLDER\.venv\Scripts\python.exe" --version
-	& "$TESTSFOLDER\.venv\Scripts\pip.exe" freeze
+	& "$TESTSFOLDER\.venv_windows\Scripts\python.exe" --version
+	& "$TESTSFOLDER\.venv_windows\Scripts\pip.exe" freeze
         if ( $LastExitCode -ne 0 ) {
           echo "Error listing installed python modules and their dependencies versions"
           exit $LastExitCode
         }
 
 
-	if(!(Test-Path -Path "$TESTSFOLDER\.venv\Scripts\flake8.exe"  )){
+	if(!(Test-Path -Path "$TESTSFOLDER\.venv_windows\Scripts\flake8.exe"  )){
 	  echo "Error: flake8 binary is missing. Can't proceed to lint python code"
 	  exit 5
 	}
 
 	echo "Linting Python integration tests ..."
 	# We put the linting here for simplicity, since this is not a Python project
-	& "$TESTSFOLDER\.venv\Scripts\flake8.exe" --ignore E501,F401,F403,F405,W504,W605 ${TESTSFOLDER} --exclude=.venv
+	& "$TESTSFOLDER\.venv_windows\Scripts\flake8.exe" --ignore E501,F401,F403,F405,W504,W605 ${TESTSFOLDER} --exclude=.venv_windows --extend-exclude=.venv_linux
 	if ( $LastExitCode -ne 0 ) {
 	  echo 'Linting error'
 	  exit $LastExitCode
 	}
 
 	echo "Running Python integration tests ..."
-	& "$TESTSFOLDER\.venv\Scripts\python.exe" -m unittest discover -s ${TESTSFOLDER} -p '*.py*' -v
+	& "$TESTSFOLDER\.venv_windows\Scripts\python.exe" -m unittest discover -s ${TESTSFOLDER} -p '*.py*' -v
 	if ( $LastExitCode -ne 0 ) {
 	  exit $LastExitCode
 	}
 
 	echo "Cleaning up object stores as the test is complete ..."
-	& "$TESTSFOLDER\.venv\Scripts\python.exe" "$TESTSFOLDER\clean_object_stores_after_tests.py"
+	& "$TESTSFOLDER\.venv_windows\Scripts\python.exe" "$TESTSFOLDER\clean_object_stores_after_tests.py"
 	if ( $LastExitCode -ne 0 ) {
 		exit $LastExitCode
 	}

@@ -96,12 +96,8 @@ class TestRestAPIReportNotification4(unittest.TestCase):
         return response
 
     # start a backup, wait for it to fail and then check notification
+    @unittest.skipUnless(sys.platform.startswith("linux"), "mock SMTP server does not run on other platforms beside Linux")
     def test_notification_for_failed_backup1(self):
-        # unfortunately the mock SMTP server we use runs only on Linux so we can't run the tests on other platforms
-        if platform.system().lower() != 'linux':
-            logging.warn("SKIPPING SMTP related tests as they can't run on other platforms than Linux as the SMTP "
-                         "server used is working only on Linux.")
-            return
         # fetch list of jobs and start the first one
         url = self.base_url + self.api_root + '/backup/list'
         r = requests.get(url=url, auth=(self.username, self.password))

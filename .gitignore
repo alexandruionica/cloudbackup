@@ -23,3 +23,4 @@ config_server_with_secrets.yaml
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
 *VirtualBoxVM-*.log
+scorecard.png
