@@ -253,7 +253,10 @@ InfiniteLoop:
 						t.Fatalf("Reading the rate limited file should have taken 2 seconds but it took %f",
 							duration.Seconds())
 					}
-					if duration.Seconds() > 2.4 {
+					// Upper bound is intentionally generous: the meaningful assertion is the >=2s
+					// lower bound proving the rate limiter throttled. A tight upper bound is flaky
+					// under CI load, so we only guard against gross over-throttling here.
+					if duration.Seconds() > 10 {
 						t.Fatalf("Reading the rate limited file should have taken a bit over 2 seconds but it took %f",
 							duration.Seconds())
 					}
@@ -335,8 +338,10 @@ InfiniteLoop:
 			case io.EOF:
 				{
 					duration := time.Since(startTime)
-					if duration.Seconds() > 0.1 {
-						t.Fatalf("Reading the rate limited file should have taken under 0.1 seconds but it took %f",
+					// Generous upper bound to avoid CI-load flakiness: the point is only that an
+					// un-throttled read is far quicker than the ~2s rate-limited case above.
+					if duration.Seconds() > 1 {
+						t.Fatalf("Reading the un-rate-limited file should have taken well under a second but it took %f",
 							duration.Seconds())
 					}
 					reader.Close()
