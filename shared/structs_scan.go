@@ -31,15 +31,15 @@ type ScanEvalItemReport struct {
 	Error string `json:"error"`
 }
 
-// $Path string, $fileType string, $OperationType string, $Error string  are defined only to satisfy interface requirements
-func (jobs *DryRunBackupJobsState) IncrementCounter(BackupJobName string, counterName string, Path string,
-	fileType string, OperationType string, Error string) {
+// $path string, $fileType string, $operationType string, $errMsg string  are defined only to satisfy interface requirements
+func (jobs *DryRunBackupJobsState) IncrementCounter(backupJobName string, counterName string, path string,
+	fileType string, operationType string, errMsg string) {
 	jobs.Lock.Lock()
 	defer func() {
 		jobs.Lock.Unlock()
 	}()
 	for _, job := range jobs.DryRunning {
-		if BackupJobName == job.Name {
+		if backupJobName == job.Name {
 			job.StatsCounters[counterName] += 1
 			break
 		}
@@ -47,16 +47,16 @@ func (jobs *DryRunBackupJobsState) IncrementCounter(BackupJobName string, counte
 }
 
 // we don't need this for a dry run but this function is needed in order to satisfy the interface constrains
-func (jobs *DryRunBackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string,
-	ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool) {
+func (jobs *DryRunBackupJobsState) IncrementRateCounter(backupJobName string, objectStoreName string,
+	objectStoreType string, incrementValue int64, path string, percentDone uint, newItem bool) {
 }
 
 // we don't need this for a dry run but this function is needed in order to satisfy the interface constrains
-func (jobs *DryRunBackupJobsState) IncrementSequence(BackupJobName string) {
+func (jobs *DryRunBackupJobsState) IncrementSequence(backupJobName string) {
 }
 
 // we don't need this for a dry run but this function is needed in order to satisfy the interface constrains
-func (jobs *DryRunBackupJobsState) AddBytesRead(BackupJobName string, bytesRead uint64) {
+func (jobs *DryRunBackupJobsState) AddBytesRead(backupJobName string, bytesRead uint64) {
 }
 
 // This will not error if a job having the same name does not exist;
@@ -66,14 +66,14 @@ func (jobs *DryRunBackupJobsState) AddBytesRead(BackupJobName string, bytesRead 
 //
 //	from the initial implementation but since switched to using an interface and adjusting behaviour as needed; the
 //	method name makes sense in the BackupJobsState struct
-func (jobs *DryRunBackupJobsState) UpdateStatsText(BackupJobName string, statName string, statValue string,
+func (jobs *DryRunBackupJobsState) UpdateStatsText(backupJobName string, statName string, statValue string,
 	exclusionExpr string, fileError string) {
 	jobs.Lock.Lock()
 	defer func() {
 		jobs.Lock.Unlock()
 	}()
 	for _, job := range jobs.DryRunning {
-		if BackupJobName == job.Name {
+		if backupJobName == job.Name {
 			job.StatsText[statName] = statValue
 			if statValue != "" {
 				response := ScanEvalItemReport{
@@ -105,7 +105,7 @@ func (jobs *DryRunBackupJobsState) UpdateStatsText(BackupJobName string, statNam
 	}
 }
 
-func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string, BackupJobId string) error {
+func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string, backupJobId string) error {
 	log.WithFields(log.Fields{"context": logContext}).Debugf("Marking job '%s' as 'evaluating'", name)
 	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read/write lock before updating " +
 		"evaluating backup jobs struct")
@@ -125,7 +125,7 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 	jobs.DryRunning = append(jobs.DryRunning, BackupJobStatus{
 		Name:        name,
 		State:       "evaluating",
-		BackupJobId: BackupJobId,
+		BackupJobId: backupJobId,
 		StartTime:   time.Now(),
 		// init statistics related fields
 		StatsCounters: map[string]uint64{
@@ -153,7 +153,7 @@ func (jobs *DryRunBackupJobsState) MarkEvaluating(name string, logContext string
 // return the signal channel used by a particular DryRunning job with a particular uuid (or if uuid="" then match on
 //
 //	name only)
-func (jobs *DryRunBackupJobsState) GetCancelFunctionForJob(BackupJobName string, BackupJobId string) (context.CancelFunc, error) {
+func (jobs *DryRunBackupJobsState) GetCancelFunctionForJob(backupJobName string, backupJobId string) (context.CancelFunc, error) {
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
@@ -163,14 +163,14 @@ func (jobs *DryRunBackupJobsState) GetCancelFunctionForJob(BackupJobName string,
 	found := false
 
 	for _, job := range jobs.DryRunning {
-		if BackupJobName == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if BackupJobId == "" {
+		if backupJobName == job.Name {
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if backupJobId == "" {
 				found = true
 				CancelFunction = job.Cancel
 				break
 			} else {
-				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					CancelFunction = job.Cancel
 					break
@@ -188,7 +188,7 @@ func (jobs *DryRunBackupJobsState) GetCancelFunctionForJob(BackupJobName string,
 // return the context for a particular Running job with a particular uuid (or if uuid="" then match on
 //
 //	name only)
-func (jobs *DryRunBackupJobsState) GetContextForJob(BackupJobName string, BackupJobId string) (context.Context, error) {
+func (jobs *DryRunBackupJobsState) GetContextForJob(backupJobName string, backupJobId string) (context.Context, error) {
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
@@ -198,14 +198,14 @@ func (jobs *DryRunBackupJobsState) GetContextForJob(BackupJobName string, Backup
 	found := false
 
 	for _, job := range jobs.DryRunning {
-		if BackupJobName == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if BackupJobId == "" {
+		if backupJobName == job.Name {
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if backupJobId == "" {
 				found = true
 				ctx = job.Ctx
 				break
 			} else {
-				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					ctx = job.Ctx
 					break
@@ -221,7 +221,7 @@ func (jobs *DryRunBackupJobsState) GetContextForJob(BackupJobName string, Backup
 }
 
 // returns a copy of stats so far; the copy is of StatsCounters & StatsText
-func (jobs *DryRunBackupJobsState) GetStats(BackupJobName string) (BackupJobStatus, error) {
+func (jobs *DryRunBackupJobsState) GetStats(backupJobName string) (BackupJobStatus, error) {
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
@@ -233,7 +233,7 @@ func (jobs *DryRunBackupJobsState) GetStats(BackupJobName string) (BackupJobStat
 	}
 	found := false
 	for _, job := range jobs.DryRunning {
-		if BackupJobName == job.Name {
+		if backupJobName == job.Name {
 			found = true
 			// copy maps
 			for k, v := range job.StatsCounters {

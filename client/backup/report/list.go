@@ -11,9 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
-	"unicode/utf8"
 )
 
 const ApiPrefix = "/api/v1"
@@ -96,17 +94,17 @@ func List(config clientConfig.Client, jsonOutput bool, jobName string, StartTime
 			// stop the loop if we don't have a "next" marker; otherwise build a new payload
 			if decodedJson.Next == "" {
 				if firstLoopRun {
-					printBackupList(decodedJson, true)
+					clientCommon.PrintJobListTable(decodedJson.Result, true)
 				} else {
-					printBackupList(decodedJson, false)
+					clientCommon.PrintJobListTable(decodedJson.Result, false)
 				}
 				os.Exit(0)
 			} else {
 				if firstLoopRun {
-					printBackupList(decodedJson, true)
+					clientCommon.PrintJobListTable(decodedJson.Result, true)
 					firstLoopRun = false
 				} else {
-					printBackupList(decodedJson, false)
+					clientCommon.PrintJobListTable(decodedJson.Result, false)
 				}
 				payload = httpd.ReportBackupList{
 					Name: jobName,
@@ -116,73 +114,4 @@ func List(config clientConfig.Client, jsonOutput bool, jobName string, StartTime
 		}
 	}
 
-}
-
-// for a "list" command this formats the result and prints it in a nice way
-func printBackupList(decodedJson ListResponse, showHeader bool) {
-	logger.Debugf("%+v", decodedJson)
-	JobIdLength, StateLength, DurationLength, StartTimeLength, EndTimeLength := 5, 5, 8, 10, 8 // minimum is the lenght of the column headers
-	for _, job := range decodedJson.Result {
-		if utf8.RuneCountInString(job.JobId) > JobIdLength {
-			JobIdLength = utf8.RuneCountInString(job.JobId)
-		}
-		if utf8.RuneCountInString(job.State) > StateLength {
-			StateLength = utf8.RuneCountInString(job.State)
-		}
-		if utf8.RuneCountInString(job.StartTime) > StartTimeLength {
-			StartTimeLength = utf8.RuneCountInString(job.StartTime)
-		}
-		if utf8.RuneCountInString(job.EndTime) > EndTimeLength {
-			EndTimeLength = utf8.RuneCountInString(job.EndTime)
-		}
-		conversionErr := false
-		tmpStartTime, err := time.Parse(time.RFC3339Nano, job.StartTime)
-		if err != nil {
-			conversionErr = true
-		}
-		tmpEndTime, err := time.Parse(time.RFC3339Nano, job.EndTime)
-		if err != nil {
-			conversionErr = true
-		}
-		if !conversionErr {
-			if utf8.RuneCountInString(tmpEndTime.Sub(tmpStartTime).Round(time.Second).String()) > DurationLength {
-				DurationLength = utf8.RuneCountInString(tmpEndTime.Sub(tmpStartTime).Round(time.Second).String())
-			}
-		}
-	}
-	// table header
-	tableTemplate := "%" + strconv.Itoa(JobIdLength) + "s | %" + strconv.Itoa(StateLength) + "s | %" +
-		strconv.Itoa(DurationLength) + "s | %" + strconv.Itoa(StartTimeLength) + "s | %" + strconv.Itoa(EndTimeLength) +
-		"s\n"
-	if showHeader {
-		fmt.Printf(tableTemplate, "JobId", "State", "Duration", "Start Time", "End Time")
-	}
-	for _, job := range decodedJson.Result {
-		conversionErr := false
-		tmpStartTime, err := time.Parse(time.RFC3339Nano, job.StartTime)
-		if err != nil {
-			conversionErr = true
-		}
-		tmpEndTime, err := time.Parse(time.RFC3339Nano, job.EndTime)
-		if err != nil {
-			conversionErr = true
-		}
-		var endTime string
-		if !conversionErr {
-			if tmpEndTime.IsZero() {
-				endTime = "n/a"
-			} else {
-				endTime = job.EndTime
-			}
-		} else {
-			endTime = "n/a"
-		}
-		var duration string
-		if conversionErr {
-			duration = "n/a"
-		} else {
-			duration = tmpEndTime.Sub(tmpStartTime).Round(time.Second).String()
-		}
-		fmt.Printf(tableTemplate, job.JobId, job.State, duration, job.StartTime, endTime)
-	}
 }

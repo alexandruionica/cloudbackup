@@ -69,12 +69,8 @@ class TestRestAPIReportNotification1(unittest.TestCase):
         return response
 
     # start a test notification - should fail as we don't have the config file entries for any
+    @unittest.skipUnless(sys.platform.startswith("linux"), "mock SMTP server does not run on other platforms beside Linux")
     def test_notification_test1(self):
-        # unfortunately the mock SMTP server we use runs only on Linux so we can't run the tests on other platforms
-        if platform.system().lower() != 'linux':
-            logging.warn("SKIPPING SMTP related tests as they can't run on other platforms than Linux as the SMTP "
-                         "server used is working only on Linux.")
-            return
         r = requests.post(self.base_url + self.api_root + '/report/notification/test', auth=(self.username, self.password))
         self.assertEqual(r.status_code, 500, "Expected status code 500 for POST "
                                              "{}".format(self.base_url + self.api_root + '/report/notification/test'))

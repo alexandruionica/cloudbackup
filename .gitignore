@@ -4,8 +4,14 @@ cloudbackup.exe
 dist/
 tmp/
 .idea/
-integration_tests/.venv
+integration_tests/.venv/
+integration_tests/.venv_windows/
+integration_tests/.venv_linux/
+integration_tests/.venv_unix/
+integration_tests/.venv_macos/
 integration_tests/__pycache__
+.venv_desloppify/
+.desloppify/
 documentation_src/.venv/
 documentation_src/__pycache__
 developer_documentation/.venv
@@ -21,3 +27,4 @@ config_server_with_secrets.yaml
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
 *VirtualBoxVM-*.log
+scorecard.png

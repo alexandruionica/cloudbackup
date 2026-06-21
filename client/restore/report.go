@@ -11,9 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
-	"unicode/utf8"
 )
 
 // ReportListResponse is the JSON envelope returned by POST /report/restore/list.
@@ -125,7 +123,7 @@ func ReportList(config clientConfig.Client, jsonOutput bool, jobName string, sta
 			}
 			nextToken = decoded.Next
 		} else {
-			printRestoreReportList(decoded, firstPage)
+			clientCommon.PrintJobListTable(decoded.Result, firstPage)
 			if decoded.Next == "" {
 				os.Exit(0)
 			}
@@ -151,71 +149,4 @@ func ReportShow(config clientConfig.Client, jsonOutput bool, jobName, jobId stri
 		os.Exit(0)
 	}
 	clientCommon.PrintRestoreStatus(decoded.Result, true)
-}
-
-func printRestoreReportList(decoded ReportListResponse, showHeader bool) {
-	logger.Debugf("%+v", decoded)
-	JobIdLength, StateLength, DurationLength, StartTimeLength, EndTimeLength := 5, 5, 8, 10, 8
-	for _, job := range decoded.Result {
-		if utf8.RuneCountInString(job.JobId) > JobIdLength {
-			JobIdLength = utf8.RuneCountInString(job.JobId)
-		}
-		if utf8.RuneCountInString(job.State) > StateLength {
-			StateLength = utf8.RuneCountInString(job.State)
-		}
-		if utf8.RuneCountInString(job.StartTime) > StartTimeLength {
-			StartTimeLength = utf8.RuneCountInString(job.StartTime)
-		}
-		if utf8.RuneCountInString(job.EndTime) > EndTimeLength {
-			EndTimeLength = utf8.RuneCountInString(job.EndTime)
-		}
-		conversionErr := false
-		tmpStartTime, err := time.Parse(time.RFC3339Nano, job.StartTime)
-		if err != nil {
-			conversionErr = true
-		}
-		tmpEndTime, err := time.Parse(time.RFC3339Nano, job.EndTime)
-		if err != nil {
-			conversionErr = true
-		}
-		if !conversionErr {
-			if utf8.RuneCountInString(tmpEndTime.Sub(tmpStartTime).Round(time.Second).String()) > DurationLength {
-				DurationLength = utf8.RuneCountInString(tmpEndTime.Sub(tmpStartTime).Round(time.Second).String())
-			}
-		}
-	}
-	tableTemplate := "%" + strconv.Itoa(JobIdLength) + "s | %" + strconv.Itoa(StateLength) + "s | %" +
-		strconv.Itoa(DurationLength) + "s | %" + strconv.Itoa(StartTimeLength) + "s | %" + strconv.Itoa(EndTimeLength) +
-		"s\n"
-	if showHeader {
-		fmt.Printf(tableTemplate, "JobId", "State", "Duration", "Start Time", "End Time")
-	}
-	for _, job := range decoded.Result {
-		conversionErr := false
-		tmpStartTime, err := time.Parse(time.RFC3339Nano, job.StartTime)
-		if err != nil {
-			conversionErr = true
-		}
-		tmpEndTime, err := time.Parse(time.RFC3339Nano, job.EndTime)
-		if err != nil {
-			conversionErr = true
-		}
-		var endTime string
-		if !conversionErr {
-			if tmpEndTime.IsZero() {
-				endTime = "n/a"
-			} else {
-				endTime = job.EndTime
-			}
-		} else {
-			endTime = "n/a"
-		}
-		var duration string
-		if conversionErr {
-			duration = "n/a"
-		} else {
-			duration = tmpEndTime.Sub(tmpStartTime).Round(time.Second).String()
-		}
-		fmt.Printf(tableTemplate, job.JobId, job.State, duration, job.StartTime, endTime)
-	}
 }

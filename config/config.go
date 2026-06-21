@@ -216,17 +216,6 @@ func ValidateBackup(backups []shared.ConfigBackup, logError bool) error {
 			}
 		}
 
-		if backup.VersionsMaxAge != "0" { //nolint:staticcheck
-			// TODO - validate that the AGE string is valid (to figure out what valid means)
-			//msg := fmt.Sprintf("backup[%d] having 'name=%s' has setting 'versioning=false' but " +
-			//	"'versions_max_age=%s' . Enable versioning or remove the 'versions_max_age' setting", i, backup.Name,
-			//		backup.VersionsMaxAge)
-			//if logError{
-			//	logger.Error(msg)
-			//}
-			//return errors.New(msg)
-		}
-
 		if backup.PreRunScript != "" {
 			err := ValidatePrePostRunScript(backup.PreRunScript, "pre", backup.Name, logError)
 			if err != nil {
@@ -865,8 +854,8 @@ func ValidateUser(config shared.CfgTemplate, logError bool, hiddenPass bool) err
 					return errors.New(msg)
 				}
 			}
-			// Access field has only two options allowed: "read" or "write"
-			if strings.ToLower(user.Access) != "read" && strings.ToLower(user.Access) != "write" {
+			// Access field has only two options allowed: shared.AccessRead or shared.AccessWrite
+			if strings.ToLower(user.Access) != shared.AccessRead && strings.ToLower(user.Access) != shared.AccessWrite {
 				msg := fmt.Sprintf("Username '%s' has field 'access' set to value '%s' but the only two allowed "+
 					"values are 'read' or 'write'", user.Name, user.Access)
 				if logError {
@@ -967,11 +956,7 @@ func SanitizeCfgTemplate(config shared.CfgTemplate) shared.CfgTemplate {
 
 // checks if a string is made up only of a given character (or substring)
 func CheckStringIsOnly(val string, chars string) bool {
-	if utf8.RuneCountInString(val) > 0 && val == strings.Repeat(chars, utf8.RuneCountInString(val)) {
-		return true
-	} else {
-		return false
-	}
+	return utf8.RuneCountInString(val) > 0 && val == strings.Repeat(chars, utf8.RuneCountInString(val))
 }
 
 // reads passwords from the old config. If the new config has an entry which matches (meaning both have the same name)

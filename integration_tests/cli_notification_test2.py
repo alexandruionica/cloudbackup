@@ -69,12 +69,8 @@ class TestCliNotification2(unittest.TestCase):
             self.smtp_controller.stop()
 
     # ./cloudbackup client notification test -c client_config.yaml     works
+    @unittest.skipUnless(sys.platform.startswith("linux"), "mock SMTP server does not run on other platforms beside Linux")
     def test_cmd_client_notification_test1(self):
-        # unfortunately the mock SMTP server we use runs only on Linux so we can't run the tests on other platforms
-        if platform.system().lower() != 'linux':
-            logging.warn("SKIPPING SMTP related tests as they can't run on other platforms than Linux as the SMTP "
-                         "server used is working only on Linux.")
-            return
         result = run_shell_cmd(self.cmd + " client notification test -c " + self.client_config_file_path)
         self.assertEqual(result['result'].returncode, 0, "Exit code from {} is not 0. Command output object: "
                                                          "{}".format(cmd_default, result))

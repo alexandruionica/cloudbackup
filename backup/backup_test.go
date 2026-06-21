@@ -4137,7 +4137,7 @@ func TestUploadAndUpdateDB4(t *testing.T) {
 		t.Fatalf("Failed to get signalling context. Error was: %s", err)
 	}
 
-	errObjectStore := objectstore.InitialiseStoreError(ctx, backupConfig, "error_store", "store_error", 0)
+	errObjectStore := objectstore.InitialiseStoreError("error_store", "store_error")
 	objectStores := []objectstore.ObjectStore{errObjectStore}
 
 	if len(objectStores) < 1 {
@@ -4237,7 +4237,7 @@ func TestUploadAndUpdateDB5(t *testing.T) {
 		t.Fatal("No object stores defined in the config so there is nothing to test")
 	}
 
-	errObjectStore := objectstore.InitialiseStoreError(ctx, backupConfig, "error_store", "store_error", 0)
+	errObjectStore := objectstore.InitialiseStoreError("error_store", "store_error")
 	objectStores = append(objectStores, errObjectStore)
 
 	dbData, err := dbops.PrepareDb(backupConfig.Name, jobId, result.Config, backupJobsState, backupConfig, true, nil)
@@ -5009,7 +5009,7 @@ func TestMarkDeleted5(t *testing.T) {
 	}
 
 	// replace the 2nd object store with a broken one which has pretends to have the same name and same type (hint: it lies)
-	errObjectStore := objectstore.InitialiseStoreError(ctx, backupConfig, "2nd_store", "test_null", 0)
+	errObjectStore := objectstore.InitialiseStoreError("2nd_store", "test_null")
 	objectStores[1] = errObjectStore
 
 	// delete file from disk so Mark deleted has something to complain about

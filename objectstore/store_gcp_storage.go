@@ -1,7 +1,6 @@
 package objectstore
 
 import (
-	"cloudbackup/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -74,8 +72,8 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 		},
 	}
 
-	GetStringParameter("storage_class", &result.storageClass, target.Parameters, "")
-	GetBoolParameter("disable_crc32c_hash", &result.disableCrc32cHash, target.Parameters, false)
+	resolveStringParameter("storage_class", &result.storageClass, target.Parameters, "")
+	resolveBoolParameter("disable_crc32c_hash", &result.disableCrc32cHash, target.Parameters, false)
 
 	// if we got the credentials in the config then attempt to use them
 	if foundGcpCredentialsInTargetConfig(target.Parameters) {
@@ -106,7 +104,7 @@ func InitialiseStoreGcpStorage(ctx context.Context, backupConfig shared.ConfigBa
 
 func (objStore *StoreGcpStorage) Upload(DbRecord shared.BackedUpFileProperties, version int64, backupJobsState shared.BackupJobsStateInterface,
 	metadata bool) (remoteVersion string, cancelled bool, err error) {
-	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, DbRecord.Path, metadata)
+	remotePath := calculateRemotePath(objStore.storePrefix, DbRecord.Path, metadata)
 	logger.Debugf("Uploading: '%s' having version: '%d' to object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", DbRecord.Path, version, objStore.storeName, objStore.storeBucketName, remotePath)
 
@@ -276,7 +274,7 @@ func (objStore *StoreGcpStorage) MarkDeleted(existingDbRecord shared.BackedUpFil
 		return strconv.FormatInt(markerVersion, 10), false, nil
 	}
 
-	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	remotePath := calculateRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Marking as deleted: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, objStore.storeName, objStore.storeBucketName, remotePath)
 	err = objStore.gcpBucketObj.Object(remotePath).Delete(objStore.ctx)
@@ -303,7 +301,7 @@ func (objStore *StoreGcpStorage) Delete(existingDbRecord shared.BackedUpFileProp
 		// directories and symlinks DO NOT GET UPLOADED so there is nothing to delete
 		return nil
 	}
-	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	remotePath := calculateRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	logger.Debugf("Deleting: '%s' having version: '%d' and remote version: '%s' from object store: '%s' using bucket: '%s' and"+
 		" full remote path: '%s'", existingDbRecord.Path, version, remoteVersion, objStore.storeName, objStore.storeBucketName, remotePath)
 	// if this a request to delete a "delete marker" then return success as this object store does not have the concept
@@ -333,7 +331,7 @@ func (objStore *StoreGcpStorage) Get(existingDbRecord shared.BackedUpFilePropert
 		return false, nil
 	}
 
-	remotePath := calculateGcpStorageRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
+	remotePath := calculateRemotePath(objStore.storePrefix, existingDbRecord.Path, metadata)
 	generation, err := strconv.ParseInt(remoteVersion, 10, 64)
 	if err != nil {
 		return false, fmt.Errorf("could not convert '%s' to an int64 due to error: %s . Because of this, download of "+
@@ -589,23 +587,6 @@ func foundGcpCredentialsInTargetConfig(params []shared.ConfigBackupTargetParams)
 		}
 	}
 	return false
-}
-
-// for a given $prefix , $path and $metadata (true if file is metadata, false if not) return the remote path
-func calculateGcpStorageRemotePath(prefix string, path string, metadata bool) string {
-	if metadata {
-		// when dealing with metadata, we want to store on the remote only the filename, excluding the rest of the local path
-		filename := filepath.Base(path)
-		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
-		remotePath := filepath.ToSlash(prefix + "/" + MetaDataPrepend + "/" + filename)
-		// ensure we don't have double forward slashes
-		return utils.SquashForwardSlashes(remotePath)
-	} else {
-		// ensure MS Windows paths are converted to forward slash; otherwise filepath.ToSlash() should not affect Unixes
-		remotePath := filepath.ToSlash(prefix + "/" + DataPrepend + "/" + path)
-		// ensure we don't have double forward slashes
-		return utils.SquashForwardSlashes(remotePath)
-	}
 }
 
 // returns a HTTP client which can then be passed to the GCP sdk, when initialising the SDK. For this to work,

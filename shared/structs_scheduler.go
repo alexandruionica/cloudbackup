@@ -237,12 +237,12 @@ type ObjectStoreRate struct {
 //
 //	dry run report
 type BackupJobsStateInterface interface {
-	AddBytesRead(BackupJobName string, bytesRead uint64)
-	IncrementCounter(BackupJobName string, counterName string, Path string, fileType string, OperationType string, Error string)
-	IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool)
+	AddBytesRead(backupJobName string, bytesRead uint64)
+	IncrementCounter(backupJobName string, counterName string, path string, fileType string, operationType string, errMsg string)
+	IncrementRateCounter(backupJobName string, objectStoreName string, objectStoreType string, incrementValue int64, path string, percentDone uint, newItem bool)
 	// The Sequence is used when sending messages to Watch clients about objects being uploaded, up to date or marked as deleted
-	IncrementSequence(BackupJobName string)
-	UpdateStatsText(BackupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
+	IncrementSequence(backupJobName string)
+	UpdateStatsText(backupJobName string, statName string, statValue string, exclusionExpr string, fileError string)
 }
 
 // returns a slice with the state of both running and stopped jobs. $cfgCopy MUST be a copy and not a dereference of
@@ -315,8 +315,6 @@ func (jobs *BackupJobsState) Get(cfgCopy CfgTemplate, logContext string) []Backu
 	return result
 }
 
-// checks if a given job is running. Returns true if running, false otherwise
-// ("stopping" state is considered running too)
 // GetRestoresRunning returns a snapshot of all currently running restore jobs. Unlike Get(),
 // it does NOT emit placeholder "stopped" entries for backup definitions in the config because
 // restores are ephemeral — they do not have a stable identity that persists across runs, so a
@@ -345,7 +343,7 @@ func (jobs *BackupJobsState) GetRestoresRunning(logContext string) []BackupJobSt
 	return result
 }
 
-func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext string) bool {
+func (jobs *BackupJobsState) IsRunning(name string, jobId string, logContext string) bool {
 	//log.WithFields(log.Fields{"context": logContext + ".IsRunning"}).Debug("Acquiring read lock before reading running " +
 	//	"backup jobs struct")
 	jobs.Lock.RLock()
@@ -356,11 +354,11 @@ func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext str
 	}()
 	for _, job := range jobs.Running {
 		if name == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if JobId == "" {
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if jobId == "" {
 				return true
 			} else {
-				if JobId != "" && job.BackupJobId == JobId {
+				if job.BackupJobId == jobId {
 					return true
 				}
 			}
@@ -370,7 +368,7 @@ func (jobs *BackupJobsState) IsRunning(name string, JobId string, logContext str
 }
 
 // checks if a given job is stopping. Returns true if stopping, false otherwise
-func (jobs *BackupJobsState) IsStopping(name string, JobId string, logContext string) bool {
+func (jobs *BackupJobsState) IsStopping(name string, jobId string, logContext string) bool {
 	//log.WithFields(log.Fields{"context": logContext + ".IsStopping"}).Debug("Acquiring read lock before reading running " +
 	//	"backup jobs struct")
 	jobs.Lock.RLock()
@@ -381,11 +379,11 @@ func (jobs *BackupJobsState) IsStopping(name string, JobId string, logContext st
 	}()
 	for _, job := range jobs.Running {
 		if name == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if JobId == "" && job.State == "stopping" {
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if jobId == "" && job.State == "stopping" {
 				return true
 			} else {
-				if JobId != "" && job.BackupJobId == JobId && job.State == "stopping" {
+				if job.BackupJobId == jobId && job.State == "stopping" {
 					return true
 				}
 			}
@@ -394,7 +392,7 @@ func (jobs *BackupJobsState) IsStopping(name string, JobId string, logContext st
 	return false
 }
 
-func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJobId string) error {
+func (jobs *BackupJobsState) MarkRunning(name string, logContext string, backupJobId string) error {
 	log.WithFields(log.Fields{"context": logContext}).Debugf("Marking job '%s' as 'running'", name)
 	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read/write lock before updating running " +
 		"backup jobs struct")
@@ -415,7 +413,7 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 		JobType:     "backup",
 		Name:        name,
 		State:       "running",
-		BackupJobId: BackupJobId,
+		BackupJobId: backupJobId,
 		StartTime:   time.Now(),
 		Platform:    runtime.GOOS,
 		// init statistics related fields ; IF ANY NEW ENTRY IS ADDED BELOW THEN REVISIT AT LEAST METHOD
@@ -496,8 +494,8 @@ func (jobs *BackupJobsState) MarkRunning(name string, logContext string, BackupJ
 // definition name competes for the same per-name slot as a backup of that name: if there is
 // already ANY job (backup or restore) running with the same name, this function returns
 // ErrJobAlreadyRunning. The caller is expected to invoke MarkStopped when the restore
-// finishes (same entry-removal logic applies as for backups, keyed by name + RestoreJobId).
-func (jobs *BackupJobsState) MarkRestoreRunning(name string, logContext string, RestoreJobId string) error {
+// finishes (same entry-removal logic applies as for backups, keyed by name + restoreJobId).
+func (jobs *BackupJobsState) MarkRestoreRunning(name string, logContext string, restoreJobId string) error {
 	log.WithFields(log.Fields{"context": logContext}).Debugf("Marking restore job '%s' as 'running'", name)
 	jobs.Lock.Lock()
 	defer jobs.Lock.Unlock()
@@ -511,7 +509,7 @@ func (jobs *BackupJobsState) MarkRestoreRunning(name string, logContext string, 
 		JobType:     "restore",
 		Name:        name,
 		State:       "running",
-		BackupJobId: RestoreJobId,
+		BackupJobId: restoreJobId,
 		StartTime:   time.Now(),
 		Platform:    runtime.GOOS,
 		// restore uses a small distinct set of stats counters. They are kept inside StatsCounters
@@ -541,7 +539,7 @@ func (jobs *BackupJobsState) MarkRestoreRunning(name string, logContext string, 
 // If $stopped == false then mark job as "stopping"; if $stopped == true then remove job from Running Jobs list
 // the $stopped bool parameter signifies when having value "false" the job state should be changed to "stopping" while
 // when the parameter is "true" then the job has been stopped and it should be removed from the list of running jobs
-func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJobId string, stopped bool) error {
+func (jobs *BackupJobsState) MarkStopped(name string, logContext string, backupJobId string, stopped bool) error {
 	var state string
 	if stopped {
 		state = "stopped"
@@ -549,7 +547,7 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 		state = "stopping"
 	}
 	log.WithFields(log.Fields{"context": logContext}).Debugf("Marking job '%s' having job id '%s' as '%s'", name,
-		BackupJobId, state)
+		backupJobId, state)
 	log.WithFields(log.Fields{"context": logContext}).Debug("Acquiring read/write lock before updating running " +
 		"backup jobs struct")
 	jobs.Lock.Lock()
@@ -562,8 +560,8 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 	updatedJobsRunning := make([]BackupJobStatus, 0)
 	for _, job := range jobs.Running {
 		if name == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if BackupJobId == "" {
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if backupJobId == "" {
 				found = true
 				if !stopped {
 					job.State = "stopping"
@@ -571,7 +569,7 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 				}
 				continue
 			} else {
-				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					if !stopped {
 						job.State = "stopping"
@@ -595,7 +593,7 @@ func (jobs *BackupJobsState) MarkStopped(name string, logContext string, BackupJ
 // increment a statistics counter; this will not error if a job having the same name does not exist;
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
 // stopped state
-func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName string, Path string, fileType string, OperationType string, Error string) {
+func (jobs *BackupJobsState) IncrementCounter(backupJobName string, counterName string, path string, fileType string, operationType string, errMsg string) {
 	jobs.Lock.Lock()
 	defer func() {
 		jobs.Lock.Unlock()
@@ -603,7 +601,7 @@ func (jobs *BackupJobsState) IncrementCounter(BackupJobName string, counterName 
 
 MainLoop:
 	for _, job := range jobs.Running {
-		if BackupJobName == job.Name {
+		if backupJobName == job.Name {
 			job.StatsCounters[counterName] += 1
 
 			// don't send a message to the multiplexer for the below $counterName
@@ -615,14 +613,14 @@ MainLoop:
 			}
 			// if this is a file, and no errors were encountered and this was a content upload then don't send a
 			// message to the multiplexer (because IncrementRateCounter() does it).
-			if Error == "" && fileType == "file" && OperationType == "upload" {
+			if errMsg == "" && fileType == "file" && operationType == "upload" {
 				break
 			}
 
-			var PercentDone uint = 0
+			var percentDone uint = 0
 			// if no error then the operation was successful (metadata operations are either 0% done ore 100% done)
-			if Error == "" {
-				PercentDone = 100
+			if errMsg == "" {
+				percentDone = 100
 			}
 			// use the job's own JobType so restore-watch clients (which register with
 			// JobType="restore") receive the messages — the watcher filters by JobType
@@ -633,16 +631,16 @@ MainLoop:
 			msg := WatchMessage{
 				Sequence:        job.Sequence,
 				JobType:         jobType,
-				JobName:         BackupJobName,
+				JobName:         backupJobName,
 				JobId:           job.BackupJobId,
-				Path:            Path,
-				PercentDone:     PercentDone,
+				Path:            path,
+				PercentDone:     percentDone,
 				Rate:            0,
 				ObjectType:      fileType,
 				ObjectStoreName: "",
 				ObjectStoreType: "",
-				OperationType:   OperationType,
-				Error:           Error,
+				OperationType:   operationType,
+				Error:           errMsg,
 				JobCompleted:    false,
 			}
 			SendMsgToWatcher(msg, jobs.WatchMsgReceiver)
@@ -656,11 +654,11 @@ MainLoop:
 // restore resume reads the counter state from the per-target restore database and needs to
 // pre-populate the in-memory counters so that watch clients see a consistent total including the
 // work done before the crash. No watch message is emitted (seeding is not an observable event).
-func (jobs *BackupJobsState) SeedCounter(BackupJobName string, JobId string, counterName string, value uint64) {
+func (jobs *BackupJobsState) SeedCounter(backupJobName string, jobId string, counterName string, value uint64) {
 	jobs.Lock.Lock()
 	defer jobs.Lock.Unlock()
 	for _, job := range jobs.Running {
-		if BackupJobName == job.Name && (JobId == "" || job.BackupJobId == JobId) {
+		if backupJobName == job.Name && (jobId == "" || job.BackupJobId == jobId) {
 			if _, ok := job.StatsCounters[counterName]; ok {
 				job.StatsCounters[counterName] = value
 			}
@@ -673,7 +671,7 @@ func (jobs *BackupJobsState) SeedCounter(BackupJobName string, JobId string, cou
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
 // stopped state; $exclusionExpr and $fileError are not used but are needed in the signature in order to match
 // interface expectations
-func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName string, statValue string,
+func (jobs *BackupJobsState) UpdateStatsText(backupJobName string, statName string, statValue string,
 	exclusionExpr string, fileError string) {
 	// we use the "unknown" marker when reporting errors for getting file stat() of files/folder being excluded. This
 	// 	maker is useful only in the other implementation of this interface method so here we just skip over it
@@ -686,7 +684,7 @@ func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName stri
 		jobs.Lock.Unlock()
 	}()
 	for _, job := range jobs.Running {
-		if BackupJobName == job.Name {
+		if backupJobName == job.Name {
 			// if an exclusion has matched or we got an error then we don't want the file/directory to appear any more as
 			// currently being processed
 			if exclusionExpr != "" || fileError != "" {
@@ -703,13 +701,13 @@ func (jobs *BackupJobsState) UpdateStatsText(BackupJobName string, statName stri
 // CRITICAL assumption is that we never have more than one jobs having the same name but different UUIDs in a non
 // stopped state
 // TODO - write unit tests for this function - depends on having the object store "test_null" implemented
-func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectStoreName string, ObjectStoreType string, IncrementValue int64, Path string, PercentDone uint, NewItem bool) {
+func (jobs *BackupJobsState) IncrementRateCounter(backupJobName string, objectStoreName string, objectStoreType string, incrementValue int64, path string, percentDone uint, newItem bool) {
 	jobs.Lock.Lock()
 	defer func() {
 		jobs.Lock.Unlock()
 	}()
 	for k, job := range jobs.Running {
-		if BackupJobName == job.Name {
+		if backupJobName == job.Name {
 
 			// if the job rate counters(pointers) are not initialised then init them
 			if job._rate1Min == nil || job._rate5Min == nil || job._rate15Min == nil {
@@ -719,9 +717,9 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 			}
 
 			// increment job rate counters
-			jobs.Running[k]._rate1Min.Incr(IncrementValue)
-			jobs.Running[k]._rate5Min.Incr(IncrementValue)
-			jobs.Running[k]._rate15Min.Incr(IncrementValue)
+			jobs.Running[k]._rate1Min.Incr(incrementValue)
+			jobs.Running[k]._rate5Min.Incr(incrementValue)
+			jobs.Running[k]._rate15Min.Incr(incrementValue)
 			// update job rate counters which are retrievable
 			jobs.Running[k].Rate1Min = jobs.Running[k]._rate1Min.Rate() / 60
 			jobs.Running[k].Rate5Min = jobs.Running[k]._rate5Min.Rate() / 300
@@ -734,7 +732,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 
 			foundObjectStoreEntry := false
 			for _, objectStore := range jobs.Running[k].ObjectStoreRates {
-				if ObjectStoreName == objectStore.Name {
+				if objectStoreName == objectStore.Name {
 					foundObjectStoreEntry = true
 					break
 				}
@@ -742,8 +740,8 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 			// add entry and init counters
 			if !foundObjectStoreEntry {
 				jobs.Running[k].ObjectStoreRates = append(jobs.Running[k].ObjectStoreRates, ObjectStoreRate{
-					Name:             ObjectStoreName,
-					Type:             ObjectStoreType,
+					Name:             objectStoreName,
+					Type:             objectStoreType,
 					_currentFileRate: ratecounter.NewRateCounter(time.Second * 10),
 					_rate1Min:        ratecounter.NewRateCounter(time.Minute * 1),
 					_rate5Min:        ratecounter.NewRateCounter(time.Minute * 5),
@@ -753,11 +751,11 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 
 			for k2, objectStore := range jobs.Running[k].ObjectStoreRates {
 				var increment int64 = 0
-				if ObjectStoreName == objectStore.Name {
-					increment = IncrementValue
+				if objectStoreName == objectStore.Name {
+					increment = incrementValue
 				}
 				// whenever a new file starts being uploaded, reset this Rate as this is file specific only
-				if NewItem {
+				if newItem {
 					jobs.Running[k].ObjectStoreRates[k2]._currentFileRate = ratecounter.NewRateCounter(time.Second * 10)
 				}
 				jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Incr(increment)
@@ -778,14 +776,14 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 				msg := WatchMessage{
 					Sequence:        job.Sequence,
 					JobType:         jobType,
-					JobName:         BackupJobName,
+					JobName:         backupJobName,
 					JobId:           job.BackupJobId,
-					Path:            Path,
-					PercentDone:     PercentDone,
+					Path:            path,
+					PercentDone:     percentDone,
 					Rate:            jobs.Running[k].ObjectStoreRates[k2]._currentFileRate.Rate() / 10,
 					ObjectType:      "file",
-					ObjectStoreName: ObjectStoreName,
-					ObjectStoreType: ObjectStoreType,
+					ObjectStoreName: objectStoreName,
+					ObjectStoreType: objectStoreType,
 					OperationType:   "upload",
 					JobCompleted:    false,
 				}
@@ -797,7 +795,7 @@ func (jobs *BackupJobsState) IncrementRateCounter(BackupJobName string, ObjectSt
 }
 
 // add to *BackupJobsState.FileContentBytesRead of a given backup job a number of bytes which were read(represents file contents)
-func (jobs *BackupJobsState) AddBytesRead(BackupJobName string, bytesRead uint64) {
+func (jobs *BackupJobsState) AddBytesRead(backupJobName string, bytesRead uint64) {
 	if bytesRead == 0 {
 		return
 	}
@@ -806,7 +804,7 @@ func (jobs *BackupJobsState) AddBytesRead(BackupJobName string, bytesRead uint64
 		jobs.Lock.Unlock()
 	}()
 	for k, job := range jobs.Running {
-		if BackupJobName == job.Name {
+		if backupJobName == job.Name {
 			jobs.Running[k].FileContentBytesRead += bytesRead
 			break
 		}
@@ -815,11 +813,11 @@ func (jobs *BackupJobsState) AddBytesRead(BackupJobName string, bytesRead uint64
 
 // increments *BackupJobsState.Sequence of a given backup job. The Sequence is used when sending messages to clients
 // about objects being uploaded
-func (jobs *BackupJobsState) IncrementSequence(BackupJobName string) {
+func (jobs *BackupJobsState) IncrementSequence(backupJobName string) {
 	jobs.Lock.Lock()
 	defer jobs.Lock.Unlock()
 	for k, job := range jobs.Running {
-		if BackupJobName == job.Name {
+		if backupJobName == job.Name {
 			jobs.Running[k].Sequence += 1
 			break
 		}
@@ -829,7 +827,7 @@ func (jobs *BackupJobsState) IncrementSequence(BackupJobName string) {
 // return the cancel function for a particular Running job with a particular uuid (or if uuid="" then match on
 //
 //	name only)
-func (jobs *BackupJobsState) GetCancelFunctionForJob(BackupJobName string, BackupJobId string) (context.CancelFunc, error) {
+func (jobs *BackupJobsState) GetCancelFunctionForJob(backupJobName string, backupJobId string) (context.CancelFunc, error) {
 	//log.WithFields(log.Fields{"context": loggingContext + ".GetCancelFunctionForJob"}).Debug("Acquiring read lock " +
 	//	"before reading the backup jobs struct")
 	jobs.Lock.RLock()
@@ -844,14 +842,14 @@ func (jobs *BackupJobsState) GetCancelFunctionForJob(BackupJobName string, Backu
 	found := false
 
 	for _, job := range jobs.Running {
-		if BackupJobName == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if BackupJobId == "" {
+		if backupJobName == job.Name {
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if backupJobId == "" {
 				found = true
 				CancelFunction = job.Cancel
 				break
 			} else {
-				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					CancelFunction = job.Cancel
 					break
@@ -869,7 +867,7 @@ func (jobs *BackupJobsState) GetCancelFunctionForJob(BackupJobName string, Backu
 // return the context for a particular Running job with a particular uuid (or if uuid="" then match on
 //
 //	name only)
-func (jobs *BackupJobsState) GetContextForJob(BackupJobName string, BackupJobId string) (context.Context, error) {
+func (jobs *BackupJobsState) GetContextForJob(backupJobName string, backupJobId string) (context.Context, error) {
 	//log.WithFields(log.Fields{"context": loggingContext + ".GetContextForJob"}).Debug("Acquiring read lock " +
 	//	"before reading the backup jobs struct")
 	jobs.Lock.RLock()
@@ -883,14 +881,14 @@ func (jobs *BackupJobsState) GetContextForJob(BackupJobName string, BackupJobId 
 	found := false
 
 	for _, job := range jobs.Running {
-		if BackupJobName == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if BackupJobId == "" {
+		if backupJobName == job.Name {
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if backupJobId == "" {
 				found = true
 				ctx = job.Ctx
 				break
 			} else {
-				if BackupJobId != "" && job.BackupJobId == BackupJobId {
+				if job.BackupJobId == backupJobId {
 					found = true
 					ctx = job.Ctx
 					break
@@ -907,18 +905,18 @@ func (jobs *BackupJobsState) GetContextForJob(BackupJobName string, BackupJobId 
 
 // gets the start time of a backup job
 // returns: time of start ; error if encountered and error
-func (jobs *BackupJobsState) GetStartTime(name string, JobId string, logContext string) (time.Time, error) {
+func (jobs *BackupJobsState) GetStartTime(name string, jobId string, logContext string) (time.Time, error) {
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
 	}()
 	for _, job := range jobs.Running {
 		if name == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if JobId == "" {
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if jobId == "" {
 				return job.StartTime, nil
 			} else {
-				if JobId != "" && job.BackupJobId == JobId {
+				if job.BackupJobId == jobId {
 					return job.StartTime, nil
 				}
 			}
@@ -943,27 +941,19 @@ func (jobs *BackupJobsState) GetRunningBackupJobId(name string, logContext strin
 }
 
 // checks if a given job running/stopping (but not stopped) job is cancelled . Returns true if cancelled, false otherwise
-func (jobs *BackupJobsState) IsCancelled(name string, JobId string, logContext string) bool {
+func (jobs *BackupJobsState) IsCancelled(name string, jobId string, logContext string) bool {
 	jobs.Lock.RLock()
 	defer func() {
 		jobs.Lock.RUnlock()
 	}()
 	for _, job := range jobs.Running {
 		if name == job.Name {
-			// if JobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
-			if JobId == "" {
-				if job.Ctx.Err() == context.Canceled {
-					return true
-				} else {
-					return false
-				}
+			// if jobId is not specified then any match is sufficient otherwise a matching name + matching jobids are required
+			if jobId == "" {
+				return job.Ctx.Err() == context.Canceled
 			} else {
-				if JobId != "" && job.BackupJobId == JobId {
-					if job.Ctx.Err() == context.Canceled {
-						return true
-					} else {
-						return false
-					}
+				if job.BackupJobId == jobId {
+					return job.Ctx.Err() == context.Canceled
 				}
 			}
 		}
