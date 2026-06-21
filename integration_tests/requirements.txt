@@ -17,7 +17,7 @@ google-cloud-storage==3.10.1
 google-resumable-media==2.8.2
 googleapis-common-protos==1.74.0
 azure-common==1.1.23
-azure-storage-blob==2.1.0
+azure-storage-blob==12.13.0
 azure-storage-common==2.1.0
 connexion==3.3.0
 click==7.1.2
