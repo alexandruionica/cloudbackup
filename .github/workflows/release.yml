@@ -1,0 +1,137 @@
+name: Release
+
+# Manual-only release pipeline. It does NOT run the test suite (tests stay a
+# local concern for now). It builds the Linux .deb/.rpm packages and a Windows
+# .zip, then publishes them all on a GitHub Release.
+#
+# Version is read from misc/version.txt and the release is tagged v<version>.
+# Bump misc/version.txt and commit it before dispatching a release.
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Mark the release as a pre-release"
+        type: boolean
+        default: false
+      draft:
+        description: "Create the release as a draft (publish manually later)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: Read misc/version.txt and ensure tag is free
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < misc/version.txt)"
+          if [ -z "$version" ]; then
+            echo "misc/version.txt is empty" >&2
+            exit 1
+          fi
+          tag="v${version}"
+          echo "Resolved version=${version} tag=${tag}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag ${tag} already exists on origin — bump misc/version.txt before releasing." >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+  linux-packages:
+    name: Build Linux packages (.deb/.rpm)
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # generate_version.sh needs git history for the commit id
+      - name: Build packages
+        run: make packages
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: dist/packages/*
+          if-no-files-found: error
+
+  windows-zip:
+    name: Build Windows zip
+    needs: version
+    runs-on: windows-latest
+    env:
+      CGO_ENABLED: "1" # required by github.com/mattn/go-sqlite3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # generate_version.ps1 needs git history for the commit id
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Generate version stamp
+        run: pwsh ./generate_version.ps1
+      - name: Build cloudbackup.exe
+        run: go build -v -mod=vendor -o cloudbackup.exe .
+      - name: Assemble release tree
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $stage = "dist/win/cloudbackup"
+          New-Item -ItemType Directory -Force -Path "$stage/webstatic/ui/js" | Out-Null
+          Copy-Item cloudbackup.exe "$stage/"
+          # Mirror the webstatic layout the Linux packages ship (see
+          # packaging/build-in-container.sh): docs, docs_api, and a trimmed ui.
+          Copy-Item -Recurse webstatic/docs "$stage/webstatic/docs"
+          Copy-Item -Recurse webstatic/docs_api "$stage/webstatic/docs_api"
+          Copy-Item webstatic/ui/index.html, webstatic/ui/styles.css "$stage/webstatic/ui/"
+          Copy-Item -Recurse webstatic/ui/js "$stage/webstatic/ui/js"
+          Copy-Item packaging/files/config.yaml.sample "$stage/config.yaml.sample"
+          Copy-Item README.md "$stage/README.md"
+      - name: Create zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "${{ needs.version.outputs.version }}"
+          $zip = "dist/cloudbackup_${version}_windows_amd64.zip"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path dist/win/cloudbackup -DestinationPath $zip -Force
+          Get-ChildItem $zip
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: dist/cloudbackup_*_windows_amd64.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: [version, linux-packages, windows-zip]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: List artifacts
+        run: ls -lh artifacts
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ needs.version.outputs.tag }}
+          generate_release_notes: true
+          prerelease: ${{ inputs.prerelease }}
+          draft: ${{ inputs.draft }}
+          files: artifacts/*
+          fail_on_unmatched_files: true
