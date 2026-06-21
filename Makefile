@@ -102,6 +102,19 @@ else
 	@echo "Desloppify installed: $(DESLOPPIFY_VENV)/bin/desloppify"
 endif
 
+# Run a fast Desloppify code-health scan (Go, CI profile, no scorecard).
+# Installs Desloppify into the virtualenv first if it isn't already present.
+deslop:
+ifeq ($(OS),Windows_NT)
+	@echo "Desloppify is not needed on Windows; skipping."
+else
+	@if [ ! -x $(DESLOPPIFY_VENV)/bin/desloppify ]; then \
+		echo "Desloppify not found; installing ..."; \
+		$(MAKE) desloppify; \
+	fi
+	$(DESLOPPIFY_VENV)/bin/desloppify --lang go scan --path . --profile ci --no-badge
+endif
+
 # Build .deb and .rpm packages for all supported distros via Docker.
 # Pass DISTROS="deb12 el9" to limit; default is the full matrix.
 packages:
