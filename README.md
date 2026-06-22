@@ -1,15 +1,12 @@
-# README #
-This project was an attempt to build an opensource backup solution which provides file level granularity of backups and is able to store resulting backups in a cloud provider's blob store, like AWS S3, Azure Blob Storage or Google's GCP Cloud Storage.
-The project was a continuation of a tool(https://bitbucket.org/alexandru_ionica/s3backuptool/) a built many years ago(in 2016), in Python. This new attempt was in GO and was setup from the get go to use modern coding practices.
+This project is an attempt to build an opensource backup solution which provides file level granularity of backups and is able to store resulting backups in a cloud provider's blob store, like AWS S3, Azure Blob Storage or Google's GCP Cloud Storage.
+The project is a continuation of a tool(https://bitbucket.org/alexandru_ionica/s3backuptool/) I built many years ago(in 2016), in Python. This new attempt is in GO and was setup from the get go to use modern coding practices.
+Around December 2021 I stopped working on it and it lay dormant until April 2026 when I resumed work on it. Since April 2026 code submissions have been exclusively done using LLMs, using prompt driven development and relying on testing (unit and integration testing) to catch regressions and errors introduced by the use of LLMs. 
 
-It had a server which would take care of backups, restores and reporting and a command line client capable to connect to the server and request on demand backups, restores and reporting.
-The client could also connect and see in realtime the progress of a backup. Additionally an HTTP API (used by the client) was documented using SWAGGER.
-Supported platforms were Linux, FreeBSD and MS Windows. While MacOS was not integrated into the CI/CD pipeline, it would most likely has minor issues to fix before a build would be possible.
+It has a server which takes care of backups, restores and reporting. Separately a command line client capable to connect to the server and request on demand backups, restores and reporting. A minimalistic web UI is also provided.
+The clients can also connect and see in realtime the progress of a backup. Additionally, an HTTP API (used by the client) is documented using [Swagger](https://swagger.io).
+Supported platforms are Linux, FreeBSD and MS Windows. While MacOS is not integrated into the CI/CD pipeline, it will most likely work albeit probably with minor issues to fix before a build is be possible.
 
-The project never completed the restore capability while the on-demand backup one was implemented, for the three mentioned object stores.
 If you wish to continue then to get started you need to make a build
-
-The CI/CD setup is [in a separate repository](https://bitbucket.org/alexandru_ionica/cloudbackup_infrastructure/src/master/). Jenkins for the actual CI/CD and some tooling for building the AWS AMIs for Linux/FreeBSD/Windows to be used by Jenkins. 
 
 To do initial setup:
 
@@ -22,12 +19,12 @@ To do initial setup:
 cd $GOPATH
 mkdir -p src
 cd src
-git clone git@bitbucket.org:alexandru_ionica/cloudbackup.git
+git clone https://github.com/alexandruionica/cloudbackup.git
 ```
 
 To do a build, run:
 ```
-cd $GOPATH/srv/cloudbackup
+cd cloudbackup
 make
 ```
 

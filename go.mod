@@ -28,7 +28,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.42
 	github.com/paulbellamy/ratecounter v0.2.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/sirupsen/logrus v1.0.5
+	github.com/sirupsen/logrus v1.8.3
 	golang.org/x/crypto v0.52.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sys v0.45.0
@@ -111,6 +111,4 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
-	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 )
