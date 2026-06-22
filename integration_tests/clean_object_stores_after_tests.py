@@ -6,7 +6,7 @@ import os
 import platform
 from common import *
 from google.cloud import storage
-from azure.storage.blob import BlockBlobService
+from azure.storage.blob import ContainerClient
 from pprint import pprint
 
 
@@ -79,11 +79,14 @@ def clean_azure_blob_container(prefix=None):
         logging.error("Environment variable CLD_AZURE_STORAGE_ACCESS_KEY is not set")
         exit(1)
 
-    block_blob_service = BlockBlobService(account_name=azure_storage_account, account_key=azure_storage_account_key)
-    generator = block_blob_service.list_blobs(container_name=bucket, prefix=prefix)
-    for blob in generator:
+    container_client = ContainerClient(
+        account_url="https://{}.blob.core.windows.net".format(azure_storage_account),
+        container_name=bucket,
+        credential=azure_storage_account_key,
+    )
+    for blob in container_client.list_blobs(name_starts_with=prefix):
         logging.info("Deleting Azure blob '{}'".format(blob.name))
-        block_blob_service.delete_blob(container_name=bucket, blob_name=blob.name)
+        container_client.delete_blob(blob.name)
 
 
 def get_args():
@@ -101,7 +104,9 @@ def get_args():
 
 def main():
     arguments = get_args()
-    azure_logger = logging.getLogger('azure.storage')
+    # 'azure' covers both azure.storage and azure.core.* (the latter's
+    # http_logging_policy emits a full request/response dump at INFO).
+    azure_logger = logging.getLogger('azure')
     if arguments.verbose:
         logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
         azure_logger.setLevel(logging.INFO)
