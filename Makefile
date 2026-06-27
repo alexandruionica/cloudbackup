@@ -120,3 +120,14 @@ endif
 packages:
 	@echo "############ Building distribution packages ############"
 	bash packaging/build-all.sh $(DISTROS)
+
+# Build the native Windows installer (.msi) via the WiX Toolset v5.
+# Must run on Windows (GitHub Actions windows-latest or the Vagrant windows2025
+# VM). See packaging/windows/README.md for prerequisites.
+winpackage:
+ifeq ($(OS),Windows_NT)
+	@echo "############ Building Windows MSI installer ############"
+	powershell '& .\packaging\windows\build-msi.ps1'
+else
+	@echo "Windows MSI packages must be built on Windows (GitHub Actions windows-latest or the Vagrant windows2025 VM)."
+endif
