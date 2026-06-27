@@ -11,6 +11,13 @@ import (
 	"syscall"
 )
 
+// ServiceShutdown lets the Windows Service Control Manager integration (see
+// cliargs/service_windows.go) ask the daemon to shut down gracefully. The svc
+// handler sends on this channel when it receives a Stop/Shutdown control; the
+// WaitForEvent loop then performs the same teardown as a SIGINT and returns so
+// daemon.Start can return and the service process can exit cleanly.
+var ServiceShutdown = make(chan struct{}, 1)
+
 // sleeps until it receives on one of the many channels an event
 func WaitForEvent(httpServer *httpd.SrvData, rcvCfgChangeFromHttpd <-chan bool, sndCfgChangeToScheduler chan<- bool,
 	shutdownScheduler chan bool) {
@@ -26,6 +33,18 @@ func WaitForEvent(httpServer *httpd.SrvData, rcvCfgChangeFromHttpd <-chan bool, 
 		// received a SIGnal
 		case s := <-signalChan:
 			ProcessSignal(s, httpServer, shutdownScheduler)
+			// received a stop request from the Windows Service Control Manager
+		case <-ServiceShutdown:
+			logger.Info("Received Windows service stop request")
+			httpServer.Stop()
+			// tell scheduler to stop (and also stop running backups / restores )
+			shutdownScheduler <- true
+			// scheduler will reply back on the same channel when it has exited
+			<-shutdownScheduler
+			logger.Info("Service stopped, exiting")
+			// return (rather than os.Exit) so the svc handler can report a clean
+			// Stopped status to the SCM before the process exits
+			return
 			// received an event
 		case <-rcvCfgChangeFromHttpd:
 			logger.Debug("Notifying scheduler to reload configuration")

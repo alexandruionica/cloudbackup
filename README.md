@@ -28,6 +28,23 @@ cd cloudbackup
 make
 ```
 
+## Native installers ##
+
+Native, distribution-managed installers are produced for both Linux and Windows.
+
+* **Linux** — `make packages` builds `.deb` and `.rpm` packages (via `nfpm` in Docker;
+  see `packaging/`). They install the binary, web UI, a sample `/etc/cloudbackup/config.yaml`,
+  and a systemd unit (enabled but not auto-started).
+
+* **Windows** — `make winpackage` (run on Windows) builds a native `.msi` with the WiX
+  Toolset v5 (see `packaging/windows/README.md`). It installs to
+  `C:\Program Files\cloudbackup\`, places a preserved config + data dir under
+  `C:\ProgramData\cloudbackup\`, registers the `cloudbackup` Windows service (manual start),
+  and adds an Add/Remove Programs entry. Install/uninstall via `msiexec /i` / `msiexec /x`.
+
+Both installer types are built and attached to GitHub Releases by the `Release` workflow
+(`.github/workflows/release.yml`).
+
 ## LLM usage ##
 
 Code submitted before April 2026 was produced in "classical ways" and represents the vast majority of the codebase. 

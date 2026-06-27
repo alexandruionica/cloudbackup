@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WiX Toolset v5 source for the CloudBackup Windows installer (.msi).
+
+  This is the Windows analog of the Linux deb/rpm packaging (see
+  ../nfpm.yaml). It lays down:
+    * C:\Program Files\cloudbackup\cloudbackup.exe
+    * C:\Program Files\cloudbackup\webstatic\...        (web UI + API docs)
+    * C:\ProgramData\cloudbackup\config.yaml            (preserved on upgrade)
+    * C:\ProgramData\cloudbackup\data\                  (SQLite metadata, writable)
+  and registers a Windows service "cloudbackup" (manual start, LocalSystem),
+  mirroring the systemd unit shipped on Linux.
+
+  Build with packaging/windows/build-msi.ps1, which passes:
+    -d Version=<x.y.z>   -d StageDir=<path to staged tree>
+
+  UpgradeCode below is permanent — never change it, or upgrades break.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="CloudBackup"
+      Manufacturer="Alexandru Ionica"
+      Version="$(Version)"
+      UpgradeCode="D189654E-96F3-469C-9244-70D97A24FDF2"
+      Scope="perMachine"
+      Compressed="yes">
+
+    <!-- Clean in-place upgrades; block downgrades with a friendly message. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of CloudBackup is already installed. Setup will now exit." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Add/Remove Programs metadata. -->
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/aionica/cloudbackup" />
+    <Icon Id="cloudbackup.exe" SourceFile="$(StageDir)\cloudbackup.exe" />
+    <Property Id="ARPPRODUCTICON" Value="cloudbackup.exe" />
+
+    <!-- Install tree under "C:\Program Files\cloudbackup". -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="cloudbackup">
+
+        <!-- The binary + the Windows service registration. -->
+        <Component Id="MainExecutable" Bitness="always64">
+          <File Id="cloudbackupExe" Source="$(StageDir)\cloudbackup.exe" KeyPath="yes" />
+
+          <!--
+            Register the service. It runs the same command an admin would type;
+            Start="demand" (= manual) means it is installed but NOT auto-started,
+            matching the Linux packages which enable but do not start the unit.
+          -->
+          <ServiceInstall
+              Id="CloudBackupServiceInstall"
+              Name="cloudbackup"
+              DisplayName="CloudBackup"
+              Description="CloudBackup server — cloud backup daemon exposing a REST API."
+              Type="ownProcess"
+              Start="demand"
+              ErrorControl="normal"
+              Account="LocalSystem"
+              Arguments="server start --configfile &quot;[CommonAppDataFolder]cloudbackup\config.yaml&quot;"
+              Vital="yes" />
+
+          <!-- Stop the service on uninstall/upgrade and remove it on uninstall. -->
+          <ServiceControl
+              Id="CloudBackupServiceControl"
+              Name="cloudbackup"
+              Stop="both"
+              Remove="uninstall"
+              Wait="yes" />
+        </Component>
+
+        <!-- Web UI + docs target dir; populated by the <Files> harvest in the Feature below. -->
+        <Directory Id="WEBSTATICDIR" Name="webstatic" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Data + config under "C:\ProgramData\cloudbackup" (service-writable). -->
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="DATAROOT" Name="cloudbackup">
+
+        <!--
+          Sample config installed as config.yaml. Permanent + NeverOverwrite is
+          the MSI equivalent of deb's "config|noreplace": a config edited by the
+          admin survives upgrades, repairs, and uninstall.
+        -->
+        <Component Id="ConfigFile" Guid="FF54D387-93C3-42CB-85A0-0D9E1A7D01AA" Permanent="yes" NeverOverwrite="yes">
+          <File Id="configYaml" Name="config.yaml" Source="$(StageDir)\config.yaml.sample" KeyPath="yes" />
+        </Component>
+
+        <!--
+          Empty, writable data directory for the SQLite metadata. Permanent so
+          backup metadata is not deleted on uninstall (mirrors the Linux
+          postremove.sh, which deliberately keeps /var/lib/cloudbackup).
+        -->
+        <Directory Id="DATADIR" Name="data">
+          <Component Id="DataFolder" Guid="DC2AA1E9-64D9-4230-9273-E347E80F9A77" Permanent="yes">
+            <CreateFolder />
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="CloudBackup" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ConfigFile" />
+      <ComponentRef Id="DataFolder" />
+      <!-- Recursively harvest the staged webstatic tree into WEBSTATICDIR. -->
+      <Files Include="$(StageDir)\webstatic\**" Directory="WEBSTATICDIR" />
+    </Feature>
+  </Package>
+</Wix>

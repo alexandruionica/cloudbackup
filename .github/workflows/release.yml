@@ -87,7 +87,10 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $stage = "dist/win/cloudbackup"
-          New-Item -ItemType Directory -Force -Path "$stage/webstatic/ui/js" | Out-Null
+          # Create only ui/ (NOT ui/js): Copy-Item -Recurse into an existing
+          # destination nests the source inside it (ui/js/js/...). Letting
+          # Copy-Item create ui/js puts the files directly under ui/js.
+          New-Item -ItemType Directory -Force -Path "$stage/webstatic/ui" | Out-Null
           Copy-Item cloudbackup.exe "$stage/"
           # Mirror the webstatic layout the Linux packages ship (see
           # packaging/build-in-container.sh): docs, docs_api, and a trimmed ui.
@@ -95,7 +98,8 @@ jobs:
           Copy-Item -Recurse webstatic/docs_api "$stage/webstatic/docs_api"
           Copy-Item webstatic/ui/index.html, webstatic/ui/styles.css "$stage/webstatic/ui/"
           Copy-Item -Recurse webstatic/ui/js "$stage/webstatic/ui/js"
-          Copy-Item packaging/files/config.yaml.sample "$stage/config.yaml.sample"
+          # Windows-specific sample config (Windows paths + service commands).
+          Copy-Item packaging/windows/config.yaml.sample "$stage/config.yaml.sample"
           Copy-Item README.md "$stage/README.md"
       - name: Create zip
         shell: pwsh
@@ -113,9 +117,33 @@ jobs:
           path: dist/cloudbackup_*_windows_amd64.zip
           if-no-files-found: error
 
+  windows-msi:
+    name: Build Windows installer (.msi)
+    needs: version
+    runs-on: windows-latest
+    env:
+      CGO_ENABLED: "1" # required by github.com/mattn/go-sqlite3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # generate_version.ps1 needs git history for the commit id
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install WiX Toolset v5
+        run: dotnet tool install --global wix --version 5.*
+      - name: Build MSI
+        run: pwsh ./packaging/windows/build-msi.ps1
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-msi
+          path: dist/packages/cloudbackup_*_amd64.msi
+          if-no-files-found: error
+
   release:
     name: Publish GitHub Release
-    needs: [version, linux-packages, windows-zip]
+    needs: [version, linux-packages, windows-zip, windows-msi]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

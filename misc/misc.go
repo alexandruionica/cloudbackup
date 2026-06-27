@@ -192,7 +192,7 @@ notification:
 
 const SampleWindowsServerYamlConfig = `---
 # where are the internal SQL databases to be kept
-data_dir: c:\Program Files\cloudbackup\data
+data_dir: C:\ProgramData\cloudbackup\data
 user:
   - name: testuser1
     # bcrypt hash of password  "HV}H/y?<9$]Z5N4N" - use ./cloudbackup misc hash-password to hash passwords
@@ -211,8 +211,8 @@ user:
 https:
   enabled: true
   bind_address: "127.0.0.1:8443"
-  ssl_cert_path: c:\Program Files\cloudbackup\ssl\cert.crt
-  ssl_key_path: c:\Program Files\cloudbackup\ssl\cert.key
+  ssl_cert_path: C:\ProgramData\cloudbackup\ssl\cert.crt
+  ssl_key_path: C:\ProgramData\cloudbackup\ssl\cert.key
 backup:
   - name: generic
     paths:
@@ -371,6 +371,11 @@ func SetupLogging(args LoggingArgs) {
 			log.Errorf("Failed to log to file %s as the following error was received: '%s'. Reverting to using "+
 				"stdout for log output.", args.LogFile, err)
 		}
+	} else {
+		// No --logfile supplied. On Windows this routes logging to the Windows
+		// Event Log (Event Viewer -> Application); on other platforms it is a
+		// no-op and logging stays on stdout (set above).
+		setupPlatformLogging()
 	}
 
 	if args.Debug {

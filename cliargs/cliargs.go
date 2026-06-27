@@ -279,6 +279,14 @@ func (command *ArgsCommandServerStart) Execute(args []string) error {
 		LogFile: command.LogFile,
 	}
 	misc.SetupLogging(loggingArgs)
+	// On Windows, when the process is launched by the Service Control Manager,
+	// maybeRunAsService takes over the lifecycle (svc.Run blocks until the SCM
+	// stops the service) and returns true. When run interactively (console) it
+	// returns false and we fall through to the normal foreground daemon below.
+	// On non-Windows platforms maybeRunAsService is always a no-op returning false.
+	if maybeRunAsService(command.ConfigFile, command.Debug) {
+		return nil
+	}
 	daemon.Start(command.ConfigFile, command.Debug)
 	return nil
 }

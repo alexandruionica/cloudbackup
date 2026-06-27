@@ -1,0 +1,41 @@
+# CloudBackup server configuration
+#
+# After editing this file, restart the service (elevated PowerShell):
+#     Restart-Service cloudbackup
+# To check the status of the service (elevated PowerShell):
+#     Get-Service cloudbackup
+# To start service (elevated PowerShell):
+#     Start-Service -Name "cloudbackup"
+# To stop service (elevated PowerShell):
+#     Stop-Service -Name "cloudbackup"
+#
+# To see every available option with comments, run:
+#     ."C:\Program Files\cloudbackup\cloudbackup.exe" server config example
+#
+# To validate a config file:
+#     ."C:\Program Files\cloudbackup\cloudbackup.exe" server config validate -c "C:\ProgramData\cloudbackup\config.yaml"
+#
+# Logs are by default available in Windows Event Log service. If you specify the command line flag "--logfile=" at server
+#     startup then logs will be sent to that file and not to Event Event Log service any more.
+
+data_dir: C:\ProgramData\cloudbackup\data
+html_dir: C:\Program Files\cloudbackup\webstatic
+
+http:
+  bind_address: "127.0.0.1:8080"
+
+# https:
+#   enabled: true
+#   bind_address: "0.0.0.0:8443"
+#   ssl_cert_path: C:\ProgramData\cloudbackup\cert.crt
+#   ssl_key_path: C:\ProgramData\cloudbackup\cert.key
+
+# Define at least one user before starting the service. Generate a bcrypt hash with:
+#     cloudbackup misc hash-password
+user:
+  - name: admin
+    pass: REPLACE_WITH_BCRYPT_HASH
+    access: write
+
+# Add backup definitions here. Empty list = nothing scheduled.
+backup: []
