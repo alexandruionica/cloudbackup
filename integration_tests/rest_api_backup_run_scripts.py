@@ -131,8 +131,7 @@ if ( $found -ne 1 ) {{
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
         if platform.system() == 'Windows':
-            if os.path.exists(self.inttestlog):
-                os.remove(self.inttestlog)
+            remove_file_with_retries(self.inttestlog)
         if os.path.exists(self.script_path):
             os.remove(self.script_path)
         if os.path.exists(self.script_result_path):

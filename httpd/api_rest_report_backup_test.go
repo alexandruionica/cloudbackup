@@ -275,3 +275,20 @@ func TestDecodeNextTokenOfReportBackupFileListRejectsBadDescend(t *testing.T) {
 		t.Fatal("expected error for non-bool descend, got nil")
 	}
 }
+
+// A Windows absolute path contains a ':' in the drive letter (e.g. "C:\\Users").
+// Since ':' is also the token field separator, the path must still round-trip
+// intact; a naive Split(":") that requires exactly five parts would mis-parse it.
+func TestDecodeNextTokenOfReportBackupFileListRoundtripWindowsPath(t *testing.T) {
+	winPath := `C:\Users\vagrant\AppData\Local\Temp\integration_test_bzpo4xob`
+	tok := buildNextTokenOfReportBackupFileList(2, 2, "08ecef18-6a11-4932-bc9e-8e8e1a56076b", winPath, true)
+	limit, offset, jobId, path, descend, err := decodeNextTokenOfReportBackupFileList(tok)
+	if err != nil {
+		t.Fatalf("unexpected decode error for Windows path: %v", err)
+	}
+	if limit != 2 || offset != 2 || jobId != "08ecef18-6a11-4932-bc9e-8e8e1a56076b" ||
+		path != winPath || !descend {
+		t.Errorf("roundtrip mismatch: got limit=%d offset=%d jobId=%q path=%q descend=%v",
+			limit, offset, jobId, path, descend)
+	}
+}

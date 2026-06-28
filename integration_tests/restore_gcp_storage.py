@@ -206,8 +206,7 @@ class TestRestoreGcpStorage(unittest.TestCase):
         # step 4: verify restored files on disk
         logging.info("Verifying restored files in '{}'".format(self.restore_dir))
         for source_path, file_type in self.filelist.items():
-            relative_path = source_path.lstrip(os.sep)
-            restored_path = os.path.join(self.restore_dir, relative_path)
+            restored_path = map_path_into_restore_dir(self.restore_dir, source_path)
             self.assertTrue(os.path.exists(restored_path),
                             "Expected restored item '{}' (type={}) to exist at '{}' but it does "
                             "not".format(source_path, file_type, restored_path))
@@ -229,7 +228,7 @@ class TestRestoreGcpStorage(unittest.TestCase):
 
         # step 6: count files, directories, and symlinks under the restored subtree and verify the
         # numbers match what was counted on the source side before the backup ran
-        restored_source_root = os.path.join(self.restore_dir, self.tmpdir.lstrip(os.sep))
+        restored_source_root = map_path_into_restore_dir(self.restore_dir, self.tmpdir)
         restored_f, restored_d, restored_s = count_files_folders_links(restored_source_root,
                                                                        backup_cfg["dereference"])
         self.assertEqual(restored_f, expected_num_files,
@@ -277,8 +276,7 @@ class TestRestoreGcpStorage(unittest.TestCase):
         # step 3: verify items inside the requested directory were restored
         subdir_no_trailing = subdir_to_restore.rstrip(os.sep)
         for source_path, file_type in self.filelist.items():
-            relative_path = source_path.lstrip(os.sep)
-            restored_path = os.path.join(restore_dir2, relative_path)
+            restored_path = map_path_into_restore_dir(restore_dir2, source_path)
             is_inside = source_path == subdir_no_trailing or source_path.startswith(subdir_no_trailing + os.sep)
             # Parent directories of the restored subtree are created as a side effect of
             # os.MkdirAll when writing files, so they will exist on disk even though they

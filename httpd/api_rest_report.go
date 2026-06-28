@@ -994,10 +994,13 @@ func decodeNextTokenOfReportBackupFileList(nextToken string) (limit uint64, offs
 		return limit, offset, jobId, path, descend, fmt.Errorf("could not base64 decode 'Next' token '%s' due to error: %s", nextToken, err)
 	}
 	parts := strings.Split(string(decoded), ":")
-	// expected format is limit:offset:jobId:path:descend
-	if len(parts) != 5 {
+	// expected format is limit:offset:jobId:path:descend . The path field can itself
+	// contain a ':' (e.g. a Windows drive letter such as "C:\\Users\\..."), so we
+	// anchor parsing on the four colon-free fields — limit/offset/jobId from the
+	// front, descend from the back — and treat everything in between as the path.
+	if len(parts) < 5 {
 		return limit, offset, jobId, path, descend, fmt.Errorf("base64 decoded token '%s' to '%+v' is "+
-			"not made up of five parts separated by ':'", nextToken, parts)
+			"not made up of at least five parts separated by ':'", nextToken, parts)
 	}
 	limit, err = strconv.ParseUint(parts[0], 10, 64)
 	if err != nil {
@@ -1012,12 +1015,12 @@ func decodeNextTokenOfReportBackupFileList(nextToken string) (limit uint64, offs
 	}
 
 	jobId = parts[2]
-	path = parts[3]
+	path = strings.Join(parts[3:len(parts)-1], ":")
 
-	descend, err = strconv.ParseBool(parts[4])
+	descend, err = strconv.ParseBool(parts[len(parts)-1])
 	if err != nil {
-		return limit, offset, jobId, path, descend, fmt.Errorf("base64 decoded token '%s' to '%+v'. Fifth "+
-			"part which is '%s' could not be converted to a boolean due to error: %s", nextToken, parts, parts[4], err)
+		return limit, offset, jobId, path, descend, fmt.Errorf("base64 decoded token '%s' to '%+v'. Last "+
+			"part which is '%s' could not be converted to a boolean due to error: %s", nextToken, parts, parts[len(parts)-1], err)
 	}
 
 	return limit, offset, jobId, path, descend, nil

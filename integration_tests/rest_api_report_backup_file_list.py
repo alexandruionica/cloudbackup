@@ -34,7 +34,7 @@ class TestRestAPIReportBackupFileList(unittest.TestCase):
         with open(self.server_config_file_path, "w") as fd:
             fd.write(yaml.dump(parsed))
         self.base_url = "http://127.0.0.1:8080"
-        _, self.inttestlog = tempfile.mkstemp(prefix="integration_test_log_filelist_")
+        self.inttestlog = make_inttest_logfile(prefix="integration_test_log_filelist_")
         self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url,
                                    extra_options="--logfile=" + self.inttestlog)
         self.api_root = '/api/v1'
@@ -49,8 +49,7 @@ class TestRestAPIReportBackupFileList(unittest.TestCase):
                     os.remove(entry)
         if os.path.exists(self.tmpdir):
             shutil.rmtree(self.tmpdir)
-        if os.path.exists(self.inttestlog):
-            os.remove(self.inttestlog)
+        remove_file_with_retries(self.inttestlog)
 
     def _decode(self, r, url):
         self.assertEqual(r.headers.get('Content-Type'), 'application/json',

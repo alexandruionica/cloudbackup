@@ -1047,6 +1047,12 @@
             "schema": {
               "$ref": "#/definitions/ApiResponseReportVersion"
             }
+          },
+          "401": {
+            "description": "Basic authentication required",
+            "schema": {
+              "$ref": "#/definitions/ApiResponseError"
+            }
           }
         },
         "security": []

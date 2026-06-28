@@ -121,7 +121,10 @@ To start run:
 vagrant up windows2025
 # the SSH daemon built in Windows 2025 is enabled and configured. You will need to auth with user "vagrant" and password "vagrant"
 vagrant ssh windows2025
-
+# once logged on, mount the vboxfs share; automating it has proven challenging:  
+net use Z: \\vboxsvr\Users_vagrant_Documents_golang
+# code is located at:
+cd z:\src\cloudbackup\
 ```
 
 # Client-side encryption
