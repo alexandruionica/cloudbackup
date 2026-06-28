@@ -669,3 +669,61 @@ def check_restore_report(self, job_name, restore_job_id, expected_num_files, exp
         self.assertEqual(response['result']['stats_counters'][counter], 0,
                          "expected value of counter named '{}' in the restore report was 0 but instead {} was "
                          "found".format(counter, response['result']['stats_counters'][counter]))
+
+
+def make_inttest_logfile(prefix="integration_test_log_"):
+    """
+    Create a temporary log file for the daemon's --logfile option and return its path.
+
+    tempfile.mkstemp() returns an *open* OS file descriptor; if it is left dangling
+    the test process keeps a handle on the file. On Windows that handle blocks the
+    teardown from deleting the file (it is then opened a second time by the daemon),
+    so we close it immediately and let the daemon reopen the path by name.
+    """
+    fd, path = tempfile.mkstemp(prefix=prefix)
+    os.close(fd)
+    return path
+
+
+def remove_file_with_retries(path, max_count=50, sleep_seconds=0.1):
+    """
+    Delete a file, tolerating the brief window on Windows where the file is still
+    reported as in use by another process (WinError 32) right after the daemon that
+    held its --logfile open has been killed. The OS releases the handle moments after
+    the process dies, so we retry for a few seconds. If the file cannot be removed in
+    time we log a warning rather than fail an otherwise-passing test's teardown.
+    """
+    if not os.path.exists(path):
+        return
+    for _ in range(max_count):
+        try:
+            os.remove(path)
+            return
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            time.sleep(sleep_seconds)
+    logging.warning("Could not remove file '{}' after {} attempts; leaving it behind".format(path, max_count))
+
+
+def map_path_into_restore_dir(restore_dir, source_path):
+    """
+    Mirror the server's mapPathIntoRestoreDir(): compute where an absolute source path
+    lands once it has been restored under restore_dir. On Windows "C:\\foo\\bar" becomes
+    "<restore_dir>\\C\\foo\\bar" (the drive-letter colon is dropped and the letter becomes
+    a path component); on Unix "/foo/bar" becomes "<restore_dir>/foo/bar".
+
+    The test must use the exact same mapping as the server. A naive
+    os.path.join(restore_dir, source_path.lstrip(os.sep)) is correct on Unix but wrong on
+    Windows: lstrip does not remove the drive letter, and os.path.join then discards
+    restore_dir entirely (because the source path is still drive-absolute), so the test
+    would silently check the original source location instead of the restored copy.
+    """
+    clean = os.path.normpath(source_path)
+    if platform.system() == 'Windows':
+        drive, rest = os.path.splitdrive(clean)
+        rest = rest.lstrip("\\/")
+        if drive:
+            return os.path.join(restore_dir, drive[0], rest)
+        return os.path.join(restore_dir, rest)
+    return os.path.join(restore_dir, clean.lstrip("/"))

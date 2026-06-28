@@ -805,6 +805,10 @@ paths:
           description: successful operation
           schema:
             $ref: '#/definitions/ApiResponseReportVersion'
+        '401':
+          description: Basic authentication required
+          schema:
+            $ref: '#/definitions/ApiResponseError'
       security: []
 securityDefinitions:
   backup_auth:

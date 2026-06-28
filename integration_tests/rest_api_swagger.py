@@ -1,18 +1,12 @@
 #!/usr/bin/env python
 import argparse
-import bcrypt
 import logging
 import os
-import re
-import requests
-import sys
 import shutil
-import tempfile
+import subprocess
+import sys
 import unittest
-import yaml
 from common import *
-from pprint import pprint
-from swagger_tester import swagger_test
 
 
 class TestRestAPISwagger(unittest.TestCase):
@@ -21,7 +15,14 @@ class TestRestAPISwagger(unittest.TestCase):
         self.config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
             suffix='_integration_tests_rest_api_swagger')
         self.base_url = "http://127.0.0.1:8080"
-        self.daemon = BackupDaemon(config_path=self.config_file_path, base_url=self.base_url)
+        # the daemon serves /swagger.json as a redirect to the static spec, so we
+        # point schemathesis straight at the canonical location
+        self.schema_url = self.base_url + "/docs_api/swagger.json"
+        # schemathesis fires well over a thousand requests; run the daemon in
+        # --quiet mode so its per-request logging does not fill the captured
+        # stdout/stderr pipe and stall the server mid-run
+        self.daemon = BackupDaemon(config_path=self.config_file_path, base_url=self.base_url,
+                                   extra_options="--quiet")
 
     def tearDown(self):
         self.daemon.kill()
@@ -33,27 +34,40 @@ class TestRestAPISwagger(unittest.TestCase):
                 else:
                     os.remove(entry)
 
-    def test_swagger_unauthorized(self):
-        authorize_error = {
-            'get': {
-                '/api/v1/report/version': [401]
-            }
-        }
-        swagger_test(app_url=self.base_url, authorize_error=authorize_error)
+    def test_swagger_conformance_unauthenticated(self):
+        """
+        Validate that the live API conforms to its published Swagger 2.0 spec.
+
+        We deliberately run schemathesis WITHOUT credentials: every authenticated
+        operation must reject the request with the documented 401 before doing any
+        work, so all 20 operations get exercised while the stateful backup daemon
+        stays untouched (no random fuzzing reaches backup/restore/config writes).
+        Schemathesis still validates that the served spec is well formed and that
+        the returned status codes, content types and response bodies match the
+        spec, which is a strict superset of the old unauthorized-only check.
+        """
+        # schemathesis is installed as a console script in the same virtualenv as
+        # the interpreter running this test
+        schemathesis_bin = os.path.join(os.path.dirname(sys.executable), "schemathesis")
+        cmd = [
+            schemathesis_bin, "run", self.schema_url,
+            "--checks", "all",
+            "--max-examples", "5",
+            "--request-timeout", "5",
+        ]
+        logging.info("Running swagger conformance check: {}".format(" ".join(cmd)))
+        # schemathesis prints Unicode glyphs (box drawing, status marks). Force
+        # UTF-8 for the child so it does not crash writing to a non-UTF-8 console
+        # encoding (cp1252 on Windows), and decode the captured output as UTF-8.
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                encoding="utf-8", errors="replace", env=env)
         stopped, _, _ = self.daemon.stop()
         self.assertTrue(stopped, "Backup daemon already stopped. Something must have gone wrong")
-
-    # # bug in swagger-parser library prevents correct parsing
-    # def test_swagger_authorized(self):
-    #     # the below basic auth is for user = 'testuser1' ; password = 'HV}H/y?<9$]Z5N4N' ; should be reproduced by doing
-    #     #      import requests.auth
-    #     #      requests.auth._basic_auth_str(user, password)
-    #     extra_headers = {
-    #         "Authorization": 'Basic dGVzdHVzZXIxOkhWfUgveT88OSRdWjVONE4='
-    #     }
-    #     swagger_test(app_url=self.base_url, extra_headers=extra_headers)
-    #     stopped, _, _ = self.daemon.stop()
-    #     self.assertTrue(stopped, "Backup daemon already stopped. Something must have gone wrong")
+        self.assertEqual(
+            result.returncode, 0,
+            "schemathesis reported API/spec conformance failures:\n{}".format(result.stdout))
 
 
 def get_args():

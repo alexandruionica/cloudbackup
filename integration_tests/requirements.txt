@@ -3,13 +3,10 @@ boto3==1.20.22
 botocore==1.23.22
 flake8==7.1.1
 requests==2.33.1
-pyyaml==5.4
+pyyaml==6.0.2
 pyasyncore==1.0.4
 bcrypt==3.2.0
-swagger-spec-validator==3.0.4
-swagger-tester==0.2.12
-swagger-parser==1.0.2
-jsonschema==4.26.0
+schemathesis==4.21.10
 google-api-core==2.30.3
 google-auth==2.49.2
 google-cloud-core==2.5.1
@@ -17,7 +14,4 @@ google-cloud-storage==3.10.1
 google-resumable-media==2.8.2
 googleapis-common-protos==1.74.0
 azure-storage-blob==12.13.0
-connexion==3.3.0
-click==7.1.2
-Jinja2==3.1.6
 iso8601==1.0.2

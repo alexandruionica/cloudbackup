@@ -62,7 +62,7 @@ class TestEncryptionLifecycle(unittest.TestCase):
         self.restore_dir = tempfile.mkdtemp(prefix="integration_test_encryption_restore_")
         # Start daemon.
         self.base_url = "http://127.0.0.1:8080"
-        _, self.inttestlog = tempfile.mkstemp(prefix="integration_test_log_encryption_")
+        self.inttestlog = make_inttest_logfile(prefix="integration_test_log_encryption_")
         self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url,
                                    extra_options="--logfile=" + self.inttestlog)
         self.api_root = '/api/v1'
@@ -79,8 +79,7 @@ class TestEncryptionLifecycle(unittest.TestCase):
             shutil.rmtree(self.tmpdir)
         if os.path.exists(self.restore_dir):
             shutil.rmtree(self.restore_dir)
-        if os.path.exists(self.inttestlog):
-            os.remove(self.inttestlog)
+        remove_file_with_retries(self.inttestlog)
 
     def _decode(self, r, url):
         self.assertIn('Content-Type', r.headers,
