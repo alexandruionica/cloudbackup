@@ -49,26 +49,44 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
   linux-packages:
-    name: Build Linux packages (.deb/.rpm)
+    name: Build Linux packages (${{ matrix.arch }})
     needs: version
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm # GitHub-hosted native ARM runner (free for public repos)
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # generate_version.sh needs git history for the commit id
       - name: Build packages
-        run: make packages
+        # Each runner is native for its arch, so build-all.sh builds without
+        # emulation. ARCHS pins it to this runner's arch.
+        run: make packages ARCHS=${{ matrix.arch }}
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-packages
+          name: linux-packages-${{ matrix.arch }}
           path: dist/packages/*
           if-no-files-found: error
 
   windows-zip:
-    name: Build Windows zip
+    name: Build Windows zip (${{ matrix.arch }})
     needs: version
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm # GitHub-hosted native Windows-on-ARM runner (public repos)
+    runs-on: ${{ matrix.runner }}
     env:
       CGO_ENABLED: "1" # required by github.com/mattn/go-sqlite3
     steps:
@@ -78,6 +96,26 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Install llvm-mingw (arm64 CGO toolchain)
+        # windows-latest (x64) ships a working mingw gcc; windows-11-arm does
+        # not, and only the clang-based llvm-mingw can emit Windows/arm64
+        # objects. Pull the latest release and point CC/CXX at its aarch64 clang.
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $rel = gh api repos/mstorsjo/llvm-mingw/releases/latest | ConvertFrom-Json
+          $asset = $rel.assets | Where-Object { $_.name -match 'ucrt-aarch64\.zip$' } | Select-Object -First 1
+          if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -match 'ucrt-x86_64\.zip$' } | Select-Object -First 1 }
+          Write-Host "Downloading $($asset.name)"
+          curl.exe -fsSL -o llvm-mingw.zip $asset.browser_download_url
+          Expand-Archive -Path llvm-mingw.zip -DestinationPath C:\llvm-mingw -Force
+          $bin = (Get-ChildItem -Directory C:\llvm-mingw | Select-Object -First 1).FullName + "\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value $bin
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=aarch64-w64-mingw32-clang"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=aarch64-w64-mingw32-clang++"
       - name: Generate version stamp
         run: pwsh ./generate_version.ps1
       - name: Build cloudbackup.exe
@@ -106,21 +144,29 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $version = "${{ needs.version.outputs.version }}"
-          $zip = "dist/cloudbackup_${version}_windows_amd64.zip"
+          $zip = "dist/cloudbackup_${version}_windows_${{ matrix.arch }}.zip"
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Compress-Archive -Path dist/win/cloudbackup -DestinationPath $zip -Force
           Get-ChildItem $zip
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-zip
-          path: dist/cloudbackup_*_windows_amd64.zip
+          name: windows-zip-${{ matrix.arch }}
+          path: dist/cloudbackup_*_windows_${{ matrix.arch }}.zip
           if-no-files-found: error
 
   windows-msi:
-    name: Build Windows installer (.msi)
+    name: Build Windows installer .msi (${{ matrix.arch }})
     needs: version
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm # GitHub-hosted native Windows-on-ARM runner (public repos)
+    runs-on: ${{ matrix.runner }}
     env:
       CGO_ENABLED: "1" # required by github.com/mattn/go-sqlite3
     steps:
@@ -130,15 +176,37 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x" # WiX v5 is a .NET tool; windows-11-arm may not ship the SDK
+      - name: Install llvm-mingw (arm64 CGO toolchain)
+        # See the windows-zip job: windows-11-arm has no arm64 C compiler, and
+        # only clang-based llvm-mingw can emit Windows/arm64 objects for CGO.
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $rel = gh api repos/mstorsjo/llvm-mingw/releases/latest | ConvertFrom-Json
+          $asset = $rel.assets | Where-Object { $_.name -match 'ucrt-aarch64\.zip$' } | Select-Object -First 1
+          if (-not $asset) { $asset = $rel.assets | Where-Object { $_.name -match 'ucrt-x86_64\.zip$' } | Select-Object -First 1 }
+          Write-Host "Downloading $($asset.name)"
+          curl.exe -fsSL -o llvm-mingw.zip $asset.browser_download_url
+          Expand-Archive -Path llvm-mingw.zip -DestinationPath C:\llvm-mingw -Force
+          $bin = (Get-ChildItem -Directory C:\llvm-mingw | Select-Object -First 1).FullName + "\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value $bin
+          Add-Content -Path $env:GITHUB_ENV -Value "CC=aarch64-w64-mingw32-clang"
+          Add-Content -Path $env:GITHUB_ENV -Value "CXX=aarch64-w64-mingw32-clang++"
       - name: Install WiX Toolset v5
         run: dotnet tool install --global wix --version 5.*
       - name: Build MSI
-        run: pwsh ./packaging/windows/build-msi.ps1
+        run: pwsh ./packaging/windows/build-msi.ps1 -Arch ${{ matrix.arch }}
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-msi
-          path: dist/packages/cloudbackup_*_amd64.msi
+          name: windows-msi-${{ matrix.arch }}
+          path: dist/packages/cloudbackup_*_${{ matrix.arch }}.msi
           if-no-files-found: error
 
   release:

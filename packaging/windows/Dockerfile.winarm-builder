@@ -1,0 +1,23 @@
+# Cross-compile toolchain for Windows-on-ARM (windows/arm64) builds.
+#
+# Windows ARM64 binaries can only be produced by the LLVM/clang-based
+# llvm-mingw toolchain; the gcc-based mingw-w64 cannot target ARM64. We layer a
+# pinned Go on top of the llvm-mingw image and preset the cross-compile
+# environment so a plain `go build` produces a CGO-enabled windows/arm64 binary
+# (github.com/mattn/go-sqlite3 needs CGO). This is a real cross-compile on an
+# amd64 host — no emulation — so it is fast.
+ARG GO_IMAGE=golang:1.25-bookworm
+ARG LLVM_MINGW_IMAGE=mstorsjo/llvm-mingw:latest
+
+FROM ${GO_IMAGE} AS go
+
+FROM ${LLVM_MINGW_IMAGE}
+COPY --from=go /usr/local/go /usr/local/go
+ENV PATH=/usr/local/go/bin:/opt/llvm-mingw/bin:${PATH}
+ENV GOOS=windows
+ENV GOARCH=arm64
+ENV CGO_ENABLED=1
+ENV CC=aarch64-w64-mingw32-clang
+ENV CXX=aarch64-w64-mingw32-clang++
+ENV GOFLAGS=-mod=vendor
+WORKDIR /src
