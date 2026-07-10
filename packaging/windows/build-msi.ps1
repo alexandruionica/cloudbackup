@@ -7,17 +7,35 @@
     cloudbackup.exe, stages the same webstatic tree the Linux packages ship
     plus the sample config, then runs `wix build` against
     packaging/windows/cloudbackup.wxs to produce
-    dist/packages/cloudbackup_<version>_amd64.msi.
+    dist/packages/cloudbackup_<version>_<arch>.msi.
 
-    Must be run on Windows (GitHub Actions windows-latest, or the Vagrant
-    windows2025 VM). Requires:
-      * Go (version per go.mod), with CGO enabled (TDM-GCC / mingw) for
-        github.com/mattn/go-sqlite3.
+    Must be run on Windows (GitHub Actions windows-latest / windows-11-arm, or
+    the Vagrant windows2025 VM). Requires:
+      * Go (version per go.mod), with CGO enabled for
+        github.com/mattn/go-sqlite3 — TDM-GCC / mingw on x64, and the
+        clang-based llvm-mingw (CC=aarch64-w64-mingw32-clang) on arm64.
       * Git (generate_version.ps1 stamps the short commit id).
       * WiX Toolset v5 on PATH: dotnet tool install --global wix --version 5.*
+
+.PARAMETER Arch
+    Target architecture: amd64 (default) or arm64. Builds for the host arch —
+    run the arm64 build on a Windows-on-ARM machine (e.g. the windows-11-arm
+    runner), not as a cross-compile.
 #>
 
+param(
+    [ValidateSet("amd64", "arm64")]
+    [string]$Arch = "amd64"
+)
+
 $ErrorActionPreference = "Stop"
+
+# Map the Go arch name to the WiX platform and pin GOARCH so the binary matches
+# the installer's declared platform.
+switch ($Arch) {
+    "amd64" { $wixArch = "x64";   $env:GOARCH = "amd64" }
+    "arm64" { $wixArch = "arm64"; $env:GOARCH = "arm64" }
+}
 
 # Repo root is two levels up from this script (packaging/windows/).
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
@@ -38,7 +56,7 @@ if ([string]::IsNullOrWhiteSpace($version)) {
     Write-Error "misc/version.txt is empty"
     exit 1
 }
-Write-Host "############ Building CloudBackup MSI version $version ############"
+Write-Host "############ Building CloudBackup MSI version $version ($Arch) ############"
 
 # Stamp misc/version.go (AWS/GCP/Azure SDK versions + short commit id).
 Write-Host "############ Generating version stamp ############"
@@ -72,10 +90,10 @@ Copy-Item packaging/windows/config.yaml.sample "$stage/config.yaml.sample"
 # Produce the MSI.
 $outDir = "dist/packages"
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-$msi = "$outDir/cloudbackup_${version}_amd64.msi"
+$msi = "$outDir/cloudbackup_${version}_${Arch}.msi"
 Write-Host "############ Running wix build ############"
 wix build packaging/windows/cloudbackup.wxs `
-    -arch x64 `
+    -arch $wixArch `
     -d "Version=$version" `
     -d "StageDir=$((Resolve-Path $stage).Path)" `
     -o $msi

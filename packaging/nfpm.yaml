@@ -1,5 +1,5 @@
 name: cloudbackup
-arch: amd64
+arch: ${PKG_ARCH}
 platform: linux
 version: ${PKG_VERSION}
 release: ${PKG_RELEASE}

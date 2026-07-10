@@ -116,10 +116,25 @@ else
 endif
 
 # Build .deb and .rpm packages for all supported distros via Docker.
-# Pass DISTROS="deb12 el9" to limit; default is the full matrix.
+# Pass DISTROS="deb12 el9" to limit distros (default: full matrix) and
+# ARCHS="amd64 arm64" to pick architectures (default: host arch only; arm64
+# on an x86_64 host builds via QEMU emulation).
 packages:
 	@echo "############ Building distribution packages ############"
-	bash packaging/build-all.sh $(DISTROS)
+	ARCHS="$(ARCHS)" bash packaging/build-all.sh $(DISTROS)
+
+# Cross-compile the Windows ARM64 (aarch64) build locally on an amd64 host via
+# the clang-based llvm-mingw toolchain in Docker, and assemble the same release
+# zip the CI windows job ships (dist/cloudbackup_<version>_windows_arm64.zip).
+# Unix host with Docker only — no emulation, so it is fast. This proves the code
+# *builds* for Windows-on-ARM; runtime verification needs the windows-11-arm
+# GitHub Actions runner (or real ARM Windows hardware).
+winbuild-arm64:
+ifeq ($(OS),Windows_NT)
+	@echo "winbuild-arm64 cross-compiles from a Unix host with Docker; on Windows build natively or use the windows-11-arm GitHub Actions runner."
+else
+	bash packaging/windows/build-winarm64.sh
+endif
 
 # Build the native Windows installer (.msi) via the WiX Toolset v5.
 # Must run on Windows (GitHub Actions windows-latest or the Vagrant windows2025

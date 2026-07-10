@@ -34,13 +34,19 @@ Native, distribution-managed installers are produced for both Linux and Windows.
 
 * **Linux** — `make packages` builds `.deb` and `.rpm` packages (via `nfpm` in Docker;
   see `packaging/`). They install the binary, web UI, a sample `/etc/cloudbackup/config.yaml`,
-  and a systemd unit (enabled but not auto-started).
+  and a systemd unit (enabled but not auto-started). Builds the host architecture by
+  default; pass `ARCHS="amd64 arm64"` for both (arm64 on an x86_64 host builds under
+  QEMU emulation, so it is slower). Limit distros with `DISTROS="deb12 el9"`.
 
 * **Windows** — `make winpackage` (run on Windows) builds a native `.msi` with the WiX
   Toolset v5 (see `packaging/windows/README.md`). It installs to
   `C:\Program Files\cloudbackup\`, places a preserved config + data dir under
   `C:\ProgramData\cloudbackup\`, registers the `cloudbackup` Windows service (manual start),
   and adds an Add/Remove Programs entry. Install/uninstall via `msiexec /i` / `msiexec /x`.
+  Both x64 and ARM64 (`aarch64`) are supported; the release workflow builds each on its
+  native runner. To smoke-test the Windows-ARM build from an amd64 Unix host, run
+  `make winbuild-arm64` — it cross-compiles the ARM64 `.exe` (via the clang-based
+  llvm-mingw toolchain in Docker) and assembles the release zip.
 
 Both installer types are built and attached to GitHub Releases by the `Release` workflow
 (`.github/workflows/release.yml`).
