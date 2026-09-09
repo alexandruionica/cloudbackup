@@ -66,10 +66,10 @@ scripts that only list jobs and reports.
 ## 3.3 Choosing what the daemon can read
 
 The daemon backs up files *as the OS user it runs as*. The packaged Linux
-service runs as the unprivileged `cloudbackup` user with systemd hardening that
-hides `/home` entirely — see the
-[installation chapter](01-installation.md#note-on-the-hardened-service-unit) if
-your paths include home directories or root-only files.
+service runs as `root` by default, so it can read any path you point it at. If
+you would rather run it unprivileged, the
+[installation chapter](01-installation.md#note-on-the-service-account) shows how
+to override the unit — and what stops being readable once you do.
 
 ## 3.4 `http` and `https`
 

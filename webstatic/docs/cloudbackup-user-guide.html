@@ -213,8 +213,9 @@ sudo dnf install ./cloudbackup-0.0.2-1.el9.x86_64.rpm
 </tr>
 </tbody>
 </table>
-<p>It also creates a dedicated system user and group named <code>cloudbackup</code>, and
-<strong>enables — but does not start</strong> — the <code>cloudbackup</code> systemd service. The service
+<p>It also creates a dedicated system user and group named <code>cloudbackup</code> (unused by
+default — see <a href="#note-on-the-service-account">the note below</a>), and <strong>enables —
+but does not start</strong> — the <code>cloudbackup</code> systemd service. The service
 stays stopped on purpose: the shipped config contains a placeholder password hash
 that you must replace before the first start. Chapter
 <a href="#chapter-2">2 — Getting started</a> walks through that.</p>
@@ -223,27 +224,38 @@ that you must replace before the first start. Chapter
 sudo systemctl status cloudbackup
 journalctl -u cloudbackup -f        # follow the (JSON-formatted) logs
 </code></pre>
-<h3 id="note-on-the-hardened-service-unit">Note on the hardened service unit</h3>
-<p>The shipped unit runs the daemon as the unprivileged <code>cloudbackup</code> user with
-systemd hardening (<code>ProtectSystem=full</code>, <code>ProtectHome=true</code>,
-<code>ReadWritePaths=/var/lib/cloudbackup</code>). Two practical consequences:</p>
-<ol>
-<li><strong>The daemon can only back up files the <code>cloudbackup</code> user can read.</strong> System
-   paths are readable, but anything with restrictive permissions is not.</li>
-<li><strong><code>/home</code> is invisible to the service</strong> because of <code>ProtectHome=true</code>.</li>
-</ol>
-<p>If you need to back up home directories or root-only files, override the unit
-rather than editing the packaged file:</p>
+<h3 id="note-on-the-service-account">Note on the service account</h3>
+<p>The shipped unit runs the daemon as <code>root</code>, with no systemd sandboxing. That is
+deliberate: a backup daemon that cannot read <code>/home</code>, <code>/etc</code> or any other
+root-only path backs up very little, and the failure mode (files silently
+missing from a backup) is worse than the alternative. The daemon backs up files
+<em>as the OS user it runs as</em>, so running as <code>root</code> is what lets it read
+everything you point it at.</p>
+<p>If that is more privilege than your threat model allows, harden it yourself —
+override the unit rather than editing the packaged file, so your changes survive
+package upgrades:</p>
 <pre><code class="language-bash">sudo systemctl edit cloudbackup
 </code></pre>
-<p>and, for example, relax the home protection and/or change the user:</p>
+<p>The package already creates an unprivileged system user and group named
+<code>cloudbackup</code> for exactly this purpose:</p>
 <pre><code class="language-ini">[Service]
-ProtectHome=read-only
-# or, to run as root (weigh this against your threat model):
-#User=root
-#Group=root
+User=cloudbackup
+Group=cloudbackup
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/cloudbackup
 </code></pre>
-<p>Then <code>sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart cloudbackup</code>.</p>
+<p>Then hand the state directory to that user and restart:</p>
+<pre><code class="language-bash">sudo chown -R cloudbackup:cloudbackup /var/lib/cloudbackup
+sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart cloudbackup
+</code></pre>
+<p>Two consequences to plan for before you do: the daemon can then only back up
+files the <code>cloudbackup</code> user can read, and <code>ProtectHome=true</code> makes <code>/home</code>
+invisible to the service entirely (use <code>ProtectHome=read-only</code> if you need to
+back up home directories). Drop or relax whichever directives get in the way —
+each one is independent.</p>
 <h3 id="upgrading-and-uninstalling">Upgrading and uninstalling</h3>
 <pre><code class="language-bash"># Upgrade: install the newer package the same way; your edited
 # /etc/cloudbackup/config.yaml and /var/lib/cloudbackup are preserved.
@@ -594,10 +606,10 @@ if operators start/stop jobs from it; give <code>read</code> to dashboards or mo
 scripts that only list jobs and reports.</p>
 <h2 id="33-choosing-what-the-daemon-can-read">3.3 Choosing what the daemon can read</h2>
 <p>The daemon backs up files <em>as the OS user it runs as</em>. The packaged Linux
-service runs as the unprivileged <code>cloudbackup</code> user with systemd hardening that
-hides <code>/home</code> entirely — see the
-<a href="#note-on-the-hardened-service-unit">installation chapter</a> if
-your paths include home directories or root-only files.</p>
+service runs as <code>root</code> by default, so it can read any path you point it at. If
+you would rather run it unprivileged, the
+<a href="#note-on-the-service-account">installation chapter</a> shows how
+to override the unit — and what stops being readable once you do.</p>
 <h2 id="34-http-and-https">3.4 <code>http</code> and <code>https</code></h2>
 <pre><code class="language-yaml">http:
   bind_address: &quot;127.0.0.1:8080&quot;

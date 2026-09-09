@@ -248,10 +248,10 @@ if operators start/stop jobs from it; give <code>read</code> to dashboards or mo
 scripts that only list jobs and reports.</p>
 <h2 id="33-choosing-what-the-daemon-can-read">3.3 Choosing what the daemon can read</h2>
 <p>The daemon backs up files <em>as the OS user it runs as</em>. The packaged Linux
-service runs as the unprivileged <code>cloudbackup</code> user with systemd hardening that
-hides <code>/home</code> entirely — see the
-<a href="../01-installation/#note-on-the-hardened-service-unit">installation chapter</a> if
-your paths include home directories or root-only files.</p>
+service runs as <code>root</code> by default, so it can read any path you point it at. If
+you would rather run it unprivileged, the
+<a href="../01-installation/#note-on-the-service-account">installation chapter</a> shows how
+to override the unit — and what stops being readable once you do.</p>
 <h2 id="34-http-and-https">3.4 <code>http</code> and <code>https</code></h2>
 <pre><code class="language-yaml">http:
   bind_address: &quot;127.0.0.1:8080&quot;
