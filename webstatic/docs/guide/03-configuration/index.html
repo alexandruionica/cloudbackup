@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>3. Configuration reference - Cloudbackup Docs</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../custom.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "3. Configuration reference";
+        var mkdocs_page_input_path = "guide/03-configuration.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Cloudbackup Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../01-installation/">1. Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../02-getting-started/">2. Getting started</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">3. Configuration reference</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#31-top-level-layout">3.1 Top-level layout</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#32-api-users-user">3.2 API users (user)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#33-choosing-what-the-daemon-can-read">3.3 Choosing what the daemon can read</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#34-http-and-https">3.4 http and https</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#35-backup-backup-definitions">3.5 backup — backup definitions</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#name-required">name (required)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#paths-required">paths (required)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#exclusions">exclusions</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#dereference-default-true">dereference (default: true)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#checksum-default-false">checksum (default: false)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#schedule">schedule</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#encrypt-encrypt_pass">encrypt / encrypt_pass</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#versions_max_num-versions_max_age">versions_max_num / versions_max_age</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#pre_run_script-post_run_script">pre_run_script / post_run_script</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#36-target-where-the-data-goes">3.6 target — where the data goes</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#361-aws_s3">3.6.1 aws_s3</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#362-gcp_storage">3.6.2 gcp_storage</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#363-azure_blob">3.6.3 azure_blob</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#37-notification">3.7 notification</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#371-notificationemail">3.7.1 notification.email</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#372-notificationscript">3.7.2 notification.script</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../04-encryption/">4. Client-side encryption</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../05-cli-setup/">5. CLI client setup</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../06-cli-usage/">6. CLI usage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../07-web-ui/">7. Web UI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../08-http-api/">8. HTTP API</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="/docs_api/index.html">API</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Cloudbackup Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">User Guide</li>
+      <li class="breadcrumb-item active">3. Configuration reference</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="3-server-configuration-reference">3. Server configuration reference</h1>
+<p>The server is configured with a single YAML file, passed via
+<code>cloudbackup server start -c &lt;file&gt;</code>. This chapter documents <strong>every</strong> option,
+its default, validation rules and when you would use it.</p>
+<p>Three commands you will use constantly while editing configuration:</p>
+<pre><code class="language-bash">cloudbackup server config example              # print a fully commented example
+cloudbackup server config validate -c FILE     # syntax + semantic validation
+cloudbackup server config dump -c FILE         # print the parsed result (JSON, secrets masked)
+</code></pre>
+<p><code>dump</code> matters more than it sounds: YAML indentation errors often <em>parse fine</em>
+but land a setting in the wrong block. The dump shows the structure the server
+will actually run with, defaults included.</p>
+<p>Configuration is read once at startup — after editing the file, restart the
+service (<code>sudo systemctl restart cloudbackup</code> / <code>Restart-Service cloudbackup</code>).
+(The configuration can also be changed at runtime through the HTTP API's
+<code>POST /api/v1/config</code>, which persists to the same file — see
+<a href="../08-http-api/">chapter 8</a>.)</p>
+<h2 id="31-top-level-layout">3.1 Top-level layout</h2>
+<pre><code class="language-yaml">data_dir: /var/lib/cloudbackup      # required
+restore_dir: /srv/restores          # optional
+html_dir: /usr/share/cloudbackup/webstatic   # optional
+user: [ ... ]                       # API users
+http: { ... }                       # plain-HTTP listener
+https: { ... }                      # TLS listener (disables http when enabled)
+backup: [ ... ]                     # one or more backup definitions
+notification: { ... }               # optional email / script notifications
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data_dir</code></td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>Directory for the server's internal SQLite databases (one per backup job) and job reports. Must exist and be writable by the user running the daemon. Protect it: it contains the metadata that powers diffing, reports and restores.</td>
+</tr>
+<tr>
+<td><code>restore_dir</code></td>
+<td>no</td>
+<td><code>&lt;data_dir&gt;/restores</code></td>
+<td>Base directory into which restored files are written. Each restore job creates <code>&lt;restore_dir&gt;/&lt;backup-name&gt;/&lt;restore-job-id&gt;/</code> underneath it. A restore request can override this per job.</td>
+</tr>
+<tr>
+<td><code>html_dir</code></td>
+<td>no</td>
+<td><code>webstatic</code> (relative to the working directory)</td>
+<td>Where the web UI, documentation and Swagger assets live. The Linux packages set this to <code>/usr/share/cloudbackup/webstatic</code>; the Windows installer's sample config points at the install directory.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="32-api-users-user">3.2 API users (<code>user</code>)</h2>
+<pre><code class="language-yaml">user:
+  - name: admin
+    pass: $2a$05$Ug1eUCXbSYU...   # bcrypt hash — cloudbackup misc hash-password
+    access: write
+  - name: monitoring
+    pass: $2a$05$Pgdwe14mHjO...
+    access: read
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>yes</td>
+<td>—</td>
+<td>Username for HTTP Basic Auth.</td>
+</tr>
+<tr>
+<td><code>pass</code></td>
+<td>yes</td>
+<td>—</td>
+<td><strong>bcrypt hash</strong> of the password. Generate with <code>cloudbackup misc hash-password</code>.</td>
+</tr>
+<tr>
+<td><code>access</code></td>
+<td>no</td>
+<td><code>read</code></td>
+<td><code>read</code> or <code>write</code>. <code>write</code> grants the whole API. <code>read</code> permits only a fixed read-only subset: listing backups and restores, dry-runs, watching progress, listing backup/restore reports, and reading the config.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scenarios:</strong> give <code>write</code> to admins and to the credentials used by the web UI
+if operators start/stop jobs from it; give <code>read</code> to dashboards or monitoring
+scripts that only list jobs and reports.</p>
+<h2 id="33-choosing-what-the-daemon-can-read">3.3 Choosing what the daemon can read</h2>
+<p>The daemon backs up files <em>as the OS user it runs as</em>. The packaged Linux
+service runs as the unprivileged <code>cloudbackup</code> user with systemd hardening that
+hides <code>/home</code> entirely — see the
+<a href="../01-installation/#note-on-the-hardened-service-unit">installation chapter</a> if
+your paths include home directories or root-only files.</p>
+<h2 id="34-http-and-https">3.4 <code>http</code> and <code>https</code></h2>
+<pre><code class="language-yaml">http:
+  bind_address: &quot;127.0.0.1:8080&quot;
+
+https:
+  enabled: true
+  bind_address: &quot;0.0.0.0:8443&quot;
+  ssl_cert_path: /etc/cloudbackup/cert.crt
+  ssl_key_path: /etc/cloudbackup/cert.key
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>http.bind_address</code></td>
+<td><code>127.0.0.1:8080</code></td>
+<td>Listen address for plain HTTP.</td>
+</tr>
+<tr>
+<td><code>https.enabled</code></td>
+<td><code>false</code></td>
+<td>When <code>true</code>, the HTTPS listener is started <strong>and the HTTP listener is disabled</strong> — only one of the two ever runs.</td>
+</tr>
+<tr>
+<td><code>https.bind_address</code></td>
+<td><code>127.0.0.1:8443</code></td>
+<td>Listen address for HTTPS.</td>
+</tr>
+<tr>
+<td><code>https.ssl_cert_path</code></td>
+<td>—</td>
+<td>PEM certificate (required when HTTPS is enabled; the file must exist).</td>
+</tr>
+<tr>
+<td><code>https.ssl_key_path</code></td>
+<td>—</td>
+<td>PEM private key (required when HTTPS is enabled).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scenarios:</strong></p>
+<ul>
+<li><em>Single machine, local CLI only</em> — keep the default <code>127.0.0.1:8080</code>; nothing
+  is exposed to the network.</li>
+<li><em>Backup server managed from other machines</em> — enable <code>https</code> on
+  <code>0.0.0.0:8443</code> with a certificate the client machines trust. Basic Auth
+  credentials travel with every request, so avoid plain HTTP across a network.</li>
+</ul>
+<h2 id="35-backup-backup-definitions">3.5 <code>backup</code> — backup definitions</h2>
+<p>Each list entry is one independent job:</p>
+<pre><code class="language-yaml">backup:
+  - name: documents
+    paths:
+      - /srv/documents
+      - /etc
+    exclusions:
+      - &quot;**/*.tmp&quot;
+      - /srv/documents/cache
+    dereference: true
+    checksum: false
+    schedule:
+      - '30 02 * * *'
+    encrypt: false
+    pre_run_script: /usr/local/bin/pre.sh
+    post_run_script: /usr/local/bin/post.sh
+    target:
+      - ...
+</code></pre>
+<h3 id="name-required"><code>name</code> (required)</h3>
+<p>Unique across all backup definitions. Used in every CLI command, API call and
+as the on-disk database filename, so it must be ASCII, must not contain <code>/</code> or
+<code>\</code> or the reserved substring <code>__</code>, and cannot be <code>.</code> or <code>..</code>.</p>
+<h3 id="paths-required"><code>paths</code> (required)</h3>
+<p>List of <strong>absolute</strong> paths (files or directories) to back up. Directories are
+walked recursively.</p>
+<h3 id="exclusions"><code>exclusions</code></h3>
+<p>Glob patterns (Bash-like, with globstar) removing matches from the scan:</p>
+<table>
+<thead>
+<tr>
+<th>Pattern element</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>*</code></td>
+<td>any run of characters, except path separators</td>
+</tr>
+<tr>
+<td><code>**</code></td>
+<td>any run of characters, <strong>including</strong> path separators</td>
+</tr>
+<tr>
+<td><code>?</code></td>
+<td>any single character except a path separator</td>
+</tr>
+<tr>
+<td><code>[abc]</code>, <code>[a-z]</code></td>
+<td>single character from a set / range</td>
+</tr>
+<tr>
+<td><code>[^class]</code></td>
+<td>single character <em>not</em> in the class</td>
+</tr>
+<tr>
+<td><code>{alt1,alt2}</code></td>
+<td>either alternative</td>
+</tr>
+</tbody>
+</table>
+<p>Examples: <code>**/*.log</code> excludes every <code>.log</code> file anywhere; <code>/var/lib/*.db</code>
+excludes <code>.db</code> files directly inside <code>/var/lib</code> but <strong>not</strong> in its
+subdirectories.</p>
+<blockquote>
+<p>Always verify exclusion rules with <code>cloudbackup client backup dryrun &lt;job&gt;</code> —
+it lists exactly what would be examined, uploaded and excluded, without
+touching the object store.</p>
+</blockquote>
+<h3 id="dereference-default-true"><code>dereference</code> (default: <code>true</code>)</h3>
+<p>How symbolic links are treated:</p>
+<ul>
+<li><code>true</code> — links are followed; the <em>content they point to</em> is backed up.</li>
+<li><code>false</code> — links are stored <em>as links</em> (their target path is recorded and
+  recreated on restore).</li>
+</ul>
+<p>Set <code>false</code> when backing up trees that contain internal symlinks (package
+trees, <code>alternatives</code>-style layouts) to avoid duplicating content or escaping
+the intended directory.</p>
+<h3 id="checksum-default-false"><code>checksum</code> (default: <code>false</code>)</h3>
+<p>How "has this file changed?" is decided between runs:</p>
+<ul>
+<li><code>false</code> — metadata comparison (size, timestamps). Fast; right for almost
+  everyone.</li>
+<li><code>true</code> — the file content is read and checksummed every run. Catches
+  modifications that preserve size and timestamps, at the cost of reading every
+  file on every run. Use for data where silent in-place changes are a real
+  concern and the dataset is small enough to read each time.</li>
+</ul>
+<h3 id="schedule"><code>schedule</code></h3>
+<p>A list of standard <strong>5-field cron expressions</strong> (<code>minute hour day-of-month
+month day-of-week</code>), plus the usual descriptors (<code>@daily</code>, <code>@hourly</code>,
+<code>@weekly</code>, ...). Multiple entries are allowed. An empty/omitted list means the
+job only runs when started manually (CLI, web UI or API).</p>
+<pre><code class="language-yaml">schedule:
+  - '05 01 * * *'     # daily at 01:05
+  - '00 13 * * 6'     # Saturdays at 13:00
+</code></pre>
+<p>Only one run of a given job can be active at a time.</p>
+<h3 id="encrypt-encrypt_pass"><code>encrypt</code> / <code>encrypt_pass</code></h3>
+<p>Client-side encryption of file contents before upload. <code>encrypt: true</code>
+requires a non-empty <code>encrypt_pass</code>. This feature has enough operational
+implications to deserve its own chapter — read
+<a href="../04-encryption/">chapter 4 — Client-side encryption</a> <strong>before</strong> enabling it,
+in particular what happens if the password is lost (unrecoverable data).</p>
+<h3 id="versions_max_num-versions_max_age"><code>versions_max_num</code> / <code>versions_max_age</code></h3>
+<pre><code class="language-yaml">versions_max_num: 10    # keep at most 10 versions per file; 0 = unlimited
+versions_max_age: 6w    # drop versions older than 6 weeks;  0 = unlimited
+</code></pre>
+<p>Intended retention limits for old versions of backed-up files.</p>
+<blockquote>
+<p><strong>Current status:</strong> these two options are parsed and accepted, but retention
+enforcement is <strong>not yet implemented</strong> in this version — no versions are
+deleted regardless of the values. Manage retention with your bucket's
+lifecycle rules for now, and be careful that such rules don't delete versions
+you still need.</p>
+</blockquote>
+<h3 id="pre_run_script-post_run_script"><code>pre_run_script</code> / <code>post_run_script</code></h3>
+<p>Absolute path to a script or executable to run before / after each run of this
+job.</p>
+<ul>
+<li>On Unix-likes the file must be executable (<code>+x</code>); on Windows it must be a
+  <code>.bat</code> or <code>.ps1</code> script (or an executable).</li>
+<li>The script receives <strong>one argument: the job id</strong> (a UUID).</li>
+<li>The file must exist at server start, otherwise the server refuses to start.</li>
+<li><strong>Pre-run:</strong> a non-zero exit code cancels the whole backup run and marks it
+  failed; the script's combined stdout+stderr is captured into the error log
+  (large output increases server memory usage). Cancelling a job while the
+  pre-run script is executing waits for the script to finish — it is not
+  killed.</li>
+<li><strong>Post-run:</strong> runs regardless of whether the backup finished, failed or was
+  cancelled.</li>
+</ul>
+<p><strong>Scenario:</strong> snapshot a database before the run and release the snapshot after:</p>
+<pre><code class="language-yaml">pre_run_script: /usr/local/bin/take_db_snapshot.sh
+post_run_script: /usr/local/bin/remove_db_snapshot.sh
+</code></pre>
+<h2 id="36-target-where-the-data-goes">3.6 <code>target</code> — where the data goes</h2>
+<p>Each backup definition needs at least one target; with several targets every
+file is uploaded to each of them (e.g. S3 <em>and</em> Azure for provider
+redundancy).</p>
+<pre><code class="language-yaml">target:
+  - name: s3-main
+    type: aws_s3
+    bucket: 'my-backup-bucket'
+    prefix: 'backups/server-01'
+    ratelimit: 10 MB
+    parameters:
+      - name: AWS_ACCESS_KEY_ID
+        value: AKIA...
+      - name: AWS_SECRET_ACCESS_KEY
+        value: ...
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>yes</td>
+<td>Target name, referenced by restore commands (<code>--target</code>). Same character rules as backup names.</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>yes</td>
+<td><code>aws_s3</code>, <code>gcp_storage</code> or <code>azure_blob</code>. (<code>test_null</code> exists for the test suite; it discards data.)</td>
+</tr>
+<tr>
+<td><code>bucket</code></td>
+<td>yes</td>
+<td>Bucket / container name.</td>
+</tr>
+<tr>
+<td><code>prefix</code></td>
+<td>yes</td>
+<td>Key prefix under which this server's data is stored.</td>
+</tr>
+<tr>
+<td><code>ratelimit</code></td>
+<td>no (default <code>0</code>)</td>
+<td>Upload rate limit for this target, in bytes/second; accepts human units (<code>500 KB</code>, <code>10 MB</code>). <code>0</code> or unset = unlimited. Useful to keep a backup from saturating an office uplink.</td>
+</tr>
+<tr>
+<td><code>parameters</code></td>
+<td>per type</td>
+<td>List of <code>{name, value}</code> pairs, documented per provider below. Parameter <em>names</em> are case-insensitive; <em>values</em> are case-sensitive unless noted.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Shared advice for every provider:</strong></p>
+<ul>
+<li>Dedicate buckets to backups only, and give each server its own <code>prefix</code>.
+  Anything else writing under the same keys can corrupt backups.</li>
+<li>Lock the bucket down so only the backup credentials can read/write it.</li>
+<li>After configuring a target, run
+  <code>cloudbackup client backup target test &lt;job&gt;</code> to verify connectivity,
+  credentials and permissions before relying on it.</li>
+</ul>
+<h3 id="361-aws_s3">3.6.1 <code>aws_s3</code></h3>
+<p><strong>Required bucket setup:</strong> enable
+<a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html">S3 bucket versioning</a>.
+Also consider a lifecycle rule that aborts/purges incomplete multipart uploads
+older than a few days.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AWS_ACCESS_KEY_ID</code></td>
+<td>no*</td>
+<td>Access key id. *If set, <code>AWS_SECRET_ACCESS_KEY</code> must be set too (and vice-versa). If neither is set, the AWS SDK's <a href="https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials">standard credential resolution</a> is used — environment, shared credentials file, or EC2/ECS instance roles.</td>
+</tr>
+<tr>
+<td><code>AWS_SECRET_ACCESS_KEY</code></td>
+<td>no*</td>
+<td>Secret access key; see above.</td>
+</tr>
+<tr>
+<td><code>storage_class</code></td>
+<td>no</td>
+<td>One of <code>STANDARD</code>, <code>REDUCED_REDUNDANCY</code>, <code>STANDARD_IA</code>, <code>ONEZONE_IA</code>, <code>INTELLIGENT_TIERING</code> (case-sensitive).</td>
+</tr>
+<tr>
+<td><code>region</code></td>
+<td>no</td>
+<td>Lower-case AWS region (e.g. <code>us-east-1</code>). Only used as a fallback when the bucket's region cannot be auto-detected via the S3 API.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scenario — EC2 instance with an IAM role:</strong> omit both key parameters and
+grant the instance role access to the bucket; credentials never live in the
+config file.</p>
+<h3 id="362-gcp_storage">3.6.2 <code>gcp_storage</code></h3>
+<p><strong>Required bucket setup:</strong> enable
+<a href="https://cloud.google.com/storage/docs/using-object-versioning">object versioning</a>.</p>
+<p>Credentials come from a
+<a href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys">service account key</a>
+JSON file. The credential parameters below are <strong>all-or-nothing</strong>: specify none
+of them (then <a href="https://cloud.google.com/docs/authentication/production#finding_credentials_automatically">Application Default Credentials</a>
+are used — right choice on GCE/GKE) or all of them.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code>, <code>project_id</code>, <code>private_key_id</code>, <code>private_key</code>, <code>client_email</code>, <code>client_id</code>, <code>auth_uri</code>, <code>token_uri</code>, <code>auth_provider_x509_cert_url</code>, <code>client_x509_cert_url</code></td>
+<td>Copied field-for-field from the service account JSON key file. <strong><code>private_key</code> must be wrapped in double quotes</strong> (not single) so the embedded <code>\n</code> escapes survive YAML parsing.</td>
+</tr>
+<tr>
+<td><code>storage_class</code></td>
+<td>Optional; one of <code>multi_regional</code>, <code>regional</code>, <code>nearline</code>, <code>coldline</code>.</td>
+</tr>
+<tr>
+<td><code>disable_crc32c_hash</code></td>
+<td>Optional, default <code>false</code>. When <code>false</code>, a CRC32C hash is computed for each upload and GCP verifies it server-side — at the cost of one extra local read per file. Set to <code>yes</code>/<code>true</code> only if that read is too expensive; keeping the check on is strongly advised.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="363-azure_blob">3.6.3 <code>azure_blob</code></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>storage_account</code></td>
+<td><strong>yes</strong></td>
+<td>Storage account name (must be a Blob Storage account).</td>
+</tr>
+<tr>
+<td><code>storage_access_key</code></td>
+<td><strong>yes</strong></td>
+<td>Storage account access key.</td>
+</tr>
+<tr>
+<td><code>primary_blob_service_endpoint</code></td>
+<td>no</td>
+<td>Override endpoint URL (HTTPS only), as shown in the Azure portal under <em>Storage accounts → your account → Properties → Primary Blob Service Endpoint</em>. Defaults to <code>https://&lt;storage_account&gt;.blob.core.windows.net/</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="37-notification">3.7 <code>notification</code></h2>
+<p>Optional. Fires on backup/restore job lifecycle events. Two mechanisms, each a
+list (so different recipients/scripts can subscribe to different events):</p>
+<p>Event types: <code>started</code>, <code>finished</code>, <code>failed</code>, <code>cancelled</code>, <code>crashed</code>.
+When <code>type</code> is omitted, a block defaults to <code>failed</code> + <code>crashed</code> — the "only
+tell me when something is wrong" setting.</p>
+<h3 id="371-notificationemail">3.7.1 <code>notification.email</code></h3>
+<pre><code class="language-yaml">notification:
+  email:
+    - server: smtp.example.com
+      port: 587                # default &quot;25&quot;
+      user: backup-notify      # omit user/pass for localhost SMTP
+      pass: 'secret'
+      from: backup@example.com # optional
+      to: ops@example.com      # exactly one recipient
+      cc:                      # optional, multiple allowed
+        - manager@example.com
+      type: [failed, crashed]
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>server</code></td>
+<td>yes</td>
+<td>—</td>
+<td>SMTP server address. Gmail caps direct sending (~99 mails/day/account).</td>
+</tr>
+<tr>
+<td><code>port</code></td>
+<td>no</td>
+<td><code>25</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>user</code> / <code>pass</code></td>
+<td>no</td>
+<td>—</td>
+<td>SMTP auth. Can be omitted when <code>server</code> is <code>127.0.0.1</code>/<code>localhost</code>.</td>
+</tr>
+<tr>
+<td><code>from</code></td>
+<td>no</td>
+<td>—</td>
+<td>Sender address.</td>
+</tr>
+<tr>
+<td><code>to</code></td>
+<td>yes</td>
+<td>—</td>
+<td>Single recipient.</td>
+</tr>
+<tr>
+<td><code>cc</code></td>
+<td>no</td>
+<td>—</td>
+<td>List of additional recipients.</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>no</td>
+<td><code>[failed, crashed]</code></td>
+<td>Events this block fires on.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="372-notificationscript">3.7.2 <code>notification.script</code></h3>
+<pre><code class="language-yaml">notification:
+  script:
+    - path: /usr/local/bin/notify_hook.sh
+      type: [started, finished, failed, cancelled, crashed]
+</code></pre>
+<p>The script (executable, or <code>.bat</code>/<code>.ps1</code> on Windows) is invoked with <strong>six
+arguments</strong>:</p>
+<pre><code>JobType JobName JobId JobState JobError ReportFile
+</code></pre>
+<p><code>ReportFile</code> is the path to a plain-text file containing the job's JSON report
+(the <code>ResultBackupJobStatus</code> model in the <a href="../08-http-api/">API documentation</a>).
+Use it to feed Slack webhooks, ticketing systems, or metrics.</p>
+<p>Test the whole notification setup at any time:</p>
+<pre><code class="language-bash">cloudbackup client notification test
+</code></pre>
+<hr />
+<p>Next: <a href="../04-encryption/">4. Client-side encryption</a></p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../02-getting-started/" class="btn btn-neutral float-left" title="2. Getting started"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../04-encryption/" class="btn btn-neutral float-right" title="4. Client-side encryption">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../02-getting-started/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../04-encryption/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CloudBackup</title>
   <link rel="stylesheet" href="./styles.css" />
+  <!-- Runtime dependencies are vendored under ./vendor/ (see vendor/MANIFEST.md)
+       rather than loaded from a CDN, so the UI works without internet access and
+       no third party can inject script into a page holding server credentials.
+       Refresh them with "make uivendor" after bumping versions in package.json. -->
   <script type="importmap">
   {
     "imports": {
-      "preact": "https://esm.sh/preact@10.22.1",
-      "preact/hooks": "https://esm.sh/preact@10.22.1/hooks",
-      "htm/preact": "https://esm.sh/htm@3.1.1/preact?deps=preact@10.22.1"
+      "preact": "./vendor/preact.mjs",
+      "preact/hooks": "./vendor/preact-hooks.mjs",
+      "htm": "./vendor/htm.mjs",
+      "htm/preact": "./vendor/htm-preact.mjs"
     }
   }
   </script>

@@ -6,6 +6,15 @@ extra_css:
 site_dir: ../webstatic/docs/
 nav:
     - Home: index.md
+    - User Guide:
+        - Overview: guide/README.md
+        - 1. Installation: guide/01-installation.md
+        - 2. Getting started: guide/02-getting-started.md
+        - 3. Configuration reference: guide/03-configuration.md
+        - 4. Client-side encryption: guide/04-encryption.md
+        - 5. CLI client setup: guide/05-cli-setup.md
+        - 6. CLI usage: guide/06-cli-usage.md
+        - 7. Web UI: guide/07-web-ui.md
+        - 8. HTTP API: guide/08-http-api.md
     - Architecture: architecture.md
-    - Configuration: configuration.md
     - API: /docs_api/index.html

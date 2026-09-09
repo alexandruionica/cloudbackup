@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>1. Installation - Cloudbackup Docs</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../custom.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "1. Installation";
+        var mkdocs_page_input_path = "guide/01-installation.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Cloudbackup Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">1. Installation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#11-linux-deb-rpm">1.1 Linux (.deb / .rpm)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#note-on-the-hardened-service-unit">Note on the hardened service unit</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#upgrading-and-uninstalling">Upgrading and uninstalling</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#12-windows-msi-installer">1.2 Windows — MSI installer</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#13-windows-portable-zip">1.3 Windows — portable zip</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#14-verifying-an-installation">1.4 Verifying an installation</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../02-getting-started/">2. Getting started</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../03-configuration/">3. Configuration reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../04-encryption/">4. Client-side encryption</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../05-cli-setup/">5. CLI client setup</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../06-cli-usage/">6. CLI usage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../07-web-ui/">7. Web UI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../08-http-api/">8. HTTP API</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="/docs_api/index.html">API</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Cloudbackup Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">User Guide</li>
+      <li class="breadcrumb-item active">1. Installation</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="1-installation">1. Installation</h1>
+<p>Pre-built packages are published on the project's GitHub Releases page:</p>
+<blockquote>
+<p><a href="https://github.com/alexandruionica/cloudbackup/releases">https://github.com/alexandruionica/cloudbackup/releases</a></p>
+</blockquote>
+<p>Each release (tagged <code>v&lt;version&gt;</code>, e.g. <code>v0.0.2</code>) carries:</p>
+<table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>Platform</th>
+<th>Example file name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Debian package</td>
+<td>Debian 11/12, Ubuntu 22.04/24.04 — <code>amd64</code> and <code>arm64</code></td>
+<td><code>cloudbackup_0.0.2-1~deb12_amd64.deb</code></td>
+</tr>
+<tr>
+<td>RPM package</td>
+<td>RHEL/Alma/Rocky 8 and 9 — <code>x86_64</code> and <code>aarch64</code></td>
+<td><code>cloudbackup-0.0.2-1.el9.x86_64.rpm</code></td>
+</tr>
+<tr>
+<td>Windows installer</td>
+<td>Windows x64 and ARM64</td>
+<td><code>cloudbackup_0.0.2_amd64.msi</code></td>
+</tr>
+<tr>
+<td>Windows portable zip</td>
+<td>Windows x64 and ARM64</td>
+<td><code>cloudbackup_0.0.2_windows_amd64.zip</code></td>
+</tr>
+</tbody>
+</table>
+<p>For platforms without a pre-built package (FreeBSD, macOS, other Linux
+distributions) build from source — see the
+<a href="https://github.com/alexandruionica/cloudbackup#readme">README in the repository root</a>.</p>
+<p>The same binary contains the server, the CLI client and all miscellaneous
+commands; installing the package on a machine gives you all of them.</p>
+<hr />
+<h2 id="11-linux-deb-rpm">1.1 Linux (<code>.deb</code> / <code>.rpm</code>)</h2>
+<p>Download the package that matches your distribution and architecture, then:</p>
+<pre><code class="language-bash"># Debian / Ubuntu
+sudo apt install ./cloudbackup_0.0.2-1~deb12_amd64.deb
+
+# RHEL / Alma / Rocky
+sudo dnf install ./cloudbackup-0.0.2-1.el9.x86_64.rpm
+</code></pre>
+<p>The package installs:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/usr/bin/cloudbackup</code></td>
+<td>The binary (server + CLI client)</td>
+</tr>
+<tr>
+<td><code>/etc/cloudbackup/config.yaml</code></td>
+<td>Sample server configuration (preserved on upgrade — marked as a config file)</td>
+</tr>
+<tr>
+<td><code>/usr/share/cloudbackup/webstatic/</code></td>
+<td>Web UI, this documentation and the Swagger API reference</td>
+</tr>
+<tr>
+<td><code>/usr/lib/systemd/system/cloudbackup.service</code></td>
+<td>systemd unit</td>
+</tr>
+<tr>
+<td><code>/var/lib/cloudbackup/</code></td>
+<td>Data directory (SQLite databases, reports), mode <code>0750</code></td>
+</tr>
+</tbody>
+</table>
+<p>It also creates a dedicated system user and group named <code>cloudbackup</code>, and
+<strong>enables — but does not start</strong> — the <code>cloudbackup</code> systemd service. The service
+stays stopped on purpose: the shipped config contains a placeholder password hash
+that you must replace before the first start. Chapter
+<a href="../02-getting-started/">2 — Getting started</a> walks through that.</p>
+<p>When you are ready:</p>
+<pre><code class="language-bash">sudo systemctl start cloudbackup
+sudo systemctl status cloudbackup
+journalctl -u cloudbackup -f        # follow the (JSON-formatted) logs
+</code></pre>
+<h3 id="note-on-the-hardened-service-unit">Note on the hardened service unit</h3>
+<p>The shipped unit runs the daemon as the unprivileged <code>cloudbackup</code> user with
+systemd hardening (<code>ProtectSystem=full</code>, <code>ProtectHome=true</code>,
+<code>ReadWritePaths=/var/lib/cloudbackup</code>). Two practical consequences:</p>
+<ol>
+<li><strong>The daemon can only back up files the <code>cloudbackup</code> user can read.</strong> System
+   paths are readable, but anything with restrictive permissions is not.</li>
+<li><strong><code>/home</code> is invisible to the service</strong> because of <code>ProtectHome=true</code>.</li>
+</ol>
+<p>If you need to back up home directories or root-only files, override the unit
+rather than editing the packaged file:</p>
+<pre><code class="language-bash">sudo systemctl edit cloudbackup
+</code></pre>
+<p>and, for example, relax the home protection and/or change the user:</p>
+<pre><code class="language-ini">[Service]
+ProtectHome=read-only
+# or, to run as root (weigh this against your threat model):
+#User=root
+#Group=root
+</code></pre>
+<p>Then <code>sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart cloudbackup</code>.</p>
+<h3 id="upgrading-and-uninstalling">Upgrading and uninstalling</h3>
+<pre><code class="language-bash"># Upgrade: install the newer package the same way; your edited
+# /etc/cloudbackup/config.yaml and /var/lib/cloudbackup are preserved.
+sudo apt install ./cloudbackup_&lt;newver&gt;_amd64.deb
+
+# Uninstall
+sudo apt remove cloudbackup       # dnf remove cloudbackup
+</code></pre>
+<hr />
+<h2 id="12-windows-msi-installer">1.2 Windows — MSI installer</h2>
+<p>Download the <code>.msi</code> matching your architecture (<code>amd64</code> for Intel/AMD,
+<code>arm64</code> for Windows-on-ARM) and either double-click it or install silently:</p>
+<pre><code class="language-powershell">msiexec /i cloudbackup_0.0.2_amd64.msi /qn /l*v install.log
+</code></pre>
+<p>The installer:</p>
+<ul>
+<li>installs <code>cloudbackup.exe</code> and <code>webstatic\</code> to <code>C:\Program Files\cloudbackup\</code>,</li>
+<li>places a sample config at <code>C:\ProgramData\cloudbackup\config.yaml</code> and creates
+  <code>C:\ProgramData\cloudbackup\data\</code> — <strong>both are preserved across upgrades and
+  uninstall</strong>, so an edited config and backup metadata are never clobbered,</li>
+<li>registers a Windows <strong>service named <code>cloudbackup</code></strong> (runs as <code>LocalSystem</code>,
+  start type <em>Manual</em> — installed but not auto-started, matching the Linux packages),</li>
+<li>adds an <em>Add/Remove Programs</em> entry.</li>
+</ul>
+<p>After editing the config (see <a href="../02-getting-started/">chapter 2</a>):</p>
+<pre><code class="language-powershell">notepad C:\ProgramData\cloudbackup\config.yaml
+Start-Service cloudbackup
+Get-Service cloudbackup
+</code></pre>
+<p>When running as a service, log output goes to the <strong>Windows Event Log</strong>
+(Event Viewer → Windows Logs → Application).</p>
+<p>Uninstall via <em>Add/Remove Programs</em> or:</p>
+<pre><code class="language-powershell">msiexec /x cloudbackup_0.0.2_amd64.msi /qn
+</code></pre>
+<p>Config and data under <code>C:\ProgramData\cloudbackup\</code> are intentionally retained.</p>
+<hr />
+<h2 id="13-windows-portable-zip">1.3 Windows — portable zip</h2>
+<p>The zip contains a <code>cloudbackup\</code> folder with <code>cloudbackup.exe</code>, the <code>webstatic\</code>
+assets and a sample config. Use it when you don't want (or aren't allowed) to
+install an MSI:</p>
+<pre><code class="language-powershell">Expand-Archive cloudbackup_0.0.2_windows_amd64.zip -DestinationPath C:\Tools
+cd C:\Tools\cloudbackup
+.\cloudbackup.exe server version
+</code></pre>
+<p>Run the server in a console (see chapter 2 for the config file):</p>
+<pre><code class="language-powershell">.\cloudbackup.exe server start --configfile .\config.yaml
+</code></pre>
+<p>There is no service registration with the portable zip; the process runs in the
+foreground until stopped.</p>
+<hr />
+<h2 id="14-verifying-an-installation">1.4 Verifying an installation</h2>
+<pre><code class="language-console">$ cloudbackup server version
+Server version: 0.0.2
+Build date: ...
+OS: linux
+Arch: amd64
+...
+</code></pre>
+<p><code>cloudbackup client version</code> prints the (same) client version. Once a server is
+running, <code>cloudbackup client server-version</code> fetches the version over the API —
+a handy end-to-end connectivity check.</p>
+<hr />
+<p>Next: <a href="../02-getting-started/">2. Getting started</a></p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../" class="btn btn-neutral float-left" title="Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../02-getting-started/" class="btn btn-neutral float-right" title="2. Getting started">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../02-getting-started/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

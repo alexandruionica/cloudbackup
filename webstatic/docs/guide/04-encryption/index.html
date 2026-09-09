@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>4. Client-side encryption - Cloudbackup Docs</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../custom.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "4. Client-side encryption";
+        var mkdocs_page_input_path = "guide/04-encryption.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Cloudbackup Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../01-installation/">1. Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../02-getting-started/">2. Getting started</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../03-configuration/">3. Configuration reference</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">4. Client-side encryption</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#41-how-it-works">4.1 How it works</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#42-the-rules-that-keep-your-data-recoverable">4.2 The rules that keep your data recoverable</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#43-failure-modes-you-might-see">4.3 Failure modes you might see</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#44-starting-over-after-sidecar-loss-reset-keystore">4.4 Starting over after sidecar loss (reset-keystore)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#45-what-encryption-does-not-cover">4.5 What encryption does not cover</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../05-cli-setup/">5. CLI client setup</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../06-cli-usage/">6. CLI usage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../07-web-ui/">7. Web UI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../08-http-api/">8. HTTP API</a>
+                  </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="" href="/docs_api/index.html">API</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Cloudbackup Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">User Guide</li>
+      <li class="breadcrumb-item active">4. Client-side encryption</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="4-client-side-encryption">4. Client-side encryption</h1>
+<p>With <code>encrypt: true</code> on a backup definition, file contents are encrypted <strong>on
+the backup server, before upload</strong> — the cloud provider only ever sees
+ciphertext. This chapter explains how it works and, more importantly, how to
+operate it safely.</p>
+<pre><code class="language-yaml">backup:
+  - name: documents
+    encrypt: true
+    encrypt_pass: 'a-long-random-passphrase'
+    ...
+</code></pre>
+<h2 id="41-how-it-works">4.1 How it works</h2>
+<ul>
+<li>Each file is encrypted with streaming <strong>AES-256-GCM</strong>; data is never staged
+  unencrypted on disk and files of any size are handled in constant memory.</li>
+<li>The encryption key is derived from <code>encrypt_pass</code> with <strong>argon2id</strong>, a
+  memory-hard key-derivation function that makes brute-forcing the passphrase
+  expensive.</li>
+<li>Every encrypted target keeps a small <strong>keystore sidecar</strong> object in the
+  bucket at <code>&lt;prefix&gt;/.cbcrypt/keystore.v1.yaml</code>. It stores the KDF salt and
+  parameters, a keystore UUID and a password verifier — <strong>not</strong> the key itself.
+  The sidecar plus your passphrase are what make decryption possible.</li>
+<li>On the first encrypted backup to a target, the sidecar is created
+  automatically (with a conditional PUT, so two servers racing to create it
+  cannot corrupt each other).</li>
+<li>Encrypted objects carry a small header (including the keystore UUID), so the
+  on-the-wire size is slightly larger than the plaintext.</li>
+</ul>
+<p>The <code>.cbcrypt/</code> path segment is <strong>reserved</strong>: local files whose path contains a
+<code>.cbcrypt</code> component are skipped (counted as <code>skipped_reserved_path</code> in
+reports) to protect the metadata namespace in the bucket.</p>
+<h2 id="42-the-rules-that-keep-your-data-recoverable">4.2 The rules that keep your data recoverable</h2>
+<ol>
+<li><strong>The passphrase is unrecoverable by design.</strong> If you lose <code>encrypt_pass</code>,
+   every encrypted object becomes permanent noise. Store the passphrase in a
+   password manager / escrow independent from the backup server.</li>
+<li><strong>Don't delete the keystore sidecar.</strong> Without
+   <code>&lt;prefix&gt;/.cbcrypt/keystore.v1.yaml</code>, existing ciphertext cannot be
+   decrypted even with the right passphrase (the KDF salt lives there).
+   Bucket lifecycle or cleanup scripts must leave <code>.cbcrypt/</code> alone.</li>
+<li><strong>Don't change <code>encrypt_pass</code> on an existing job.</strong> The password is verified
+   against the keystore; a different password will fail verification rather
+   than silently writing a mix of keys.</li>
+<li><strong>Restores need both</strong>: a reachable sidecar and the same <code>encrypt_pass</code> in
+   the server config. Restore operations never create or modify the sidecar.</li>
+</ol>
+<h2 id="43-failure-modes-you-might-see">4.3 Failure modes you might see</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom (report counter / error)</th>
+<th>Meaning</th>
+<th>Recovery</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>keystore sidecar missing; cannot decrypt without it</code> (on restore)</td>
+<td>Sidecar was deleted from the bucket.</td>
+<td>Restore the sidecar object (e.g. from bucket versioning — one more reason to enable it).</td>
+</tr>
+<tr>
+<td><code>keystore_inconsistent</code> counter / backup refuses to encrypt</td>
+<td>Sidecar missing from the bucket, but the local database says encrypted files exist for this job. Bootstrapping a fresh keystore would silently orphan them.</td>
+<td>Either restore the sidecar, or accept the loss and run <code>reset-keystore</code> (below).</td>
+</tr>
+<tr>
+<td><code>decrypt_keystore_mismatch</code> counter</td>
+<td>An object was encrypted under a different keystore than the current sidecar (e.g. the sidecar was re-created at some point).</td>
+<td>Those objects need the original sidecar to decrypt.</td>
+</tr>
+<tr>
+<td><code>skipped_too_large_for_target</code> counter</td>
+<td>The file's encrypted size exceeds the target's maximum object size, so it was skipped (other targets in the same job may still receive it).</td>
+<td>Store that file on a target with a larger object-size limit, or exclude it.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="44-starting-over-after-sidecar-loss-reset-keystore">4.4 Starting over after sidecar loss (<code>reset-keystore</code>)</h2>
+<p>If the sidecar is gone for good and you accept that previously-encrypted
+objects are lost, reset the job's local encryption state:</p>
+<pre><code class="language-console">$ cloudbackup server reset-keystore -c /etc/cloudbackup/config.yaml documents
+This will clear the 'encrypted' flag for all files in the local DB for backup job &quot;documents&quot;.
+After this, the next backup run will treat all previously-encrypted files as needing re-upload.
+Any previously-encrypted objects already in the bucket will be unrecoverable unless their keystore sidecar is restored.
+Type the job name (&quot;documents&quot;) to confirm:
+</code></pre>
+<p>This is a <strong>server-side</strong> command (run it on the machine holding <code>data_dir</code>,
+with the server config). Add <code>-y</code> to skip the confirmation prompt in scripts.
+Also delete the stale <code>.cbcrypt/</code> object from the bucket if one is present, so
+the next backup run bootstraps a fresh keystore and re-uploads everything.</p>
+<h2 id="45-what-encryption-does-not-cover">4.5 What encryption does <em>not</em> cover</h2>
+<ul>
+<li><strong>File paths and metadata</strong> are visible to the object store as key names —
+  only file <em>contents</em> are encrypted.</li>
+<li>Enabling <code>encrypt: true</code> on a job that already has unencrypted backups does
+  not retroactively encrypt what is already in the bucket; files are encrypted
+  as they are (re-)uploaded.</li>
+</ul>
+<hr />
+<p>Next: <a href="../05-cli-setup/">5. CLI client setup</a></p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../03-configuration/" class="btn btn-neutral float-left" title="3. Configuration reference"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../05-cli-setup/" class="btn btn-neutral float-right" title="5. CLI client setup">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../03-configuration/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../05-cli-setup/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

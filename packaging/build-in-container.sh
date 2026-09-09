@@ -43,6 +43,7 @@ cp -r webstatic/docs "${WEBROOT}/docs"
 cp -r webstatic/docs_api "${WEBROOT}/docs_api"
 cp webstatic/ui/index.html webstatic/ui/styles.css "${WEBROOT}/ui/"
 cp -r webstatic/ui/js "${WEBROOT}/ui/js"
+cp -r webstatic/ui/vendor "${WEBROOT}/ui/vendor"
 
 echo "############ [${DISTRO_TAG}/${PKG_ARCH}] running nfpm (${PKG_FAMILY}) ############"
 case "${PKG_FAMILY}" in
