@@ -124,6 +124,31 @@ class TestRestAPIRestore(unittest.TestCase):
             counter += 1
         logging.info("Restore for '{}' completed (restore_job_id='{}')".format(job_name, restore_job_id))
 
+    def _set_target_ratelimit(self, job_name, ratelimit):
+        """Set 'ratelimit' on the first target of $job_name via the config API.
+
+        The test_null backend serves restores from memory, so an unthrottled restore of the handful
+        of small files created by setUp() finishes in a couple of milliseconds - long before a
+        client can attach to /restore/watch. A rate limit makes the restore last long enough to be
+        observed; the same knob is used by the backup tests for the equivalent reason.
+        """
+        url = self.base_url + self.api_root + '/config'
+        r = requests.get(url=url, auth=(self.username, self.password))
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        config = r.json()['result']
+        job_index = None
+        for index, job in enumerate(config['backup']):
+            if job['name'] == job_name:
+                job_index = index
+                break
+        self.assertIsNotNone(job_index, "Did not find any backup job having name '{}'".format(job_name))
+        config['backup'][job_index]['target'][0]['ratelimit'] = ratelimit
+        r = requests.post(url=url, auth=(self.username, self.password), json=config)
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        self.assertNotEqual(r.json()['message'], "The supplied configuration matches the existing one so no actual "
+                                                 "changes are going to take effect")
+        logging.info("Set ratelimit='{}' on the first target of job '{}'".format(ratelimit, job_name))
+
     # --- input validation tests ---
 
     def test_restore_start_missing_name(self):
@@ -284,6 +309,11 @@ class TestRestAPIRestore(unittest.TestCase):
         job_name = "first_backup"
         # step 1: run a backup so the restore has something to reconstruct from
         backup_job_id = self._run_backup_and_wait(job_name)
+
+        # step 1b: throttle the target so the restore below takes roughly a second instead of a few
+        # milliseconds, leaving a wide margin for the watch subscribe in step 3. The backup above ran
+        # unthrottled because it happened before this change takes effect.
+        self._set_target_ratelimit(job_name, "1000")
 
         # step 2: start the restore
         url_start = self.base_url + self.api_root + '/restore/start'
