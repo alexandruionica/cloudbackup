@@ -136,6 +136,7 @@ jobs:
           Copy-Item -Recurse webstatic/docs_api "$stage/webstatic/docs_api"
           Copy-Item webstatic/ui/index.html, webstatic/ui/styles.css "$stage/webstatic/ui/"
           Copy-Item -Recurse webstatic/ui/js "$stage/webstatic/ui/js"
+          Copy-Item -Recurse webstatic/ui/vendor "$stage/webstatic/ui/vendor"
           # Windows-specific sample config (Windows paths + service commands).
           Copy-Item packaging/windows/config.yaml.sample "$stage/config.yaml.sample"
           Copy-Item README.md "$stage/README.md"

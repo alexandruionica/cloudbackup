@@ -25,3 +25,10 @@ ${DOCSSRCFOLDER}/.venv/bin/pip freeze
 echo "Running Python documentation generator ..."
 cd ${DOCSSRCFOLDER}/
 .venv/bin/mkdocs build
+if [ $? -ne 0 ]; then
+  echo 'Error running mkdocs build'
+  exit 1
+fi
+
+echo "Building single-file offline user guide ..."
+.venv/bin/python build_offline_guide.py

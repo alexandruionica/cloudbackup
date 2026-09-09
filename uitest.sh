@@ -21,6 +21,14 @@ fi
 # without the Unix exec bit and "npm test" fails with "tsc: Permission denied".
 chmod +x node_modules/.bin/* 2>/dev/null || true
 
+# The UI loads its Preact/htm runtime from webstatic/ui/vendor/ (committed) rather
+# than a CDN. Fail early if that copy has drifted from the pinned dependencies.
+echo "Checking vendored web UI dependencies are in sync ..."
+./vendor-deps.sh --check
+if [ $? -ne 0 ]; then
+    exit 1
+fi
+
 echo "Running web UI tests ..."
 npm test
 if [ $? -ne 0 ]; then

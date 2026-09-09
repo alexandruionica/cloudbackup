@@ -6,6 +6,17 @@ It has a server which takes care of backups, restores and reporting. Separately 
 The clients can also connect and see in realtime the progress of a backup. Additionally, an HTTP API (used by the client) is documented using [Swagger](https://swagger.io).
 Supported platforms are Linux, FreeBSD and MS Windows. While MacOS is not integrated into the CI/CD pipeline, it will most likely work albeit probably with minor issues to fix before a build is be possible.
 
+## Documentation ##
+
+The **[User Guide](documentation_src/docs/guide/README.md)** covers installation from the
+pre-built packages, first-run setup, the full configuration reference, client-side encryption,
+CLI setup and usage, the web UI and the HTTP API.
+
+The same guide is served by every running server at `http(s)://<server>/docs/` (with the
+interactive Swagger API reference at `/docs_api/`), and is also available as a single
+self-contained offline file: [`webstatic/docs/cloudbackup-user-guide.html`](webstatic/docs/cloudbackup-user-guide.html)
+(readable from disk, printable to PDF from a browser).
+
 If you wish to continue then to get started you need to make a build
 
 To do initial setup:

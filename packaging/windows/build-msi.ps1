@@ -83,6 +83,7 @@ Copy-Item -Recurse webstatic/docs "$web/docs"
 Copy-Item -Recurse webstatic/docs_api "$web/docs_api"
 Copy-Item webstatic/ui/index.html, webstatic/ui/styles.css "$web/ui/"
 Copy-Item -Recurse webstatic/ui/js "$web/ui/js"
+Copy-Item -Recurse webstatic/ui/vendor "$web/ui/vendor"
 # Windows-specific sample config (Windows paths + service commands), not the
 # Linux packaging/files/config.yaml.sample.
 Copy-Item packaging/windows/config.yaml.sample "$stage/config.yaml.sample"

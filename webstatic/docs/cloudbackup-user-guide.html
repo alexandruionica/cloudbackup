@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloudBackup User Guide</title>
+<style>
+:root { --fg: #1a1a1a; --muted: #555; --border: #d0d0d0; --accent: #0b5d8a; }
+* { box-sizing: border-box; }
+body { color: var(--fg); font: 16px/1.6 Georgia, 'Times New Roman', serif;
+       max-width: 54rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+h1, h2, h3, h4 { font-family: Helvetica, Arial, sans-serif; line-height: 1.25; }
+h1 { border-bottom: 3px solid var(--accent); padding-bottom: .3rem; margin-top: 3rem; }
+h2 { border-bottom: 1px solid var(--border); padding-bottom: .2rem; margin-top: 2.2rem; }
+a { color: var(--accent); }
+code, pre { font-family: 'SF Mono', Consolas, Menlo, monospace; font-size: .85em; }
+code { background: #f2f2f2; padding: .1em .3em; border-radius: 3px; }
+pre { background: #f7f7f7; border: 1px solid var(--border); border-radius: 4px;
+      padding: .8rem 1rem; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92em; }
+th, td { border: 1px solid var(--border); padding: .4rem .6rem; text-align: left;
+         vertical-align: top; }
+th { background: #f0f4f7; font-family: Helvetica, Arial, sans-serif; }
+blockquote { border-left: 4px solid var(--accent); margin: 1rem 0; padding: .2rem 1rem;
+             color: var(--muted); background: #f7fafc; }
+.cover { text-align: center; margin: 4rem 0 5rem; }
+.cover h1 { border: none; font-size: 2.4rem; }
+.cover p { color: var(--muted); }
+.toc { background: #f7fafc; border: 1px solid var(--border); border-radius: 6px;
+       padding: 1rem 2rem; }
+.toc ol { margin: .4rem 0; }
+section.chapter { page-break-before: always; }
+@media print {
+  body { max-width: none; font-size: 11pt; }
+  pre, blockquote, table, img { break-inside: avoid; }
+  a { color: inherit; }
+}
+</style>
+</head>
+<body>
+<div class="cover">
+  <h1>CloudBackup User Guide</h1>
+  <p>Single-file offline edition &mdash; generated 2026-09-09.<br>
+  Latest version: <a href="https://github.com/alexandruionica/cloudbackup">github.com/alexandruionica/cloudbackup</a></p>
+</div>
+<section class="chapter" id="guide-overview">
+<h1 id="cloudbackup-user-guide">CloudBackup User Guide</h1>
+<p>CloudBackup is an open-source backup tool that backs up files from Linux, FreeBSD and
+Microsoft Windows systems into cloud object stores — <strong>AWS S3</strong>, <strong>Azure Blob Storage</strong>
+and <strong>GCP Cloud Storage</strong> — with file-level granularity.</p>
+<p>A single binary provides everything:</p>
+<ul>
+<li>a <strong>server</strong> (daemon) that scans, uploads, restores, schedules and reports,</li>
+<li>a <strong>CLI client</strong> that talks to the server over its HTTP API,</li>
+<li>a built-in <strong>web UI</strong> and <strong>Swagger-documented HTTP API</strong>, both served by the daemon.</li>
+</ul>
+<h2 id="how-to-read-this-guide">How to read this guide</h2>
+<p>The chapters are ordered the way a new installation proceeds. If you are setting up
+CloudBackup for the first time, read chapters 1–2 in order; the rest are reference
+chapters you can dip into as needed.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Chapter</th>
+<th>What it covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><a href="#chapter-1">Installation</a></td>
+<td>Installing pre-built packages on Linux (<code>.deb</code>/<code>.rpm</code>) and Windows (<code>.msi</code>, portable <code>.zip</code>); upgrading; uninstalling</td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="#chapter-2">Getting started</a></td>
+<td>Core concepts, first-run configuration, starting the server, your first backup</td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="#chapter-3">Server configuration reference</a></td>
+<td>Every configuration option, defaults, validation rules and usage scenarios</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="#chapter-4">Client-side encryption</a></td>
+<td>How encryption works, the keystore sidecar, operational do's and don'ts</td>
+</tr>
+<tr>
+<td>5</td>
+<td><a href="#chapter-5">CLI client setup</a></td>
+<td>The client configuration file, environment variables and connection options</td>
+</tr>
+<tr>
+<td>6</td>
+<td><a href="#chapter-6">CLI usage</a></td>
+<td>Day-to-day tasks: starting, watching and stopping backups; reports; restores</td>
+</tr>
+<tr>
+<td>7</td>
+<td><a href="#chapter-7">Web UI</a></td>
+<td>Using the built-in browser UI</td>
+</tr>
+<tr>
+<td>8</td>
+<td><a href="#chapter-8">HTTP API</a></td>
+<td>Authentication, response format, common calls with <code>curl</code>, live watch streams</td>
+</tr>
+</tbody>
+</table>
+<h2 id="other-formats">Other formats</h2>
+<ul>
+<li><strong>On GitHub</strong> — you are probably reading it there right now; all chapters are plain
+  Markdown and cross-linked.</li>
+<li><strong>Served by the daemon</strong> — every CloudBackup server serves this guide at
+  <code>http(s)://&lt;server&gt;/docs/</code> and the interactive Swagger API reference at
+  <code>http(s)://&lt;server&gt;/docs_api/</code>. No authentication is required for the documentation
+  pages.</li>
+<li><strong>Offline / single file</strong> — the documentation build also produces a single
+  self-contained HTML file, <code>cloudbackup-user-guide.html</code> (in <code>webstatic/docs/</code> in the
+  repository, also served at <code>http(s)://&lt;server&gt;/docs/cloudbackup-user-guide.html</code>).
+  It works from a local disk without a web server and prints cleanly, so you can use
+  your browser's <em>Print → Save as PDF</em> to produce a PDF copy.</li>
+</ul>
+<h2 id="quick-demos">Quick demos</h2>
+<ul>
+<li>CLI usage and documentation access: <a href="https://www.youtube.com/watch?v=wyoO3pm_fmY">https://www.youtube.com/watch?v=wyoO3pm_fmY</a></li>
+<li>Web UI tour: <a href="https://youtu.be/EFjg5-VDSu8">https://youtu.be/EFjg5-VDSu8</a></li>
+</ul>
+</section>
+<section class="chapter" id="chapter-1">
+<h1 id="1-installation">1. Installation</h1>
+<p>Pre-built packages are published on the project's GitHub Releases page:</p>
+<blockquote>
+<p><a href="https://github.com/alexandruionica/cloudbackup/releases">https://github.com/alexandruionica/cloudbackup/releases</a></p>
+</blockquote>
+<p>Each release (tagged <code>v&lt;version&gt;</code>, e.g. <code>v0.0.2</code>) carries:</p>
+<table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>Platform</th>
+<th>Example file name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Debian package</td>
+<td>Debian 11/12, Ubuntu 22.04/24.04 — <code>amd64</code> and <code>arm64</code></td>
+<td><code>cloudbackup_0.0.2-1~deb12_amd64.deb</code></td>
+</tr>
+<tr>
+<td>RPM package</td>
+<td>RHEL/Alma/Rocky 8 and 9 — <code>x86_64</code> and <code>aarch64</code></td>
+<td><code>cloudbackup-0.0.2-1.el9.x86_64.rpm</code></td>
+</tr>
+<tr>
+<td>Windows installer</td>
+<td>Windows x64 and ARM64</td>
+<td><code>cloudbackup_0.0.2_amd64.msi</code></td>
+</tr>
+<tr>
+<td>Windows portable zip</td>
+<td>Windows x64 and ARM64</td>
+<td><code>cloudbackup_0.0.2_windows_amd64.zip</code></td>
+</tr>
+</tbody>
+</table>
+<p>For platforms without a pre-built package (FreeBSD, macOS, other Linux
+distributions) build from source — see the
+<a href="https://github.com/alexandruionica/cloudbackup#readme">README in the repository root</a>.</p>
+<p>The same binary contains the server, the CLI client and all miscellaneous
+commands; installing the package on a machine gives you all of them.</p>
+<hr />
+<h2 id="11-linux-deb-rpm">1.1 Linux (<code>.deb</code> / <code>.rpm</code>)</h2>
+<p>Download the package that matches your distribution and architecture, then:</p>
+<pre><code class="language-bash"># Debian / Ubuntu
+sudo apt install ./cloudbackup_0.0.2-1~deb12_amd64.deb
+
+# RHEL / Alma / Rocky
+sudo dnf install ./cloudbackup-0.0.2-1.el9.x86_64.rpm
+</code></pre>
+<p>The package installs:</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/usr/bin/cloudbackup</code></td>
+<td>The binary (server + CLI client)</td>
+</tr>
+<tr>
+<td><code>/etc/cloudbackup/config.yaml</code></td>
+<td>Sample server configuration (preserved on upgrade — marked as a config file)</td>
+</tr>
+<tr>
+<td><code>/usr/share/cloudbackup/webstatic/</code></td>
+<td>Web UI, this documentation and the Swagger API reference</td>
+</tr>
+<tr>
+<td><code>/usr/lib/systemd/system/cloudbackup.service</code></td>
+<td>systemd unit</td>
+</tr>
+<tr>
+<td><code>/var/lib/cloudbackup/</code></td>
+<td>Data directory (SQLite databases, reports), mode <code>0750</code></td>
+</tr>
+</tbody>
+</table>
+<p>It also creates a dedicated system user and group named <code>cloudbackup</code>, and
+<strong>enables — but does not start</strong> — the <code>cloudbackup</code> systemd service. The service
+stays stopped on purpose: the shipped config contains a placeholder password hash
+that you must replace before the first start. Chapter
+<a href="#chapter-2">2 — Getting started</a> walks through that.</p>
+<p>When you are ready:</p>
+<pre><code class="language-bash">sudo systemctl start cloudbackup
+sudo systemctl status cloudbackup
+journalctl -u cloudbackup -f        # follow the (JSON-formatted) logs
+</code></pre>
+<h3 id="note-on-the-hardened-service-unit">Note on the hardened service unit</h3>
+<p>The shipped unit runs the daemon as the unprivileged <code>cloudbackup</code> user with
+systemd hardening (<code>ProtectSystem=full</code>, <code>ProtectHome=true</code>,
+<code>ReadWritePaths=/var/lib/cloudbackup</code>). Two practical consequences:</p>
+<ol>
+<li><strong>The daemon can only back up files the <code>cloudbackup</code> user can read.</strong> System
+   paths are readable, but anything with restrictive permissions is not.</li>
+<li><strong><code>/home</code> is invisible to the service</strong> because of <code>ProtectHome=true</code>.</li>
+</ol>
+<p>If you need to back up home directories or root-only files, override the unit
+rather than editing the packaged file:</p>
+<pre><code class="language-bash">sudo systemctl edit cloudbackup
+</code></pre>
+<p>and, for example, relax the home protection and/or change the user:</p>
+<pre><code class="language-ini">[Service]
+ProtectHome=read-only
+# or, to run as root (weigh this against your threat model):
+#User=root
+#Group=root
+</code></pre>
+<p>Then <code>sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart cloudbackup</code>.</p>
+<h3 id="upgrading-and-uninstalling">Upgrading and uninstalling</h3>
+<pre><code class="language-bash"># Upgrade: install the newer package the same way; your edited
+# /etc/cloudbackup/config.yaml and /var/lib/cloudbackup are preserved.
+sudo apt install ./cloudbackup_&lt;newver&gt;_amd64.deb
+
+# Uninstall
+sudo apt remove cloudbackup       # dnf remove cloudbackup
+</code></pre>
+<hr />
+<h2 id="12-windows-msi-installer">1.2 Windows — MSI installer</h2>
+<p>Download the <code>.msi</code> matching your architecture (<code>amd64</code> for Intel/AMD,
+<code>arm64</code> for Windows-on-ARM) and either double-click it or install silently:</p>
+<pre><code class="language-powershell">msiexec /i cloudbackup_0.0.2_amd64.msi /qn /l*v install.log
+</code></pre>
+<p>The installer:</p>
+<ul>
+<li>installs <code>cloudbackup.exe</code> and <code>webstatic\</code> to <code>C:\Program Files\cloudbackup\</code>,</li>
+<li>places a sample config at <code>C:\ProgramData\cloudbackup\config.yaml</code> and creates
+  <code>C:\ProgramData\cloudbackup\data\</code> — <strong>both are preserved across upgrades and
+  uninstall</strong>, so an edited config and backup metadata are never clobbered,</li>
+<li>registers a Windows <strong>service named <code>cloudbackup</code></strong> (runs as <code>LocalSystem</code>,
+  start type <em>Manual</em> — installed but not auto-started, matching the Linux packages),</li>
+<li>adds an <em>Add/Remove Programs</em> entry.</li>
+</ul>
+<p>After editing the config (see <a href="#chapter-2">chapter 2</a>):</p>
+<pre><code class="language-powershell">notepad C:\ProgramData\cloudbackup\config.yaml
+Start-Service cloudbackup
+Get-Service cloudbackup
+</code></pre>
+<p>When running as a service, log output goes to the <strong>Windows Event Log</strong>
+(Event Viewer → Windows Logs → Application).</p>
+<p>Uninstall via <em>Add/Remove Programs</em> or:</p>
+<pre><code class="language-powershell">msiexec /x cloudbackup_0.0.2_amd64.msi /qn
+</code></pre>
+<p>Config and data under <code>C:\ProgramData\cloudbackup\</code> are intentionally retained.</p>
+<hr />
+<h2 id="13-windows-portable-zip">1.3 Windows — portable zip</h2>
+<p>The zip contains a <code>cloudbackup\</code> folder with <code>cloudbackup.exe</code>, the <code>webstatic\</code>
+assets and a sample config. Use it when you don't want (or aren't allowed) to
+install an MSI:</p>
+<pre><code class="language-powershell">Expand-Archive cloudbackup_0.0.2_windows_amd64.zip -DestinationPath C:\Tools
+cd C:\Tools\cloudbackup
+.\cloudbackup.exe server version
+</code></pre>
+<p>Run the server in a console (see chapter 2 for the config file):</p>
+<pre><code class="language-powershell">.\cloudbackup.exe server start --configfile .\config.yaml
+</code></pre>
+<p>There is no service registration with the portable zip; the process runs in the
+foreground until stopped.</p>
+<hr />
+<h2 id="14-verifying-an-installation">1.4 Verifying an installation</h2>
+<pre><code class="language-console">$ cloudbackup server version
+Server version: 0.0.2
+Build date: ...
+OS: linux
+Arch: amd64
+...
+</code></pre>
+<p><code>cloudbackup client version</code> prints the (same) client version. Once a server is
+running, <code>cloudbackup client server-version</code> fetches the version over the API —
+a handy end-to-end connectivity check.</p>
+<hr />
+<p>Next: <a href="#chapter-2">2. Getting started</a></p>
+</section>
+<section class="chapter" id="chapter-2">
+<h1 id="2-getting-started">2. Getting started</h1>
+<p>This chapter takes you from a freshly installed package to a first successful
+backup and restore.</p>
+<h2 id="21-concepts-in-one-minute">2.1 Concepts in one minute</h2>
+<ul>
+<li><strong>One binary, two roles.</strong> <code>cloudbackup server ...</code> runs the backup engine as a
+  daemon; <code>cloudbackup client ...</code> is a thin CLI that talks to a (possibly remote)
+  server over its HTTP API. <code>cloudbackup misc ...</code> holds helpers such as password
+  hashing.</li>
+<li><strong>Backup definition (job).</strong> A named entry in the server config: which <code>paths</code>
+  to back up, what to exclude, when (<code>schedule</code>), and where to store the data
+  (one or more <code>target</code>s).</li>
+<li><strong>Target.</strong> An object store destination: a bucket + key <code>prefix</code> in AWS S3,
+  Azure Blob Storage or GCP Cloud Storage. A job with several targets uploads
+  every file to each of them.</li>
+<li><strong>Local state.</strong> The server keeps one SQLite database per backup job under
+  <code>data_dir</code> — it records what was uploaded, when and where, and powers diffing,
+  reports and restores. Losing it doesn't lose your data, but protect it anyway.</li>
+<li><strong>Users.</strong> API access uses HTTP Basic Auth against users defined in the server
+  config; <code>access: read</code> users can look but not touch, <code>access: write</code> users can
+  do everything.</li>
+</ul>
+<h2 id="22-hash-a-password">2.2 Hash a password</h2>
+<p>Passwords are stored in the server config as bcrypt hashes, never in plaintext:</p>
+<pre><code class="language-console">$ cloudbackup misc hash-password
+Enter password:
+Re-enter password:
+The hashed password is: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
+</code></pre>
+<p>Copy the hash — you'll paste it into the config next.</p>
+<h2 id="23-write-a-minimal-server-configuration">2.3 Write a minimal server configuration</h2>
+<p>The packages install a commented starting point (<code>/etc/cloudbackup/config.yaml</code>
+on Linux, <code>C:\ProgramData\cloudbackup\config.yaml</code> on Windows). A minimal but
+complete config looks like this:</p>
+<pre><code class="language-yaml"># Where the server keeps its SQLite databases and reports
+data_dir: /var/lib/cloudbackup
+
+# Linux packages install the web assets here; omit html_dir if you run
+# from a source checkout (it defaults to &quot;webstatic&quot; relative to the cwd)
+html_dir: /usr/share/cloudbackup/webstatic
+
+http:
+  bind_address: &quot;127.0.0.1:8080&quot;
+
+user:
+  - name: admin
+    pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
+    access: write
+
+backup:
+  - name: documents
+    paths:
+      - /srv/documents
+    target:
+      - name: s3-main
+        type: aws_s3
+        bucket: 'my-backup-bucket'
+        prefix: 'backups/server-01'
+        parameters:
+          - name: AWS_ACCESS_KEY_ID
+            value: AKIAIOSFODNN7EXAMPLE
+          - name: AWS_SECRET_ACCESS_KEY
+            value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+    schedule:
+      - '30 02 * * *'      # every night at 02:30
+</code></pre>
+<p>Two commands print full annotated examples at any time:</p>
+<pre><code class="language-bash">cloudbackup server config example     # server config, with every option commented
+cloudbackup client config example     # client config (chapter 5)
+</code></pre>
+<blockquote>
+<p><strong>Provider prerequisites:</strong> for AWS S3 and GCP Storage you must enable <strong>bucket
+object versioning</strong> — CloudBackup relies on it to keep multiple versions of a
+file. Details and per-provider credential options are in
+<a href="#chapter-3">chapter 3</a>.</p>
+</blockquote>
+<h2 id="24-validate-before-starting">2.4 Validate before starting</h2>
+<p>YAML indentation mistakes are easy to make and can silently move a setting into
+the wrong section. Two commands protect you:</p>
+<pre><code class="language-bash"># 1. Syntax + semantic validation (schedules, paths, target parameters, ...)
+cloudbackup server config validate -c /etc/cloudbackup/config.yaml
+
+# 2. Dump the *parsed* configuration (as JSON, secrets masked) and eyeball it —
+#    this is what the server will actually use, defaults included
+cloudbackup server config dump -c /etc/cloudbackup/config.yaml
+</code></pre>
+<h2 id="25-start-the-server">2.5 Start the server</h2>
+<p>On Linux (package install):</p>
+<pre><code class="language-bash">sudo systemctl start cloudbackup
+journalctl -u cloudbackup -f
+</code></pre>
+<p>On Windows (MSI install): <code>Start-Service cloudbackup</code>.</p>
+<p>Or in the foreground on any platform:</p>
+<pre><code class="language-bash">cloudbackup server start --configfile /etc/cloudbackup/config.yaml
+</code></pre>
+<p>Useful <code>server start</code> flags:</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-c, --configfile</code></td>
+<td>Path to the YAML config (required)</td>
+</tr>
+<tr>
+<td><code>-t, --textlog</code></td>
+<td>Human-readable log lines instead of the default JSON</td>
+</tr>
+<tr>
+<td><code>-l, --logfile FILE</code></td>
+<td>Log to a file instead of stdout</td>
+</tr>
+<tr>
+<td><code>-q, --quiet</code></td>
+<td>Suppress log output</td>
+</tr>
+<tr>
+<td><code>-d, --debug</code></td>
+<td>Debug logging — <strong>warning: prints secrets and passwords</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="26-point-the-cli-client-at-the-server">2.6 Point the CLI client at the server</h2>
+<p>Create <code>~/.cloudbackup.yaml</code> (the client's default config location; full details
+in <a href="#chapter-5">chapter 5</a>):</p>
+<pre><code class="language-yaml">---
+username: admin
+password: 'the-plaintext-password-you-hashed'
+address: http://127.0.0.1:8080
+</code></pre>
+<p>Check the connection end to end:</p>
+<pre><code class="language-console">$ cloudbackup client server-version
+Server version: 0.0.2
+...
+</code></pre>
+<h2 id="27-test-the-target-dry-run-back-up">2.7 Test the target, dry-run, back up</h2>
+<pre><code class="language-bash"># 1. Can the server actually reach the bucket with these credentials?
+cloudbackup client backup target test documents
+
+# 2. What would be backed up? (also verifies your exclusion rules)
+cloudbackup client backup dryrun documents
+
+# 3. Run it, watching per-file progress live
+cloudbackup client backup start documents --watch
+</code></pre>
+<p>While a job runs you can follow it from another terminal:</p>
+<pre><code class="language-bash">cloudbackup client backup list             # all jobs + brief status
+cloudbackup client backup status documents # detailed live counters
+cloudbackup client backup watch documents  # per-file event stream
+</code></pre>
+<p>Afterwards, inspect the report:</p>
+<pre><code class="language-bash">cloudbackup client backup report list documents
+cloudbackup client backup report show documents -i &lt;job-uuid&gt;
+</code></pre>
+<h2 id="28-restore-something">2.8 Restore something</h2>
+<pre><code class="language-bash"># Find the backup run to restore from
+cloudbackup client backup report list documents
+
+# No --file/--all-files: an interactive file browser opens in the terminal
+cloudbackup client restore start documents -i &lt;backup-job-uuid&gt; --watch
+</code></pre>
+<p>Restored files land on the <strong>server</strong>, under
+<code>&lt;data_dir&gt;/restores/&lt;backup-name&gt;/&lt;restore-job-id&gt;/</code> by default (configurable —
+see <code>restore_dir</code> in <a href="#chapter-3">chapter 3</a>, or override per restore
+with <code>--restore-dir</code>).</p>
+<h2 id="29-the-web-ui-and-api-docs">2.9 The web UI and API docs</h2>
+<p>Open <code>http://127.0.0.1:8080/</code> in a browser — it redirects to the web UI at
+<code>/ui/</code>. The same daemon serves this guide at <code>/docs/</code> and the interactive
+Swagger API reference at <code>/docs_api/</code>. See <a href="#chapter-7">chapter 7</a> and
+<a href="#chapter-8">chapter 8</a>.</p>
+<blockquote>
+<p>The default <code>bind_address</code> of <code>127.0.0.1</code> only accepts local connections. To
+use the CLI or web UI from another machine, bind to <code>0.0.0.0</code> (or a specific
+interface address) — and at that point enable HTTPS; see
+<a href="#34-http-and-https">chapter 3, §3.4</a>.</p>
+</blockquote>
+<hr />
+<p>Next: <a href="#chapter-3">3. Server configuration reference</a></p>
+</section>
+<section class="chapter" id="chapter-3">
+<h1 id="3-server-configuration-reference">3. Server configuration reference</h1>
+<p>The server is configured with a single YAML file, passed via
+<code>cloudbackup server start -c &lt;file&gt;</code>. This chapter documents <strong>every</strong> option,
+its default, validation rules and when you would use it.</p>
+<p>Three commands you will use constantly while editing configuration:</p>
+<pre><code class="language-bash">cloudbackup server config example              # print a fully commented example
+cloudbackup server config validate -c FILE     # syntax + semantic validation
+cloudbackup server config dump -c FILE         # print the parsed result (JSON, secrets masked)
+</code></pre>
+<p><code>dump</code> matters more than it sounds: YAML indentation errors often <em>parse fine</em>
+but land a setting in the wrong block. The dump shows the structure the server
+will actually run with, defaults included.</p>
+<p>Configuration is read once at startup — after editing the file, restart the
+service (<code>sudo systemctl restart cloudbackup</code> / <code>Restart-Service cloudbackup</code>).
+(The configuration can also be changed at runtime through the HTTP API's
+<code>POST /api/v1/config</code>, which persists to the same file — see
+<a href="#chapter-8">chapter 8</a>.)</p>
+<h2 id="31-top-level-layout">3.1 Top-level layout</h2>
+<pre><code class="language-yaml">data_dir: /var/lib/cloudbackup      # required
+restore_dir: /srv/restores          # optional
+html_dir: /usr/share/cloudbackup/webstatic   # optional
+user: [ ... ]                       # API users
+http: { ... }                       # plain-HTTP listener
+https: { ... }                      # TLS listener (disables http when enabled)
+backup: [ ... ]                     # one or more backup definitions
+notification: { ... }               # optional email / script notifications
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data_dir</code></td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>Directory for the server's internal SQLite databases (one per backup job) and job reports. Must exist and be writable by the user running the daemon. Protect it: it contains the metadata that powers diffing, reports and restores.</td>
+</tr>
+<tr>
+<td><code>restore_dir</code></td>
+<td>no</td>
+<td><code>&lt;data_dir&gt;/restores</code></td>
+<td>Base directory into which restored files are written. Each restore job creates <code>&lt;restore_dir&gt;/&lt;backup-name&gt;/&lt;restore-job-id&gt;/</code> underneath it. A restore request can override this per job.</td>
+</tr>
+<tr>
+<td><code>html_dir</code></td>
+<td>no</td>
+<td><code>webstatic</code> (relative to the working directory)</td>
+<td>Where the web UI, documentation and Swagger assets live. The Linux packages set this to <code>/usr/share/cloudbackup/webstatic</code>; the Windows installer's sample config points at the install directory.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="32-api-users-user">3.2 API users (<code>user</code>)</h2>
+<pre><code class="language-yaml">user:
+  - name: admin
+    pass: $2a$05$Ug1eUCXbSYU...   # bcrypt hash — cloudbackup misc hash-password
+    access: write
+  - name: monitoring
+    pass: $2a$05$Pgdwe14mHjO...
+    access: read
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>yes</td>
+<td>—</td>
+<td>Username for HTTP Basic Auth.</td>
+</tr>
+<tr>
+<td><code>pass</code></td>
+<td>yes</td>
+<td>—</td>
+<td><strong>bcrypt hash</strong> of the password. Generate with <code>cloudbackup misc hash-password</code>.</td>
+</tr>
+<tr>
+<td><code>access</code></td>
+<td>no</td>
+<td><code>read</code></td>
+<td><code>read</code> or <code>write</code>. <code>write</code> grants the whole API. <code>read</code> permits only a fixed read-only subset: listing backups and restores, dry-runs, watching progress, listing backup/restore reports, and reading the config.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scenarios:</strong> give <code>write</code> to admins and to the credentials used by the web UI
+if operators start/stop jobs from it; give <code>read</code> to dashboards or monitoring
+scripts that only list jobs and reports.</p>
+<h2 id="33-choosing-what-the-daemon-can-read">3.3 Choosing what the daemon can read</h2>
+<p>The daemon backs up files <em>as the OS user it runs as</em>. The packaged Linux
+service runs as the unprivileged <code>cloudbackup</code> user with systemd hardening that
+hides <code>/home</code> entirely — see the
+<a href="#note-on-the-hardened-service-unit">installation chapter</a> if
+your paths include home directories or root-only files.</p>
+<h2 id="34-http-and-https">3.4 <code>http</code> and <code>https</code></h2>
+<pre><code class="language-yaml">http:
+  bind_address: &quot;127.0.0.1:8080&quot;
+
+https:
+  enabled: true
+  bind_address: &quot;0.0.0.0:8443&quot;
+  ssl_cert_path: /etc/cloudbackup/cert.crt
+  ssl_key_path: /etc/cloudbackup/cert.key
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>http.bind_address</code></td>
+<td><code>127.0.0.1:8080</code></td>
+<td>Listen address for plain HTTP.</td>
+</tr>
+<tr>
+<td><code>https.enabled</code></td>
+<td><code>false</code></td>
+<td>When <code>true</code>, the HTTPS listener is started <strong>and the HTTP listener is disabled</strong> — only one of the two ever runs.</td>
+</tr>
+<tr>
+<td><code>https.bind_address</code></td>
+<td><code>127.0.0.1:8443</code></td>
+<td>Listen address for HTTPS.</td>
+</tr>
+<tr>
+<td><code>https.ssl_cert_path</code></td>
+<td>—</td>
+<td>PEM certificate (required when HTTPS is enabled; the file must exist).</td>
+</tr>
+<tr>
+<td><code>https.ssl_key_path</code></td>
+<td>—</td>
+<td>PEM private key (required when HTTPS is enabled).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scenarios:</strong></p>
+<ul>
+<li><em>Single machine, local CLI only</em> — keep the default <code>127.0.0.1:8080</code>; nothing
+  is exposed to the network.</li>
+<li><em>Backup server managed from other machines</em> — enable <code>https</code> on
+  <code>0.0.0.0:8443</code> with a certificate the client machines trust. Basic Auth
+  credentials travel with every request, so avoid plain HTTP across a network.</li>
+</ul>
+<h2 id="35-backup-backup-definitions">3.5 <code>backup</code> — backup definitions</h2>
+<p>Each list entry is one independent job:</p>
+<pre><code class="language-yaml">backup:
+  - name: documents
+    paths:
+      - /srv/documents
+      - /etc
+    exclusions:
+      - &quot;**/*.tmp&quot;
+      - /srv/documents/cache
+    dereference: true
+    checksum: false
+    schedule:
+      - '30 02 * * *'
+    encrypt: false
+    pre_run_script: /usr/local/bin/pre.sh
+    post_run_script: /usr/local/bin/post.sh
+    target:
+      - ...
+</code></pre>
+<h3 id="name-required"><code>name</code> (required)</h3>
+<p>Unique across all backup definitions. Used in every CLI command, API call and
+as the on-disk database filename, so it must be ASCII, must not contain <code>/</code> or
+<code>\</code> or the reserved substring <code>__</code>, and cannot be <code>.</code> or <code>..</code>.</p>
+<h3 id="paths-required"><code>paths</code> (required)</h3>
+<p>List of <strong>absolute</strong> paths (files or directories) to back up. Directories are
+walked recursively.</p>
+<h3 id="exclusions"><code>exclusions</code></h3>
+<p>Glob patterns (Bash-like, with globstar) removing matches from the scan:</p>
+<table>
+<thead>
+<tr>
+<th>Pattern element</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>*</code></td>
+<td>any run of characters, except path separators</td>
+</tr>
+<tr>
+<td><code>**</code></td>
+<td>any run of characters, <strong>including</strong> path separators</td>
+</tr>
+<tr>
+<td><code>?</code></td>
+<td>any single character except a path separator</td>
+</tr>
+<tr>
+<td><code>[abc]</code>, <code>[a-z]</code></td>
+<td>single character from a set / range</td>
+</tr>
+<tr>
+<td><code>[^class]</code></td>
+<td>single character <em>not</em> in the class</td>
+</tr>
+<tr>
+<td><code>{alt1,alt2}</code></td>
+<td>either alternative</td>
+</tr>
+</tbody>
+</table>
+<p>Examples: <code>**/*.log</code> excludes every <code>.log</code> file anywhere; <code>/var/lib/*.db</code>
+excludes <code>.db</code> files directly inside <code>/var/lib</code> but <strong>not</strong> in its
+subdirectories.</p>
+<blockquote>
+<p>Always verify exclusion rules with <code>cloudbackup client backup dryrun &lt;job&gt;</code> —
+it lists exactly what would be examined, uploaded and excluded, without
+touching the object store.</p>
+</blockquote>
+<h3 id="dereference-default-true"><code>dereference</code> (default: <code>true</code>)</h3>
+<p>How symbolic links are treated:</p>
+<ul>
+<li><code>true</code> — links are followed; the <em>content they point to</em> is backed up.</li>
+<li><code>false</code> — links are stored <em>as links</em> (their target path is recorded and
+  recreated on restore).</li>
+</ul>
+<p>Set <code>false</code> when backing up trees that contain internal symlinks (package
+trees, <code>alternatives</code>-style layouts) to avoid duplicating content or escaping
+the intended directory.</p>
+<h3 id="checksum-default-false"><code>checksum</code> (default: <code>false</code>)</h3>
+<p>How "has this file changed?" is decided between runs:</p>
+<ul>
+<li><code>false</code> — metadata comparison (size, timestamps). Fast; right for almost
+  everyone.</li>
+<li><code>true</code> — the file content is read and checksummed every run. Catches
+  modifications that preserve size and timestamps, at the cost of reading every
+  file on every run. Use for data where silent in-place changes are a real
+  concern and the dataset is small enough to read each time.</li>
+</ul>
+<h3 id="schedule"><code>schedule</code></h3>
+<p>A list of standard <strong>5-field cron expressions</strong> (<code>minute hour day-of-month
+month day-of-week</code>), plus the usual descriptors (<code>@daily</code>, <code>@hourly</code>,
+<code>@weekly</code>, ...). Multiple entries are allowed. An empty/omitted list means the
+job only runs when started manually (CLI, web UI or API).</p>
+<pre><code class="language-yaml">schedule:
+  - '05 01 * * *'     # daily at 01:05
+  - '00 13 * * 6'     # Saturdays at 13:00
+</code></pre>
+<p>Only one run of a given job can be active at a time.</p>
+<h3 id="encrypt-encrypt_pass"><code>encrypt</code> / <code>encrypt_pass</code></h3>
+<p>Client-side encryption of file contents before upload. <code>encrypt: true</code>
+requires a non-empty <code>encrypt_pass</code>. This feature has enough operational
+implications to deserve its own chapter — read
+<a href="#chapter-4">chapter 4 — Client-side encryption</a> <strong>before</strong> enabling it,
+in particular what happens if the password is lost (unrecoverable data).</p>
+<h3 id="versions_max_num-versions_max_age"><code>versions_max_num</code> / <code>versions_max_age</code></h3>
+<pre><code class="language-yaml">versions_max_num: 10    # keep at most 10 versions per file; 0 = unlimited
+versions_max_age: 6w    # drop versions older than 6 weeks;  0 = unlimited
+</code></pre>
+<p>Intended retention limits for old versions of backed-up files.</p>
+<blockquote>
+<p><strong>Current status:</strong> these two options are parsed and accepted, but retention
+enforcement is <strong>not yet implemented</strong> in this version — no versions are
+deleted regardless of the values. Manage retention with your bucket's
+lifecycle rules for now, and be careful that such rules don't delete versions
+you still need.</p>
+</blockquote>
+<h3 id="pre_run_script-post_run_script"><code>pre_run_script</code> / <code>post_run_script</code></h3>
+<p>Absolute path to a script or executable to run before / after each run of this
+job.</p>
+<ul>
+<li>On Unix-likes the file must be executable (<code>+x</code>); on Windows it must be a
+  <code>.bat</code> or <code>.ps1</code> script (or an executable).</li>
+<li>The script receives <strong>one argument: the job id</strong> (a UUID).</li>
+<li>The file must exist at server start, otherwise the server refuses to start.</li>
+<li><strong>Pre-run:</strong> a non-zero exit code cancels the whole backup run and marks it
+  failed; the script's combined stdout+stderr is captured into the error log
+  (large output increases server memory usage). Cancelling a job while the
+  pre-run script is executing waits for the script to finish — it is not
+  killed.</li>
+<li><strong>Post-run:</strong> runs regardless of whether the backup finished, failed or was
+  cancelled.</li>
+</ul>
+<p><strong>Scenario:</strong> snapshot a database before the run and release the snapshot after:</p>
+<pre><code class="language-yaml">pre_run_script: /usr/local/bin/take_db_snapshot.sh
+post_run_script: /usr/local/bin/remove_db_snapshot.sh
+</code></pre>
+<h2 id="36-target-where-the-data-goes">3.6 <code>target</code> — where the data goes</h2>
+<p>Each backup definition needs at least one target; with several targets every
+file is uploaded to each of them (e.g. S3 <em>and</em> Azure for provider
+redundancy).</p>
+<pre><code class="language-yaml">target:
+  - name: s3-main
+    type: aws_s3
+    bucket: 'my-backup-bucket'
+    prefix: 'backups/server-01'
+    ratelimit: 10 MB
+    parameters:
+      - name: AWS_ACCESS_KEY_ID
+        value: AKIA...
+      - name: AWS_SECRET_ACCESS_KEY
+        value: ...
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>yes</td>
+<td>Target name, referenced by restore commands (<code>--target</code>). Same character rules as backup names.</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>yes</td>
+<td><code>aws_s3</code>, <code>gcp_storage</code> or <code>azure_blob</code>. (<code>test_null</code> exists for the test suite; it discards data.)</td>
+</tr>
+<tr>
+<td><code>bucket</code></td>
+<td>yes</td>
+<td>Bucket / container name.</td>
+</tr>
+<tr>
+<td><code>prefix</code></td>
+<td>yes</td>
+<td>Key prefix under which this server's data is stored.</td>
+</tr>
+<tr>
+<td><code>ratelimit</code></td>
+<td>no (default <code>0</code>)</td>
+<td>Upload rate limit for this target, in bytes/second; accepts human units (<code>500 KB</code>, <code>10 MB</code>). <code>0</code> or unset = unlimited. Useful to keep a backup from saturating an office uplink.</td>
+</tr>
+<tr>
+<td><code>parameters</code></td>
+<td>per type</td>
+<td>List of <code>{name, value}</code> pairs, documented per provider below. Parameter <em>names</em> are case-insensitive; <em>values</em> are case-sensitive unless noted.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Shared advice for every provider:</strong></p>
+<ul>
+<li>Dedicate buckets to backups only, and give each server its own <code>prefix</code>.
+  Anything else writing under the same keys can corrupt backups.</li>
+<li>Lock the bucket down so only the backup credentials can read/write it.</li>
+<li>After configuring a target, run
+  <code>cloudbackup client backup target test &lt;job&gt;</code> to verify connectivity,
+  credentials and permissions before relying on it.</li>
+</ul>
+<h3 id="361-aws_s3">3.6.1 <code>aws_s3</code></h3>
+<p><strong>Required bucket setup:</strong> enable
+<a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/Versioning.html">S3 bucket versioning</a>.
+Also consider a lifecycle rule that aborts/purges incomplete multipart uploads
+older than a few days.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AWS_ACCESS_KEY_ID</code></td>
+<td>no*</td>
+<td>Access key id. *If set, <code>AWS_SECRET_ACCESS_KEY</code> must be set too (and vice-versa). If neither is set, the AWS SDK's <a href="https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials">standard credential resolution</a> is used — environment, shared credentials file, or EC2/ECS instance roles.</td>
+</tr>
+<tr>
+<td><code>AWS_SECRET_ACCESS_KEY</code></td>
+<td>no*</td>
+<td>Secret access key; see above.</td>
+</tr>
+<tr>
+<td><code>storage_class</code></td>
+<td>no</td>
+<td>One of <code>STANDARD</code>, <code>REDUCED_REDUNDANCY</code>, <code>STANDARD_IA</code>, <code>ONEZONE_IA</code>, <code>INTELLIGENT_TIERING</code> (case-sensitive).</td>
+</tr>
+<tr>
+<td><code>region</code></td>
+<td>no</td>
+<td>Lower-case AWS region (e.g. <code>us-east-1</code>). Only used as a fallback when the bucket's region cannot be auto-detected via the S3 API.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scenario — EC2 instance with an IAM role:</strong> omit both key parameters and
+grant the instance role access to the bucket; credentials never live in the
+config file.</p>
+<h3 id="362-gcp_storage">3.6.2 <code>gcp_storage</code></h3>
+<p><strong>Required bucket setup:</strong> enable
+<a href="https://cloud.google.com/storage/docs/using-object-versioning">object versioning</a>.</p>
+<p>Credentials come from a
+<a href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys">service account key</a>
+JSON file. The credential parameters below are <strong>all-or-nothing</strong>: specify none
+of them (then <a href="https://cloud.google.com/docs/authentication/production#finding_credentials_automatically">Application Default Credentials</a>
+are used — right choice on GCE/GKE) or all of them.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code>, <code>project_id</code>, <code>private_key_id</code>, <code>private_key</code>, <code>client_email</code>, <code>client_id</code>, <code>auth_uri</code>, <code>token_uri</code>, <code>auth_provider_x509_cert_url</code>, <code>client_x509_cert_url</code></td>
+<td>Copied field-for-field from the service account JSON key file. <strong><code>private_key</code> must be wrapped in double quotes</strong> (not single) so the embedded <code>\n</code> escapes survive YAML parsing.</td>
+</tr>
+<tr>
+<td><code>storage_class</code></td>
+<td>Optional; one of <code>multi_regional</code>, <code>regional</code>, <code>nearline</code>, <code>coldline</code>.</td>
+</tr>
+<tr>
+<td><code>disable_crc32c_hash</code></td>
+<td>Optional, default <code>false</code>. When <code>false</code>, a CRC32C hash is computed for each upload and GCP verifies it server-side — at the cost of one extra local read per file. Set to <code>yes</code>/<code>true</code> only if that read is too expensive; keeping the check on is strongly advised.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="363-azure_blob">3.6.3 <code>azure_blob</code></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>storage_account</code></td>
+<td><strong>yes</strong></td>
+<td>Storage account name (must be a Blob Storage account).</td>
+</tr>
+<tr>
+<td><code>storage_access_key</code></td>
+<td><strong>yes</strong></td>
+<td>Storage account access key.</td>
+</tr>
+<tr>
+<td><code>primary_blob_service_endpoint</code></td>
+<td>no</td>
+<td>Override endpoint URL (HTTPS only), as shown in the Azure portal under <em>Storage accounts → your account → Properties → Primary Blob Service Endpoint</em>. Defaults to <code>https://&lt;storage_account&gt;.blob.core.windows.net/</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="37-notification">3.7 <code>notification</code></h2>
+<p>Optional. Fires on backup/restore job lifecycle events. Two mechanisms, each a
+list (so different recipients/scripts can subscribe to different events):</p>
+<p>Event types: <code>started</code>, <code>finished</code>, <code>failed</code>, <code>cancelled</code>, <code>crashed</code>.
+When <code>type</code> is omitted, a block defaults to <code>failed</code> + <code>crashed</code> — the "only
+tell me when something is wrong" setting.</p>
+<h3 id="371-notificationemail">3.7.1 <code>notification.email</code></h3>
+<pre><code class="language-yaml">notification:
+  email:
+    - server: smtp.example.com
+      port: 587                # default &quot;25&quot;
+      user: backup-notify      # omit user/pass for localhost SMTP
+      pass: 'secret'
+      from: backup@example.com # optional
+      to: ops@example.com      # exactly one recipient
+      cc:                      # optional, multiple allowed
+        - manager@example.com
+      type: [failed, crashed]
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Required</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>server</code></td>
+<td>yes</td>
+<td>—</td>
+<td>SMTP server address. Gmail caps direct sending (~99 mails/day/account).</td>
+</tr>
+<tr>
+<td><code>port</code></td>
+<td>no</td>
+<td><code>25</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>user</code> / <code>pass</code></td>
+<td>no</td>
+<td>—</td>
+<td>SMTP auth. Can be omitted when <code>server</code> is <code>127.0.0.1</code>/<code>localhost</code>.</td>
+</tr>
+<tr>
+<td><code>from</code></td>
+<td>no</td>
+<td>—</td>
+<td>Sender address.</td>
+</tr>
+<tr>
+<td><code>to</code></td>
+<td>yes</td>
+<td>—</td>
+<td>Single recipient.</td>
+</tr>
+<tr>
+<td><code>cc</code></td>
+<td>no</td>
+<td>—</td>
+<td>List of additional recipients.</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>no</td>
+<td><code>[failed, crashed]</code></td>
+<td>Events this block fires on.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="372-notificationscript">3.7.2 <code>notification.script</code></h3>
+<pre><code class="language-yaml">notification:
+  script:
+    - path: /usr/local/bin/notify_hook.sh
+      type: [started, finished, failed, cancelled, crashed]
+</code></pre>
+<p>The script (executable, or <code>.bat</code>/<code>.ps1</code> on Windows) is invoked with <strong>six
+arguments</strong>:</p>
+<pre><code>JobType JobName JobId JobState JobError ReportFile
+</code></pre>
+<p><code>ReportFile</code> is the path to a plain-text file containing the job's JSON report
+(the <code>ResultBackupJobStatus</code> model in the <a href="#chapter-8">API documentation</a>).
+Use it to feed Slack webhooks, ticketing systems, or metrics.</p>
+<p>Test the whole notification setup at any time:</p>
+<pre><code class="language-bash">cloudbackup client notification test
+</code></pre>
+<hr />
+<p>Next: <a href="#chapter-4">4. Client-side encryption</a></p>
+</section>
+<section class="chapter" id="chapter-4">
+<h1 id="4-client-side-encryption">4. Client-side encryption</h1>
+<p>With <code>encrypt: true</code> on a backup definition, file contents are encrypted <strong>on
+the backup server, before upload</strong> — the cloud provider only ever sees
+ciphertext. This chapter explains how it works and, more importantly, how to
+operate it safely.</p>
+<pre><code class="language-yaml">backup:
+  - name: documents
+    encrypt: true
+    encrypt_pass: 'a-long-random-passphrase'
+    ...
+</code></pre>
+<h2 id="41-how-it-works">4.1 How it works</h2>
+<ul>
+<li>Each file is encrypted with streaming <strong>AES-256-GCM</strong>; data is never staged
+  unencrypted on disk and files of any size are handled in constant memory.</li>
+<li>The encryption key is derived from <code>encrypt_pass</code> with <strong>argon2id</strong>, a
+  memory-hard key-derivation function that makes brute-forcing the passphrase
+  expensive.</li>
+<li>Every encrypted target keeps a small <strong>keystore sidecar</strong> object in the
+  bucket at <code>&lt;prefix&gt;/.cbcrypt/keystore.v1.yaml</code>. It stores the KDF salt and
+  parameters, a keystore UUID and a password verifier — <strong>not</strong> the key itself.
+  The sidecar plus your passphrase are what make decryption possible.</li>
+<li>On the first encrypted backup to a target, the sidecar is created
+  automatically (with a conditional PUT, so two servers racing to create it
+  cannot corrupt each other).</li>
+<li>Encrypted objects carry a small header (including the keystore UUID), so the
+  on-the-wire size is slightly larger than the plaintext.</li>
+</ul>
+<p>The <code>.cbcrypt/</code> path segment is <strong>reserved</strong>: local files whose path contains a
+<code>.cbcrypt</code> component are skipped (counted as <code>skipped_reserved_path</code> in
+reports) to protect the metadata namespace in the bucket.</p>
+<h2 id="42-the-rules-that-keep-your-data-recoverable">4.2 The rules that keep your data recoverable</h2>
+<ol>
+<li><strong>The passphrase is unrecoverable by design.</strong> If you lose <code>encrypt_pass</code>,
+   every encrypted object becomes permanent noise. Store the passphrase in a
+   password manager / escrow independent from the backup server.</li>
+<li><strong>Don't delete the keystore sidecar.</strong> Without
+   <code>&lt;prefix&gt;/.cbcrypt/keystore.v1.yaml</code>, existing ciphertext cannot be
+   decrypted even with the right passphrase (the KDF salt lives there).
+   Bucket lifecycle or cleanup scripts must leave <code>.cbcrypt/</code> alone.</li>
+<li><strong>Don't change <code>encrypt_pass</code> on an existing job.</strong> The password is verified
+   against the keystore; a different password will fail verification rather
+   than silently writing a mix of keys.</li>
+<li><strong>Restores need both</strong>: a reachable sidecar and the same <code>encrypt_pass</code> in
+   the server config. Restore operations never create or modify the sidecar.</li>
+</ol>
+<h2 id="43-failure-modes-you-might-see">4.3 Failure modes you might see</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom (report counter / error)</th>
+<th>Meaning</th>
+<th>Recovery</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>keystore sidecar missing; cannot decrypt without it</code> (on restore)</td>
+<td>Sidecar was deleted from the bucket.</td>
+<td>Restore the sidecar object (e.g. from bucket versioning — one more reason to enable it).</td>
+</tr>
+<tr>
+<td><code>keystore_inconsistent</code> counter / backup refuses to encrypt</td>
+<td>Sidecar missing from the bucket, but the local database says encrypted files exist for this job. Bootstrapping a fresh keystore would silently orphan them.</td>
+<td>Either restore the sidecar, or accept the loss and run <code>reset-keystore</code> (below).</td>
+</tr>
+<tr>
+<td><code>decrypt_keystore_mismatch</code> counter</td>
+<td>An object was encrypted under a different keystore than the current sidecar (e.g. the sidecar was re-created at some point).</td>
+<td>Those objects need the original sidecar to decrypt.</td>
+</tr>
+<tr>
+<td><code>skipped_too_large_for_target</code> counter</td>
+<td>The file's encrypted size exceeds the target's maximum object size, so it was skipped (other targets in the same job may still receive it).</td>
+<td>Store that file on a target with a larger object-size limit, or exclude it.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="44-starting-over-after-sidecar-loss-reset-keystore">4.4 Starting over after sidecar loss (<code>reset-keystore</code>)</h2>
+<p>If the sidecar is gone for good and you accept that previously-encrypted
+objects are lost, reset the job's local encryption state:</p>
+<pre><code class="language-console">$ cloudbackup server reset-keystore -c /etc/cloudbackup/config.yaml documents
+This will clear the 'encrypted' flag for all files in the local DB for backup job &quot;documents&quot;.
+After this, the next backup run will treat all previously-encrypted files as needing re-upload.
+Any previously-encrypted objects already in the bucket will be unrecoverable unless their keystore sidecar is restored.
+Type the job name (&quot;documents&quot;) to confirm:
+</code></pre>
+<p>This is a <strong>server-side</strong> command (run it on the machine holding <code>data_dir</code>,
+with the server config). Add <code>-y</code> to skip the confirmation prompt in scripts.
+Also delete the stale <code>.cbcrypt/</code> object from the bucket if one is present, so
+the next backup run bootstraps a fresh keystore and re-uploads everything.</p>
+<h2 id="45-what-encryption-does-not-cover">4.5 What encryption does <em>not</em> cover</h2>
+<ul>
+<li><strong>File paths and metadata</strong> are visible to the object store as key names —
+  only file <em>contents</em> are encrypted.</li>
+<li>Enabling <code>encrypt: true</code> on a job that already has unencrypted backups does
+  not retroactively encrypt what is already in the bucket; files are encrypted
+  as they are (re-)uploaded.</li>
+</ul>
+<hr />
+<p>Next: <a href="#chapter-5">5. CLI client setup</a></p>
+</section>
+<section class="chapter" id="chapter-5">
+<h1 id="5-cli-client-setup">5. CLI client setup</h1>
+<p>Every <code>cloudbackup client ...</code> command needs three things: the server
+<strong>address</strong>, a <strong>username</strong> and a <strong>password</strong> (a user from the server config —
+see <a href="#32-api-users-user">chapter 3, §3.2</a>). You can supply
+them in three ways; from highest to lowest precedence:</p>
+<ol>
+<li><strong>Command-line flags</strong> — <code>-a/--address</code>, <code>-u/--username</code>, <code>-p/--password</code></li>
+<li><strong>Environment variables</strong> — <code>CLOUDBACKUP_CLIENT_ADDRESS</code>,
+   <code>CLOUDBACKUP_CLIENT_USERNAME</code>, <code>CLOUDBACKUP_CLIENT_PASSWORD</code></li>
+<li><strong>Client configuration file</strong></li>
+</ol>
+<h2 id="51-the-client-configuration-file">5.1 The client configuration file</h2>
+<p>Default location:</p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linux / Unix</td>
+<td><code>$HOME/.cloudbackup.yaml</code></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><code>%HomeDrive%%HomePath%\.cloudbackup.yaml</code> (e.g. <code>C:\Users\you\.cloudbackup.yaml</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>A different file can be passed to any command with <code>-c/--configfile</code>.</p>
+<p>Format (print it any time with <code>cloudbackup client config example</code>):</p>
+<pre><code class="language-yaml">---
+username: admin
+password: 'the-plaintext-password'
+address: http://127.0.0.1:8080
+</code></pre>
+<ul>
+<li><code>address</code> must include the scheme: <code>http://host:port</code> or <code>https://host:port</code>.</li>
+<li><code>password</code> is the plaintext password (the <em>server</em> stores only the bcrypt
+  hash). Restrict the file's permissions accordingly:
+  <code>chmod 600 ~/.cloudbackup.yaml</code>.</li>
+<li>With <code>https://</code> addresses, the server's certificate must be trusted by the
+  client machine (public CA or the CA/cert added to the system trust store).</li>
+</ul>
+<h2 id="52-validating-the-client-configuration">5.2 Validating the client configuration</h2>
+<pre><code class="language-bash"># Is the merged configuration (file + env vars + flags) complete and valid?
+cloudbackup client config validate
+
+# Show the merged result (password masked)
+cloudbackup client config dump
+
+# End-to-end test: fetch the server's version over the API
+cloudbackup client server-version
+</code></pre>
+<h2 id="53-common-flags-on-every-client-command">5.3 Common flags on every client command</h2>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-c, --configfile FILE</code></td>
+<td>Use this client config file instead of the default location</td>
+</tr>
+<tr>
+<td><code>-u, --username</code> / <code>-p, --password</code> / <code>-a, --address</code></td>
+<td>Override credentials/address for this invocation</td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>Print the raw JSON response from the server instead of formatted text/tables — ideal for scripting (pipe into <code>jq</code>)</td>
+</tr>
+<tr>
+<td><code>-d, --debug</code></td>
+<td>Debug logging — <strong>prints secrets</strong>; use only while troubleshooting</td>
+</tr>
+<tr>
+<td><code>--jsonlog</code></td>
+<td>Log messages as JSON instead of plaintext</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Scenario — cron/automation without a config file:</strong> pass credentials through
+the environment so nothing is on the command line (visible in <code>ps</code>) and no
+file needs distributing:</p>
+<pre><code class="language-bash">export CLOUDBACKUP_CLIENT_ADDRESS=&quot;https://backup.internal:8443&quot;
+export CLOUDBACKUP_CLIENT_USERNAME=&quot;automation&quot;
+export CLOUDBACKUP_CLIENT_PASSWORD=&quot;...&quot;
+cloudbackup client backup start documents --json
+</code></pre>
+<hr />
+<p>Next: <a href="#chapter-6">6. CLI usage</a></p>
+</section>
+<section class="chapter" id="chapter-6">
+<h1 id="6-cli-usage">6. CLI usage</h1>
+<p>This chapter covers day-to-day operations with <code>cloudbackup client</code>. All
+commands assume the client is configured as per <a href="#chapter-5">chapter 5</a>;
+all accept <code>--json</code> for machine-readable output.</p>
+<p>Command map:</p>
+<pre><code>cloudbackup client
+├── backup    start | stop | list | status | watch | dryrun
+│   ├── target   test
+│   └── report   list | show
+├── restore   start | stop | list | watch
+│   └── report   list | show
+├── notification  test
+├── config    validate | dump | example
+├── version
+└── server-version
+</code></pre>
+<h2 id="61-backups">6.1 Backups</h2>
+<h3 id="start-a-backup">Start a backup</h3>
+<pre><code class="language-bash">cloudbackup client backup start documents
+cloudbackup client backup start documents --watch    # start and follow progress live
+</code></pre>
+<p>The response includes the run's <strong>job id</strong> (a UUID) — you'll use it with
+<code>stop</code>, <code>watch</code>, <code>report show</code> and <code>restore start</code>.</p>
+<h3 id="monitor-running-backups">Monitor running backups</h3>
+<pre><code class="language-console">$ cloudbackup client backup list
+NAME        STATE     JOB ID                                START TIME            NEXT RUN
+documents   running   1b2b7f96-...                          2026-07-10T02:30:00Z  ...
+http_logs   stopped   -                                     -                     2026-08-01T08:00:00Z
+</code></pre>
+<pre><code class="language-bash"># Detailed live counters for one job: examined/uploaded/failed files,
+# transfer rates (1/5/15 min), current file, per-target rates ...
+cloudbackup client backup status documents
+
+# Live per-file event stream (what is being examined/uploaded right now)
+cloudbackup client backup watch documents
+cloudbackup client backup watch documents -i &lt;job-id&gt;   # only if this exact run is active
+</code></pre>
+<p><code>watch</code> is best-effort: if the server produces events faster than the client
+consumes them, events are dropped rather than slowing the backup down. Watching
+requires only <code>read</code> access, so it's safe to hand to operators.</p>
+<h3 id="stop-a-running-backup">Stop a running backup</h3>
+<pre><code class="language-bash">cloudbackup client backup stop documents
+cloudbackup client backup stop documents -i &lt;job-id&gt;   # guard: only stop this exact run
+</code></pre>
+<p>The <code>-i</code> form protects scripts against races — if the id doesn't match the
+currently running instance of that job, nothing is stopped.</p>
+<h3 id="dry-run">Dry run</h3>
+<pre><code class="language-bash">cloudbackup client backup dryrun documents
+</code></pre>
+<p>Walks the configured paths and prints what would be examined, uploaded and
+excluded — without contacting the object store. Use it after every change to
+<code>paths</code> or <code>exclusions</code>.</p>
+<h3 id="test-targets">Test targets</h3>
+<pre><code class="language-bash">cloudbackup client backup target test documents
+</code></pre>
+<p>Verifies that every target of the job is reachable and the credentials allow
+the needed operations. Run it after configuring a new target or rotating
+credentials.</p>
+<h2 id="62-backup-reports">6.2 Backup reports</h2>
+<p>Every run leaves a report on the server.</p>
+<pre><code class="language-bash"># Runs of the last 30 days (the default window)
+cloudbackup client backup report list documents
+
+# Custom window (RFC3339 timestamps)
+cloudbackup client backup report list documents \
+    --from-start-time 2026-06-01T00:00:00Z \
+    --until-start-time 2026-07-01T00:00:00Z
+
+# Full report of one run: state, timings, counters (uploaded / up-to-date /
+# failed / excluded ...), transfer totals, per-target details, script results
+cloudbackup client backup report show documents -i &lt;job-id&gt;
+</code></pre>
+<p><strong>Scenario — nightly verification script:</strong></p>
+<pre><code class="language-bash">state=$(cloudbackup client backup report show documents -i &quot;$id&quot; --json | jq -r .result.state)
+[ &quot;$state&quot; = finished ] || alert &quot;backup $id ended in state $state&quot;
+</code></pre>
+<h2 id="63-restores">6.3 Restores</h2>
+<h3 id="start-a-restore">Start a restore</h3>
+<p>Restores pull files from a <strong>specific past backup run</strong>, so first find its job
+id:</p>
+<pre><code class="language-bash">cloudbackup client backup report list documents
+</code></pre>
+<p>Then choose one of three selection modes:</p>
+<pre><code class="language-bash"># 1. Interactive: no --file/--all-files opens a terminal file browser
+#    in which you tick files/directories to restore
+cloudbackup client restore start documents -i &lt;backup-job-id&gt;
+
+# 2. Explicit files (repeat --file as needed)
+cloudbackup client restore start documents -i &lt;backup-job-id&gt; \
+    --file /srv/documents/report.odt --file /srv/documents/2026/
+
+# 3. Everything from that run
+cloudbackup client restore start documents -i &lt;backup-job-id&gt; --all-files
+</code></pre>
+<p>Options:</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-i, --job-id</code></td>
+<td><strong>Required.</strong> The backup run to restore from.</td>
+</tr>
+<tr>
+<td><code>--file PATH</code></td>
+<td>Absolute source path to restore; repeatable. Mutually exclusive with <code>--all-files</code>.</td>
+</tr>
+<tr>
+<td><code>--all-files</code></td>
+<td>Restore every file, directory and symlink from the run.</td>
+</tr>
+<tr>
+<td><code>--exclusion GLOB</code></td>
+<td>Glob pattern of files to skip (same syntax as backup exclusions); repeatable.</td>
+</tr>
+<tr>
+<td><code>--target NAME</code></td>
+<td>Which of the job's targets to fetch from (default: the first one).</td>
+</tr>
+<tr>
+<td><code>--restore-dir DIR</code></td>
+<td>Server-side destination override.</td>
+</tr>
+<tr>
+<td><code>-N, --non-interactive</code></td>
+<td>Fail instead of opening the file browser when no files were specified (for scripts).</td>
+</tr>
+<tr>
+<td><code>-w, --watch</code></td>
+<td>Watch progress immediately after starting.</td>
+</tr>
+</tbody>
+</table>
+<p>Files are written <strong>on the server</strong>, under
+<code>&lt;restore_dir&gt;/&lt;backup-name&gt;/&lt;restore-job-id&gt;/</code> (default <code>restore_dir</code> is
+<code>&lt;data_dir&gt;/restores</code>) — restores never overwrite the original files in place.
+Copy or move them from there once the restore finishes.</p>
+<blockquote>
+<p>Restoring from an encrypted backup requires the keystore sidecar in the
+bucket and the correct <code>encrypt_pass</code> in the server config — see
+<a href="#chapter-4">chapter 4</a>.</p>
+</blockquote>
+<h3 id="monitor-and-stop-restores">Monitor and stop restores</h3>
+<pre><code class="language-bash">cloudbackup client restore list                       # running restore jobs
+cloudbackup client restore watch documents            # live per-file progress
+cloudbackup client restore watch documents -i &lt;restore-job-id&gt;
+cloudbackup client restore stop documents
+cloudbackup client restore stop documents -i &lt;restore-job-id&gt;
+</code></pre>
+<h3 id="restore-reports">Restore reports</h3>
+<pre><code class="language-bash">cloudbackup client restore report list documents
+cloudbackup client restore report show documents -i &lt;restore-job-id&gt;
+</code></pre>
+<p>Same shape as backup reports: state, timings, per-file counters and errors.</p>
+<blockquote>
+<p>A failed or stopped restore can be <strong>resumed</strong> (skipping already-restored
+files) from the web UI or via the API's <code>/restore/resume</code> endpoint — see
+<a href="#chapter-7">chapter 7</a> and <a href="#chapter-8">chapter 8</a>. There is no CLI
+resume command at present; re-running <code>restore start</code> starts a fresh restore
+into a new directory.</p>
+</blockquote>
+<h2 id="64-notifications">6.4 Notifications</h2>
+<pre><code class="language-bash">cloudbackup client notification test
+</code></pre>
+<p>Triggers every configured notification (each email block, each script) with a
+test event, so you validate SMTP credentials and script plumbing without
+waiting for a real failure.</p>
+<h2 id="65-versions">6.5 Versions</h2>
+<pre><code class="language-bash">cloudbackup client version          # version of the local binary
+cloudbackup client server-version   # version info of the server, via the API
+</code></pre>
+<h2 id="66-server-side-commands-not-part-of-client">6.6 Server-side commands (not part of <code>client</code>)</h2>
+<p>These run on the backup server machine itself, against the server config file:</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cloudbackup server start -c FILE</code></td>
+<td>Run the daemon (<a href="#25-start-the-server">chapter 2</a>)</td>
+</tr>
+<tr>
+<td><code>cloudbackup server version</code></td>
+<td>Version + build info of the binary</td>
+</tr>
+<tr>
+<td><code>cloudbackup server config validate -c FILE</code></td>
+<td>Validate a server config</td>
+</tr>
+<tr>
+<td><code>cloudbackup server config dump -c FILE</code></td>
+<td>Print the parsed config (secrets masked)</td>
+</tr>
+<tr>
+<td><code>cloudbackup server config example</code></td>
+<td>Print a fully commented example config</td>
+</tr>
+<tr>
+<td><code>cloudbackup server reset-keystore -c FILE JOB</code></td>
+<td>Reset a job's encryption state (<a href="#44-starting-over-after-sidecar-loss-reset-keystore">chapter 4, §4.4</a>)</td>
+</tr>
+<tr>
+<td><code>cloudbackup misc hash-password</code></td>
+<td>bcrypt-hash a password for the <code>user:</code> section</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p>Next: <a href="#chapter-7">7. Web UI</a></p>
+</section>
+<section class="chapter" id="chapter-7">
+<h1 id="7-web-ui">7. Web UI</h1>
+<p>The daemon ships a minimalistic single-page web UI, served at:</p>
+<pre><code>http(s)://&lt;server-address&gt;/ui/
+</code></pre>
+<p>(<code>http(s)://&lt;server-address&gt;/</code> redirects there.) The UI's static files are
+served without authentication; every API call the UI makes carries your HTTP
+Basic Auth credentials.</p>
+<blockquote>
+<p><strong>No internet access required.</strong> The UI ships its entire runtime (Preact and
+htm) inside <code>webstatic/ui/vendor/</code>, served by the daemon itself, so it works
+unchanged on airgapped and DMZ networks. Nothing on the page is fetched from
+a third-party host.</p>
+</blockquote>
+<h2 id="71-connecting">7.1 Connecting</h2>
+<p>Click <strong>Connection</strong> (top right) and fill in:</p>
+<ul>
+<li><strong>Server URL</strong> — e.g. <code>http://127.0.0.1:8080</code> (usually pre-filled with the
+  address you loaded the UI from),</li>
+<li><strong>Username</strong> / <strong>Password</strong> — a user from the server config
+  (<a href="#32-api-users-user">chapter 3, §3.2</a>).</li>
+</ul>
+<p>Settings are stored in the browser's local storage — on a shared machine,
+prefer a <code>read</code>-access user. Users with <code>read</code> access can view jobs, watch
+progress and browse report lists, but starting/stopping backups and restores
+and reading full report details require <code>write</code> access.</p>
+<p>The header shows the connected server's version, and links to this
+<strong>Documentation</strong> and the <strong>API (Swagger)</strong> reference served by the same
+daemon.</p>
+<h2 id="72-the-job-list">7.2 The job list</h2>
+<p>The main screen shows one card per backup definition, refreshed automatically
+every few seconds. Each card shows the job's state (<code>running</code>, <code>stopped</code>,
+<code>finished</code>, <code>failed</code>, ...), last/next run times and live counters while
+running.</p>
+<p>Per-card actions:</p>
+<table>
+<thead>
+<tr>
+<th>Button</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Start</strong> / <strong>Stop</strong></td>
+<td>Start the job now / stop the currently running instance</td>
+</tr>
+<tr>
+<td><strong>Watch</strong></td>
+<td>Opens a live progress view — a streaming table of per-file events (examined, uploaded, up-to-date, excluded) with rates, as the backup runs</td>
+</tr>
+<tr>
+<td><strong>Reports</strong></td>
+<td>Past backup runs, newest first (paginated). Click a run for the full report: overview, transfer totals, examination/upload counters, deletion tracking, script results and client-side-encryption counters</td>
+</tr>
+<tr>
+<td><strong>Restore</strong></td>
+<td>Start a restore from this job (below)</td>
+</tr>
+<tr>
+<td><strong>Restore reports</strong></td>
+<td>Past restore runs, with details — and the <strong>Resume</strong> action</td>
+</tr>
+</tbody>
+</table>
+<p>When a restore is running for a job, the card also offers watch/stop for it.</p>
+<h2 id="73-restoring-from-the-ui">7.3 Restoring from the UI</h2>
+<p><strong>Restore</strong> opens a dialog where you:</p>
+<ol>
+<li>pick the <strong>backup run</strong> (source job id) to restore from,</li>
+<li>pick the <strong>target</strong> to fetch from (when the job has several),</li>
+<li>select <strong>what</strong> to restore — either <em>all files</em>, or specific ones via the
+   built-in file tree browser (directories expand lazily and large directories
+   paginate),</li>
+<li>optionally set a <strong>destination directory</strong> override and <strong>exclusion</strong>
+   patterns.</li>
+</ol>
+<p>Files are restored <strong>onto the server</strong>, under
+<code>&lt;restore_dir&gt;/&lt;backup-name&gt;/&lt;restore-job-id&gt;/</code> unless overridden — same
+semantics as the CLI (<a href="#63-restores">chapter 6, §6.3</a>).</p>
+<h2 id="74-resuming-a-failed-restore">7.4 Resuming a failed restore</h2>
+<p>In <strong>Restore reports</strong>, a restore that ended prematurely (failed, cancelled)
+offers a <strong>Resume</strong> button (as long as no other restore is currently running
+for that job). Resume continues into the <em>same</em> restore directory and skips
+files that were already restored — useful for large restores interrupted by
+network trouble.</p>
+<hr />
+<p>Next: <a href="#chapter-8">8. HTTP API</a></p>
+</section>
+<section class="chapter" id="chapter-8">
+<h1 id="8-http-api">8. HTTP API</h1>
+<p>Everything the CLI and web UI do goes through the server's HTTP API — you can
+script against it directly.</p>
+<ul>
+<li><strong>Base path:</strong> <code>http(s)://&lt;server&gt;/api/v1</code></li>
+<li><strong>Authoritative reference:</strong> interactive Swagger UI at
+  <code>http(s)://&lt;server&gt;/docs_api/</code>; raw spec at <code>/swagger.yaml</code> and
+  <code>/swagger.json</code>. This chapter is a practical introduction, the Swagger spec
+  documents every field of every model.</li>
+</ul>
+<h2 id="81-authentication-and-access-levels">8.1 Authentication and access levels</h2>
+<p>All <code>/api/v1</code> endpoints use <strong>HTTP Basic Auth</strong> with the users from the server
+config. Use HTTPS whenever requests cross a network — Basic Auth sends the
+password with every request.</p>
+<p><code>access: write</code> users can call everything. <code>access: read</code> users are limited to:</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Read-accessible endpoints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/config</code>, <code>/backup/list</code>, <code>/restore/list</code></td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/backup/dryrun</code>, <code>/backup/watch</code>, <code>/restore/watch</code>, <code>/report/backup/list</code>, <code>/report/restore/list</code></td>
+</tr>
+</tbody>
+</table>
+<p>Everything else (starting/stopping jobs, report <em>details</em>, config changes,
+notification tests) returns <code>403</code> for read users.</p>
+<h2 id="82-response-envelope">8.2 Response envelope</h2>
+<p>Every JSON endpoint answers with the same envelope:</p>
+<pre><code class="language-json">{
+  &quot;code&quot;: &quot;success&quot;,          // or &quot;error&quot;
+  &quot;message&quot;: &quot;...&quot;,           // human-readable, set on errors
+  &quot;result&quot;: ...,              // payload: object or array
+  &quot;next&quot;: &quot;...&quot;               // pagination token, on list endpoints
+}
+</code></pre>
+<p>List endpoints (<code>/report/backup/list</code>, <code>/report/restore/list</code>,
+<code>/report/backup/file/list</code>) paginate: pass the returned <code>next</code> token in the
+next request's <code>next</code> field until it comes back empty. <code>max_results</code> bounds the
+page size.</p>
+<h2 id="83-endpoint-overview">8.3 Endpoint overview</h2>
+<table>
+<thead>
+<tr>
+<th>Method &amp; path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /report/version</code></td>
+<td>Server version info</td>
+</tr>
+<tr>
+<td><code>GET /backup/list</code></td>
+<td>All backup jobs with live status</td>
+</tr>
+<tr>
+<td><code>POST /backup/start</code></td>
+<td>Start a job — body <code>{"name": "..."}</code></td>
+</tr>
+<tr>
+<td><code>POST /backup/stop</code></td>
+<td>Stop — body <code>{"name": "...", "job_id": "optional-guard"}</code></td>
+</tr>
+<tr>
+<td><code>POST /backup/dryrun</code></td>
+<td>Dry-run stream for a job</td>
+</tr>
+<tr>
+<td><code>POST /backup/watch</code></td>
+<td>Live progress event stream (SSE-style, see §8.5)</td>
+</tr>
+<tr>
+<td><code>POST /backup/target/test</code></td>
+<td>Test all targets of a job</td>
+</tr>
+<tr>
+<td><code>GET /restore/list</code></td>
+<td>Running restore jobs</td>
+</tr>
+<tr>
+<td><code>POST /restore/start</code></td>
+<td>Start a restore (see §8.4)</td>
+</tr>
+<tr>
+<td><code>POST /restore/stop</code></td>
+<td>Stop — body <code>{"name": "...", "restore_job_id": "optional"}</code></td>
+</tr>
+<tr>
+<td><code>POST /restore/resume</code></td>
+<td>Resume a partial restore — body <code>{"name", "target_name", "restore_job_id"}</code></td>
+</tr>
+<tr>
+<td><code>POST /restore/watch</code></td>
+<td>Live restore progress stream</td>
+</tr>
+<tr>
+<td><code>POST /report/backup/list</code></td>
+<td>Past backup runs — body <code>{"name", "from_start_time", "until_start_time", "max_results", "next"}</code> (times RFC3339)</td>
+</tr>
+<tr>
+<td><code>POST /report/backup/show</code></td>
+<td>Full report — body <code>{"name", "job_id"}</code></td>
+</tr>
+<tr>
+<td><code>POST /report/backup/file/list</code></td>
+<td>Browse files recorded in a run — body <code>{"name", "job_id", "path", "descend", "next"}</code></td>
+</tr>
+<tr>
+<td><code>POST /report/restore/list</code> / <code>POST /report/restore/show</code></td>
+<td>Same, for restores</td>
+</tr>
+<tr>
+<td><code>POST /report/notification/test</code></td>
+<td>Fire test notifications</td>
+</tr>
+<tr>
+<td><code>GET /config</code></td>
+<td>Current server config (secrets masked as <code>*****</code>)</td>
+</tr>
+<tr>
+<td><code>POST /config</code></td>
+<td>Replace the server config (persists to the YAML file)</td>
+</tr>
+<tr>
+<td><code>POST /config/backup</code></td>
+<td>Replace only the <code>backup</code> section</td>
+</tr>
+</tbody>
+</table>
+<h2 id="84-worked-examples">8.4 Worked examples</h2>
+<pre><code class="language-bash">BASE=http://127.0.0.1:8080/api/v1
+AUTH=admin:secret
+
+# Server version
+curl -su $AUTH $BASE/report/version
+
+# List jobs and their live state
+curl -su $AUTH $BASE/backup/list
+
+# Start a backup
+curl -su $AUTH -X POST -H 'Content-Type: application/json' \
+     -d '{&quot;name&quot;:&quot;documents&quot;}' $BASE/backup/start
+# → {&quot;code&quot;:&quot;success&quot;, &quot;result&quot;:{&quot;name&quot;:&quot;documents&quot;,&quot;job_id&quot;:&quot;1b2b7f96-...&quot;}}
+
+# Stop it (job_id optional but recommended as a guard)
+curl -su $AUTH -X POST -H 'Content-Type: application/json' \
+     -d '{&quot;name&quot;:&quot;documents&quot;,&quot;job_id&quot;:&quot;1b2b7f96-...&quot;}' $BASE/backup/stop
+
+# Backup runs of June 2026
+curl -su $AUTH -X POST -H 'Content-Type: application/json' \
+     -d '{&quot;name&quot;:&quot;documents&quot;,
+          &quot;from_start_time&quot;:&quot;2026-06-01T00:00:00Z&quot;,
+          &quot;until_start_time&quot;:&quot;2026-07-01T00:00:00Z&quot;}' \
+     $BASE/report/backup/list
+
+# Full report of one run
+curl -su $AUTH -X POST -H 'Content-Type: application/json' \
+     -d '{&quot;name&quot;:&quot;documents&quot;,&quot;job_id&quot;:&quot;1b2b7f96-...&quot;}' $BASE/report/backup/show
+
+# Restore two paths from that run
+curl -su $AUTH -X POST -H 'Content-Type: application/json' \
+     -d '{&quot;name&quot;:&quot;documents&quot;,
+          &quot;source_backup_job_id&quot;:&quot;1b2b7f96-...&quot;,
+          &quot;files&quot;:[&quot;/srv/documents/report.odt&quot;,&quot;/srv/documents/2026/&quot;]}' \
+     $BASE/restore/start
+# → {&quot;code&quot;:&quot;success&quot;,&quot;result&quot;:{&quot;name&quot;:&quot;documents&quot;,&quot;restore_job_id&quot;:&quot;...&quot;}}
+
+# ... or everything, to a chosen directory, from a chosen target
+curl -su $AUTH -X POST -H 'Content-Type: application/json' \
+     -d '{&quot;name&quot;:&quot;documents&quot;,&quot;source_backup_job_id&quot;:&quot;1b2b7f96-...&quot;,
+          &quot;all_files&quot;:true,&quot;target_name&quot;:&quot;s3-main&quot;,
+          &quot;restore_dir&quot;:&quot;/srv/restore-here&quot;}' \
+     $BASE/restore/start
+</code></pre>
+<h2 id="85-live-watch-streams">8.5 Live watch streams</h2>
+<p><code>POST /backup/watch</code>, <code>POST /restore/watch</code> and <code>POST /backup/dryrun</code> respond
+with a long-lived stream of <code>data: &lt;json&gt;</code> lines (Server-Sent-Events style,
+each event terminated by a single newline). Body:
+<code>{"name":"documents"}</code> — optionally with <code>"job_id"</code> to bind to one specific
+run.</p>
+<pre><code class="language-bash">curl -sN -u $AUTH -X POST -H 'Content-Type: application/json' \
+     -d '{&quot;name&quot;:&quot;documents&quot;}' $BASE/backup/watch
+</code></pre>
+<p>Each event carries: <code>sequence</code>, <code>name</code> (the file), <code>type</code>
+(file/directory/symlink), <code>operation_type</code> (<code>examine</code>, <code>upload</code>, <code>metadata</code>,
+<code>up_to_date</code>, <code>excluded</code>, <code>mark_deleted</code>), <code>percent_done</code>, <code>rate</code>,
+<code>store_name</code>/<code>store_type</code> and <code>error</code>. The stream is best-effort — under load,
+events are dropped rather than slowing the job — and ends with a plain-text
+completion message.</p>
+<h2 id="86-changing-configuration-over-the-api">8.6 Changing configuration over the API</h2>
+<p><code>GET /config</code> returns the full parsed configuration with every secret replaced
+by <code>*****</code>. <code>POST /config</code> accepts the same structure back: fields still set
+to <code>*****</code> mean "keep the existing secret", so the usual flow is <em>GET → modify
+→ POST</em> without ever handling plaintext secrets. The new configuration is
+validated like a config file at startup, applied live, and <strong>persisted to the
+server's YAML config file</strong>. <code>POST /config/backup</code> does the same for just the
+<code>backup:</code> list.</p>
+<hr />
+<p>Back to the <a href="#guide-overview">guide index</a></p>
+</section>
+</body>
+</html>

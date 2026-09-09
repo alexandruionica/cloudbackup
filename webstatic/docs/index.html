@@ -46,12 +46,29 @@
     </ul>
                 </li>
               </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="architecture/">Architecture</a>
-                </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/">Overview</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/01-installation/">1. Installation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/02-getting-started/">2. Getting started</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/03-configuration/">3. Configuration reference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/04-encryption/">4. Client-side encryption</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/05-cli-setup/">5. CLI client setup</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/06-cli-usage/">6. CLI usage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/07-web-ui/">7. Web UI</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="guide/08-http-api/">8. HTTP API</a>
+                  </li>
               </ul>
               <ul>
-                <li class="toctree-l1"><a class="reference internal" href="configuration/">Configuration</a>
+                <li class="toctree-l1"><a class="reference internal" href="architecture/">Architecture</a>
                 </li>
               </ul>
               <ul>
@@ -81,13 +98,67 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="welcome-to-docs">Welcome to Docs</h1>
-<p>The <strong>API</strong> menu item will redirect to Swagger UI. </p>
+                <h1 id="cloudbackup-documentation">CloudBackup Documentation</h1>
+<p>CloudBackup backs up files from Linux, FreeBSD and Windows systems into cloud
+object stores (AWS S3, Azure Blob Storage, GCP Cloud Storage), with a server
+daemon, a CLI client, a web UI and a Swagger-documented HTTP API.</p>
+<p><strong>Start here → <a href="guide/">User Guide</a></strong></p>
+<table>
+<thead>
+<tr>
+<th>Chapter</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="guide/01-installation/">1. Installation</a></td>
+<td>Pre-built packages: Linux <code>.deb</code>/<code>.rpm</code>, Windows <code>.msi</code> and portable zip</td>
+</tr>
+<tr>
+<td><a href="guide/02-getting-started/">2. Getting started</a></td>
+<td>First-run configuration and your first backup</td>
+</tr>
+<tr>
+<td><a href="guide/03-configuration/">3. Configuration reference</a></td>
+<td>Every server configuration option explained</td>
+</tr>
+<tr>
+<td><a href="guide/04-encryption/">4. Client-side encryption</a></td>
+<td>How encryption works and how to operate it safely</td>
+</tr>
+<tr>
+<td><a href="guide/05-cli-setup/">5. CLI client setup</a></td>
+<td>Client config file, environment variables, flags</td>
+</tr>
+<tr>
+<td><a href="guide/06-cli-usage/">6. CLI usage</a></td>
+<td>Backups, monitoring, reports, restores from the command line</td>
+</tr>
+<tr>
+<td><a href="guide/07-web-ui/">7. Web UI</a></td>
+<td>Using the built-in browser interface</td>
+</tr>
+<tr>
+<td><a href="guide/08-http-api/">8. HTTP API</a></td>
+<td>Scripting the server with <code>curl</code></td>
+</tr>
+</tbody>
+</table>
+<p>Other resources:</p>
+<ul>
+<li><strong>API (Swagger)</strong> — the <em>API</em> item in the navigation opens the interactive
+  Swagger UI served by this same server.</li>
+<li><strong><a href="architecture/">Architecture</a></strong> — internals overview for the curious.</li>
+<li><strong>Offline copy</strong> — <a href="cloudbackup-user-guide.html">cloudbackup-user-guide.html</a>
+  is this entire user guide as a single self-contained HTML file; save it
+  anywhere, read it without a network, or print it to PDF from your browser.</li>
+</ul>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href="architecture/" class="btn btn-neutral float-right" title="Architecture">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="guide/" class="btn btn-neutral float-right" title="Overview">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -111,7 +182,7 @@
     
     
     
-      <span><a href="architecture/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="guide/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
@@ -131,5 +202,5 @@
 
 <!--
 MkDocs version : 1.6.1
-Build Date UTC : 2025-01-29 10:00:16.619980+00:00
+Build Date UTC : 2026-09-09 04:17:21.368411+00:00
 -->

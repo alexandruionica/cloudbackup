@@ -30,6 +30,16 @@ else
 	@echo "Running on some kind of Unix"
 	./uitest.sh
 endif
+# Refresh webstatic/ui/vendor/ — the browser-side Preact/htm runtime the web UI
+# loads instead of a CDN. Run after bumping a version in webstatic/ui/package.json
+# and commit the result; "make uitest" verifies the committed copy is in sync.
+uivendor:
+	@echo "############ Vendoring web UI runtime dependencies ############"
+ifeq ($(OS),Windows_NT)
+	@echo "uivendor must be run from a Unix shell (it uses sha256sum/diff); the vendored files are committed, so Windows builds just consume them."
+else
+	cd webstatic/ui && npm install --no-audit --no-fund --silent && ./vendor-deps.sh
+endif
 # test coding practices
 testcp:
 	@$(GOCMD) version

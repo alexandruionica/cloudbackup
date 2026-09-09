@@ -45,12 +45,16 @@ a config copy, or it will be ignored on reload.
    leaking a secret here ships it offsite.
 
 6. **Plumb into the API / Swagger** if user-facing. Update
-   `webstatic/docs_api/swagger.yaml` with the field on the relevant schema,
-   then `make docs`. Update the `httpd/api_rest_config.go` payload struct if
-   it diverges from the YAML struct (some endpoints use trimmed views).
+   `webstatic/docs_api/swagger.yaml` **and** `swagger.json` with the field on
+   the relevant schema — both are hand-maintained and the Swagger UI loads the
+   JSON. Update the `httpd/api_rest_config.go` payload struct if it diverges
+   from the YAML struct (some endpoints use trimmed views).
 
-7. **Document** in `documentation_src/docs/configuration.md` and
-   `config.yaml` (the example file at repo root).
+7. **Document** in `documentation_src/docs/guide/03-configuration.md` and
+   `config.yaml` (the example file at repo root), then run `make docs` and
+   commit the regenerated `webstatic/docs/`. See the `documentation` skill.
+   State only what the code enforces — a parsed-but-unused field must be
+   documented as such.
 
 ## Validation
 - `go test -mod=vendor -race ./config/... ./shared/...`

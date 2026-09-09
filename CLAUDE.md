@@ -15,7 +15,7 @@ make inttest      # Run Python-based integration tests
 make cover        # Show HTML coverage report
 make deps         # go mod tidy + go mod vendor
 make run          # Build and run the binary
-make docs         # Regenerate Swagger API docs
+make docs         # Rebuild the docs site + offline guide (Swagger spec is hand-maintained)
 ```
 
 To run a single Go test:
