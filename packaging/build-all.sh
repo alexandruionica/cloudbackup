@@ -6,10 +6,9 @@ cd "${ROOT}"
 
 # Each spec: <base_image>|<pkg_family>|<distro_tag>
 TARGETS=(
-    "debian:11|deb|deb11"
     "debian:12|deb|deb12"
-    "ubuntu:22.04|deb|ubuntu22.04"
     "ubuntu:24.04|deb|ubuntu24.04"
+    "ubuntu:26.04|deb|ubuntu26.04"
     "rockylinux:8|rpm|el8"
     "rockylinux:9|rpm|el9"
 )

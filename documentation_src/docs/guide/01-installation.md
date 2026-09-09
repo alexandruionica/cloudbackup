@@ -8,7 +8,7 @@ Each release (tagged `v<version>`, e.g. `v0.0.2`) carries:
 
 | Asset | Platform | Example file name |
 |-------|----------|-------------------|
-| Debian package | Debian 11/12, Ubuntu 22.04/24.04 — `amd64` and `arm64` | `cloudbackup_0.0.2-1~deb12_amd64.deb` |
+| Debian package | Debian 12, Ubuntu 24.04/26.04 — `amd64` and `arm64` | `cloudbackup_0.0.2-1~deb12_amd64.deb` |
 | RPM package | RHEL/Alma/Rocky 8 and 9 — `x86_64` and `aarch64` | `cloudbackup-0.0.2-1.el9.x86_64.rpm` |
 | Windows installer | Windows x64 and ARM64 | `cloudbackup_0.0.2_amd64.msi` |
 | Windows portable zip | Windows x64 and ARM64 | `cloudbackup_0.0.2_windows_amd64.zip` |
