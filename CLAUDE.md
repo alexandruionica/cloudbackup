@@ -25,7 +25,7 @@ go test -v -run TestName ./path/to/package/...
 
 Integration tests require cloud credentials as environment variables (AWS, GCP, Azure) — see README.md for the full list.
 
-**Prerequisites:** Go 1.22+, golangci-lint v1.64.4, Python 3.12.3+, virtualenv, pip.
+**Prerequisites:** Go 1.26+, golangci-lint v1.64.4, Python 3.12.3+, virtualenv, pip.
 
 ## Architecture
 

@@ -4,7 +4,7 @@ Around December 2021 I stopped working on it and it lay dormant until April 2026
 
 It has a server which takes care of backups, restores and reporting. Separately a command line client capable to connect to the server and request on demand backups, restores and reporting. A minimalistic web UI is also provided.
 The clients can also connect and see in realtime the progress of a backup. Additionally, an HTTP API (used by the client) is documented using [Swagger](https://swagger.io).
-Supported platforms are Linux, FreeBSD and MS Windows. While MacOS is not integrated into the CI/CD pipeline, it will most likely work albeit probably with minor issues to fix before a build is be possible.
+Supported platforms are Linux, FreeBSD and MS Windows. While MacOS is not integrated into the CI/CD pipeline, it will most likely work albeit probably with minor issues to fix before a build will be possible.
 
 ## Documentation ##
 
@@ -21,7 +21,7 @@ If you wish to continue then to get started you need to make a build
 
 To do initial setup:
 
-*  install Golang 1.22 and golangci-lint v1.64.4 https://github.com/golangci/golangci-lint/releases/tag/v1.63.4
+*  install Golang 1.26 and golangci-lint v1.64.4 https://github.com/golangci/golangci-lint/releases/tag/v1.63.4
 *  set $GOPATH
 *  install Make, Python3 >=3.12.3 , Python3 Virtualenv, Python3 pip
 *  Clone repo

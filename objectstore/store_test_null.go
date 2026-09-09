@@ -231,6 +231,21 @@ func (objStore *StoreTestNull) Get(existingDbRecord shared.BackedUpFilePropertie
 	} else {
 		prepend = DataPrepend
 	}
+
+	// Pace the "download" when a rate limit is configured on the target. A real backend spends
+	// wall-clock time moving bytes over the network; this one serves objects out of memory (and
+	// serves nothing at all for records uploaded by an earlier process, since memObjects does not
+	// outlive the store instance), so an unthrottled restore of a handful of small files finishes
+	// before an API client has any chance to attach to /restore/watch. Integration tests that need
+	// an observable, still-running restore set a non-zero ratelimit for exactly this reason - the
+	// same knob the upload path already honors via NewFileReader(). Metadata downloads (DB copy /
+	// config copy) stay unthrottled, mirroring the short-circuit in Upload().
+	if objStore.rateLimit > 0 && !metadata {
+		if cancelled := objStore.throttleDownload(existingDbRecord.Size, existingDbRecord.Path); cancelled {
+			return true, nil
+		}
+	}
+
 	remoteKey := objStore.storePrefix + "/" + prepend + "/" + existingDbRecord.Path
 	objStore.memMu.Lock()
 	body, ok := objStore.memObjects[remoteKey]
@@ -271,6 +286,35 @@ func (objStore *StoreTestNull) Get(existingDbRecord shared.BackedUpFilePropertie
 		return false, err
 	}
 	return false, nil
+}
+
+// throttleDownload consumes $size bytes worth of tokens from the target's rate limiter before a
+// (pretend) download is served, so that test_null restores progress at the configured rate instead
+// of completing instantly. Tokens are consumed in chunks no larger than the limiter's burst because
+// rate.Limiter.WaitN refuses any request bigger than that.
+// returns: true when the job was cancelled while waiting for tokens
+func (objStore *StoreTestNull) throttleDownload(size int64, path string) (cancelled bool) {
+	if objStore.bucket == nil || objStore.bucket.Burst() < 1 {
+		return false
+	}
+	maxChunk := int64(objStore.bucket.Burst())
+	for remaining := size; remaining > 0; {
+		chunk := remaining
+		if chunk > maxChunk {
+			chunk = maxChunk
+		}
+		if err := objStore.bucket.WaitN(objStore.ctx, int(chunk)); err != nil {
+			if objStore.ctx.Err() != nil {
+				logger.Infof("Received cancellation request while downloading '%s'", path)
+				return true
+			}
+			logger.Warningf("While pausing before downloading '%s' the following error was received from the "+
+				"rate limiting token bucket: %s . Proceeding to download while ignoring the rate limiting", path, err)
+			return false
+		}
+		remaining -= chunk
+	}
+	return false
 }
 
 // bytesReaderOf returns an io.Reader over a copy of b — safe for use across

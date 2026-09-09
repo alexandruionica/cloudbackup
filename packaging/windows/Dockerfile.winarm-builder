@@ -6,7 +6,7 @@
 # environment so a plain `go build` produces a CGO-enabled windows/arm64 binary
 # (github.com/mattn/go-sqlite3 needs CGO). This is a real cross-compile on an
 # amd64 host — no emulation — so it is fast.
-ARG GO_IMAGE=golang:1.25-bookworm
+ARG GO_IMAGE=golang:1.26-bookworm
 ARG LLVM_MINGW_IMAGE=mstorsjo/llvm-mingw:latest
 
 FROM ${GO_IMAGE} AS go
