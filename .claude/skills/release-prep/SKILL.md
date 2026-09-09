@@ -33,13 +33,15 @@ proceed past a red step.
   surface that as a known gap before approving the release.
 
 ## 6. Docs are current
-- `make docs` — regenerates `webstatic/docs_api/swagger.json` from
-  `swagger.yaml` and the static site under `webstatic/docs/`. Diff the
-  result; if files changed, the developer forgot to regenerate before
-  committing — make a follow-up commit.
-- Skim `documentation_src/docs/configuration.md` against the current
+- `make docs` — rebuilds the static site under `webstatic/docs/` (mkdocs plus
+  the single-file offline guide). It does **not** touch the Swagger spec.
+  Diff the result; if files changed, the developer forgot to regenerate
+  before committing — make a follow-up commit.
+- Skim `documentation_src/docs/guide/03-configuration.md` against the current
   `shared/structs_config.go` — every yaml-tagged user-facing field should
   appear in the docs.
+- `webstatic/docs_api/swagger.yaml` and `swagger.json` are hand-maintained in
+  parallel and must stay equivalent; the `documentation` skill has the check.
 
 ## 7. Outstanding TODOs
 - `grep -rn "TODO" --include='*.go' .` — list any TODOs touching code paths

@@ -41,9 +41,11 @@ nothing else outside the package needs to know about the new provider.
    - A Python integration test in `integration_tests/` that uploads,
      lists, and deletes if you have CI credentials available.
 
-6. **Documentation**. Add a section to `documentation_src/docs/configuration.md`
-   listing the new target type and its parameters. Run `make docs` to
-   regenerate the static docs.
+6. **Documentation**. Add a section to
+   `documentation_src/docs/guide/03-configuration.md` (under "target") listing
+   the new target type and its parameters, matching the layout of the existing
+   `aws_s3` / `gcp_storage` / `azure_blob` sections. Run `make docs` and commit
+   the regenerated `webstatic/docs/`. See the `documentation` skill.
 
 ## Validation
 - `go build -mod=vendor ./...`
