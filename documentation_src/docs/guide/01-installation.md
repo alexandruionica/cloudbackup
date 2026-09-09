@@ -44,8 +44,9 @@ The package installs:
 | `/usr/lib/systemd/system/cloudbackup.service` | systemd unit |
 | `/var/lib/cloudbackup/` | Data directory (SQLite databases, reports), mode `0750` |
 
-It also creates a dedicated system user and group named `cloudbackup`, and
-**enables — but does not start** — the `cloudbackup` systemd service. The service
+It also creates a dedicated system user and group named `cloudbackup` (unused by
+default — see [the note below](#note-on-the-service-account)), and **enables —
+but does not start** — the `cloudbackup` systemd service. The service
 stays stopped on purpose: the shipped config contains a placeholder password hash
 that you must replace before the first start. Chapter
 [2 — Getting started](02-getting-started.md) walks through that.
@@ -58,34 +59,49 @@ sudo systemctl status cloudbackup
 journalctl -u cloudbackup -f        # follow the (JSON-formatted) logs
 ```
 
-### Note on the hardened service unit
+### Note on the service account
 
-The shipped unit runs the daemon as the unprivileged `cloudbackup` user with
-systemd hardening (`ProtectSystem=full`, `ProtectHome=true`,
-`ReadWritePaths=/var/lib/cloudbackup`). Two practical consequences:
+The shipped unit runs the daemon as `root`, with no systemd sandboxing. That is
+deliberate: a backup daemon that cannot read `/home`, `/etc` or any other
+root-only path backs up very little, and the failure mode (files silently
+missing from a backup) is worse than the alternative. The daemon backs up files
+*as the OS user it runs as*, so running as `root` is what lets it read
+everything you point it at.
 
-1. **The daemon can only back up files the `cloudbackup` user can read.** System
-   paths are readable, but anything with restrictive permissions is not.
-2. **`/home` is invisible to the service** because of `ProtectHome=true`.
-
-If you need to back up home directories or root-only files, override the unit
-rather than editing the packaged file:
+If that is more privilege than your threat model allows, harden it yourself —
+override the unit rather than editing the packaged file, so your changes survive
+package upgrades:
 
 ```bash
 sudo systemctl edit cloudbackup
 ```
 
-and, for example, relax the home protection and/or change the user:
+The package already creates an unprivileged system user and group named
+`cloudbackup` for exactly this purpose:
 
 ```ini
 [Service]
-ProtectHome=read-only
-# or, to run as root (weigh this against your threat model):
-#User=root
-#Group=root
+User=cloudbackup
+Group=cloudbackup
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/cloudbackup
 ```
 
-Then `sudo systemctl daemon-reload && sudo systemctl restart cloudbackup`.
+Then hand the state directory to that user and restart:
+
+```bash
+sudo chown -R cloudbackup:cloudbackup /var/lib/cloudbackup
+sudo systemctl daemon-reload && sudo systemctl restart cloudbackup
+```
+
+Two consequences to plan for before you do: the daemon can then only back up
+files the `cloudbackup` user can read, and `ProtectHome=true` makes `/home`
+invisible to the service entirely (use `ProtectHome=read-only` if you need to
+back up home directories). Drop or relax whichever directives get in the way —
+each one is independent.
 
 ### Upgrading and uninstalling
 
