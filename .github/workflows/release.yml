@@ -230,7 +230,19 @@ jobs:
         with:
           fetch-depth: 0 # generate_version.sh needs git history for the commit id
       - name: Build package in FreeBSD ${{ matrix.release }}
-        uses: vmactions/freebsd-vm@v1
+        # Our fork of vmactions/freebsd-vm. GitHub hosts no FreeBSD runner and
+        # this repo's Actions policy allows only GitHub-authored actions and our
+        # own, so using the fork keeps the policy narrow instead of widening it
+        # for a third party. Pinned to a commit, like the release action below,
+        # because this workflow holds contents:write and a floating tag would
+        # let a retag run unreviewed code with it.
+        #
+        # Sync with upstream deliberately, then re-pin:
+        #   gh repo sync alexandruionica/freebsd-vm
+        #
+        # Note this does not isolate the whole supply chain: at runtime the
+        # action still downloads anyvm.py and the VM images from anyvm-org.
+        uses: alexandruionica/freebsd-vm@8b0f1a8fc0ea0def307835c258940ca358fe6480 # v1.5.6
         with:
           release: ${{ matrix.release }}
           usesh: true

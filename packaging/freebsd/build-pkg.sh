@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build the FreeBSD .pkg. Must run ON FreeBSD: go-sqlite3 needs cgo, so there
 # is no cross-compile path from the Linux release runners the way there is for
-# the Windows zips. Use either the freebsd14 Vagrant VM or the vmactions VM the
+# the Windows zips. Use either the freebsd14 Vagrant VM or the FreeBSD VM the
 # release workflow spins up.
 #
 # The resulting package is tagged with the building host's ABI (FreeBSD:14:amd64
