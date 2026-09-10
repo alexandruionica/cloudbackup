@@ -434,6 +434,21 @@ class CustomSMTPHandler:
     def received_messages_count(self):
         return len(self.received_messages)
 
+
+def start_smtp_controller(handler, port=25025, ready_timeout=30):
+    """
+    Start an aiosmtpd SMTP server for handler. The aiosmtpd default ready timeout (5s) is too tight on a busy host
+    (seen on macOS). If start() fails the controller is stopped before re-raising: setUp failing means tearDown won't
+    run, so otherwise the server thread would keep the port bound and break every later test using it.
+    """
+    controller = Controller(handler, hostname='localhost', port=port, ready_timeout=ready_timeout)
+    try:
+        controller.start()
+    except Exception:
+        controller.stop(no_assert=True)
+        raise
+    return controller
+
 # mock smtp server, initial code taken from
 # https://notepad.mmakowski.com/Tech/E-mail%20Testing%20with%20Mock%20SMTP%20Server
 # class MockSMTPServer(smtpd.SMTPServer, threading.Thread):
