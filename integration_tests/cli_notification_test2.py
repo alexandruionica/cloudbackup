@@ -46,8 +46,7 @@ class TestCliNotification2(unittest.TestCase):
         # start SMTP server on Linux only as it doesn't work on other platforms
         if platform.system().lower() == 'linux':
             self.smtp_handler = CustomSMTPHandler()
-            self.smtp_controller = Controller(self.smtp_handler, hostname='localhost', port=25025)
-            self.smtp_controller.start()
+            self.smtp_controller = start_smtp_controller(self.smtp_handler)
         # start server
         self.base_url = "http://127.0.0.1:8080"
         self.daemon = BackupDaemon(config_path=self.server_config_file_path, base_url=self.base_url)

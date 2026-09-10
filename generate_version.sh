@@ -15,11 +15,11 @@ GCP_STORAGE_SDK=$(grep cloud.google.com/go/storage go.mod  | awk {'print $2'})
 AZURE_BLOB_STORAGE_SDK=$(grep github.com/Azure/azure-sdk-for-go/sdk/storage/azblob go.mod  | awk {'print $2'})
 
 LATEST_COMMIT_ID=$(git rev-parse --short HEAD)
-if [[ $(uname -s) == "FreeBSD" ]]; then
-  # FreeBSD's date doesn't support sub second
-  BUILD_START_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-else
+if [[ $(date -u +"%6N") =~ ^[0-9]{6}$ ]]; then
   BUILD_START_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")
+else
+  # BSD date (FreeBSD, macOS) doesn't support sub second and would print "%6N" as a literal "6N"
+  BUILD_START_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 fi
 
 cat << EOF > misc/version.go
