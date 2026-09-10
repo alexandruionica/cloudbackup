@@ -1,11 +1,11 @@
 ---
 name: packaging
-description: Build, debug or extend cloudbackup's native installers — the nfpm-driven Linux .deb/.rpm, the WiX v5 Windows .msi and zip, and the pkg(8) FreeBSD .pkg — plus the manual Release workflow that publishes them. Use when the user asks about packaging, `make packages` / `winpackage` / `freebsdpackage`, nfpm, WiX, `pkg create`, install paths, systemd units or rc.d scripts, pre/post install-remove scripts, or adding a new distro, architecture or OS target.
+description: Build, debug or extend cloudbackup's native installers — the nfpm-driven Linux .deb/.rpm, the WiX v5 Windows .msi and zip, the pkg(8) FreeBSD .pkg and the pkgbuild macOS .pkg — plus the manual Release workflow that publishes them. Use when the user asks about packaging, `make packages` / `winpackage` / `freebsdpackage` / `macospackage`, nfpm, WiX, `pkg create`, `pkgbuild`, launchd plists, code signing or notarization, install paths, systemd units or rc.d scripts, pre/post install-remove scripts, or adding a new distro, architecture or OS target.
 ---
 
-# Packaging — how the three installer families work
+# Packaging — how the four installer families work
 
-Three package families, one deliberate shape. Read this before changing any
+Four package families, one deliberate shape. Read this before changing any
 install path, adding a target, or debugging a package that installs wrong.
 
 ## The constraint that governs everything
@@ -13,15 +13,19 @@ install path, adding a target, or debugging a package that installs wrong.
 `database/database.go` imports `github.com/mattn/go-sqlite3`, so **every build
 needs `CGO_ENABLED=1`**. That single fact explains most of the design:
 
-- There is **no cross-compile path** for Linux or FreeBSD. Each package is
-  built on a host of its own OS and architecture.
+- There is **no cross-OS compile path**. Each package is built on a host
+  running its own OS.
 - CI uses native runners where GitHub has them (`ubuntu-24.04-arm`,
-  `windows-11-arm`) and a VM where it does not (FreeBSD).
-- The one exception is Windows/arm64, which cross-compiles via the clang-based
-  llvm-mingw toolchain — ordinary mingw gcc cannot emit Windows/arm64 objects.
+  `windows-11-arm`, `macos-26`, `macos-26-intel`) and a VM where it does not
+  (FreeBSD).
+- Two cross-*architecture* exceptions exist, both within one OS: Windows/arm64
+  via the clang-based llvm-mingw toolchain (ordinary mingw gcc cannot emit
+  Windows/arm64 objects), and macOS, where Xcode ships both slices' SDKs so
+  `CC="clang -arch <slice>"` is enough.
 
 If someone proposes swapping in pure-Go `modernc.org/sqlite`, that is the
 change that would delete the llvm-mingw dance and make FreeBSD/arm64 free.
+It would not help macOS, which needs no VM and cross-builds already.
 It is a real migration: driver name, plus the `SetMaxOpenConns(1)` and WAL
 tuning in `database/database.go` would need re-validating.
 
@@ -43,9 +47,13 @@ tuning in `database/database.go` would need re-validating.
 | FreeBSD pinned Go toolchain installer | `packaging/freebsd/install-go.sh` |
 | FreeBSD manifest, rc.d script, sample config | `packaging/freebsd/{manifest.template,cloudbackup.rc,config.yaml.sample}` |
 | FreeBSD lifecycle scripts | `packaging/freebsd/scripts/{post-install,pre-deinstall,post-deinstall}.sh` |
+| macOS build, staging, pkgbuild, signing | `packaging/macos/build-pkg.sh` |
+| macOS LaunchDaemon, sample config | `packaging/macos/{cloudbackup.plist,config.yaml.sample}` |
+| macOS lifecycle scripts + uninstaller | `packaging/macos/scripts/{preinstall,postinstall}.sh`, `packaging/macos/uninstall.sh` |
+| macOS operator docs (signing, launchctl, logs) | `packaging/macos/README.md` |
 | Release pipeline | `.github/workflows/release.yml` |
 
-## Common shape across all three
+## Common shape across all four
 
 Every package ships the same payload and behaves the same way:
 
@@ -59,14 +67,15 @@ Every package ships the same payload and behaves the same way:
    the short commit id, which is why every CI job checks out with
    `fetch-depth: 0`.
 
-| | Linux | Windows | FreeBSD |
-|---|---|---|---|
-| Binary | `/usr/bin/cloudbackup` | `C:\Program Files\cloudbackup\` | `/usr/local/bin/cloudbackup` |
-| Web UI | `/usr/share/cloudbackup/webstatic` | `…\cloudbackup\webstatic` | `/usr/local/share/cloudbackup/webstatic` |
-| Config | `/etc/cloudbackup/config.yaml` | `C:\ProgramData\cloudbackup\config.yaml` | `/usr/local/etc/cloudbackup/config.yaml` |
-| Data | `/var/lib/cloudbackup` | `C:\ProgramData\cloudbackup\data\` | `/var/db/cloudbackup` |
-| Service | systemd unit, enabled not started | SCM service, `Start="demand"` | rc.d script, not enabled |
-| Config preserved by | nfpm `config\|noreplace` | `Permanent`+`NeverOverwrite` component | not packaged; seeded by `+POST_INSTALL` |
+| | Linux | Windows | FreeBSD | macOS |
+|---|---|---|---|---|
+| Binary | `/usr/bin/cloudbackup` | `C:\Program Files\cloudbackup\` | `/usr/local/bin/cloudbackup` | `/usr/local/bin/cloudbackup` |
+| Web UI | `/usr/share/cloudbackup/webstatic` | `…\cloudbackup\webstatic` | `/usr/local/share/cloudbackup/webstatic` | `/usr/local/share/cloudbackup/webstatic` |
+| Config | `/etc/cloudbackup/config.yaml` | `C:\ProgramData\cloudbackup\config.yaml` | `/usr/local/etc/cloudbackup/config.yaml` | `/usr/local/etc/cloudbackup/config.yaml` |
+| Data | `/var/lib/cloudbackup` | `C:\ProgramData\cloudbackup\data\` | `/var/db/cloudbackup` | `/usr/local/var/cloudbackup` |
+| Service | systemd unit, enabled not started | SCM service, `Start="demand"` | rc.d script, not enabled | LaunchDaemon, `Disabled` true |
+| Config preserved by | nfpm `config\|noreplace` | `Permanent`+`NeverOverwrite` component | not packaged; seeded by `+POST_INSTALL` | not packaged; seeded by `postinstall` |
+| Removal | `apt`/`dnf remove` | `msiexec /x` | `pkg delete` | shipped `uninstall.sh` |
 
 ## Linux — nfpm in Docker
 
@@ -162,25 +171,71 @@ pkg create -m <metadata dir> -p <plist> -r <staged root> -o dist/packages
 - `install-go.sh` pins the Go toolchain rather than using the `go` port, whose
   version floats. Keep it in step with `GO_VERSION` at the top of `Vagrantfile`.
 
+## macOS — pkgbuild
+
+```sh
+make macospackage                    # host arch
+make macospackage PKG_ARCH=amd64     # cross-build the Intel slice on Apple Silicon
+```
+
+macOS ships GNU make, so plain `make` works here — unlike FreeBSD, which needs
+`gmake`. `build-pkg.sh` stages a root containing both `usr/local/...` and
+`Library/LaunchDaemons/...`, then runs `pkgbuild --install-location /`.
+
+- **`--ownership recommended` is load-bearing.** CI builds as an unprivileged
+  user; without it the payload would install owned by that user rather than
+  `root:wheel`.
+- The scripts dir passed to `--scripts` must contain files named exactly
+  `preinstall` and `postinstall`. The repo keeps them as `scripts/*.sh` and
+  renames on the way in, the same trick the FreeBSD `+POST_INSTALL` uses.
+- **A macOS .pkg has no uninstall phase** — Installer.app only ever adds files.
+  `uninstall.sh` ships in the payload as the analogue of the deb/rpm remove
+  scripts, and calls `pkgutil --forget` so a reinstall is not seen as a
+  downgrade. `preinstall` is therefore the only hook that can stop a running
+  daemon before its binary is replaced.
+- The LaunchDaemon ships with **`Disabled` true**. A plist in
+  `/Library/LaunchDaemons` is loaded automatically at next boot, and with the
+  placeholder hash still in the config the daemon would fail and be restarted
+  on a throttled loop. `KeepAlive`/`SuccessfulExit=false` plus
+  `ThrottleInterval 5` is the launchd spelling of `Restart=on-failure` /
+  `RestartSec=5s`.
+- **No system user**, unlike Linux and FreeBSD. macOS has no `useradd`, and
+  creating one needs `dscl` plus a free-UID search. The daemon runs as root
+  everywhere anyway; the plist's `UserName` key is the supported way down.
+- **XML comments cannot contain `--`.** Writing `--logfile` inside a comment in
+  the plist makes it unparseable. `plutil -lint` catches it.
+- Signing and notarization are driven entirely by env vars
+  (`MACOS_SIGN_IDENTITY`, `MACOS_NOTARY_KEY_*`) and are **off by default**, so
+  the build needs no Apple Developer account. The workflow maps repo secrets
+  onto them, so signing turns on by adding secrets rather than editing YAML.
+  Unsigned packages install fine via `sudo installer -pkg … -target /`;
+  Gatekeeper only blocks double-click.
+
 ## The release pipeline
 
 `.github/workflows/release.yml` is **manual-only** (`workflow_dispatch`) and
 **does not run tests** — tests stay a local concern. It reads
 `misc/version.txt`, fails early if tag `v<version>` already exists on origin,
 fans out to `linux-packages` (amd64 + arm64), `windows-zip`, `windows-msi`
-(amd64 + arm64 each) and `freebsd-package` (14.5 + 15.1), then publishes every
-artifact on a GitHub Release.
+(amd64 + arm64 each), `freebsd-package` (14.5 + 15.1) and `macos-package`
+(arm64 + amd64), then publishes every artifact on a GitHub Release.
+
+Both `.pkg` families land in the same release, so their filenames must stay
+distinguishable: FreeBSD carries a `.freebsd<major>.` infix, macOS a `_macos_`
+one. GitHub retires x64 macOS runners in Fall 2027, which will end the Intel leg.
 
 Bump `misc/version.txt` and commit **before** dispatching. See the
 `release-prep` skill for the pre-release checklist.
 
 ## Gotchas that have actually bitten
 
-- **The webstatic staging block is duplicated in four places** —
+- **The webstatic staging block is duplicated in five places** —
   `packaging/build-in-container.sh`, `packaging/windows/build-msi.ps1`, the
-  `windows-zip` job's "Assemble release tree" step in `release.yml`, and
-  `packaging/freebsd/build-pkg.sh`. Add a directory under `webstatic/` and you
-  must update **all four**, or that platform silently ships an incomplete UI.
+  `windows-zip` job's "Assemble release tree" step in `release.yml`,
+  `packaging/freebsd/build-pkg.sh` and `packaging/macos/build-pkg.sh`. Add a
+  directory under `webstatic/` and you must update **all five**, or that
+  platform silently ships an incomplete UI. This is the single most likely
+  thing to go wrong in this area.
 - **PowerShell `Copy-Item -Recurse` into an existing destination nests the
   source inside it** (`ui/js/js/...`). Create `ui/` but let `Copy-Item` create
   `ui/js` itself. Both Windows staging sites carry this comment.
@@ -198,7 +253,14 @@ Bump `misc/version.txt` and commit **before** dispatching. See the
   family's `overrides:` deps in `nfpm.yaml` are right for it.
 - **New architecture**: prefer a native runner. Emulated builds work but are
   slow enough to be worth avoiding in CI.
-- **New OS**: the FreeBSD layer is the template — a staged root, a native
-  packaging tool, an OS-idiomatic service definition, and a lifecycle-script
-  set that preserves config and data. Expect to add a CI job that builds on
-  that OS rather than cross-compiling, because of cgo.
+- **New OS**: the FreeBSD and macOS layers are the templates — a staged root,
+  a native packaging tool, an OS-idiomatic service definition, and a
+  lifecycle-script set that preserves config and data. Expect to add a CI job
+  that builds on that OS rather than cross-compiling, because of cgo; use a
+  native runner if GitHub has one, a VM action if not.
+- **Docs are part of the job.** A new platform means updating
+  `documentation_src/docs/guide/01-installation.md` (asset table plus a
+  per-platform section), the chapter tables in `guide/README.md` and
+  `docs/index.md`, and the Native installers section of the root `README.md` —
+  then rerunning `./generate_docs.sh` and committing the regenerated
+  `webstatic/docs/`. See the `documentation` skill.

@@ -1,6 +1,6 @@
 # CloudBackup Documentation
 
-CloudBackup backs up files from Linux, FreeBSD and Windows systems into cloud
+CloudBackup backs up files from Linux, FreeBSD, macOS and Windows systems into cloud
 object stores (AWS S3, Azure Blob Storage, GCP Cloud Storage), with a server
 daemon, a CLI client, a web UI and a Swagger-documented HTTP API.
 
@@ -8,7 +8,7 @@ daemon, a CLI client, a web UI and a Swagger-documented HTTP API.
 
 | Chapter | Contents |
 |---------|----------|
-| [1. Installation](guide/01-installation.md) | Pre-built packages: Linux `.deb`/`.rpm`, Windows `.msi` and portable zip |
+| [1. Installation](guide/01-installation.md) | Pre-built packages: Linux `.deb`/`.rpm`, Windows `.msi` and portable zip, FreeBSD and macOS `.pkg` |
 | [2. Getting started](guide/02-getting-started.md) | First-run configuration and your first backup |
 | [3. Configuration reference](guide/03-configuration.md) | Every server configuration option explained |
 | [4. Client-side encryption](guide/04-encryption.md) | How encryption works and how to operate it safely |

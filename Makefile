@@ -170,3 +170,18 @@ else
 	@echo "############ Building FreeBSD package ############"
 	sh packaging/freebsd/build-pkg.sh
 endif
+
+# Build the macOS .pkg installer. Must run ON macOS (go-sqlite3 needs cgo, and
+# pkgbuild ships with the Xcode command line tools). Unlike FreeBSD, macOS ships
+# GNU make, so plain `make` works here.
+#
+# Builds the host architecture by default; set PKG_ARCH=amd64 (or arm64) to
+# cross-build the other slice, which works because Xcode carries both SDKs.
+# Signing is off unless MACOS_SIGN_IDENTITY is set — see packaging/macos/README.md.
+macospackage:
+ifeq ($(OS),Windows_NT)
+	@echo "macOS packages must be built on macOS."
+else
+	@echo "############ Building macOS package ############"
+	PKG_ARCH="$(PKG_ARCH)" sh packaging/macos/build-pkg.sh
+endif

@@ -4,7 +4,7 @@ Around December 2021 I stopped working on it and it lay dormant until April 2026
 
 It has a server which takes care of backups, restores and reporting. Separately a command line client capable to connect to the server and request on demand backups, restores and reporting. A minimalistic web UI is also provided.
 The clients can also connect and see in realtime the progress of a backup. Additionally, an HTTP API (used by the client) is documented using [Swagger](https://swagger.io).
-Supported platforms are Linux, FreeBSD and MS Windows. While MacOS is not integrated into the CI/CD pipeline, it will most likely work albeit probably with minor issues to fix before a build will be possible.
+Supported platforms are Linux, FreeBSD, macOS and MS Windows. All four have native installers built and published by the release pipeline.
 
 ## Documentation ##
 
@@ -41,7 +41,7 @@ make
 
 ## Native installers ##
 
-Native, distribution-managed installers are produced for Linux, Windows and FreeBSD.
+Native, distribution-managed installers are produced for Linux, Windows, FreeBSD and macOS.
 
 * **Linux** — `make packages` builds `.deb` and `.rpm` packages (via `nfpm` in Docker;
   see `packaging/`). They install the binary, web UI, a sample `/etc/cloudbackup/config.yaml`,
@@ -72,7 +72,21 @@ Native, distribution-managed installers are produced for Linux, Windows and Free
   building host's ABI into the package and refuses to install across major releases, so
   the release workflow builds one package per supported branch (currently 14.5 and 15.1).
 
-All three installer types are built and attached to GitHub Releases by the `Release`
+* **macOS** — `make macospackage` (run on macOS) builds a native `.pkg` with
+  `pkgbuild` (see `packaging/macos/README.md`). It installs to
+  `/usr/local/bin/cloudbackup`, the web UI to `/usr/local/share/cloudbackup/webstatic`,
+  a config at `/usr/local/etc/cloudbackup/config.yaml`, data at
+  `/usr/local/var/cloudbackup`, and a LaunchDaemon at
+  `/Library/LaunchDaemons/eu.ionica.cloudbackup.plist` shipped **disabled** (a plist
+  there would otherwise load at next boot). Both Apple Silicon and Intel are built,
+  each on its own native runner; `PKG_ARCH=amd64` cross-builds the other slice locally,
+  since Xcode carries both SDKs. Packages are **unsigned** by default — install with
+  `sudo installer -pkg <file> -target /`, which Gatekeeper does not block. Setting the
+  `MACOS_SIGN_IDENTITY` / notarization secrets turns signing on with no workflow change.
+  A macOS package has no uninstall phase, so removal ships as
+  `/usr/local/share/cloudbackup/uninstall.sh`.
+
+All four installer types are built and attached to GitHub Releases by the `Release`
 workflow (`.github/workflows/release.yml`).
 
 ## LLM usage ##

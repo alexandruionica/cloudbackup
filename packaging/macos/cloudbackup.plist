@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchDaemon for the CloudBackup server — the macOS counterpart of
+  packaging/files/cloudbackup.service and packaging/freebsd/cloudbackup.rc.
+
+  Disabled is true on purpose. A plist dropped into /Library/LaunchDaemons is
+  otherwise loaded automatically at the next boot, and with the placeholder
+  bcrypt hash still in config.yaml the daemon would fail and be restarted on a
+  throttled loop. Shipping it disabled keeps "installed but not started"
+  consistent with every other platform; postinstall prints the enable command.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>eu.ionica.cloudbackup</string>
+
+    <key>Disabled</key>
+    <true/>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/cloudbackup</string>
+        <string>server</string>
+        <string>start</string>
+        <string>--configfile</string>
+        <string>/usr/local/etc/cloudbackup/config.yaml</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Restart only on failure, the launchd equivalent of systemd's
+         Restart=on-failure. ThrottleInterval matches RestartSec=5s; launchd's
+         default would be 10s. -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+
+    <!-- launchd gives a daemon no console, so send the JSON log somewhere
+         readable. The daemon's own logfile flag is deliberately not used;
+         launchd captures stdout/stderr instead, which keeps the plist the
+         single place a user has to look to redirect logs. -->
+    <key>StandardOutPath</key>
+    <string>/usr/local/var/log/cloudbackup.log</string>
+    <key>StandardErrorPath</key>
+    <string>/usr/local/var/log/cloudbackup.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/usr/local/var/cloudbackup</string>
+</dict>
+</plist>
