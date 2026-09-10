@@ -12,9 +12,11 @@ Each release (tagged `v<version>`, e.g. `v0.0.2`) carries:
 | RPM package | RHEL/Alma/Rocky 8 and 9 — `x86_64` and `aarch64` | `cloudbackup-0.0.2-1.el9.x86_64.rpm` |
 | Windows installer | Windows x64 and ARM64 | `cloudbackup_0.0.2_amd64.msi` |
 | Windows portable zip | Windows x64 and ARM64 | `cloudbackup_0.0.2_windows_amd64.zip` |
+| FreeBSD package | FreeBSD 14 and 15 — `amd64` | `cloudbackup-0.0.2_1.freebsd14.amd64.pkg` |
+| macOS package | macOS 13+ — Apple Silicon and Intel | `cloudbackup_0.0.2_macos_arm64.pkg` |
 
-For platforms without a pre-built package (FreeBSD, macOS, other Linux
-distributions) build from source — see the
+For other Linux distributions, or any platform without a pre-built package,
+build from source — see the
 [README in the repository root](https://github.com/alexandruionica/cloudbackup#readme).
 
 The same binary contains the server, the CLI client and all miscellaneous
@@ -179,7 +181,116 @@ foreground until stopped.
 
 ---
 
-## 1.4 Verifying an installation
+## 1.4 FreeBSD (`.pkg`)
+
+Packages are built per FreeBSD major release, because `pkg` refuses to install a
+package built for a different branch. Download the one matching your system
+(`freebsd14` or `freebsd15`):
+
+```sh
+sudo pkg add ./cloudbackup-0.0.2_1.freebsd14.amd64.pkg
+```
+
+The package installs:
+
+| Path | Purpose |
+|------|---------|
+| `/usr/local/bin/cloudbackup` | The binary (server + CLI client) |
+| `/usr/local/etc/cloudbackup/config.yaml` | Server configuration, seeded from the shipped sample on first install |
+| `/usr/local/share/cloudbackup/webstatic/` | Web UI, this documentation and the Swagger API reference |
+| `/usr/local/etc/rc.d/cloudbackup` | rc.d service script |
+| `/var/db/cloudbackup/` | Data directory (SQLite databases, reports), mode `0750` |
+
+Unlike the Linux packages it does **not** edit `/etc/rc.conf` — a package
+writing to it is not the FreeBSD way. Enable and start the service yourself once
+you have replaced the placeholder password hash, as chapter
+[2. Getting started](02-getting-started.md) describes:
+
+```sh
+sudo sysrc cloudbackup_enable=YES
+sudo service cloudbackup start
+sudo service cloudbackup status
+```
+
+The daemon runs as `root` for the same reason it does on Linux (see
+[the note above](#note-on-the-service-account)); set `cloudbackup_user` in
+`/etc/rc.conf` to run it as someone else. Logs go to syslog tagged
+`cloudbackup`, or to a file if you set `cloudbackup_logfile`.
+
+### Upgrading and uninstalling on FreeBSD
+
+```sh
+# Upgrade
+sudo pkg add -f ./cloudbackup-<newver>_1.freebsd14.amd64.pkg
+
+# Uninstall. Your config and /var/db/cloudbackup are kept.
+sudo pkg delete cloudbackup
+```
+
+---
+
+## 1.5 macOS (`.pkg`)
+
+Download the `.pkg` matching your Mac — `arm64` for Apple Silicon, `amd64` for
+Intel.
+
+These packages are currently **unsigned**, so Gatekeeper refuses to open them by
+double-click. Installing from a terminal is not subject to that check:
+
+```sh
+sudo installer -pkg cloudbackup_0.0.2_macos_arm64.pkg -target /
+```
+
+To use the graphical installer instead, clear the quarantine flag first:
+
+```sh
+xattr -d com.apple.quarantine cloudbackup_0.0.2_macos_arm64.pkg
+```
+
+The package installs:
+
+| Path | Purpose |
+|------|---------|
+| `/usr/local/bin/cloudbackup` | The binary (server + CLI client) |
+| `/usr/local/etc/cloudbackup/config.yaml` | Server configuration, seeded from the shipped sample on first install |
+| `/usr/local/share/cloudbackup/webstatic/` | Web UI, this documentation and the Swagger API reference |
+| `/Library/LaunchDaemons/eu.ionica.cloudbackup.plist` | launchd service definition, installed disabled |
+| `/usr/local/var/cloudbackup/` | Data directory (SQLite databases, reports), mode `0750` |
+
+The launchd job ships **disabled** on purpose: a plist in
+`/Library/LaunchDaemons` is otherwise loaded at the next boot, which with the
+placeholder password hash still in place would leave the daemon failing and
+being restarted on a loop. Enable it once the config is ready:
+
+```sh
+sudo launchctl enable system/eu.ionica.cloudbackup
+sudo launchctl bootstrap system /Library/LaunchDaemons/eu.ionica.cloudbackup.plist
+sudo launchctl print system/eu.ionica.cloudbackup
+```
+
+The daemon runs as `root`, for the reason given in
+[the note above](#note-on-the-service-account); add a `UserName` key to the
+plist to run it as someone else. Logs go to
+`/usr/local/var/log/cloudbackup.log`. After a config change, restart with:
+
+```sh
+sudo launchctl kickstart -k system/eu.ionica.cloudbackup
+```
+
+### Upgrading and uninstalling on macOS
+
+Install the newer `.pkg` the same way to upgrade; your config and data directory
+are preserved. A macOS package carries no uninstaller, so removal ships as a
+script:
+
+```sh
+sudo /usr/local/share/cloudbackup/uninstall.sh            # keeps config + data
+sudo /usr/local/share/cloudbackup/uninstall.sh --purge    # removes those too
+```
+
+---
+
+## 1.6 Verifying an installation
 
 ```console
 $ cloudbackup server version

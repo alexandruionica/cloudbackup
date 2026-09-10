@@ -2,8 +2,8 @@ name: Release
 
 # Manual-only release pipeline. It does NOT run the test suite (tests stay a
 # local concern for now). It builds the Linux .deb/.rpm packages, a Windows
-# .zip and .msi, and the FreeBSD .pkg, then publishes them all on a GitHub
-# Release.
+# .zip and .msi, the FreeBSD .pkg and the macOS .pkg, then publishes them all
+# on a GitHub Release.
 #
 # Version is read from misc/version.txt and the release is tagged v<version>.
 # Bump misc/version.txt and commit it before dispatching a release.
@@ -250,9 +250,78 @@ jobs:
           path: dist/packages/*.pkg
           if-no-files-found: error
 
+  macos-package:
+    name: Build macOS package (${{ matrix.arch }})
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-26 # Apple Silicon; the default macOS runner
+          - arch: amd64
+            # Intel. GitHub retires x64 macOS runners in Fall 2027 when the
+            # macos-15 image is removed, so this leg is on borrowed time.
+            runner: macos-26-intel
+    runs-on: ${{ matrix.runner }}
+    env:
+      CGO_ENABLED: "1" # required by github.com/mattn/go-sqlite3
+      # Signing is optional: with these secrets unset every signing step below
+      # is skipped and the job ships an unsigned .pkg. Populate them to turn
+      # signing and notarization on without touching this workflow.
+      MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+      MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+      MACOS_NOTARY_KEY_ISSUER: ${{ secrets.MACOS_NOTARY_KEY_ISSUER }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # generate_version.sh needs git history for the commit id
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Import Developer ID Installer certificate
+        # Imports the .p12 into a throwaway keychain so productsign can find the
+        # identity. Skipped entirely when MACOS_SIGN_IDENTITY is unset.
+        if: env.MACOS_SIGN_IDENTITY != ''
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/build.keychain-db"
+          keychain_pw="$(uuidgen)"
+          security create-keychain -p "$keychain_pw" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_pw" "$keychain"
+          printf '%s' "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" \
+              -P "$MACOS_CERT_PASSWORD" -T /usr/bin/productsign
+          security set-key-partition-list -S apple-tool:,apple: \
+              -k "$keychain_pw" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" login.keychain-db
+          rm -f "$RUNNER_TEMP/cert.p12"
+      - name: Write App Store Connect API key for notarization
+        if: env.MACOS_NOTARY_KEY_ID != ''
+        env:
+          MACOS_NOTARY_KEY_P8: ${{ secrets.MACOS_NOTARY_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          key_path="$RUNNER_TEMP/notary_key.p8"
+          printf '%s' "$MACOS_NOTARY_KEY_P8" | base64 --decode > "$key_path"
+          chmod 600 "$key_path"
+          echo "MACOS_NOTARY_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+      - name: Build package
+        run: make macospackage PKG_ARCH=${{ matrix.arch }}
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-pkg-${{ matrix.arch }}
+          path: dist/packages/cloudbackup_*_macos_${{ matrix.arch }}.pkg
+          if-no-files-found: error
+
   release:
     name: Publish GitHub Release
-    needs: [version, linux-packages, windows-zip, windows-msi, freebsd-package]
+    needs: [version, linux-packages, windows-zip, windows-msi, freebsd-package, macos-package]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

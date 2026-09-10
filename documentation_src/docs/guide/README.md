@@ -1,7 +1,7 @@
 # CloudBackup User Guide
 
-CloudBackup is an open-source backup tool that backs up files from Linux, FreeBSD and
-Microsoft Windows systems into cloud object stores — **AWS S3**, **Azure Blob Storage**
+CloudBackup is an open-source backup tool that backs up files from Linux, FreeBSD,
+macOS and Microsoft Windows systems into cloud object stores — **AWS S3**, **Azure Blob Storage**
 and **GCP Cloud Storage** — with file-level granularity.
 
 A single binary provides everything:
@@ -18,7 +18,7 @@ chapters you can dip into as needed.
 
 | # | Chapter | What it covers |
 |---|---------|----------------|
-| 1 | [Installation](01-installation.md) | Installing pre-built packages on Linux (`.deb`/`.rpm`) and Windows (`.msi`, portable `.zip`); upgrading; uninstalling |
+| 1 | [Installation](01-installation.md) | Installing pre-built packages on Linux (`.deb`/`.rpm`), Windows (`.msi`, portable `.zip`), FreeBSD and macOS (`.pkg`); upgrading; uninstalling |
 | 2 | [Getting started](02-getting-started.md) | Core concepts, first-run configuration, starting the server, your first backup |
 | 3 | [Server configuration reference](03-configuration.md) | Every configuration option, defaults, validation rules and usage scenarios |
 | 4 | [Client-side encryption](04-encryption.md) | How encryption works, the keystore sidecar, operational do's and don'ts |
