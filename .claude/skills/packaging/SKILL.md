@@ -137,8 +137,14 @@ gmake freebsdpackage                   # ON FreeBSD only
 ```
 
 **FreeBSD's `make` is bmake and cannot parse this GNU Makefile — use `gmake`.**
-Build locally in the `freebsd14` Vagrant VM, or in CI inside the
-`vmactions/freebsd-vm` VM that runs on the Linux runner.
+Build locally in the `freebsd14` Vagrant VM, or in CI inside the FreeBSD VM
+that runs on the Linux runner via `alexandruionica/freebsd-vm` — our fork of
+`vmactions/freebsd-vm`. The fork exists because this repo's Actions policy
+allows only GitHub-authored actions and our own; using it keeps the policy
+narrow rather than allowlisting a third party. Sync it deliberately with
+`gh repo sync alexandruionica/freebsd-vm`, then re-pin the commit in
+`release.yml`. It does not isolate the whole supply chain: the action still
+downloads anyvm.py and the VM images from anyvm-org at runtime.
 
 nfpm has **no FreeBSD backend**, so `build-pkg.sh` drives base `pkg(8)` directly:
 
