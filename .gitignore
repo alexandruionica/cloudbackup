@@ -7,6 +7,7 @@ tmp/
 integration_tests/.venv/
 integration_tests/.venv_windows/
 integration_tests/.venv_linux/
+integration_tests/.venv_freebsd/
 integration_tests/.venv_unix/
 integration_tests/.venv_macos/
 integration_tests/__pycache__

@@ -132,7 +132,7 @@ exit 1
       freebsd.ssh.shell = "sh"
 
       # FreeBSD doesn't support shared folder mounting via VirtualBox so rsync needs to be used(NFS is another option but sqlite doesn't like it so it could lead to funny test output)
-      freebsd.vm.synced_folder "../..", "/home/vagrant/Documents/golang", type: "rsync", rsync__exclude: [".git/", "bin/"], rsync__args: ["--verbose", "--archive", "--delete", "-z"]
+      freebsd.vm.synced_folder "./", "/home/vagrant/Documents/golang/src/cloudbackup/", type: "rsync", rsync__exclude: ["bin/"], rsync__args: ["--verbose", "--archive", "--delete", "-z"]
       # disable default shared folder
       freebsd.vm.synced_folder ".", "/vagrant", disabled: true
 
