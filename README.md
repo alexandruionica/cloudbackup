@@ -41,7 +41,7 @@ make
 
 ## Native installers ##
 
-Native, distribution-managed installers are produced for both Linux and Windows.
+Native, distribution-managed installers are produced for Linux, Windows and FreeBSD.
 
 * **Linux** — `make packages` builds `.deb` and `.rpm` packages (via `nfpm` in Docker;
   see `packaging/`). They install the binary, web UI, a sample `/etc/cloudbackup/config.yaml`,
@@ -59,8 +59,21 @@ Native, distribution-managed installers are produced for both Linux and Windows.
   `make winbuild-arm64` — it cross-compiles the ARM64 `.exe` (via the clang-based
   llvm-mingw toolchain in Docker) and assembles the release zip.
 
-Both installer types are built and attached to GitHub Releases by the `Release` workflow
-(`.github/workflows/release.yml`).
+* **FreeBSD** — `gmake freebsdpackage` (run on FreeBSD) builds a native `.pkg`
+  (see `packaging/freebsd/`). It installs to `/usr/local/bin/cloudbackup`, the web UI to
+  `/usr/local/share/cloudbackup/webstatic`, a sample
+  `/usr/local/etc/cloudbackup/config.yaml`, an rc.d script, and creates the data dir at
+  `/var/db/cloudbackup`. Install/uninstall with `pkg add ./cloudbackup-*.pkg` /
+  `pkg delete cloudbackup`, then enable it with `sysrc cloudbackup_enable=YES`.
+  amd64 only. Note that FreeBSD's `make` is bmake and cannot parse this GNU Makefile —
+  use `gmake` (`pkg install gmake`). Because `go-sqlite3` requires cgo there is no
+  cross-compile path, so the build must happen on FreeBSD: locally in the `freebsd14`
+  Vagrant VM, and in CI inside a FreeBSD VM running on the Linux runner. `pkg` stamps the
+  building host's ABI into the package and refuses to install across major releases, so
+  the release workflow builds one package per supported branch (currently 14.5 and 15.1).
+
+All three installer types are built and attached to GitHub Releases by the `Release`
+workflow (`.github/workflows/release.yml`).
 
 ## LLM usage ##
 

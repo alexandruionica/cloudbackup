@@ -1,0 +1,19 @@
+# pkg(8) manifest template. build-pkg.sh expands the version placeholder below
+# and writes the result to the metadata directory as +MANIFEST. Do not repeat
+# that placeholder in a comment: the substitution is a plain sed and would
+# rewrite it here too. pkg fills in the ABI
+# (e.g. FreeBSD:14:amd64) from the host it is built on, which is why we build
+# one package per supported FreeBSD release.
+name: cloudbackup
+version: "${PKG_VERSION}"
+origin: sysutils/cloudbackup
+comment: "Server/client backup tool with cloud blob store support"
+maintainer: alexandru@ionica.eu
+www: https://github.com/aionica/cloudbackup
+prefix: /usr/local
+categories: [sysutils]
+desc: <<EOD
+CloudBackup - server/client backup tool with cloud blob store support
+(AWS S3, Azure Blob Storage, GCP Storage). Runs as a daemon exposing a
+REST API; ships with a CLI client for on-demand operations.
+EOD
