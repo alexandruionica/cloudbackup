@@ -156,3 +156,17 @@ ifeq ($(OS),Windows_NT)
 else
 	@echo "Windows MSI packages must be built on Windows (GitHub Actions windows-latest or the Vagrant windows2025 VM)."
 endif
+
+# Build the FreeBSD .pkg. Must run ON FreeBSD (the freebsd14 Vagrant VM, or the
+# vmactions VM the release workflow spins up) — go-sqlite3 needs cgo, so there
+# is no cross-compile path from a Linux host.
+#
+# NOTE: FreeBSD's make(1) is bmake and cannot parse this GNU Makefile. Invoke it
+# as `gmake freebsdpackage` (pkg install gmake).
+freebsdpackage:
+ifeq ($(OS),Windows_NT)
+	@echo "FreeBSD packages must be built on FreeBSD."
+else
+	@echo "############ Building FreeBSD package ############"
+	sh packaging/freebsd/build-pkg.sh
+endif

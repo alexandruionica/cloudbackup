@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# CloudBackup rc.d script — the FreeBSD counterpart of
+# packaging/files/cloudbackup.service.
+#
+# PROVIDE: cloudbackup
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# Enable the service in /etc/rc.conf:
+#
+#     sysrc cloudbackup_enable=YES
+#
+# Optional knobs, shown with their defaults:
+#
+#     cloudbackup_config="/usr/local/etc/cloudbackup/config.yaml"
+#     cloudbackup_user="root"
+#     cloudbackup_flags=""
+#     cloudbackup_logfile=""      # empty -> log to syslog
+
+. /etc/rc.subr
+
+name="cloudbackup"
+rcvar="cloudbackup_enable"
+
+load_rc_config "$name"
+
+: ${cloudbackup_enable:="NO"}
+: ${cloudbackup_config:="/usr/local/etc/cloudbackup/config.yaml"}
+: ${cloudbackup_user:="root"}
+: ${cloudbackup_flags:=""}
+: ${cloudbackup_logfile:=""}
+
+# The daemon writes structured logs to stdout. Hand them to syslog by default
+# (daemon -S, tagged with the service name); cloudbackup_logfile redirects them
+# to a plain file instead.
+if [ -n "${cloudbackup_logfile}" ]; then
+	_cloudbackup_output="-o ${cloudbackup_logfile}"
+else
+	_cloudbackup_output="-S -T ${name}"
+fi
+
+# daemon(8) supervises the process and restarts it 5s after a failure, matching
+# the systemd unit's Restart=on-failure / RestartSec=5s. pidfile and procname
+# deliberately track the *supervisor* rather than the child: pointing them at
+# the child would make "service cloudbackup stop" kill the child only, and the
+# supervisor would immediately start a new one.
+pidfile="/var/run/${name}.pid"
+procname="/usr/sbin/daemon"
+command="/usr/sbin/daemon"
+command_args="-R 5 -P ${pidfile} -t ${name} -u ${cloudbackup_user} ${_cloudbackup_output} \
+	/usr/local/bin/cloudbackup server start --configfile ${cloudbackup_config} ${cloudbackup_flags}"
+
+# Refuse to start before the admin has put a config in place.
+required_files="${cloudbackup_config}"
+
+run_rc_command "$1"

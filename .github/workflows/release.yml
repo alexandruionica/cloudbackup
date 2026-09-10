@@ -1,8 +1,9 @@
 name: Release
 
 # Manual-only release pipeline. It does NOT run the test suite (tests stay a
-# local concern for now). It builds the Linux .deb/.rpm packages and a Windows
-# .zip, then publishes them all on a GitHub Release.
+# local concern for now). It builds the Linux .deb/.rpm packages, a Windows
+# .zip and .msi, and the FreeBSD .pkg, then publishes them all on a GitHub
+# Release.
 #
 # Version is read from misc/version.txt and the release is tagged v<version>.
 # Bump misc/version.txt and commit it before dispatching a release.
@@ -210,9 +211,48 @@ jobs:
           path: dist/packages/cloudbackup_*_${{ matrix.arch }}.msi
           if-no-files-found: error
 
+  freebsd-package:
+    name: Build FreeBSD package (${{ matrix.release }})
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        # One package per supported FreeBSD major release: pkg stamps the
+        # building host's ABI (FreeBSD:14:amd64 / FreeBSD:15:amd64) into the
+        # package and refuses to install it on the other branch.
+        release: ["14.5", "15.1"]
+    # GitHub hosts no FreeBSD runner, and go-sqlite3 needs cgo so the binary
+    # cannot be cross-compiled from Linux the way the Windows zips are. Build
+    # inside a real FreeBSD VM running on the Linux runner instead.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # generate_version.sh needs git history for the commit id
+      - name: Build package in FreeBSD ${{ matrix.release }}
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: ${{ matrix.release }}
+          usesh: true
+          # ca_root_nss gives fetch(1) a CA bundle for the Go download; bash and
+          # git are what generate_version.sh needs. pkg(8) itself is in base.
+          prepare: |
+            pkg install -y ca_root_nss bash git
+          # Deliberately build-only, matching the Linux and Windows jobs: this
+          # pipeline does not run the test suite (see the header comment).
+          run: |
+            sh packaging/freebsd/install-go.sh
+            sh packaging/freebsd/build-pkg.sh
+      - name: Upload FreeBSD artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd-pkg-${{ matrix.release }}
+          path: dist/packages/*.pkg
+          if-no-files-found: error
+
   release:
     name: Publish GitHub Release
-    needs: [version, linux-packages, windows-zip, windows-msi]
+    needs: [version, linux-packages, windows-zip, windows-msi, freebsd-package]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

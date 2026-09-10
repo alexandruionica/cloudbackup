@@ -1,5 +1,5 @@
-GO_VERSION = "1.17.4"
-GOLANGCI_LINT_VERSION = "1.43.0"
+GO_VERSION = "1.26.8"
+GOLANGCI_LINT_VERSION = "2.11.4"
 
 Vagrant.configure("2") do |config|
 
@@ -114,42 +114,34 @@ exit 1
 
   end
 
-  config.vm.define "freebsd12.3", autostart: false do |freebsd|
-    freebsd.vm.box = "freebsd/FreeBSD-12.3-STABLE"
-    # NFS needs a private network
-    freebsd.vm.network "private_network", :ip => "172.28.128.4", :name => 'vboxnet0'
+  config.vm.define "freebsd14", autostart: false do |freebsd|
+    freebsd.vm.box = "freebsd/FreeBSD-14.1-RELEASE"
 
       freebsd.vm.provider "virtualbox" do |vb|
         # Display the VirtualBox GUI when booting the machine
         vb.gui = true
         # Customize the amount of memory on the VM:
         vb.memory = "2048"
+        vb.cpus = 4
       end
       # for this to work, env var VAGRANT_EXPERIMENTAL="disks" needs to be EXPORTED (not just set) before running vagrant
-      # increase default disk from 9GB to 20GB . The default depends on the creator of the source "box"
-      freebsd.vm.disk :disk, size: "20GB", primary: true
+      # increase default disk from 9GB to 25GB . The default depends on the creator of the source "box"
+      freebsd.vm.disk :disk, size: "25GB", primary: true
 
       freebsd.vm.guest = :freebsd
       freebsd.ssh.shell = "sh"
 
       # FreeBSD doesn't support shared folder mounting via VirtualBox so rsync needs to be used(NFS is another option but sqlite doesn't like it so it could lead to funny test output)
-      freebsd.vm.synced_folder "../..", "/home/vagrant/Documents/golang", type: "rsync", rsync__exclude: [".git/", "bin/"], rsync__args: ["--verbose", "--archive", "--delete", "-z"]
+      freebsd.vm.synced_folder "./", "/home/vagrant/Documents/golang/src/cloudbackup/", type: "rsync", rsync__exclude: ["bin/"], rsync__args: ["--verbose", "--archive", "--delete", "-z"]
       # disable default shared folder
       freebsd.vm.synced_folder ".", "/vagrant", disabled: true
 
       freebsd.vm.provision "shell", inline: "su root -c 'pkg update'"
-      freebsd.vm.provision "shell", inline: "pkg install --yes python38 py38-virtualenv py38-pip py38-sqlite3 wget openjdk8-jre bash gcc ca_root_nss git gmake ca_root_nss rust"
-      # TODO - install some kind of Docker Server (unfortunately the old package docker-freebsd is as of now broken and no more available via pkg_install
+      freebsd.vm.provision "shell", inline: "pkg install --yes python312 py312-virtualenv py312-pip py312-sqlite3 wget bash gcc ca_root_nss git gmake ca_root_nss rust"
       # the GO package is a dependency of Docker but otherwise clashes with the custom version we want ...
       freebsd.vm.provision "shell", inline: "(pkg info go && pkg remove --yes --force go) || echo"
-      freebsd.vm.provision "shell", inline: "test -h /usr/local/bin/virtualenv || ln -s /usr/local/bin/virtualenv-3.8 /usr/local/bin/virtualenv"
-      freebsd.vm.provision "shell", inline: "test -h /usr/local/bin/python3 || ln -s /usr/local/bin/python3.8 /usr/local/bin/python3"
-      # setup Docker dependencies
-      #freebsd.vm.provision "shell", inline: "test -f /usr/local/dockerfs || dd if=/dev/zero of=/usr/local/dockerfs bs=1024K count=1000"
-      #freebsd.vm.provision "shell", inline: "zpool list zroot || zpool create -f zroot /usr/local/dockerfs"
-      #freebsd.vm.provision "shell", inline: "zfs list zroot/docker || zfs create -o mountpoint=/usr/docker zroot/docker"
+      freebsd.vm.provision "shell", inline: "test -h /usr/local/bin/python3 || ln -s /usr/local/bin/python3.12 /usr/local/bin/python3"
       freebsd.vm.provision "shell", inline: "pw usermod vagrant -G wheel,operator"
-      freebsd.vm.provision "shell", inline: "sysrc -f /etc/rc.conf docker_enable='YES'"
       # install GO
       freebsd.vm.provision "shell", inline: "test -h /usr/local/bin/go || wget https://dl.google.com/go/go#{GO_VERSION}.freebsd-amd64.tar.gz"
       freebsd.vm.provision "shell", inline: "test -h /usr/local/bin/go || tar -xzf go#{GO_VERSION}.freebsd-amd64.tar.gz"
@@ -172,45 +164,6 @@ exit 1
 
   end
 
-
-  config.vm.define "ubuntu16.04", autostart: false do |linux|
-    linux.vm.box = "ubuntu/xenial64"
-
-      linux.vm.provider "virtualbox" do |vb|
-        # Display the VirtualBox GUI when booting the machine
-        vb.gui = true
-        # Customize the amount of memory on the VM:
-        vb.memory = "2048"
-      end
-
-        linux.vm.guest = :linux
-
-        linux.vm.synced_folder "../..", "/home/vagrant/Documents/golang"
-        # disable default shared folder
-        linux.vm.synced_folder ".", "/vagrant", disabled: true
-
-        linux.vm.provision "shell", inline: "sudo apt-get update"
-        linux.vm.provision "shell", inline: "sudo DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
-        linux.vm.provision "shell", inline: "sudo apt-get -y install virtualenv python3-virtualenv python3-pip make wget openjdk-8-jre docker.io"
-        linux.vm.provision "shell", inline: "sudo usermod -aG docker ubuntu"
-
-        # install GO
-        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || wget https://dl.google.com/go/go#{GO_VERSION}.linux-amd64.tar.gz"
-        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || tar -xzf go#{GO_VERSION}.linux-amd64.tar.gz"
-        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || mv go /usr/local/go/"
-        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || rm -f go#{GO_VERSION}.linux-amd64.tar.gz"
-        linux.vm.provision "shell", inline: "test -h /usr/local/bin/go || ln -s /usr/local/go/bin/go /usr/local/bin/"
-
-        # install GO linter
-        linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || wget https://github.com/golangci/golangci-lint/releases/download/v#{GOLANGCI_LINT_VERSION}/golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
-        linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || tar -xzf golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
-        linux.vm.provision "shell", inline: "test -f /usr/local/bin/golangci-lint || cp golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64/golangci-lint /usr/local/bin/"
-        linux.vm.provision "shell", inline: "rm -rf golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64 golangci-lint-#{GOLANGCI_LINT_VERSION}-linux-amd64.tar.gz"
-
-        linux.vm.provision "shell", inline: 'grep -q GOPATH /home/vagrant/.profile || echo "export GOPATH=/home/vagrant/Documents/golang/" >> /home/vagrant/.profile'
-    end
-
-
   config.vm.define "ubuntu18.04", autostart: false do |linux|
       linux.vm.box = "ubuntu/bionic64"
 
@@ -219,6 +172,7 @@ exit 1
           vb.gui = true
           # Customize the amount of memory on the VM:
           vb.memory = "2048"
+          vb.cpus = 4
         end
 
           linux.vm.guest = :linux
