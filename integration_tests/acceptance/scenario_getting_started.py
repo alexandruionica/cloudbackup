@@ -123,7 +123,9 @@ def test_getting_started_chapter(workspace):
 
         # ---- 2.8 restore something (the guide opens the TUI browser; --all-files is the scripted equivalent)
         restored = run_cli("client restore start documents -i {} --all-files --watch".format(backup_id), client_config)
-        assert "Restore job has finished" in restored.stdout, restored
+        # a restore this small can finish before the watch subscription lands; the client then reports the
+        # final state from the report instead of streaming progress, and either way exits 0
+        assert ("Restore job has finished" in restored.stdout or "Final state: finished" in restored.stdout), restored
         m = re.search(r"Restore job id '([0-9a-f-]{36})'", restored.stdout)
         assert m, restored
         restore_id = m.group(1)
