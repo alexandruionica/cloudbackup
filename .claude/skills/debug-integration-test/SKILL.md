@@ -12,6 +12,9 @@ the test to be runnable in isolation. Modules live in tier directories:
 stores, skipped without `CLD_*` credentials). Shared helpers are in
 `lib/common.py`; pytest fixtures in `conftest.py`.
 
+For writing or extending tests, the tiers, fixtures and conventions are in
+the `testing` skill; this one is only about reproducing one failure.
+
 ## Inputs to ask for if not given
 - The exact test name (file + class + method, or the
   `path::Class::method` form printed by pytest).
