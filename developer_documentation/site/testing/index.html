@@ -64,6 +64,8 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#previous-release-data">Previous-release data</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#package-install-smoke">Package install smoke</a>
+    </li>
     <li class="toctree-l3"><a class="reference internal" href="#skips">Skips</a>
     </li>
         </ul>
@@ -127,9 +129,9 @@ language model gets wrong. There are four layers.</p>
 </tr>
 <tr>
 <td>Package install smoke</td>
-<td><code>packaging/</code></td>
-<td><code>make packages</code></td>
-<td>Docker</td>
+<td><code>packaging/*/smoke-test.*</code></td>
+<td><code>make packages</code> (Linux), release workflow (others)</td>
+<td>Docker / the target OS</td>
 </tr>
 </tbody>
 </table>
@@ -220,6 +222,21 @@ integration_tests/.venv_linux/bin/python integration_tests/fixtures/make_release
 </code></pre>
 <p>The database package has no schema versioning yet; the day the schema changes, this test is what turns
 a silent break into a failing build and forces a migration path.</p>
+<h3 id="package-install-smoke">Package install smoke</h3>
+<p>Every installer family has an install smoke test that installs the freshly built package the way a user
+would and checks what the packaging promises: binary on the path, service user and directory
+ownership, sample config with its placeholder hash, web assets, the service definition. It then edits
+the config as the post-install message instructs, validates it, starts the daemon through the service
+mechanism (or, in a container, the unit's exact <code>ExecStart</code>), talks to it with the CLI client, refuses a
+wrong password, stops it, removes the package and checks that the data directory, service user and
+edited config survive.</p>
+<ul>
+<li>Linux: <code>packaging/smoke-test.sh &lt;pkg&gt; &lt;base image&gt;</code> runs in a fresh container; <code>build-all.sh</code> runs
+  it after every package it builds (<code>SMOKE=0 make packages</code> skips it).</li>
+<li>FreeBSD: <code>packaging/freebsd/smoke-test.sh</code>, run in the release workflow's VM after the build.</li>
+<li>macOS: <code>packaging/macos/smoke-test.sh</code>, run on the release runner after the build.</li>
+<li>Windows: <code>packaging/windows/smoke-test.ps1</code>, run on the release runner after the MSI build.</li>
+</ul>
 <h3 id="skips">Skips</h3>
 <p>Use <code>self.skipTest(...)</code> or <code>@unittest.skipUnless(...)</code> for platform limitations, never a bare <code>return</code>:
 a silent return counts as a pass and hides a hole in coverage. Skips are listed in the pytest summary.</p>

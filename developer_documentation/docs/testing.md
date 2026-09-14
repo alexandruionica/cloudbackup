@@ -8,7 +8,7 @@ language model gets wrong. There are four layers.
 | Go unit tests | `*_test.go` next to the code | `make gotest`, `make gotestrace` | Go |
 | Web UI unit tests | `webstatic/ui/tests/` | `make uitest` | Node >= 18 |
 | Python integration tiers | `integration_tests/<tier>/` | `make inttest`, `make inttest-cloud` | Python 3.12+, a built binary |
-| Package install smoke | `packaging/` | `make packages` | Docker |
+| Package install smoke | `packaging/*/smoke-test.*` | `make packages` (Linux), release workflow (others) | Docker / the target OS |
 
 `make test` runs lint plus the Go and web UI unit tests. `make alltest` adds every integration tier.
 
@@ -120,6 +120,22 @@ integration_tests/.venv_linux/bin/python integration_tests/fixtures/make_release
 
 The database package has no schema versioning yet; the day the schema changes, this test is what turns
 a silent break into a failing build and forces a migration path.
+
+### Package install smoke
+
+Every installer family has an install smoke test that installs the freshly built package the way a user
+would and checks what the packaging promises: binary on the path, service user and directory
+ownership, sample config with its placeholder hash, web assets, the service definition. It then edits
+the config as the post-install message instructs, validates it, starts the daemon through the service
+mechanism (or, in a container, the unit's exact `ExecStart`), talks to it with the CLI client, refuses a
+wrong password, stops it, removes the package and checks that the data directory, service user and
+edited config survive.
+
+- Linux: `packaging/smoke-test.sh <pkg> <base image>` runs in a fresh container; `build-all.sh` runs
+  it after every package it builds (`SMOKE=0 make packages` skips it).
+- FreeBSD: `packaging/freebsd/smoke-test.sh`, run in the release workflow's VM after the build.
+- macOS: `packaging/macos/smoke-test.sh`, run on the release runner after the build.
+- Windows: `packaging/windows/smoke-test.ps1`, run on the release runner after the MSI build.
 
 ### Skips
 

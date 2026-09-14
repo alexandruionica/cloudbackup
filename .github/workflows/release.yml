@@ -204,6 +204,9 @@ jobs:
         run: dotnet tool install --global wix --version 5.*
       - name: Build MSI
         run: pwsh ./packaging/windows/build-msi.ps1 -Arch ${{ matrix.arch }}
+      - name: Install smoke test
+        # Installs the MSI on the runner, starts the service, talks to it with the client, uninstalls.
+        run: pwsh ./packaging/windows/smoke-test.ps1 -Msi (Get-Item dist/packages/cloudbackup_*_${{ matrix.arch }}.msi).FullName
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
         with:
@@ -250,11 +253,12 @@ jobs:
           # git are what generate_version.sh needs. pkg(8) itself is in base.
           prepare: |
             pkg install -y ca_root_nss bash git
-          # Deliberately build-only, matching the Linux and Windows jobs: this
-          # pipeline does not run the test suite (see the header comment).
+          # Build, then the install smoke test (the only test this pipeline runs,
+          # matching the other jobs; the unit/integration suites stay local).
           run: |
             sh packaging/freebsd/install-go.sh
             sh packaging/freebsd/build-pkg.sh
+            sh packaging/freebsd/smoke-test.sh dist/packages/cloudbackup-*.pkg
       - name: Upload FreeBSD artifact
         uses: actions/upload-artifact@v4
         with:
@@ -324,6 +328,9 @@ jobs:
           echo "MACOS_NOTARY_KEY_PATH=$key_path" >> "$GITHUB_ENV"
       - name: Build package
         run: make macospackage PKG_ARCH=${{ matrix.arch }}
+      - name: Install smoke test
+        # Installs the .pkg on the runner, loads the launchd daemon, talks to it with the client, uninstalls.
+        run: sudo sh packaging/macos/smoke-test.sh dist/packages/cloudbackup_*_macos_${{ matrix.arch }}.pkg
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:

@@ -101,6 +101,18 @@ for spec in "${TARGETS[@]}"; do
             --user "$(id -u):$(id -g)" \
             "${IMAGE}" \
             bash /src/packaging/build-in-container.sh
+
+        # Install the package into a fresh container of the same distro and exercise it (SMOKE=0 skips).
+        if [ "${SMOKE:-1}" != "0" ]; then
+            PKG_VERSION="$(cat "${ROOT}/misc/version.txt")"
+            case "${FAMILY}" in
+                deb) OUT_FILE="${ROOT}/dist/packages/cloudbackup_${PKG_VERSION}-${PKG_RELEASE:-1}~${TAG}_${ARCH}.deb" ;;
+                rpm)
+                    case "${ARCH}" in amd64) RPM_ARCH=x86_64 ;; arm64) RPM_ARCH=aarch64 ;; esac
+                    OUT_FILE="${ROOT}/dist/packages/cloudbackup-${PKG_VERSION}-${PKG_RELEASE:-1}.${TAG}.${RPM_ARCH}.rpm" ;;
+            esac
+            bash "${ROOT}/packaging/smoke-test.sh" "${OUT_FILE}" "${BASE}" "${PLATFORM}"
+        fi
     done
 done
 
