@@ -57,7 +57,7 @@ func Do(ctx context.Context, path string, stat os.FileInfo, backupConfig shared.
 			if dbEntryFound {
 				logger.Debugf("Found DB entry for %s", path)
 				// check if properties match between DB record and os.FileInfo
-				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum, backupConfig.Dereference, backupConfig.Encrypt)
+				contentChanged, metadataChanged, ctime, checksum := needsUpload(path, stat, dbRecordProperties, backupConfig.Checksum, backupConfig.DereferenceEnabled(), backupConfig.Encrypt)
 				updatedDbRecord, err := PrepareFileRecord(path, stat, backupConfig, ctime, checksum, jobUuid)
 				if err != nil {
 					// something bad enough happened that we don't have a usable db record so we can't proceed to
@@ -159,7 +159,7 @@ func backupNewItem(ctx context.Context, path string, stat os.FileInfo, backupCon
 			checksum = u.String()
 		}
 	}
-	ctime, err := fileproperties.GetCtime(path, backupConfig.Dereference)
+	ctime, err := fileproperties.GetCtime(path, backupConfig.DereferenceEnabled())
 	if err != nil {
 		logger.Debugf("For '%s' could not establish ctime due to error: %s ; using current time as ctime", path, err)
 		ctime = time.Time{}
@@ -1132,7 +1132,7 @@ func UploadBackupDatabase(jobName string, jobUuid string, backupConfig shared.Co
 		foundError = true
 		foundErrorMsg = err
 	} else {
-		ctime, err := fileproperties.GetCtime(dbCopyPath, backupConfig.Dereference)
+		ctime, err := fileproperties.GetCtime(dbCopyPath, backupConfig.DereferenceEnabled())
 		if err != nil {
 			logger.Debugf("For '%s' could not establish ctime due to error: %s ; using current time as ctime", dbCopyPath, err)
 			ctime = time.Time{}
@@ -1192,7 +1192,7 @@ func UploadBackupConfigCopy(sanitisedCfgCopyFile string, jobUuid string, backupC
 
 	// increment sequence number so Watch clients get the correct output
 	backupJobsState.IncrementSequence(backupConfig.Name)
-	ctime, err := fileproperties.GetCtime(sanitisedCfgCopyFile, backupConfig.Dereference)
+	ctime, err := fileproperties.GetCtime(sanitisedCfgCopyFile, backupConfig.DereferenceEnabled())
 	if err != nil {
 		logger.Debugf("For '%s' could not establish ctime due to error: %s ; using current time as ctime", sanitisedCfgCopyFile, err)
 		ctime = time.Time{}

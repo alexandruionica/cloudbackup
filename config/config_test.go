@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -1705,5 +1706,47 @@ func TestValidateBackupTargetParametersForTestNullPersistDir(t *testing.T) {
 				t.Fatalf("wantErr=%v got err=%v", tc.wantErr, err)
 			}
 		})
+	}
+}
+
+// "dereference: false" must survive loading. The loader applies `default` tags to zero-valued
+// fields, which for a plain bool silently turned every explicit false into true (found by the
+// symlink fixture in the integration suite). Absent must still read as the documented default.
+func TestLoadDereferenceFalseIsPreserved(t *testing.T) {
+	path, pathsToDelete := testutils.SetupMockConfigAndTmpPaths(t, "unittest_config_deref_")
+	defer testutils.DeleteTestFilesAndDirs(pathsToDelete)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// give the first job an explicit false and leave the second job without the setting
+	patched := strings.Replace(string(raw), "  - name: first_backup\n", "  - name: first_backup\n    dereference: false\n", 1)
+	if patched == string(raw) {
+		t.Fatalf("could not inject 'dereference: false' into the test config:\n%s", raw)
+	}
+	if err := os.WriteFile(path, []byte(patched), 0o600); err != nil { // #nosec G703 -- temp path from the test helper
+		t.Fatal(err)
+	}
+	result, err := Load(path, false, &sync.RWMutex{})
+	if err != nil {
+		t.Fatalf("Could not load config: %s", err)
+	}
+	var sawFalse, sawDefault bool
+	for _, b := range result.Config.Backup {
+		switch {
+		case b.Dereference != nil && !*b.Dereference:
+			sawFalse = true
+			if b.DereferenceEnabled() {
+				t.Fatalf("job '%s' has dereference=false but DereferenceEnabled() reports true", b.Name)
+			}
+		case b.DereferenceEnabled():
+			sawDefault = true
+		}
+	}
+	if !sawFalse {
+		t.Fatal("no backup job kept its explicit 'dereference: false' after loading")
+	}
+	if !sawDefault {
+		t.Fatal("expected at least one job without the setting to report the default (true)")
 	}
 }

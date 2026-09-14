@@ -940,7 +940,7 @@ func TestNeedsUpload1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1040,7 +1040,7 @@ func TestNeedsUpload2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1140,7 +1140,7 @@ func TestNeedsUpload3(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1245,7 +1245,7 @@ func TestNeedsUpload4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1347,7 +1347,7 @@ func TestNeedsUpload5(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1451,7 +1451,7 @@ func TestNeedsUpload6(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1555,7 +1555,7 @@ func TestNeedsUpload7(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1658,7 +1658,7 @@ func TestNeedsUpload8(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1761,7 +1761,7 @@ func TestNeedsUpload9(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1864,7 +1864,7 @@ func TestNeedsUpload10(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -1957,7 +1957,7 @@ func TestNeedsUpload11(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2050,7 +2050,7 @@ func TestNeedsUpload12(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2145,7 +2145,7 @@ func TestNeedsUpload13(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2240,7 +2240,7 @@ func TestNeedsUpload14(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2337,7 +2337,7 @@ func TestNeedsUpload15(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2434,7 +2434,7 @@ func TestNeedsUpload16(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2530,7 +2530,7 @@ func TestNeedsUpload17(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2633,7 +2633,7 @@ func TestNeedsUpload18(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2729,7 +2729,7 @@ func TestNeedsUpload19(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2838,7 +2838,7 @@ func TestNeedsUpload20(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -2947,7 +2947,7 @@ func TestNeedsUpload21(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3061,7 +3061,7 @@ func TestNeedsUpload22(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3172,7 +3172,7 @@ func TestNeedsUpload23(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3276,7 +3276,7 @@ func TestNeedsUpload24(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3389,7 +3389,7 @@ func TestNeedsUpload25(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3501,7 +3501,7 @@ func TestNeedsUpload26(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3604,7 +3604,7 @@ func TestNeedsUpload27(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3715,7 +3715,7 @@ func TestUploadObject(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3802,7 +3802,7 @@ func TestUploadAndUpdateDB1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3892,7 +3892,7 @@ func TestUploadAndUpdateDB2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -3990,7 +3990,7 @@ func TestUploadAndUpdateDB3(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -4115,7 +4115,7 @@ func TestUploadAndUpdateDB4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -4206,7 +4206,7 @@ func TestUploadAndUpdateDB5(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -4301,7 +4301,7 @@ func TestUploadAndUpdateDB6(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -4423,7 +4423,7 @@ func TestMarkDeleted1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	backupConfig := result.Config.Backup[0]
 
 	u, err := uuid.NewV4()
@@ -4538,7 +4538,7 @@ func TestMarkDeleted2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 
 	// setup a tmpdir which then will be set in the config file as the path to be backed up
 	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
@@ -4662,7 +4662,7 @@ func TestMarkDeleted3(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 
 	// setup a tmpdir which then will be set in the config file as the path to be backed up
 	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
@@ -4788,7 +4788,7 @@ func TestMarkDeleted4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 
 	// setup a tmpdir which then will be set in the config file as the path to be backed up
 	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
@@ -4910,7 +4910,7 @@ func TestMarkDeleted5(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 
 	// setup a tmpdir which then will be set in the config file as the path to be backed up
 	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
@@ -5037,7 +5037,7 @@ func TestFindAndMarkDeleted1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 
 	// setup a tmpdir which then will be set in the config file as the path to be backed up
 	dirPath := utils.SetupTmpDir("cloudbackup_TestMarkDeleted_", t)
@@ -5208,7 +5208,7 @@ func TestBackupNewItem1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	result.Config.Backup[0].Checksum = false
 
 	// setup a tmpdir which then will be set in the config file as the path to be backed up
@@ -5354,7 +5354,7 @@ func TestBackupNewItem2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	result.Config.Backup[0].Checksum = true
 
 	// setup a tmpdir which then will be set in the config file as the path to be backed up
@@ -5457,7 +5457,7 @@ func TestDo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Could not load fake config file. Error was: %s", err)
 	}
-	result.Config.Backup[0].Dereference = dereference
+	result.Config.Backup[0].Dereference = shared.BoolPtr(dereference)
 	result.Config.Backup[0].Checksum = false
 
 	// setup a tmpdir which then will be set in the config file as the path to be backed up
