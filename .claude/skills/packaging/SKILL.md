@@ -233,6 +233,15 @@ one. GitHub retires x64 macOS runners in Fall 2027, which will end the Intel leg
 Bump `misc/version.txt` and commit **before** dispatching. See the
 `release-prep` skill for the pre-release checklist.
 
+## Install smoke tests
+
+Each family has a smoke test that installs the built package, checks files/ownership/service,
+edits the sample config, starts the daemon via the service mechanism, drives it with the CLI
+client, and removes the package: `packaging/smoke-test.sh` (Linux, in Docker, run by
+`build-all.sh` unless `SMOKE=0`), `packaging/freebsd/smoke-test.sh`, `packaging/macos/smoke-test.sh`,
+`packaging/windows/smoke-test.ps1` (the last three run in the release workflow after each build).
+When a packaging change alters a path, owner, mode or service name, update the matching smoke test.
+
 ## Gotchas that have actually bitten
 
 - **The webstatic staging block is duplicated in five places** —

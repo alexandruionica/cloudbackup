@@ -1,0 +1,29 @@
+backup:
+- exclusions:
+  - ''
+  name: first_backup
+  paths:
+  - /tmp/cloudbackup_compat_fixture
+  schedule:
+  - 05 01 * * *
+  target:
+  - bucket: myawesome-backup
+    name: aws_1
+    parameters:
+    - name: AWS_ACCESS_KEY_ID
+      value: AKIAIOSFODNN7EXAMPLE
+    - name: AWS_SECRET_ACCESS_KEY
+      value: wJalrXUtnFEMI/K7MDENG/bPxRfiCEXAMPLEKEY
+    - name: storage_class
+      value: STANDARD
+    prefix: backup/backups-for-server-51
+    type: test_null
+data_dir: REPLACED_BY_TEST
+html_dir: webstatic
+user:
+- access: write
+  name: testuser1
+  pass: $2a$05$Ug1eUCXbSYUvfnI6YokjReljCe2fZLYYhO4IQLuiu0/mnpBbsN2M.
+- access: read
+  name: testuser2
+  pass: $2a$05$Pgdwe14mHjOQ33C5LahmmugCY85Yfqlkj2rGvbDMGCDXKKwmhbwVC

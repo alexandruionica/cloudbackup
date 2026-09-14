@@ -9,6 +9,7 @@ import (
 	"cloudbackup/shared"
 	"cloudbackup/utils"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -141,15 +142,87 @@ func Start(config clientConfig.Client, jsonOutput bool, jobName string, sourceJo
 			os.Exit(1)
 		}
 		if watch {
-			Watch(config, jsonOutput, jobName, decoded.Result.RestoreJobId)
+			watchAfterStart(config, jsonOutput, jobName, decoded.Result.RestoreJobId)
 		}
 		os.Exit(0)
 	}
 	fmt.Printf("%s\nRestore job id '%s' has been allocated for this run of backup definition '%s'\n",
 		decoded.Message, decoded.Result.RestoreJobId, decoded.Result.Name)
 	if watch {
-		Watch(config, jsonOutput, jobName, decoded.Result.RestoreJobId)
+		watchAfterStart(config, jsonOutput, jobName, decoded.Result.RestoreJobId)
 	}
+}
+
+// ErrRestoreNotRunning is returned by subscribeWatch when the server refuses the subscription
+// because the restore job is no longer (or not yet) running.
+var ErrRestoreNotRunning = errors.New("restore job is not running")
+
+// subscribeWatch opens the /restore/watch event stream. The caller owns the returned response
+// body. A refusal because the job is not running is reported as ErrRestoreNotRunning so callers
+// can tell "already finished" apart from real failures.
+func subscribeWatch(config clientConfig.Client, jobName string, restoreJobId string) (*http.Response, error) {
+	payload := httpd.RestoreWatchRequest{
+		Name:         jobName,
+		RestoreJobId: restoreJobId,
+	}
+	encodedPayload, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("could not JSON encode request payload: %w", err)
+	}
+	req, err := http.NewRequest("POST", config.Address+ApiPrefix+"/restore/watch", bytes.NewBuffer(encodedPayload))
+	if err != nil {
+		return nil, fmt.Errorf("error starting the http client: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(config.Username, config.Password)
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		_, err := clientCommon.ValidateServerResponse(resp)
+		if err == nil {
+			err = fmt.Errorf("unexpected status %d from the server", resp.StatusCode)
+		}
+		if strings.Contains(err.Error(), "is not running") {
+			return nil, fmt.Errorf("%w: %s", ErrRestoreNotRunning, err)
+		}
+		return nil, err
+	}
+	return resp, nil
+}
+
+// watchAfterStart attaches to the restore that was just started. A small restore from a fast
+// store can finish before the subscription lands, in which case the server refuses the watch
+// with "not running"; that is not a failure of the restore, so the final report decides the
+// outcome instead.
+func watchAfterStart(config clientConfig.Client, jsonOutput bool, jobName string, restoreJobId string) {
+	resp, err := subscribeWatch(config, jobName, restoreJobId)
+	if err != nil {
+		if !errors.Is(err, ErrRestoreNotRunning) {
+			fmt.Printf("%s\n", err)
+			os.Exit(1)
+		}
+		report, body, reportErr := doReportShow(config, jobName, restoreJobId)
+		if reportErr != nil {
+			fmt.Printf("Restore job finished before its progress could be watched, and its report could not be "+
+				"read: %s\n", reportErr)
+			os.Exit(1)
+		}
+		if jsonOutput {
+			if err := utils.PpJson(body); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Printf("Restore job finished before its progress could be watched. Final state: %s\n", report.Result.State)
+		}
+		if report.Result.State != "finished" {
+			os.Exit(1)
+		}
+		return
+	}
+	streamWatch(resp, jsonOutput)
 }
 
 func Stop(config clientConfig.Client, jsonOutput bool, jobName string, restoreJobId string) {
@@ -187,40 +260,22 @@ func List(config clientConfig.Client, jsonOutput bool) {
 // Watch is a functional twin of client/backup.Watch — the server emits identical SSE events
 // for restores and backups, so the rendering logic is the same.
 func Watch(config clientConfig.Client, jsonOutput bool, jobName string, restoreJobId string) {
-	payload := httpd.RestoreWatchRequest{
-		Name:         jobName,
-		RestoreJobId: restoreJobId,
-	}
-	encodedPayload, err := json.Marshal(payload)
+	resp, err := subscribeWatch(config, jobName, restoreJobId)
 	if err != nil {
-		fmt.Printf("Could not JSON encode request payload. Received error was: %s", err)
+		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
+	streamWatch(resp, jsonOutput)
+}
 
-	httpClient := &http.Client{}
-	req, err := http.NewRequest("POST", config.Address+ApiPrefix+"/restore/watch",
-		bytes.NewBuffer(encodedPayload))
-	if err != nil {
-		fmt.Printf("Error starting the http client: %s\n", err)
-		os.Exit(1)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.SetBasicAuth(config.Username, config.Password)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		logger.Debugf("%s %+v", err, resp)
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	if resp.StatusCode != 200 {
-		_, err := clientCommon.ValidateServerResponse(resp)
-		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(1)
+// streamWatch renders the server-sent events of an open watch subscription until the server
+// closes the stream.
+func streamWatch(resp *http.Response, jsonOutput bool) {
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			logger.Debugf("closing watch response body: %s", err)
 		}
-	}
-
+	}()
 	var seq uint64 = 0
 	reader := bufio.NewReader(resp.Body)
 	maxLenghtObjectStoreType := 5

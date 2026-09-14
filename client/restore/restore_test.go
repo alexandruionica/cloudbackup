@@ -6,6 +6,7 @@ import (
 	"cloudbackup/httpd"
 	"cloudbackup/shared"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -295,5 +296,58 @@ func TestWatch_ParsesSingleSSEEvent(t *testing.T) {
 	case <-done:
 	case <-time.After(5 * time.Second):
 		t.Fatal("Watch did not return within 5s of the stream closing")
+	}
+}
+
+// A subscription refused because the job is not running is a distinct, recognisable error: the
+// start --watch path uses it to fall back to the final report instead of failing a restore that
+// simply finished too fast to be watched.
+func TestSubscribeWatch_NotRunningIsRecognised(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"code":"incorrect client data","message":"Restore for job having name 'j' is not running."}`))
+	}))
+	defer srv.Close()
+	resp, err := subscribeWatch(cfg(srv.URL), "j", "RJID")
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if !errors.Is(err, ErrRestoreNotRunning) {
+		t.Fatalf("expected ErrRestoreNotRunning, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "is not running") {
+		t.Fatalf("the server's message must be preserved, got %v", err)
+	}
+}
+
+func TestSubscribeWatch_OtherRefusalIsNotNotRunning(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"code":"not found","message":"No backup job found matching name: j"}`))
+	}))
+	defer srv.Close()
+	_, err := subscribeWatch(cfg(srv.URL), "j", "RJID")
+	if err == nil || errors.Is(err, ErrRestoreNotRunning) {
+		t.Fatalf("a different refusal must not read as not-running, got %v", err)
+	}
+}
+
+func TestSubscribeWatch_OpenStreamIsReturned(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("data: Restore job has finished\n"))
+	}))
+	defer srv.Close()
+	resp, err := subscribeWatch(cfg(srv.URL), "j", "RJID")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if !strings.Contains(string(body), "Restore job has finished") {
+		t.Fatalf("stream body = %q", body)
 	}
 }

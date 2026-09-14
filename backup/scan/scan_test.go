@@ -284,7 +284,7 @@ func TestPath1(t *testing.T) {
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
 	// set dereference to True
-	backupConfig.Dereference = true
+	backupConfig.Dereference = shared.BoolPtr(true)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -398,7 +398,7 @@ func TestPath2(t *testing.T) {
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
 	// set dereference to False
-	backupConfig.Dereference = false
+	backupConfig.Dereference = shared.BoolPtr(false)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -523,7 +523,7 @@ func TestPath3(t *testing.T) {
 		// overwrite whatever was in the mock config with the tmp path we want to test
 		backupConfig.Paths = []string{backupDirPath}
 		// set dereference to True
-		backupConfig.Dereference = false
+		backupConfig.Dereference = shared.BoolPtr(false)
 		// backupJobState contains the state of all running backup jobs plus it has some handy methods
 		backupJobsState := shared.NewJobsState()
 		// populate state object with default values
@@ -642,7 +642,7 @@ func TestPath4(t *testing.T) {
 		backupDirPath + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "file7",
 	}
 	// set dereference to True
-	backupConfig.Dereference = true
+	backupConfig.Dereference = shared.BoolPtr(true)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -760,7 +760,7 @@ func TestPath5(t *testing.T) {
 		backupDirPath + string(filepath.Separator) + "dir1" + string(filepath.Separator) + "dir6*",
 	}
 	// set dereference to True
-	backupConfig.Dereference = true
+	backupConfig.Dereference = shared.BoolPtr(true)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -881,7 +881,7 @@ func TestPath6(t *testing.T) {
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath + string(filepath.Separator) + "file1"}
 	// set dereference to True
-	backupConfig.Dereference = true
+	backupConfig.Dereference = shared.BoolPtr(true)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -1008,7 +1008,7 @@ func TestPath7(t *testing.T) {
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath, backupDirPath2 + string(filepath.Separator) + "file1"}
 	// set dereference to True
-	backupConfig.Dereference = true
+	backupConfig.Dereference = shared.BoolPtr(true)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -1129,7 +1129,7 @@ func TestPath8(t *testing.T) {
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath, backupDirPath2}
 	// set dereference to True
-	backupConfig.Dereference = true
+	backupConfig.Dereference = shared.BoolPtr(true)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -1241,7 +1241,7 @@ func TestPath9(t *testing.T) {
 	backupConfig.Paths = []string{backupDirPath}
 	backupConfig.Exclusions = []string{"**" + string(filepath.Separator) + "*.txt"}
 	// set dereference to False
-	backupConfig.Dereference = false
+	backupConfig.Dereference = shared.BoolPtr(false)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -1353,7 +1353,7 @@ func TestPath10(t *testing.T) {
 	backupConfig.Paths = []string{backupDirPath}
 	backupConfig.Exclusions = []string{"**" + string(filepath.Separator) + "file[2-4]*.txt"}
 	// set dereference to False
-	backupConfig.Dereference = false
+	backupConfig.Dereference = shared.BoolPtr(false)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -1465,7 +1465,7 @@ func TestPath11(t *testing.T) {
 	backupConfig.Paths = []string{backupDirPath}
 	backupConfig.Exclusions = []string{"**" + string(filepath.Separator) + "file?.txt"}
 	// set dereference to False
-	backupConfig.Dereference = false
+	backupConfig.Dereference = shared.BoolPtr(false)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -1577,7 +1577,7 @@ func TestPath12(t *testing.T) {
 	backupConfig.Paths = []string{backupDirPath}
 	backupConfig.Exclusions = []string{"**" + string(filepath.Separator) + "file{1,2}.txt"}
 	// set dereference to False
-	backupConfig.Dereference = false
+	backupConfig.Dereference = shared.BoolPtr(false)
 	// backupJobState contains the state of all running backup jobs plus it has some handy methods
 	backupJobsState := shared.NewJobsState()
 	// populate state object with default values
@@ -1703,7 +1703,7 @@ func TestPath13(t *testing.T) {
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
 	// set dereference to True
-	backupConfig.Dereference = true
+	backupConfig.Dereference = shared.BoolPtr(true)
 
 	// populate state object with default values
 	u, err := uuid.NewV4()
@@ -1869,7 +1869,7 @@ func TestPath14(t *testing.T) {
 		// overwrite whatever was in the mock config with the tmp path we want to test
 		backupConfig.Paths = []string{backupDirPath}
 		// set dereference to false
-		backupConfig.Dereference = false
+		backupConfig.Dereference = shared.BoolPtr(false)
 
 		// populate state object with default values
 		u, err := uuid.NewV4()
@@ -2024,7 +2024,7 @@ func TestPath15(t *testing.T) {
 	// overwrite whatever was in the mock config with the tmp path we want to test
 	backupConfig.Paths = []string{backupDirPath}
 	// set dereference to False
-	backupConfig.Dereference = false
+	backupConfig.Dereference = shared.BoolPtr(false)
 
 	// populate state object with default values
 	u, err := uuid.NewV4()

@@ -1,3 +1,8 @@
+# Run the Python integration tests on Windows. Same tier arguments as integration_tests.sh:
+#   .\integration_tests.ps1            -> acceptance + api
+#   .\integration_tests.ps1 cloud      -> cloud tier + object store cleanup
+#   .\integration_tests.ps1 all        -> every tier
+param([string[]]$Tiers = @())
 try {
 
 	$TESTSFOLDER='.\integration_tests'
@@ -42,16 +47,37 @@ try {
 	  exit $LastExitCode
 	}
 
-	echo "Running Python integration tests ..."
-	& "$TESTSFOLDER\.venv_windows\Scripts\python.exe" -m unittest discover -s ${TESTSFOLDER} -p '*.py*' -v
+	if ($Tiers.Count -eq 0) { $Tiers = @("acceptance", "api") }
+	elseif ($Tiers -contains "all") { $Tiers = @("acceptance", "api", "ui", "cloud") }
+	if ($Tiers -contains "ui") {
+	  echo "Ensuring the Playwright Chromium build is installed ..."
+	  & "$TESTSFOLDER\.venv_windows\Scripts\playwright.exe" install chromium
+	  if ( $LastExitCode -ne 0 ) {
+	    echo 'Error installing the Playwright browser'
+	    exit $LastExitCode
+	  }
+	}
+	$Paths = @()
+	foreach ($tier in $Tiers) {
+	  if (!(Test-Path -Path "$TESTSFOLDER\$tier" -PathType Container)) {
+	    echo "Unknown tier '$tier' (expected a directory under $TESTSFOLDER)"
+	    exit 1
+	  }
+	  $Paths += "$TESTSFOLDER\$tier"
+	}
+
+	echo "Running Python integration tests (tiers: $Tiers) ..."
+	& "$TESTSFOLDER\.venv_windows\Scripts\python.exe" -m pytest @Paths -v
 	if ( $LastExitCode -ne 0 ) {
 	  exit $LastExitCode
 	}
 
-	echo "Cleaning up object stores as the test is complete ..."
-	& "$TESTSFOLDER\.venv_windows\Scripts\python.exe" "$TESTSFOLDER\clean_object_stores_after_tests.py"
-	if ( $LastExitCode -ne 0 ) {
+	if ($Tiers -contains "cloud") {
+	  echo "Cleaning up object stores as the cloud tier is complete ..."
+	  & "$TESTSFOLDER\.venv_windows\Scripts\python.exe" "$TESTSFOLDER\cloud\clean_object_stores_after_tests.py"
+	  if ( $LastExitCode -ne 0 ) {
 		exit $LastExitCode
+	  }
 	}
 }
 catch {

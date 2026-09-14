@@ -29,7 +29,7 @@ func Path(ctx context.Context, path string, backupConfig shared.ConfigBackup, ba
 	var stat os.FileInfo
 	var err error
 	backupJobsState.IncrementSequence(backupConfig.Name)
-	if backupConfig.Dereference {
+	if backupConfig.DereferenceEnabled() {
 		stat, err = os.Stat(path)
 	} else {
 		stat, err = os.Lstat(path)
@@ -200,7 +200,7 @@ func walk(ctx context.Context, path string, stat os.FileInfo, backupConfig share
 			}
 
 			var fileInfo os.FileInfo
-			if backupConfig.Dereference {
+			if backupConfig.DereferenceEnabled() {
 				fileInfo, err = os.Stat(childPath)
 			} else {
 				fileInfo, err = os.Lstat(childPath)

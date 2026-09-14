@@ -15,7 +15,9 @@ make gotest       # Run unit tests only
 make gotestrace   # Run unit tests with race detection
 make testcp       # Run go fmt + golangci-lint (with gosec, without ineffassign)
 make alltest      # Run all tests + integration tests + build
-make inttest      # Run Python-based integration tests
+make inttest      # Python integration tests: acceptance + api tiers (no cloud credentials needed)
+make inttest-cloud # Python integration tests: cloud tier (skips providers without CLD_* credentials)
+make uitest-browser # Web UI acceptance tests in headless Chromium (Playwright, integration_tests/ui/)
 make cover        # Show HTML coverage report
 make deps         # go mod tidy + go mod vendor
 ```
@@ -63,7 +65,7 @@ If adding or removing of key packages is performed then this file should be upda
 - **scheduler** -- Channel-based message passing between HTTP handlers and backup/restore goroutines. Manages concurrent job state via `BackupJobsState`.
 - **backup** -- Core backup orchestration: diff calculation, upload. Delegates scanning to `backup/scan/` and metadata to `backup/fileproperties/`.
 - **restore** -- Core restore orchestration: downloads files from object store and writes to local filesystem.
-- **objectstore** -- Cloud storage abstraction. Each provider implements a common interface (`common.go`). Providers: `store_aws_s3.go`, `store_azure_blob.go`, `store_gcp_storage.go`, `store_test_null.go` (in-memory, used by integration tests that don't need real cloud credentials).
+- **objectstore** -- Cloud storage abstraction. Each provider implements a common interface (`common.go`). Providers: `store_aws_s3.go`, `store_azure_blob.go`, `store_gcp_storage.go`, `store_test_null.go` (in-memory, used by integration tests that don't need real cloud credentials; with the `persist_dir` target parameter it keeps objects on disk so restores can read what an earlier job uploaded).
 - **database** -- SQLite-backed metadata store using WAL mode. Schema creation in `database.go`. Prepared statements and CRUD operations in `dbops/dbops.go`.
 - **shared** -- Shared structs used across packages. Key files:
   - `structs_scheduler.go` -- `BackupJobsState`, `BackupJobStatus`, `CommWithSchedulerForBackup`, `CommWithSchedulerForRestore`, concurrency management methods

@@ -17,7 +17,11 @@ type ConfigBackup struct {
 	Paths      []string `required:"true" yaml:"paths" json:"paths"`
 	Exclusions []string `yaml:"exclusions" json:"exclusions"`
 	// TODO - fix library bug - https://github.com/jinzhu/configor/issues/34
-	Dereference bool                 `default:"true" yaml:"dereference" json:"dereference"`
+	// Dereference is a pointer so that an explicit "dereference: false" survives loading: the config
+	// loader applies `default` tags to zero-valued fields, and for a plain bool that turned every
+	// false into true. nil means "not set" and reads as the documented default (true) through
+	// DereferenceEnabled().
+	Dereference *bool                `default:"true" yaml:"dereference" json:"dereference"`
 	Checksum    bool                 `default:"false" yaml:"checksum" json:"checksum"`
 	Target      []ConfigBackupTarget `required:"true" yaml:"target" json:"target"`
 	Schedule    []string             `yaml:"schedule" json:"schedule"`
@@ -30,6 +34,17 @@ type ConfigBackup struct {
 	//
 	PreRunScript  string `yaml:"pre_run_script" json:"pre_run_script"`
 	PostRunScript string `yaml:"post_run_script" json:"post_run_script"`
+}
+
+// DereferenceEnabled reports whether symbolic links are followed for this backup job: the
+// configured value, or true (the documented default) when the setting is absent.
+func (b ConfigBackup) DereferenceEnabled() bool {
+	return b.Dereference == nil || *b.Dereference
+}
+
+// BoolPtr returns a pointer to v, for populating optional boolean settings such as Dereference.
+func BoolPtr(v bool) *bool {
+	return &v
 }
 
 // ANY CHANGE in this struct REQUIRES also an update to the Swagger YAML file to ensure the API is kept in sync
@@ -194,6 +209,9 @@ func (cfg *RuntimeConfig) GetCopyWithLock(logContext string) CfgTemplate {
 // makes a deep copy of a ConfigBackup struct
 func CopyConfigBackupStruct(source ConfigBackup) ConfigBackup {
 	result := source
+	if source.Dereference != nil {
+		result.Dereference = BoolPtr(*source.Dereference)
+	}
 	result.Paths = make([]string, len(source.Paths))
 	copy(result.Paths, source.Paths)
 

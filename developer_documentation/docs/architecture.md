@@ -65,6 +65,19 @@ When running in daemon mode, there are several important GO routines (called com
     - clients connect to the http server using the http API and then receive HTTP2 Server-Sent Events for the specific backup or restore job they have requested
     - if either the multiplexer can't keep up with the amount of messages generated or if the client can't keep up then messages will be discarded as part of normal operation
 
+## The test_null object store
+
+`objectstore/store_test_null.go` is a hidden target type used by unit and integration tests. By default it
+discards uploads after draining them into an in-process map, so a store instance can read back only what it
+uploaded itself. Because the daemon builds a fresh store per job, a restore job cannot see what a backup job
+uploaded in that mode.
+
+Setting the target parameter `persist_dir` (absolute path) makes the store write every object, including the
+encryption keystore sidecar, to that directory as one file per object named by the SHA-256 of its remote key.
+Objects then survive across jobs and daemon restarts, which is what the integration tests use to verify
+backup -> restore byte round-trips, encrypted round-trips and incremental runs without cloud credentials.
+`integration_tests/common.py` turns it on through `setup_tmp_config_file_and_tmp_dirs(..., persistent_null_store=True)`.
+
 # Database
 
 There will be one database for each `backup` section of the config file. The structure of such a database is:

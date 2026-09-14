@@ -67,9 +67,10 @@ function isRunning(state: string): boolean {
   return state === 'running' || state === 'started' || state === 'stopping';
 }
 
-// "stopped" and "crashed" restore reports can be resumed (see restore.go:Resume).
+// Restore reports that ended before completion can be resumed; keep in sync with
+// restore.go:ResumableStates.
 function isResumable(state: string): boolean {
-  return state === 'stopped' || state === 'crashed';
+  return state === 'cancelled' || state === 'failed' || state === 'stopped' || state === 'crashed';
 }
 
 interface WatchTarget {

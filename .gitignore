@@ -11,6 +11,8 @@ integration_tests/.venv_freebsd/
 integration_tests/.venv_unix/
 integration_tests/.venv_macos/
 integration_tests/__pycache__
+integration_tests/**/__pycache__
+integration_tests/.pytest_cache
 .venv_desloppify/
 .desloppify/
 documentation_src/.venv/

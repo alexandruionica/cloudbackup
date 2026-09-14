@@ -11,7 +11,9 @@ make gotest       # Run unit tests only
 make gotestrace   # Run unit tests with race detection
 make testcp       # Run go fmt + golangci-lint (with gosec, without ineffassign)
 make alltest      # Run all tests + integration tests + build
-make inttest      # Run Python-based integration tests
+make inttest      # Python integration tests: acceptance + api tiers (no cloud credentials needed)
+make inttest-cloud # Python integration tests: cloud tier (skips providers without CLD_* credentials)
+make uitest-browser # Web UI acceptance tests in headless Chromium (Playwright, integration_tests/ui/)
 make cover        # Show HTML coverage report
 make deps         # go mod tidy + go mod vendor
 make run          # Build and run the binary
@@ -23,7 +25,12 @@ To run a single Go test:
 go test -v -run TestName ./path/to/package/...
 ```
 
-Integration tests require cloud credentials as environment variables (AWS, GCP, Azure) — see README.md for the full list.
+To run a single Python integration module or test (pytest; binary must be at `./cloudbackup`, run from repo root):
+```bash
+integration_tests/.venv_linux/bin/python -m pytest integration_tests/acceptance/cli_basics.py -v
+```
+
+Integration tests are tiered by directory under `integration_tests/`: `acceptance/` (CLI, user journeys), `api/` (REST contract), `cloud/` (real object stores; needs CLD_* credentials, see README.md, otherwise skipped), `lib/common.py` (shared helpers) and `conftest.py` (pytest fixtures: `daemon`, `api`, `client_config`, `source_tree`, `restore_dir`). Details in `developer_documentation/docs/testing.md`.
 
 **Prerequisites:** Go 1.26+, golangci-lint v1.64.4, Python 3.12.3+, virtualenv, pip.
 
@@ -55,7 +62,7 @@ CLI (cliargs) → Client packages (client/*) → HTTP → Daemon (daemon) → Co
 - **httpd** — REST API handlers (`api_rest_backup.go`, `api_rest_config.go`, `api_rest_report.go`). Uses `julienschmidt/httprouter`. Authenticated via HTTP Basic Auth with role-based permissions.
 - **scheduler** — Listens on a channel for backup commands from HTTP handlers; manages concurrent backup/restore goroutines.
 - **backup** — Core backup orchestration: diff calculation, upload, restore. Delegates scanning to `backup/scan/` and metadata to `backup/fileproperties/`. Per-(file,target) gating helpers in `preupload.go` (size limit, reserved-namespace check).
-- **objectstore** — Cloud storage abstraction. Each provider (`store_aws_s3.go`, `store_azure_blob.go`, `store_gcp_storage.go`) implements the common interface defined in `common.go`. Per-target client-side-encryption lifecycle lives in `encryption.go` (`InitEncryption`, sidecar fetch/bootstrap with conditional PUT).
+- **objectstore** — Cloud storage abstraction. Each provider (`store_aws_s3.go`, `store_azure_blob.go`, `store_gcp_storage.go`) implements the common interface defined in `common.go`. Per-target client-side-encryption lifecycle lives in `encryption.go` (`InitEncryption`, sidecar fetch/bootstrap with conditional PUT). `store_test_null.go` is the credential-free test backend; give it a `persist_dir` target parameter so objects survive across jobs (restore and incremental integration tests rely on it).
 - **cbcrypto** — Client-side encryption: streaming AES-256-GCM (`EncryptingReader`, `DecryptingReader`), file header (incl. `keystore_uuid`), argon2id KEK derivation, `EncryptedSize` helper.
 - **cbcrypto/keystore** — YAML sidecar (`<storePrefix>/.cbcrypt/keystore.v1.yaml`) holding salt, KDF params, keystore UUID, and password verifier.
 - **database** — SQLite-backed metadata store using WAL mode. Tracks backup jobs, remote files, and failures. DB operations are in `dbops/`.
