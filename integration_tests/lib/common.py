@@ -916,8 +916,42 @@ class ApiClient(object):
     """
     def __init__(self, base_url, username='testuser1', password='HV}H/y?<9$]Z5N4N', api_root='/api/v1'):
         self.base_url = base_url
+        self.username = username
+        self.password = password
         self.auth = (username, password)
         self.api_root = api_root
+
+    # ---- unittest-style assertion surface, so check_backup_report(), check_restore_report() and
+    # verify_restored_tree() (written for TestCase "self") can be handed an ApiClient from pytest tests
+    def fail(self, msg):
+        raise AssertionError(msg)
+
+    def assertTrue(self, expr, msg=None):
+        assert expr, msg or "expected a true value, got {!r}".format(expr)
+
+    def assertFalse(self, expr, msg=None):
+        assert not expr, msg or "expected a false value, got {!r}".format(expr)
+
+    def assertEqual(self, a, b, msg=None):
+        assert a == b, msg or "{!r} != {!r}".format(a, b)
+
+    def assertNotEqual(self, a, b, msg=None):
+        assert a != b, msg or "{!r} == {!r}".format(a, b)
+
+    def assertIn(self, member, container, msg=None):
+        assert member in container, msg or "{!r} not found in {!r}".format(member, container)
+
+    def assertNotIn(self, member, container, msg=None):
+        assert member not in container, msg or "{!r} unexpectedly found in {!r}".format(member, container)
+
+    def assertGreater(self, a, b, msg=None):
+        assert a > b, msg or "{!r} not greater than {!r}".format(a, b)
+
+    def assertIsNotNone(self, obj, msg=None):
+        assert obj is not None, msg or "unexpectedly None"
+
+    def ValidatedAndDecodeResponse(self, r, url):
+        return self._validated(r, url, r.status_code)
 
     def url(self, path):
         return self.base_url + self.api_root + path
@@ -1008,3 +1042,61 @@ class ApiClient(object):
         else:
             raise AssertionError("backup job '{}' not found in /config".format(job_name))
         self.post('/config', config)
+
+
+class CliResult(object):
+    """Outcome of one cloudbackup CLI invocation."""
+    def __init__(self, cmdline, completed):
+        self.cmdline = cmdline
+        self.returncode = completed.returncode
+        self.stdout = completed.stdout.decode("utf-8", errors="replace")
+        self.stderr = completed.stderr.decode("utf-8", errors="replace")
+
+    def __repr__(self):
+        return "CliResult(cmd={!r}, rc={}, stdout={!r}, stderr={!r})".format(
+            self.cmdline, self.returncode, self.stdout, self.stderr)
+
+    @property
+    def lines(self):
+        return [ln for ln in self.stdout.split('\n') if ln != '']
+
+    def json(self):
+        return json.loads(self.stdout)
+
+
+def run_cli(args, client_config=None, expect=0, cmd=None):
+    """
+    Run "./cloudbackup <args>" (a string, shell-quoted by the caller where needed). When $client_config is
+    given, " -c <path>" is appended. Asserts the exit code equals $expect (None to skip the check).
+    """
+    cmdline = (cmd or cmd_default) + " " + args
+    if client_config:
+        cmdline += " -c " + client_config
+    result = CliResult(cmdline, run_shell_cmd(cmdline)['result'])
+    if expect is not None:
+        assert result.returncode == expect, "exit code {} (expected {}) from: {}".format(
+            result.returncode, expect, result)
+    return result
+
+
+def verify_restored_subset(self, restore_dir, filelist, requested):
+    """
+    After a restore that asked only for $requested (absolute source paths, files or directories), assert
+    that every filelist entry inside one of them was restored (md5-checked for files) and that nothing
+    outside was, ancestors excepted: MkdirAll creates parent directories as a side effect.
+    """
+    wanted = [r.rstrip(os.sep) for r in requested]
+    for source_path, file_type in filelist.items():
+        restored_path = map_path_into_restore_dir(restore_dir, source_path)
+        inside = any(source_path == w or source_path.startswith(w + os.sep) for w in wanted)
+        ancestor = any(w.startswith(source_path + os.sep) for w in wanted)
+        if inside:
+            self.assertTrue(os.path.exists(restored_path),
+                            "Expected restored item '{}' (type={}) at '{}'".format(source_path, file_type, restored_path))
+            if file_type == "file":
+                self.assertEqual(get_md5_sum(source_path), get_md5_sum(restored_path),
+                                 "MD5 mismatch for restored file '{}'".format(source_path))
+        elif not ancestor:
+            self.assertFalse(os.path.exists(restored_path),
+                             "'{}' is outside the requested paths {} but was restored at '{}'".format(
+                                 source_path, requested, restored_path))
