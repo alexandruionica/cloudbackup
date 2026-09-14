@@ -820,7 +820,10 @@ func cleanupAfterRestore(jobName string, restoreJobUuid string, result restore.R
 		jobReport = string(b)
 	}
 
-	if result.TargetName == "" {
+	if result.PreserveRecord {
+		logger.Infof("Leaving the stored record of restore '%s' id '%s' untouched: the request was refused before "+
+			"the job was touched", jobName, restoreJobUuid)
+	} else if result.TargetName == "" {
 		logger.Warnf("Cannot update the restore DB jobs table entry for restore '%s' id '%s' because the target "+
 			"name was not determined (restore likely failed before target resolution)", jobName, restoreJobUuid)
 	} else if err := restore.FinalizeJobRecord(serverConfigCopy, jobName, result.TargetName, restoreJobUuid, result.State, jobReport, backupJobsState); err != nil {

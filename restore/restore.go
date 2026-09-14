@@ -46,6 +46,11 @@ type Result struct {
 	State             string
 	Err               error
 	RestoredDirectory string
+	// PreserveRecord is set when a request was refused before the stored restore job was touched
+	// (for example a resume of a job whose state does not allow it). cleanupAfterRestore must then
+	// leave the jobs-table row and its report exactly as they were instead of overwriting them
+	// with this Result's State.
+	PreserveRecord bool
 	// TargetName is filled in once the restore package has resolved which target the job is
 	// actually reading from (important when the caller omitted TargetName from the Request and the
 	// default first-target fallback kicked in). cleanupAfterRestore needs this to locate the
@@ -336,6 +341,23 @@ func resumeRestoreJob(restoreDb *sql.DB, stmts shared.RestoreDbPreparedStatement
 	return nil
 }
 
+// ResumableStates lists the stored jobs-table states from which a restore can be resumed: it ended
+// before every manifest item reached 'done', so pending / in-progress rows are left to retry.
+// "cancelled" is what a user-requested stop records, "failed" an error mid-run, "crashed" a row
+// that startup recovery found still 'started' from a previous daemon process, and "stopped" is
+// kept for records written by older versions. The web UI mirrors this list (isResumable).
+var ResumableStates = []string{"cancelled", "failed", "crashed", "stopped"}
+
+// IsResumableState reports whether a stored restore job state is in ResumableStates.
+func IsResumableState(state string) bool {
+	for _, s := range ResumableStates {
+		if s == state {
+			return true
+		}
+	}
+	return false
+}
+
 // Resume is a thin wrapper invoked by the scheduler when a caller asks to resume a
 // previously-crashed restore. It reads the jobs row out of the per-target restore database,
 // rebuilds a Request from its stored fields, and hands off to Do() which detects the existing
@@ -363,13 +385,13 @@ func Resume(jobName string, restoreJobId string, targetName string, serverConfig
 	if err != nil {
 		database.DisconnectFromDb(restoreDbKey, backupJobsState, restoreDb)
 		if errors.Is(err, sql.ErrNoRows) {
-			return Result{State: "failed", Err: fmt.Errorf("no restore job with id '%s' in restore database for backup '%s' target '%s'", restoreJobId, jobName, targetName), TargetName: targetName}
+			return Result{State: "failed", Err: fmt.Errorf("no restore job with id '%s' in restore database for backup '%s' target '%s'", restoreJobId, jobName, targetName), TargetName: targetName, PreserveRecord: true}
 		}
-		return Result{State: "failed", Err: err, TargetName: targetName}
+		return Result{State: "failed", Err: err, TargetName: targetName, PreserveRecord: true}
 	}
-	if rec.State != "crashed" && rec.State != "stopped" {
+	if !IsResumableState(rec.State) {
 		database.DisconnectFromDb(restoreDbKey, backupJobsState, restoreDb)
-		return Result{State: "failed", Err: fmt.Errorf("restore job '%s' cannot be resumed because its current state is '%s' (expected 'crashed' or 'stopped')", restoreJobId, rec.State), TargetName: targetName}
+		return Result{State: "failed", Err: fmt.Errorf("restore job '%s' cannot be resumed because its current state is '%s' (expected one of %s)", restoreJobId, rec.State, strings.Join(ResumableStates, ", ")), TargetName: targetName, PreserveRecord: true}
 	}
 	// Close the DB before calling Do() because Do() will re-open it via StartRestoreDb.
 	database.DisconnectFromDb(restoreDbKey, backupJobsState, restoreDb)

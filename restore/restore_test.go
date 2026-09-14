@@ -1,6 +1,8 @@
 package restore
 
 import (
+	"cloudbackup/database"
+	"cloudbackup/database/dbops"
 	"cloudbackup/shared"
 	"database/sql"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -770,5 +773,52 @@ func TestSanitizeFilePathsWithFetchItems(t *testing.T) {
 	wantPaths := []string{p("/home/data"), p("/home/data/file.txt")}
 	if !equalStringSlices(got, wantPaths) {
 		t.Errorf("sanitize+fetch: got %v, want %v", got, wantPaths)
+	}
+}
+
+// A restore stopped by the user is stored as 'cancelled' (see cleanupAfterRestore), so the resume
+// gate must accept it or the documented "resume a cancelled restore" can never work. 'finished' and
+// in-flight states must stay refused.
+func TestIsResumableState(t *testing.T) {
+	for _, state := range []string{"cancelled", "failed", "crashed", "stopped"} {
+		if !IsResumableState(state) {
+			t.Errorf("state %q must be resumable", state)
+		}
+	}
+	for _, state := range []string{"finished", "started", "stopping", "running", ""} {
+		if IsResumableState(state) {
+			t.Errorf("state %q must not be resumable", state)
+		}
+	}
+}
+
+// Resume on a job whose state forbids it must report the refusal without touching the stored
+// record, so the caller (cleanupAfterRestore) does not overwrite a 'finished' report with 'failed'.
+func TestResumeRefusalPreservesRecord(t *testing.T) {
+	dataDir := t.TempDir()
+	cfg := shared.CfgTemplate{DataDir: dataDir, Mutex: &sync.RWMutex{}}
+	state := shared.NewJobsState()
+	db, err := database.StartRestoreDb(dataDir, "job", "t1", state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stmts, err := dbops.PrepareRestore(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := dbops.InsertRestoreJob(db, stmts, "rid", "job", "t1", "src", time.Now().UnixNano(), filepath.Join(dataDir, "out"), true, "null", "null", "linux"); err != nil {
+		t.Fatal(err)
+	}
+	if err := dbops.UpdateRestoreJobFinal(db, stmts, "rid", time.Now().UnixNano(), "finished", "{}"); err != nil {
+		t.Fatal(err)
+	}
+	database.DisconnectFromDb(database.GetRestoreDbKey("job", "t1"), state, db)
+
+	res := Resume("job", "rid", "t1", cfg, state)
+	if res.Err == nil || !res.PreserveRecord {
+		t.Fatalf("expected a refusal with PreserveRecord=true, got %+v", res)
+	}
+	if !strings.Contains(res.Err.Error(), "'finished'") {
+		t.Fatalf("refusal should name the offending state, got: %v", res.Err)
 	}
 }
