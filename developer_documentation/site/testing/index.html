@@ -60,6 +60,10 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#writing-new-tests">Writing new tests</a>
     </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fixture-trees">Fixture trees</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#previous-release-data">Previous-release data</a>
+    </li>
     <li class="toctree-l3"><a class="reference internal" href="#skips">Skips</a>
     </li>
         </ul>
@@ -191,6 +195,26 @@ for the implementation.</p>
 <code>--json</code> output that mixes pretty-printed and single-line documents.</p>
 <p>Prefer <code>--json</code> output over counting lines of human-readable text, and make every scenario docstring
 name the user guide section it mirrors.</p>
+<h3 id="fixture-trees">Fixture trees</h3>
+<p><code>setup_dir_with_tmp_files()</code> builds the default tree (Unicode and shell-metacharacter names). Flags add
+the shapes that trip backup tools: <code>symlinks</code> (to a file, to a directory, dangling), <code>empty_file</code>,
+<code>large_file</code> (6 MiB, above the S3 multipart part size and the Azure block size), <code>hard_link</code>,
+<code>long_name</code>. <code>acceptance/fixture_realism.py</code> runs the full set through backup and restore with
+<code>dereference</code> on and off; the cloud restore tests carry the empty and large files onto real buckets.
+<code>count_files_folders_links(path, dereference)</code> mirrors what the server will examine, symlinks included.</p>
+<h3 id="previous-release-data">Previous-release data</h3>
+<p><code>integration_tests/fixtures/release_&lt;tag&gt;/</code> holds a data directory (SQLite databases), the config and a
+<code>meta.json</code> written by that release's binary; <code>api/compat_previous_release.py</code> starts the current binary
+on it, reads the old run's report and file list, runs an incremental backup on top and restores. The
+databases store absolute paths, so the tree is recreated at the recorded location and the test skips on
+other OS families. Regenerate (or add a release) with the old binary built from its tag:</p>
+<pre><code class="language-bash">git worktree add /tmp/cb-v0.0.3 v0.0.3
+(cd /tmp/cb-v0.0.3 &amp;&amp; bash generate_version.sh &amp;&amp; go build -mod=vendor -o cloudbackup .)
+integration_tests/.venv_linux/bin/python integration_tests/fixtures/make_release_fixture.py \
+    --binary /tmp/cb-v0.0.3/cloudbackup --version v0.0.3
+</code></pre>
+<p>The database package has no schema versioning yet; the day the schema changes, this test is what turns
+a silent break into a failing build and forces a migration path.</p>
 <h3 id="skips">Skips</h3>
 <p>Use <code>self.skipTest(...)</code> or <code>@unittest.skipUnless(...)</code> for platform limitations, never a bare <code>return</code>:
 a silent return counts as a pass and hides a hole in coverage. Skips are listed in the pytest summary.</p>

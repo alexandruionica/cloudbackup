@@ -89,6 +89,33 @@ Assertion helpers in `common.py`: `check_backup_report()`, `check_restore_report
 Prefer `--json` output over counting lines of human-readable text, and make every scenario docstring
 name the user guide section it mirrors.
 
+### Fixture trees
+
+`setup_dir_with_tmp_files()` builds the default tree (Unicode and shell-metacharacter names). Flags add
+the shapes that trip backup tools: `symlinks` (to a file, to a directory, dangling), `empty_file`,
+`large_file` (6 MiB, above the S3 multipart part size and the Azure block size), `hard_link`,
+`long_name`. `acceptance/fixture_realism.py` runs the full set through backup and restore with
+`dereference` on and off; the cloud restore tests carry the empty and large files onto real buckets.
+`count_files_folders_links(path, dereference)` mirrors what the server will examine, symlinks included.
+
+### Previous-release data
+
+`integration_tests/fixtures/release_<tag>/` holds a data directory (SQLite databases), the config and a
+`meta.json` written by that release's binary; `api/compat_previous_release.py` starts the current binary
+on it, reads the old run's report and file list, runs an incremental backup on top and restores. The
+databases store absolute paths, so the tree is recreated at the recorded location and the test skips on
+other OS families. Regenerate (or add a release) with the old binary built from its tag:
+
+```bash
+git worktree add /tmp/cb-v0.0.3 v0.0.3
+(cd /tmp/cb-v0.0.3 && bash generate_version.sh && go build -mod=vendor -o cloudbackup .)
+integration_tests/.venv_linux/bin/python integration_tests/fixtures/make_release_fixture.py \
+    --binary /tmp/cb-v0.0.3/cloudbackup --version v0.0.3
+```
+
+The database package has no schema versioning yet; the day the schema changes, this test is what turns
+a silent break into a failing build and forces a migration path.
+
 ### Skips
 
 Use `self.skipTest(...)` or `@unittest.skipUnless(...)` for platform limitations, never a bare `return`:

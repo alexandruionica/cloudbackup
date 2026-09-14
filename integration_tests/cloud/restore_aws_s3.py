@@ -30,7 +30,8 @@ class TestRestoreAwsS3(unittest.TestCase):
         tmpfile.write(client_config_content(self.base_url))
         tmpfile.close()
         # tmp files for tests
-        self.tmpdir, self.filelist = setup_dir_with_tmp_files()
+        # a zero-byte file and a file above the multipart / block threshold ride along on real buckets
+        self.tmpdir, self.filelist = setup_dir_with_tmp_files(empty_file=True, large_file=True)
         # adjust server config for job to include above tmpdir
         with open(self.server_config_file_path) as fd:
             parsed = yaml.load(fd, Loader=yaml.SafeLoader)

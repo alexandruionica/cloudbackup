@@ -454,11 +454,22 @@ def get_md5_sum(filepath):
     return hasher.hexdigest()
 
 
-def setup_dir_with_tmp_files():
+LARGE_FILE_SIZE = 6 * 1024 * 1024  # crosses the 5 MiB S3 multipart part size and Azure block size
+
+
+def setup_dir_with_tmp_files(symlinks=False, empty_file=False, large_file=False, hard_link=False, long_name=False,
+                             large_size=LARGE_FILE_SIZE):
     """
-    Creates a tmp dir and populate it with some files and directories
-    :return: tuple consisting of directory path and then a dict in the form {"path_item": type} where type is one of
-            ["file", "dir"]
+    Creates a tmp dir and populate it with some files and directories. The default tree has Unicode and
+    shell-metacharacter names; the flags add the shapes real trees have and backups get wrong:
+      symlinks   - a symlink to a file, one to a directory and a dangling one (skipped on Windows when the
+                   process may not create symlinks)
+      empty_file - a zero-byte file
+      large_file - a $large_size byte file of non-repeating content (multipart / block upload path)
+      hard_link  - a second directory entry for an existing file's inode (backed up as two files)
+      long_name  - a 200-character file name
+    :return: tuple consisting of directory path and then a dict in the form {"path_item": type} where type is one
+            of ["file", "dir", "symlink"]
     """
     tmpdir = tempfile.mkdtemp(prefix="integration_test_")
     # tmpdir gets prepended to each item
@@ -488,6 +499,47 @@ def setup_dir_with_tmp_files():
                 os.makedirs(parent_dir, exist_ok=True)
             with open(fname, "w", encoding="utf-8") as f:
                 f.write("some text for " + fname)
+
+    extras = os.path.join(tmpdir, "dir1", "extras")
+    if empty_file or large_file or hard_link or long_name or symlinks:
+        os.makedirs(extras, exist_ok=True)
+        filelist[extras] = "dir"
+    if empty_file:
+        path = os.path.join(extras, "empty.bin")
+        open(path, "wb").close()
+        filelist[path] = "file"
+    if large_file:
+        path = os.path.join(extras, "large.bin")
+        with open(path, "wb") as f:
+            chunk = bytes(range(256)) * 4096  # 1 MiB of non-repeating-in-a-block content
+            written = 0
+            while written < large_size:
+                take = min(len(chunk), large_size - written)
+                f.write(chunk[:take])
+                written += take
+        filelist[path] = "file"
+    if hard_link:
+        path = os.path.join(extras, "hardlink-to-file7.txt")
+        os.link(os.path.join(tmpdir, "dir1", "dir5", "file7.txt"), path)
+        filelist[path] = "file"
+    if long_name:
+        path = os.path.join(extras, ("n" * 196) + ".txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("long name")
+        filelist[path] = "file"
+    if symlinks:
+        links = {
+            os.path.join(extras, "link-to-file1.txt"): os.path.join(tmpdir, "dir1", "dir2", "file1.txt"),
+            os.path.join(extras, "link-to-dir5"): os.path.join(tmpdir, "dir1", "dir5"),
+            os.path.join(extras, "dangling-link"): os.path.join(tmpdir, "does-not-exist"),
+        }
+        for link, target in links.items():
+            try:
+                os.symlink(target, link, target_is_directory=os.path.isdir(target))
+            except (OSError, NotImplementedError):
+                # Windows without SeCreateSymbolicLinkPrivilege / developer mode
+                continue
+            filelist[link] = "symlink"
     return tmpdir, filelist
 
 
@@ -696,6 +748,12 @@ def get_azure_blob_storage_config_from_env():
 #  $dereference==True then it will report 0 symlinks found no matter how many actual symlinks exist .
 # Returns a touple with three elements: (files, directories, symlinks) examined
 def count_files_folders_links(path, dereference=False):
+    """
+    Count what the server will examine under $path, mirroring its symlink handling: with $dereference
+    links are followed (a link to a file is a file, a link to a directory is walked, a dangling link is an
+    examine error and counts as nothing); without it every link is a symlink and is not followed.
+    :return: (files, dirs, symlinks)
+    """
     result_files = 0
     result_dirs = 0
     result_symlinks = 0
@@ -703,15 +761,21 @@ def count_files_folders_links(path, dereference=False):
         result_dirs = 1  # include top level dir too in result as the os.walk() function excludes it
         for root, dirs, files in os.walk(path, followlinks=dereference):
             for name in files:
-                if dereference:
-                    if os.path.islink(os.path.join(root, name)):
-                        result_symlinks += 1
+                full = os.path.join(root, name)
+                if os.path.islink(full):
+                    if dereference:
+                        if os.path.exists(full):
+                            result_files += 1
                     else:
-                        result_files += 1
+                        result_symlinks += 1
                 else:
                     result_files += 1
-            for _ in dirs:
-                result_dirs += 1
+            for name in dirs:
+                # without followlinks a symlink to a directory is listed under dirs but not descended
+                if not dereference and os.path.islink(os.path.join(root, name)):
+                    result_symlinks += 1
+                else:
+                    result_dirs += 1
     else:
         if dereference:
             result_files = 1
@@ -897,7 +961,7 @@ def verify_restored_tree(self, restore_dir, source_root, filelist, dereference=F
     """
     for source_path, file_type in filelist.items():
         restored_path = map_path_into_restore_dir(restore_dir, source_path)
-        self.assertTrue(os.path.exists(restored_path),
+        self.assertTrue(os.path.lexists(restored_path),
                         "Expected restored item '{}' (type={}) to exist at '{}' but it does "
                         "not".format(source_path, file_type, restored_path))
         if file_type == "dir":
@@ -909,6 +973,11 @@ def verify_restored_tree(self, restore_dir, source_root, filelist, dereference=F
             self.assertEqual(original_md5, restored_md5,
                              "MD5 mismatch for '{}': original={} restored={}".format(
                                  source_path, original_md5, restored_md5))
+        elif file_type == "symlink":
+            self.assertTrue(os.path.islink(restored_path), "Expected '{}' to be a symlink".format(restored_path))
+            self.assertEqual(os.readlink(restored_path), os.readlink(source_path),
+                             "symlink '{}' points at '{}' but the source pointed at '{}'".format(
+                                 restored_path, os.readlink(restored_path), os.readlink(source_path)))
     for source_path in (absent or []):
         restored_path = map_path_into_restore_dir(restore_dir, source_path)
         self.assertFalse(os.path.exists(restored_path),
