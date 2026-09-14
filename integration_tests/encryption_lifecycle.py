@@ -3,25 +3,22 @@
 # Integration test: client-side-encryption lifecycle exercised through the daemon's
 # REST API. Uses the test_null object store backend.
 #
-# IMPORTANT: test_null is in-memory and the daemon currently creates a fresh
-# StoreTestNull (with an empty memObjects map) every time a job runs. That means a
-# restore through the API cannot read back what an earlier backup uploaded — there
-# is nothing to deserialise. So the meaningful integration checks at this level are:
+# The test_null target runs with a persist_dir so the ciphertext and the keystore
+# sidecar written by the backup job survive into the restore job, which lets this
+# test prove the full encrypt -> upload -> download -> decrypt round-trip through
+# the daemon:
 #
 #   - daemon starts cleanly with encrypt=true, encrypt_pass=<value>
 #   - POST /backup/target/test succeeds (sidecar bootstrap path runs cleanly)
 #   - GET /config shows encrypt=true and a populated (obfuscated) encrypt_pass
 #   - POST /backup/start completes the job and the report exposes all of the CSE
 #     stats counters at zero
-#   - POST /restore/start + restore completion produces a report row whose CSE
-#     counter (decrypt_keystore_mismatch) is present and zero
+#   - POST /restore/start restores every file byte-for-byte and the restore
+#     report's CSE counter (decrypt_keystore_mismatch) is present and zero
 #
-# True end-to-end bytes round-trip with encryption is already covered by the Go
-# unit tests in objectstore/encryption_e2e_test.go (using TestNull in-process where
-# memObjects survives across the upload→download window). Cross-daemon behaviour
-# (sidecar rehydrate, conflict resolution, reset-keystore CLI) is covered by the
-# Go unit tests in objectstore/encryption_test.go and
-# cliargs/cliargs_resetkeystore_test.go.
+# Cross-daemon behaviour (sidecar rehydrate, conflict resolution, reset-keystore
+# CLI) is covered by the Go unit tests in objectstore/encryption_test.go,
+# objectstore/store_test_null_persist_test.go and cliargs/cliargs_resetkeystore_test.go.
 
 import argparse
 import logging
@@ -44,7 +41,7 @@ class TestEncryptionLifecycle(unittest.TestCase):
         self.username = 'testuser1'
         self.password = 'HV}H/y?<9$]Z5N4N'
         self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
-            suffix='_integration_tests_encryption_lifecycle')
+            suffix='_integration_tests_encryption_lifecycle', persistent_null_store=True)
         self.data_dir = self.to_delete[1]
         # Tmp source tree to back up.
         self.tmpdir, self.filelist = setup_dir_with_tmp_files()
@@ -91,6 +88,9 @@ class TestEncryptionLifecycle(unittest.TestCase):
         self.assertIn("message", response)
         return response
 
+    # the shared report helpers in common.py expect this name
+    ValidatedAndDecodeResponse = _decode
+
     def _wait_backup_finishes(self, job_name, max_seconds=20):
         counter = 0
         max_count = int(max_seconds / 0.1)
@@ -132,8 +132,8 @@ class TestEncryptionLifecycle(unittest.TestCase):
             time.sleep(0.1)
             counter += 1
 
-    def test_encrypted_backup_completes_and_surfaces_counters(self):
-        """Encrypted backup runs end-to-end and the report exposes the CSE counters."""
+    def test_encrypted_backup_and_restore_round_trip(self):
+        """Encrypted backup then restore through the daemon returns the original bytes."""
         job_name = 'first_backup'
 
         # 1. Sanity check: the running config reflects encrypt=true with a populated password.
@@ -176,13 +176,30 @@ class TestEncryptionLifecycle(unittest.TestCase):
             self.assertEqual(stats[counter], 0,
                              "Expected CSE counter '{}'=0, got {}".format(counter, stats[counter]))
 
-        # Note on the restore side: a successful restore through the API requires the
-        # object store's memObjects to survive between the backup and restore goroutines.
-        # The current test_null backend allocates a fresh memObjects map per
-        # InitialiseStoreTestNull call, so the keystore sidecar written by the backup is
-        # lost by the time the restore starts. End-to-end bytes round-trip with
-        # encryption is therefore covered by objectstore/encryption_e2e_test.go (Go-level)
-        # rather than this integration test.
+        # 4. Restore everything from that run into an empty directory.
+        url = self.base_url + self.api_root + '/restore/start'
+        r = requests.post(url=url, auth=(self.username, self.password),
+                          json={"name": job_name, "source_backup_job_id": backup_job_id,
+                                "all_files": True, "restore_dir": self.restore_dir})
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        restore_job_id = self._decode(r, url)['result']['restore_job_id']
+        self._wait_restore_finishes(job_name, restore_job_id)
+
+        # 5. Every file decrypts back to the exact source bytes.
+        num_files, num_dirs, num_symlinks = verify_restored_tree(self, self.restore_dir, self.tmpdir,
+                                                                 self.filelist)
+        check_restore_report(self, job_name, restore_job_id, num_files, num_dirs, num_symlinks)
+
+        # 6. The restore report carries the CSE counter and it is zero: the sidecar the restore job
+        #    rehydrated is the one the backup job bootstrapped.
+        url = self.base_url + self.api_root + '/report/restore/show'
+        r = requests.post(url=url, auth=(self.username, self.password),
+                          json={"name": job_name, "job_id": restore_job_id})
+        self.assertEqual(r.status_code, 200, url + " " + r.text)
+        stats = self._decode(r, url)['result']['stats_counters']
+        self.assertIn('decrypt_keystore_mismatch', stats,
+                      "Restore report missing CSE counter 'decrypt_keystore_mismatch'. stats: {}".format(stats))
+        self.assertEqual(stats['decrypt_keystore_mismatch'], 0)
 
     def test_target_test_succeeds_with_encryption_enabled(self):
         """POST /backup/target/test must succeed for an encrypted job (sidecar bootstrap)."""

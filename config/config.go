@@ -448,18 +448,19 @@ func ValidateBackupTargetParameters(parameters []shared.ConfigBackupTargetParams
 
 // validate "Backup/Target/Parameters" section of the config for the test_null object store type
 func ValidateBackupTargetParametersForTestNull(parameters []shared.ConfigBackupTargetParams, BackupName string, TargetName string, TargetType string) error {
-	//foundBucket := false
-	//for _, entry := range parameters {
-	//	switch strings.ToLower(entry.Name) {
-	//	case "bucket":
-	//		if entry.Value != "" {
-	//			foundBucket = true
-	//		}
-	//	}
-	//}
-	//if !foundBucket {
-	//	return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' is missing required parameter 'bucket'", TargetName, TargetType, BackupName)
-	//}
+	// Historical test configs attach S3-style parameters to test_null targets, so unknown names are
+	// tolerated. The one parameter test_null honours is "persist_dir": when set it must be an
+	// absolute path so a relative value cannot silently land somewhere under the daemon's cwd.
+	for _, entry := range parameters {
+		if strings.EqualFold(entry.Name, "persist_dir") {
+			if entry.Value == "" {
+				return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has an empty 'persist_dir' parameter", TargetName, TargetType, BackupName)
+			}
+			if !filepath.IsAbs(entry.Value) {
+				return fmt.Errorf("target '%s' of type '%s' belonging to backup '%s' has a 'persist_dir' parameter which is not an absolute path: '%s'", TargetName, TargetType, BackupName, entry.Value)
+			}
+		}
+	}
 	return nil
 }
 

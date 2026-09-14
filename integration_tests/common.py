@@ -14,6 +14,7 @@ import threading
 import time
 import tempfile
 import quopri
+import yaml
 from aiosmtpd.controller import Controller
 
 
@@ -390,7 +391,18 @@ def setup_dir_with_tmp_files():
 # sets up a server config file to be used for various tests
 # returns: path to config file; array of paths to delete (config file path, various temporary directories which may
 # be needed)
-def setup_tmp_config_file_and_tmp_dirs(suffix, config_file_content=working_server_config_file_content):
+def setup_tmp_config_file_and_tmp_dirs(suffix, config_file_content=working_server_config_file_content,
+                                       persistent_null_store=False):
+    """
+    Write a temporary server config (derived from $config_file_content) with its own data_dir.
+
+    :param persistent_null_store: when True every test_null target in the config gets a 'persist_dir'
+        parameter pointing at a fresh temp directory. The daemon builds a new object store per job, so
+        without it a restore cannot read back what an earlier backup job uploaded. Tests that restore, or
+        that run the same job more than once, need this.
+    :return: tuple of (config file path, list of paths to delete in tearDown). The data_dir is always
+        element [1] of that list; the persist dir (if requested) is element [2].
+    """
     tmphandle, config_file_path = tempfile.mkstemp(suffix=suffix + '__config.yaml')
     data_dir = tempfile.mkdtemp(suffix=suffix + '__datadir')
     server_config = config_file_content.replace("data_dir: ./tmp/", "data_dir: " + data_dir, 1)
@@ -403,7 +415,31 @@ def setup_tmp_config_file_and_tmp_dirs(suffix, config_file_content=working_serve
     tmpfile = os.fdopen(tmphandle, "w")
     tmpfile.write(server_config)
     tmpfile.close()
-    return config_file_path, [config_file_path, data_dir]
+    to_delete = [config_file_path, data_dir]
+    if persistent_null_store:
+        persist_dir = tempfile.mkdtemp(suffix=suffix + '__nullstore')
+        add_persist_dir_to_null_targets(config_file_path, persist_dir)
+        to_delete.append(persist_dir)
+    return config_file_path, to_delete
+
+
+def add_persist_dir_to_null_targets(config_file_path, persist_dir):
+    """
+    Rewrite the YAML config at $config_file_path so every target of type test_null carries a
+    'persist_dir' parameter set to $persist_dir. Targets of a job share the directory: object keys
+    include the target prefix and job name so they cannot collide.
+    """
+    with open(config_file_path) as fd:
+        parsed = yaml.load(fd, Loader=yaml.SafeLoader)
+    for job in parsed.get('backup', []):
+        for target in job.get('target', []):
+            if target.get('type') != 'test_null':
+                continue
+            params = [p for p in (target.get('parameters') or []) if p.get('name', '').lower() != 'persist_dir']
+            params.append({'name': 'persist_dir', 'value': persist_dir})
+            target['parameters'] = params
+    with open(config_file_path, "w") as fd:
+        fd.write(yaml.dump(parsed))
 
 
 class CustomSMTPHandler:
@@ -742,3 +778,38 @@ def map_path_into_restore_dir(restore_dir, source_path):
             return os.path.join(restore_dir, drive[0], rest)
         return os.path.join(restore_dir, rest)
     return os.path.join(restore_dir, clean.lstrip("/"))
+
+
+def verify_restored_tree(self, restore_dir, source_root, filelist, dereference=False, absent=None):
+    """
+    Assert that every entry of $filelist ({path: "file"|"dir"}) was restored under $restore_dir with the
+    server's path mapping, that regular files carry the same md5 as the source, and that the restored
+    subtree holds exactly as many files/dirs/symlinks as the source tree at $source_root.
+    :param absent: optional iterable of source paths that must NOT exist under restore_dir
+    :return: (num_files, num_dirs, num_symlinks) counted on the source side, handy for check_restore_report()
+    """
+    for source_path, file_type in filelist.items():
+        restored_path = map_path_into_restore_dir(restore_dir, source_path)
+        self.assertTrue(os.path.exists(restored_path),
+                        "Expected restored item '{}' (type={}) to exist at '{}' but it does "
+                        "not".format(source_path, file_type, restored_path))
+        if file_type == "dir":
+            self.assertTrue(os.path.isdir(restored_path), "Expected '{}' to be a directory".format(restored_path))
+        elif file_type == "file":
+            self.assertTrue(os.path.isfile(restored_path), "Expected '{}' to be a regular file".format(restored_path))
+            original_md5 = get_md5_sum(source_path)
+            restored_md5 = get_md5_sum(restored_path)
+            self.assertEqual(original_md5, restored_md5,
+                             "MD5 mismatch for '{}': original={} restored={}".format(
+                                 source_path, original_md5, restored_md5))
+    for source_path in (absent or []):
+        restored_path = map_path_into_restore_dir(restore_dir, source_path)
+        self.assertFalse(os.path.exists(restored_path),
+                         "'{}' was not requested but was restored at '{}'".format(source_path, restored_path))
+    expected = count_files_folders_links(source_root, dereference)
+    restored_root = map_path_into_restore_dir(restore_dir, source_root)
+    restored = count_files_folders_links(restored_root, dereference)
+    self.assertEqual(restored, expected,
+                     "restored tree at '{}' has (files, dirs, symlinks)={} but the source at '{}' has {}".format(
+                         restored_root, restored, source_root, expected))
+    return expected

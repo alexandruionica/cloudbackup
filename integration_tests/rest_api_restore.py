@@ -25,7 +25,7 @@ class TestRestAPIRestore(unittest.TestCase):
         self.password2 = 'Oonaawai8Eep]eethe8eefa$'
         # server - config file
         self.server_config_file_path, self.to_delete = setup_tmp_config_file_and_tmp_dirs(
-            suffix='_integration_tests_rest_api_restore')
+            suffix='_integration_tests_rest_api_restore', persistent_null_store=True)
         self.data_dir = self.to_delete[1]
         # tmp files for tests
         self.tmpdir, self.filelist = setup_dir_with_tmp_files()
@@ -246,7 +246,7 @@ class TestRestAPIRestore(unittest.TestCase):
     # --- end-to-end restore lifecycle with test_null backend ---
 
     def test_restore_full_lifecycle(self):
-        """Backup (test_null) -> restore all files -> verify API response flow."""
+        """Backup (persistent test_null) -> restore all files -> verify bytes, report and API flow."""
         job_name = "first_backup"
 
         # step 1: run a backup and wait for it to complete
@@ -286,7 +286,12 @@ class TestRestAPIRestore(unittest.TestCase):
         # step 4: wait for restore to complete
         self._wait_for_restore_completion(job_name, restore_job_id)
 
-        # step 5: verify restore list is now empty (since restores are ephemeral)
+        # step 5: every file came back byte-for-byte and the report agrees with the source tree
+        num_files, num_dirs, num_symlinks = verify_restored_tree(self, self.restore_dir, self.tmpdir,
+                                                                 self.filelist)
+        check_restore_report(self, job_name, restore_job_id, num_files, num_dirs, num_symlinks)
+
+        # step 6: verify restore list is now empty (since restores are ephemeral)
         url = self.base_url + self.api_root + '/restore/list'
         r = requests.get(url=url, auth=(self.username, self.password))
         self.assertEqual(r.status_code, 200, url + " " + r.text)

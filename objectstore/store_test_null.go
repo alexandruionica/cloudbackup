@@ -4,11 +4,15 @@ import (
 	"cloudbackup/cbcrypto"
 	"cloudbackup/shared"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"golang.org/x/time/rate"
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 )
@@ -33,6 +37,13 @@ type StoreTestNull struct {
 	// can exercise the encryption lifecycle without a real cloud bucket.
 	memObjects map[string][]byte
 	memMu      sync.Mutex
+	// When the target parameter "persist_dir" is set, objects are written to (and read back
+	// from) that directory instead of memObjects, so they outlive the store instance. The
+	// daemon builds a fresh store per job, which is why integration tests need this to run a
+	// restore against what an earlier backup job uploaded. Each object lives in one file named
+	// by the hex SHA-256 of its remote key: keys carry absolute source paths (Unicode, colons,
+	// long names) that are not safe to mirror as filenames on every supported OS.
+	persistDir string
 	encryptionState
 }
 
@@ -61,6 +72,13 @@ func InitialiseStoreTestNull(ctx context.Context, backupConfig shared.ConfigBack
 			password: []byte(backupConfig.EncryptPass),
 		},
 	}
+	resolveStringParameter("persist_dir", &result.persistDir, target.Parameters, "")
+	if result.persistDir != "" {
+		if err := os.MkdirAll(result.persistDir, 0o750); err != nil {
+			return &StoreTestNull{}, fmt.Errorf("target '%s' of backup '%s': could not create persist_dir '%s': %w",
+				target.Name, backupConfig.Name, result.persistDir, err)
+		}
+	}
 	// actual backends will also setup the connection client in this section
 	return result, nil
 }
@@ -87,25 +105,18 @@ func (io *testNullSidecarIO) key() string {
 }
 
 func (io *testNullSidecarIO) Fetch() ([]byte, error) {
-	io.store.memMu.Lock()
-	defer io.store.memMu.Unlock()
-	body, ok := io.store.memObjects[io.key()]
+	body, ok, err := io.store.blobGet(io.key())
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
 		return nil, errSidecarNotFound
 	}
-	out := make([]byte, len(body))
-	copy(out, body)
-	return out, nil
+	return body, nil
 }
 
 func (io *testNullSidecarIO) PutIfNotExists(body []byte) error {
-	io.store.memMu.Lock()
-	defer io.store.memMu.Unlock()
-	if _, ok := io.store.memObjects[io.key()]; ok {
-		return errSidecarConflict
-	}
-	io.store.memObjects[io.key()] = append([]byte(nil), body...)
-	return nil
+	return io.store.blobPutIfNotExists(io.key(), body)
 }
 
 // pretend to upload file (actually discarding all read content)
@@ -164,9 +175,9 @@ func (objStore *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties,
 			if err != nil {
 				switch err {
 				case io.EOF:
-					objStore.memMu.Lock()
-					objStore.memObjects[remotePath] = captured
-					objStore.memMu.Unlock()
+					if putErr := objStore.blobPut(remotePath, captured); putErr != nil {
+						return strconv.FormatInt(version, 10), false, putErr
+					}
 					return strconv.FormatInt(version, 10), false, nil
 				case context.Canceled:
 					logger.Infof("Received cancellation request while uploading '%s'", newDbRecord.Path)
@@ -233,9 +244,8 @@ func (objStore *StoreTestNull) Get(existingDbRecord shared.BackedUpFilePropertie
 	}
 
 	// Pace the "download" when a rate limit is configured on the target. A real backend spends
-	// wall-clock time moving bytes over the network; this one serves objects out of memory (and
-	// serves nothing at all for records uploaded by an earlier process, since memObjects does not
-	// outlive the store instance), so an unthrottled restore of a handful of small files finishes
+	// wall-clock time moving bytes over the network; this one serves objects out of memory or a
+	// local directory, so an unthrottled restore of a handful of small files finishes
 	// before an API client has any chance to attach to /restore/watch. Integration tests that need
 	// an observable, still-running restore set a non-zero ratelimit for exactly this reason - the
 	// same knob the upload path already honors via NewFileReader(). Metadata downloads (DB copy /
@@ -247,9 +257,10 @@ func (objStore *StoreTestNull) Get(existingDbRecord shared.BackedUpFilePropertie
 	}
 
 	remoteKey := objStore.storePrefix + "/" + prepend + "/" + existingDbRecord.Path
-	objStore.memMu.Lock()
-	body, ok := objStore.memObjects[remoteKey]
-	objStore.memMu.Unlock()
+	body, ok, err := objStore.blobGet(remoteKey)
+	if err != nil {
+		return false, err
+	}
 	if !ok {
 		// Historically TestNull's Get was a no-op; preserve that behavior for
 		// callers that never uploaded anything (e.g., tests that only exercise
@@ -334,6 +345,92 @@ func (r *bytesSliceReader) Read(p []byte) (int, error) {
 	n := copy(p, r.buf)
 	r.buf = r.buf[n:]
 	return n, nil
+}
+
+// blobPath maps a remote key to its file under persistDir.
+func (objStore *StoreTestNull) blobPath(key string) string {
+	sum := sha256.Sum256([]byte(key))
+	return filepath.Join(objStore.persistDir, hex.EncodeToString(sum[:]))
+}
+
+// blobGet returns a private copy of the object stored under $key. $found is false when nothing was
+// ever stored there; $err reports I/O failures of the persistent backend only.
+func (objStore *StoreTestNull) blobGet(key string) (body []byte, found bool, err error) {
+	if objStore.persistDir == "" {
+		objStore.memMu.Lock()
+		defer objStore.memMu.Unlock()
+		b, ok := objStore.memObjects[key]
+		if !ok {
+			return nil, false, nil
+		}
+		return append([]byte(nil), b...), true, nil
+	}
+	b, err := os.ReadFile(objStore.blobPath(key)) // #nosec G304 -- path derived from a hash inside persistDir
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("test_null persist_dir read of '%s': %w", key, err)
+	}
+	return b, true, nil
+}
+
+// blobPut stores (or overwrites) the object under $key. The persistent backend writes to a temp
+// file and renames it so a concurrent reader never observes a partial object.
+func (objStore *StoreTestNull) blobPut(key string, body []byte) error {
+	if objStore.persistDir == "" {
+		objStore.memMu.Lock()
+		defer objStore.memMu.Unlock()
+		objStore.memObjects[key] = append([]byte(nil), body...)
+		return nil
+	}
+	final := objStore.blobPath(key)
+	tmp, err := os.CreateTemp(objStore.persistDir, ".upload-*")
+	if err != nil {
+		return fmt.Errorf("test_null persist_dir write of '%s': %w", key, err)
+	}
+	tmpName := tmp.Name()
+	if _, err := tmp.Write(body); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("test_null persist_dir write of '%s': %w", key, err)
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("test_null persist_dir write of '%s': %w", key, err)
+	}
+	if err := os.Rename(tmpName, final); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("test_null persist_dir write of '%s': %w", key, err)
+	}
+	return nil
+}
+
+// blobPutIfNotExists stores the object under $key only when nothing is there yet, returning
+// errSidecarConflict otherwise. The persistent backend relies on O_EXCL so two daemons racing on
+// the same persist_dir see the same conflict a cloud conditional PUT would report.
+func (objStore *StoreTestNull) blobPutIfNotExists(key string, body []byte) error {
+	if objStore.persistDir == "" {
+		objStore.memMu.Lock()
+		defer objStore.memMu.Unlock()
+		if _, ok := objStore.memObjects[key]; ok {
+			return errSidecarConflict
+		}
+		objStore.memObjects[key] = append([]byte(nil), body...)
+		return nil
+	}
+	f, err := os.OpenFile(objStore.blobPath(key), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) // #nosec G304 -- hashed name inside persistDir
+	if errors.Is(err, os.ErrExist) {
+		return errSidecarConflict
+	}
+	if err != nil {
+		return fmt.Errorf("test_null persist_dir conditional write of '%s': %w", key, err)
+	}
+	if _, err := f.Write(body); err != nil {
+		_ = f.Close()
+		return fmt.Errorf("test_null persist_dir conditional write of '%s': %w", key, err)
+	}
+	return f.Close()
 }
 
 // validated that the config of this object store is correct

@@ -1682,3 +1682,28 @@ func TestValidateBackupScheduleAcceptsEmptyList(t *testing.T) {
 		t.Errorf("empty schedule list unexpectedly rejected: %s", err)
 	}
 }
+
+// test_null target parameter persist_dir: accepted when absolute, rejected when empty or relative
+func TestValidateBackupTargetParametersForTestNullPersistDir(t *testing.T) {
+	abs := t.TempDir()
+	cases := []struct {
+		name    string
+		params  []shared.ConfigBackupTargetParams
+		wantErr bool
+	}{
+		{"no parameters", nil, false},
+		{"legacy s3-style parameters are tolerated", []shared.ConfigBackupTargetParams{{Name: "storage_class", Value: "STANDARD"}}, false},
+		{"absolute persist_dir", []shared.ConfigBackupTargetParams{{Name: "persist_dir", Value: abs}}, false},
+		{"case-insensitive name", []shared.ConfigBackupTargetParams{{Name: "PERSIST_DIR", Value: abs}}, false},
+		{"empty persist_dir", []shared.ConfigBackupTargetParams{{Name: "persist_dir", Value: ""}}, true},
+		{"relative persist_dir", []shared.ConfigBackupTargetParams{{Name: "persist_dir", Value: "tmp/objects"}}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateBackupTargetParametersForTestNull(tc.params, "job", "t1", "test_null")
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("wantErr=%v got err=%v", tc.wantErr, err)
+			}
+		})
+	}
+}
