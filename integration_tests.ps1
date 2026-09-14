@@ -48,7 +48,15 @@ try {
 	}
 
 	if ($Tiers.Count -eq 0) { $Tiers = @("acceptance", "api") }
-	elseif ($Tiers -contains "all") { $Tiers = @("acceptance", "api", "cloud") }
+	elseif ($Tiers -contains "all") { $Tiers = @("acceptance", "api", "ui", "cloud") }
+	if ($Tiers -contains "ui") {
+	  echo "Ensuring the Playwright Chromium build is installed ..."
+	  & "$TESTSFOLDER\.venv_windows\Scripts\playwright.exe" install chromium
+	  if ( $LastExitCode -ne 0 ) {
+	    echo 'Error installing the Playwright browser'
+	    exit $LastExitCode
+	  }
+	}
 	$Paths = @()
 	foreach ($tier in $Tiers) {
 	  if (!(Test-Path -Path "$TESTSFOLDER\$tier" -PathType Container)) {

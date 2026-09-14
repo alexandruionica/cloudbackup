@@ -17,6 +17,7 @@ make testcp       # Run go fmt + golangci-lint (with gosec, without ineffassign)
 make alltest      # Run all tests + integration tests + build
 make inttest      # Python integration tests: acceptance + api tiers (no cloud credentials needed)
 make inttest-cloud # Python integration tests: cloud tier (skips providers without CLD_* credentials)
+make uitest-browser # Web UI acceptance tests in headless Chromium (Playwright, integration_tests/ui/)
 make cover        # Show HTML coverage report
 make deps         # go mod tidy + go mod vendor
 ```

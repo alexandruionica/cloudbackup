@@ -22,7 +22,7 @@ endif
 test: testcp gotest gotestrace uitest
 # inttest runs the credential-free tiers (acceptance + api); inttest-cloud runs the cloud tier, which
 # skips each provider whose CLD_* credentials are missing (see README). alltest runs everything.
-alltest: test inttest inttest-cloud
+alltest: test inttest uitest-browser inttest-cloud
 uitest:
 	@echo "############ Running: web UI unit tests ############"
 ifeq ($(OS),Windows_NT)
@@ -81,6 +81,16 @@ ifeq ($(OS),Windows_NT)
 else
 	@echo "Running on some kind of Unix"
 	./integration_tests.sh
+endif
+# Browser acceptance tests of the web UI (Playwright + headless Chromium, integration_tests/ui/).
+uitest-browser: build
+	@echo "############ Running web UI browser tests ############"
+ifeq ($(OS),Windows_NT)
+	@echo "Running on Windows"
+	powershell '& .\integration_tests.ps1 ui'
+else
+	@echo "Running on some kind of Unix"
+	./integration_tests.sh ui
 endif
 inttest-cloud: build
 	@echo "############ Running integration tests (cloud tier) ############"

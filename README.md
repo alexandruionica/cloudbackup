@@ -110,6 +110,7 @@ For a view of the web UI see https://youtu.be/EFjg5-VDSu8 .
 ```bash
 make test           # go fmt + golangci-lint + Go unit tests (+ race) + web UI unit tests
 make inttest        # Python integration tests: acceptance + api tiers (no cloud credentials needed)
+make uitest-browser # web UI acceptance tests in a headless browser (Playwright)
 make inttest-cloud  # cloud tier against real AWS S3 / Azure Blob / GCP Storage (skips providers without credentials)
 make alltest        # all of the above
 ```

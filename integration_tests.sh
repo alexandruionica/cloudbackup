@@ -5,6 +5,7 @@
 #   ./integration_tests.sh            # default tiers: acceptance + api (no cloud credentials needed)
 #   ./integration_tests.sh cloud      # cloud tier only (skips per provider when credentials are missing),
 #                                     # followed by the object store cleanup
+#   ./integration_tests.sh ui         # browser tier (web UI in headless Chromium via Playwright)
 #   ./integration_tests.sh all        # every tier
 #   ./integration_tests.sh acceptance # a single tier
 #
@@ -60,7 +61,7 @@ fi
 if [ $# -eq 0 ]; then
   TIERS="acceptance api"
 elif [ "$1" = "all" ]; then
-  TIERS="acceptance api cloud"
+  TIERS="acceptance api ui cloud"
 else
   TIERS="$*"
 fi
@@ -73,6 +74,15 @@ for tier in ${TIERS}; do
   fi
   PATHS="${PATHS} ${TESTSFOLDER}/${tier}"
   [ "${tier}" = "cloud" ] && RUN_CLEANUP=1
+  if [ "${tier}" = "ui" ]; then
+    # the browser tier drives the web UI in headless Chromium, which Playwright downloads once
+    echo "Ensuring the Playwright Chromium build is installed ..."
+    ${VENV}/bin/playwright install chromium
+    if [ $? -ne 0 ]; then
+      echo 'Error installing the Playwright browser'
+      exit 1
+    fi
+  fi
 done
 
 echo "Running Python integration tests (tiers: ${TIERS}) ..."

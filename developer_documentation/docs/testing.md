@@ -26,11 +26,16 @@ CLI binary or the REST API. The modules are grouped by what they prove:
   Storage. Each module is decorated with `requires_env(...)` and is **skipped**, not failed, when its
   `CLD_*` credentials are absent (see the README for the variable list). After this tier the runner
   calls `cloud/clean_object_stores_after_tests.py`, which likewise skips providers without credentials.
+- **`ui/`** — browser acceptance of the web UI (user guide chapter 7) with Playwright driving headless
+  Chromium against a real daemon: connect, list jobs, start and watch a backup, open reports, restore
+  from a run, resume a cancelled restore. `./integration_tests.sh ui` installs the browser build on
+  first use.
 - **`lib/`** — `common.py`, the shared helpers. `conftest.py` puts it on `sys.path`, so modules keep
   their `from common import *`.
 
 ```bash
-make inttest                       # acceptance + api (no credentials needed, ~90 s)
+make inttest                       # acceptance + api (no credentials needed)
+make uitest-browser                # web UI in a headless browser
 make inttest-cloud                 # cloud tier, then object store cleanup
 ./integration_tests.sh all         # every tier
 ./integration_tests.sh acceptance  # one tier
