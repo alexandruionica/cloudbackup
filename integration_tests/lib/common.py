@@ -10,6 +10,7 @@ import re
 import requests
 import socket
 import shlex
+import shutil
 import subprocess
 import threading
 import time
@@ -217,13 +218,23 @@ def run_interactive_shell_cmd(cmd):
 
 
 def set_http_bind_address(config_path, base_url):
-    """Point the server config at $config_path to listen on the host:port of $base_url (plain HTTP)."""
+    """
+    Point the server config at $config_path to listen on the host:port of $base_url. An https:// URL
+    enables the HTTPS listener on that address (cert/key paths must already be in the config, and the
+    daemon then disables plain HTTP); an http:// URL sets http.bind_address.
+    """
     host_port = base_url.split('//', 1)[1].rstrip('/')
     with open(config_path) as fd:
         parsed = yaml.load(fd, Loader=yaml.SafeLoader)
-    http = parsed.get('http') or {}
-    http['bind_address'] = host_port
-    parsed['http'] = http
+    if base_url.startswith('https://'):
+        https = parsed.get('https') or {}
+        https['enabled'] = True
+        https['bind_address'] = host_port
+        parsed['https'] = https
+    else:
+        http = parsed.get('http') or {}
+        http['bind_address'] = host_port
+        parsed['http'] = http
     with open(config_path, "w") as fd:
         fd.write(yaml.dump(parsed))
 
@@ -232,7 +243,7 @@ class BackupDaemon(object):
     """
     Start cloudbackup daemon
     """
-    def __init__(self, config_path, base_url=None, cmd=cmd_default, extra_options=""):
+    def __init__(self, config_path, base_url=None, cmd=cmd_default, extra_options="", tls_ca=None):
         """
         start backup daemon
         Wrapper to start a shell command which then keeps running
@@ -241,11 +252,13 @@ class BackupDaemon(object):
             config at $config_path is rewritten so its http.bind_address matches. When None, a free port is picked
             (see free_base_url()). The effective value is available afterwards as self.base_url.
         :param extra_options: extra options to pass to the backup server(Daemon)
+        :param tls_ca: for an https:// base_url, path of the CA / self-signed certificate to trust when probing
         """
         if base_url is None:
             base_url = free_base_url()
         self.base_url = base_url
         self.config_path = config_path
+        self.tls_ca = tls_ca
         set_http_bind_address(config_path, base_url)
         # check ip:port is available
         wait_for_socket(base_url)
@@ -263,7 +276,7 @@ class BackupDaemon(object):
                                      stderr=subprocess.PIPE, universal_newlines=True, bufsize=1)
         # there is a slight delay between daemon start and http becoming available so we need to ensure it is
         #   available before tests are attempted
-        if not check_api_server_ready(base_url):
+        if not check_api_server_ready(base_url, verify=tls_ca if tls_ca else True):
             _, stderr, stdout = self.stop(get_output=True)
             logging.error("Could not connect to API server after starting the daemon. Daemon's stdout was: {} "
                           "\n and stderr was: {}".format(stderr, stdout))
@@ -397,16 +410,17 @@ def wait_for_socket(base_url, max_count=600, sleep_seconds=0.1):
             "times for a total of {} seconds wait".format(ipaddr, port, counter, counter * sleep_seconds))
 
 
-def check_api_server_ready(url, max_count=20, sleep_seconds=0.1):
+def check_api_server_ready(url, max_count=20, sleep_seconds=0.1, verify=True):
     """
     Attempt $max_count times, with $sleep_seconds seconds sleep to get / from the http server. This is to give time
        to start up
+    :param verify: passed to requests (True, or the path of a certificate to trust for https URLs)
     :return: False if it did not start up during wait time, True if succeeded
     """
     counter = 0
     while counter < max_count:
         try:
-            requests.get(url)
+            requests.get(url, verify=verify)
         except requests.exceptions.ConnectionError:
             time.sleep(sleep_seconds)
             counter += 1
@@ -1100,3 +1114,28 @@ def verify_restored_subset(self, restore_dir, filelist, requested):
             self.assertFalse(os.path.exists(restored_path),
                              "'{}' is outside the requested paths {} but was restored at '{}'".format(
                                  source_path, requested, restored_path))
+
+
+def assert_counters(self, stats, expected, context=""):
+    """Assert that every counter in $expected ({name: value}) has that value in $stats (a stats_counters dict)."""
+    for name, value in expected.items():
+        self.assertIn(name, stats, "{}counter '{}' missing from stats: {}".format(context, name, stats))
+        self.assertEqual(stats[name], value, "{}counter '{}' is {} but {} was expected. All counters: {}".format(
+            context, name, stats[name], value, stats))
+
+
+def make_self_signed_cert(directory, ip='127.0.0.1'):
+    """
+    Generate a self-signed certificate + key for $ip (as a subjectAltName, which Go requires) with the openssl
+    CLI. Returns (cert_path, key_path) or None when openssl is unavailable.
+    """
+    if shutil.which('openssl') is None:
+        return None
+    cert = os.path.join(directory, 'server.crt')
+    key = os.path.join(directory, 'server.key')
+    cmd = ['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '2', '-keyout', key, '-out', cert,
+           '-subj', '/CN={}'.format(ip), '-addext', 'subjectAltName=IP:{}'.format(ip)]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        raise RuntimeError("openssl failed: {}".format(result.stderr.decode('utf-8', errors='replace')))
+    return cert, key
