@@ -48,7 +48,7 @@ func TestStoreTestNull_EncryptedUploadRoundtrip(t *testing.T) {
 
 	remoteKey := store.storePrefix + "/" + DataPrepend + "/" + srcPath
 	store.memMu.Lock()
-	uploaded, ok := store.memObjects[remoteKey]
+	uploaded, ok := store.memObjects[objectKey(remoteKey, 1)]
 	store.memMu.Unlock()
 	if !ok {
 		t.Fatalf("no captured upload at %q (captured keys: %v)", remoteKey, mapKeys(store.memObjects))
@@ -198,7 +198,7 @@ func TestStoreTestNull_SkipEncryptionUsesPlaintext(t *testing.T) {
 
 	remoteKey := store.storePrefix + "/" + MetaDataPrepend + "/" + srcPath
 	store.memMu.Lock()
-	uploaded := store.memObjects[remoteKey]
+	uploaded := store.memObjects[objectKey(remoteKey, 1)]
 	store.memMu.Unlock()
 
 	if !bytes.Equal(uploaded, plain) {

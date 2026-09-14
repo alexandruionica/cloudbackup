@@ -164,7 +164,7 @@ func (objStore *StoreTestNull) Upload(newDbRecord shared.BackedUpFileProperties,
 		// Drain all bytes (ciphertext when encryption is on; plaintext otherwise).
 		// Captured under the would-be remote path so unit tests can read them
 		// back and validate roundtrip (e.g. encrypt → decrypt).
-		remotePath := objStore.storePrefix + "/" + prepend + "/" + newDbRecord.Path
+		remotePath := objectKey(objStore.storePrefix+"/"+prepend+"/"+newDbRecord.Path, version)
 		var captured []byte
 		p := make([]byte, 102400)
 		for {
@@ -256,7 +256,7 @@ func (objStore *StoreTestNull) Get(existingDbRecord shared.BackedUpFilePropertie
 		}
 	}
 
-	remoteKey := objStore.storePrefix + "/" + prepend + "/" + existingDbRecord.Path
+	remoteKey := objectKey(objStore.storePrefix+"/"+prepend+"/"+existingDbRecord.Path, version)
 	body, ok, err := objStore.blobGet(remoteKey)
 	if err != nil {
 		return false, err
@@ -345,6 +345,14 @@ func (r *bytesSliceReader) Read(p []byte) (int, error) {
 	n := copy(p, r.buf)
 	r.buf = r.buf[n:]
 	return n, nil
+}
+
+// objectKey is the key under which one uploaded version of a remote path is kept. Real buckets
+// are versioned (a newer upload never replaces an older version, and a delete places a marker),
+// so the test backend keys every object by (remote path, version) too. Without this a restore
+// of an earlier backup run would silently hand back the newest content.
+func objectKey(remotePath string, version int64) string {
+	return remotePath + "@v" + strconv.FormatInt(version, 10)
 }
 
 // blobPath maps a remote key to its file under persistDir.

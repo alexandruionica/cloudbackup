@@ -98,7 +98,7 @@ func TestStoreTestNull_PersistDir_EncryptedRoundTripAcrossInstances(t *testing.T
 		t.Fatalf("Upload: %v", err)
 	}
 	// The bytes on "disk" must be ciphertext, not the plaintext.
-	stored, found, err := up.blobGet(up.storePrefix + "/" + DataPrepend + "/" + srcPath)
+	stored, found, err := up.blobGet(objectKey(up.storePrefix+"/"+DataPrepend+"/"+srcPath, 1))
 	if err != nil || !found {
 		t.Fatalf("blobGet: found=%v err=%v", found, err)
 	}
@@ -156,9 +156,10 @@ func TestStoreTestNull_PersistDir_SidecarConflict(t *testing.T) {
 	}
 }
 
-// TestStoreTestNull_PersistDir_OverwriteAndMissing: a re-upload replaces the object in place and
-// Get on a never-uploaded key stays a silent no-op, matching the in-memory behaviour.
-func TestStoreTestNull_PersistDir_OverwriteAndMissing(t *testing.T) {
+// TestStoreTestNull_PersistDir_VersionsCoexistAndMissing: a re-upload under a new version leaves
+// the earlier version readable (like a versioned bucket), and Get on a never-uploaded key stays a
+// silent no-op, matching the in-memory behaviour.
+func TestStoreTestNull_PersistDir_VersionsCoexistAndMissing(t *testing.T) {
 	tmp := t.TempDir()
 	persist := filepath.Join(tmp, "objects")
 	cfg := persistConfig(t, persist, "")
@@ -179,12 +180,19 @@ func TestStoreTestNull_PersistDir_OverwriteAndMissing(t *testing.T) {
 	if _, _, err := st.Upload(rec, 2, state, false); err != nil {
 		t.Fatal(err)
 	}
-	out := filepath.Join(tmp, "out.bin")
-	if _, err := st.Get(rec, out, 2, "2", false); err != nil {
+	out2 := filepath.Join(tmp, "out2.bin")
+	if _, err := st.Get(rec, out2, 2, "2", false); err != nil {
 		t.Fatal(err)
 	}
-	if got, _ := os.ReadFile(out); string(got) != "v2" {
-		t.Fatalf("expected overwritten object, got %q", got)
+	if got, _ := os.ReadFile(out2); string(got) != "v2" {
+		t.Fatalf("expected version 2 content, got %q", got)
+	}
+	out1 := filepath.Join(tmp, "out1.bin")
+	if _, err := st.Get(rec, out1, 1, "1", false); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(out1); len(got) != 1024 {
+		t.Fatalf("version 1 must still be readable after a newer upload; got %d bytes", len(got))
 	}
 	missing := shared.BackedUpFileProperties{Path: filepath.Join(tmp, "never-uploaded"), Type: "file", Size: 1}
 	if _, err := st.Get(missing, filepath.Join(tmp, "unused"), 1, "1", false); err != nil {

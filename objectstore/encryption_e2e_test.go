@@ -56,7 +56,7 @@ func TestEncryptionE2E_PlaintextThenEncryptedMigration(t *testing.T) {
 	}
 	plainKey := plainStore.storePrefix + "/" + DataPrepend + "/" + srcPath
 	plainStore.memMu.Lock()
-	plainCaptured := plainStore.memObjects[plainKey]
+	plainCaptured := plainStore.memObjects[objectKey(plainKey, 1)]
 	plainStore.memMu.Unlock()
 	if !bytes.Equal(plainCaptured, plain) {
 		t.Fatal("plaintext upload should produce bytes identical to the source file")
@@ -85,7 +85,7 @@ func TestEncryptionE2E_PlaintextThenEncryptedMigration(t *testing.T) {
 		t.Fatalf("encrypted Upload: %v", err)
 	}
 	encStore.memMu.Lock()
-	encCaptured := encStore.memObjects[plainKey]
+	encCaptured := encStore.memObjects[objectKey(plainKey, 2)]
 	encStore.memMu.Unlock()
 	if bytes.Equal(encCaptured, plain) {
 		t.Fatal("encrypted upload should NOT produce plaintext bytes")
@@ -155,8 +155,8 @@ func TestEncryptionE2E_SkipEncryptionAlongsideEncrypted(t *testing.T) {
 	userKey := store.storePrefix + "/" + DataPrepend + "/" + userPath
 	dbKey := store.storePrefix + "/" + MetaDataPrepend + "/" + dbPath
 	store.memMu.Lock()
-	uploadedUser := store.memObjects[userKey]
-	uploadedDB := store.memObjects[dbKey]
+	uploadedUser := store.memObjects[objectKey(userKey, 1)]
+	uploadedDB := store.memObjects[objectKey(dbKey, 1)]
 	store.memMu.Unlock()
 
 	if bytes.Equal(uploadedUser, userContent) {
