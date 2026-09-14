@@ -11,7 +11,8 @@ make gotest       # Run unit tests only
 make gotestrace   # Run unit tests with race detection
 make testcp       # Run go fmt + golangci-lint (with gosec, without ineffassign)
 make alltest      # Run all tests + integration tests + build
-make inttest      # Run Python-based integration tests
+make inttest      # Python integration tests: acceptance + api tiers (no cloud credentials needed)
+make inttest-cloud # Python integration tests: cloud tier (skips providers without CLD_* credentials)
 make cover        # Show HTML coverage report
 make deps         # go mod tidy + go mod vendor
 make run          # Build and run the binary
@@ -23,7 +24,12 @@ To run a single Go test:
 go test -v -run TestName ./path/to/package/...
 ```
 
-Integration tests require cloud credentials as environment variables (AWS, GCP, Azure) — see README.md for the full list.
+To run a single Python integration module or test (pytest; binary must be at `./cloudbackup`, run from repo root):
+```bash
+integration_tests/.venv_linux/bin/python -m pytest integration_tests/acceptance/cli_basics.py -v
+```
+
+Integration tests are tiered by directory under `integration_tests/`: `acceptance/` (CLI, user journeys), `api/` (REST contract), `cloud/` (real object stores; needs CLD_* credentials, see README.md, otherwise skipped), `lib/common.py` (shared helpers) and `conftest.py` (pytest fixtures: `daemon`, `api`, `client_config`, `source_tree`, `restore_dir`). Details in `developer_documentation/docs/testing.md`.
 
 **Prerequisites:** Go 1.26+, golangci-lint v1.64.4, Python 3.12.3+, virtualenv, pip.
 

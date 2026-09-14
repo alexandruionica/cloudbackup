@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Testing - Cloudbackup Developer Docs</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Testing";
+        var mkdocs_page_input_path = "testing.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Cloudbackup Developer Docs
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../architecture/">Architecture</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Testing</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#integration-tiers">Integration tiers</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#running-one-module-or-one-test">Running one module or one test</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#ports">Ports</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#the-persistent-test_null-store">The persistent test_null store</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#writing-new-tests">Writing new tests</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#skips">Skips</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Cloudbackup Developer Docs</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Testing</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="testing">Testing</h1>
+<p>Development on this project is prompt-driven; the test suite is the regression net that catches what a
+language model gets wrong. There are four layers.</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Where</th>
+<th>Runs with</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Go unit tests</td>
+<td><code>*_test.go</code> next to the code</td>
+<td><code>make gotest</code>, <code>make gotestrace</code></td>
+<td>Go</td>
+</tr>
+<tr>
+<td>Web UI unit tests</td>
+<td><code>webstatic/ui/tests/</code></td>
+<td><code>make uitest</code></td>
+<td>Node &gt;= 18</td>
+</tr>
+<tr>
+<td>Python integration tiers</td>
+<td><code>integration_tests/&lt;tier&gt;/</code></td>
+<td><code>make inttest</code>, <code>make inttest-cloud</code></td>
+<td>Python 3.12+, a built binary</td>
+</tr>
+<tr>
+<td>Package install smoke</td>
+<td><code>packaging/</code></td>
+<td><code>make packages</code></td>
+<td>Docker</td>
+</tr>
+</tbody>
+</table>
+<p><code>make test</code> runs lint plus the Go and web UI unit tests. <code>make alltest</code> adds every integration tier.</p>
+<h2 id="integration-tiers">Integration tiers</h2>
+<p>Every Python test boots a real <code>./cloudbackup</code> daemon from a temporary config and drives it through the
+CLI binary or the REST API. The modules are grouped by what they prove:</p>
+<ul>
+<li><strong><code>acceptance/</code></strong> — user acceptance. Drives the shipped binary the way the user guide tells users to:
+  <code>cloudbackup client ...</code> and <code>cloudbackup server ...</code> commands, exit codes, <code>--json</code> output, overrides
+  between config file, environment and flags, notifications delivered to a real SMTP listener.</li>
+<li><strong><code>api/</code></strong> — REST contract. Validation errors, role checks, pagination tokens, server-sent event
+  streams, the schemathesis run against the Swagger spec, and the encryption lifecycle.</li>
+<li><strong><code>cloud/</code></strong> — real object stores. Backup and restore against AWS S3, Azure Blob Storage and GCP
+  Storage. Each module is decorated with <code>requires_env(...)</code> and is <strong>skipped</strong>, not failed, when its
+  <code>CLD_*</code> credentials are absent (see the README for the variable list). After this tier the runner
+  calls <code>cloud/clean_object_stores_after_tests.py</code>, which likewise skips providers without credentials.</li>
+<li><strong><code>lib/</code></strong> — <code>common.py</code>, the shared helpers. <code>conftest.py</code> puts it on <code>sys.path</code>, so modules keep
+  their <code>from common import *</code>.</li>
+</ul>
+<pre><code class="language-bash">make inttest                       # acceptance + api (no credentials needed, ~90 s)
+make inttest-cloud                 # cloud tier, then object store cleanup
+./integration_tests.sh all         # every tier
+./integration_tests.sh acceptance  # one tier
+</code></pre>
+<p>Windows uses <code>integration_tests.ps1</code> with the same arguments.</p>
+<h3 id="running-one-module-or-one-test">Running one module or one test</h3>
+<p>The runner is pytest. The binary must exist at <code>./cloudbackup</code> in the repository root, so run from there:</p>
+<pre><code class="language-bash">make build
+integration_tests/.venv_linux/bin/python -m pytest integration_tests/acceptance/cli_basics.py -v
+integration_tests/.venv_linux/bin/python -m pytest \
+    &quot;integration_tests/api/rest_api_restore.py::TestRestAPIRestore::test_restore_full_lifecycle&quot; -v
+</code></pre>
+<p>The virtualenv is per OS (<code>.venv_linux</code>, <code>.venv_macos</code>, <code>.venv_freebsd</code>, <code>.venv_windows</code>); running the
+runner script once creates it.</p>
+<h3 id="ports">Ports</h3>
+<p>Nothing is hardcoded. <code>BackupDaemon(config_path)</code> picks a free port, rewrites <code>http.bind_address</code> in the
+temporary config, and exposes it as <code>daemon.base_url</code>; the SMTP listener does the same through
+<code>find_free_port()</code>. A developer's own daemon on 8080 cannot break the suite, and two test processes can run
+side by side.</p>
+<h3 id="the-persistent-test_null-store">The persistent <code>test_null</code> store</h3>
+<p>Most modules use the hidden <code>test_null</code> target type so no cloud account is needed. The daemon builds a new
+object store per job, so by default a restore job cannot read what a backup job uploaded. Passing
+<code>persistent_null_store=True</code> to <code>setup_tmp_config_file_and_tmp_dirs()</code> adds a <code>persist_dir</code> parameter to
+every <code>test_null</code> target, which keeps objects (and the encryption keystore sidecar) on disk. Use it for any
+test that restores, runs the same job twice, or checks encryption end to end. See the architecture chapter
+for the implementation.</p>
+<h3 id="writing-new-tests">Writing new tests</h3>
+<p>New modules should use the pytest fixtures from <code>integration_tests/conftest.py</code> instead of copying a
+<code>setUp()</code>:</p>
+<ul>
+<li><code>source_tree</code> — a temp directory populated with files and directories (Unicode names included).</li>
+<li><code>server_config</code> — a temp server config whose <code>first_backup</code> job backs up <code>source_tree</code> through a
+  persistent <code>test_null</code> target. <code>server_config.patch(fn)</code> edits it before the daemon starts.</li>
+<li><code>daemon</code> — a running daemon on a free port with <code>--logfile</code> captured; <code>daemon.base_url</code>.</li>
+<li><code>client_config</code> — a client config file for <code>testuser1</code> pointing at <code>daemon</code>.</li>
+<li><code>api</code> / <code>api_readonly</code> — an <code>ApiClient</code> (write / read-only user) with <code>run_backup_and_wait()</code>,
+  <code>start_restore()</code>, <code>wait_restore_finishes()</code>, <code>backup_report()</code>, <code>set_target_ratelimit()</code> and friends.</li>
+<li><code>restore_dir</code> — an empty temp directory.</li>
+</ul>
+<p>Assertion helpers in <code>common.py</code>: <code>check_backup_report()</code>, <code>check_restore_report()</code>,
+<code>verify_restored_tree()</code> (md5 of every restored file plus counts), <code>decode_json_stream()</code> for CLI
+<code>--json</code> output that mixes pretty-printed and single-line documents.</p>
+<p>Prefer <code>--json</code> output over counting lines of human-readable text, and make every scenario docstring
+name the user guide section it mirrors.</p>
+<h3 id="skips">Skips</h3>
+<p>Use <code>self.skipTest(...)</code> or <code>@unittest.skipUnless(...)</code> for platform limitations, never a bare <code>return</code>:
+a silent return counts as a pass and hides a hole in coverage. Skips are listed in the pytest summary.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../architecture/" class="btn btn-neutral float-left" title="Architecture"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../architecture/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

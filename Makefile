@@ -20,7 +20,9 @@ endif
 	@$(GOCMD) version
 	$(GOCMD) build -v -mod=vendor
 test: testcp gotest gotestrace uitest
-alltest: test inttest
+# inttest runs the credential-free tiers (acceptance + api); inttest-cloud runs the cloud tier, which
+# skips each provider whose CLD_* credentials are missing (see README). alltest runs everything.
+alltest: test inttest inttest-cloud
 uitest:
 	@echo "############ Running: web UI unit tests ############"
 ifeq ($(OS),Windows_NT)
@@ -72,13 +74,22 @@ endif
 	@echo "############ Running: go test - running unit tests with race detection enabled ############"
 	$(GOCMD) test -race -cover ./...
 inttest: build
-	@echo "############ Running integration tests ############"
+	@echo "############ Running integration tests (acceptance + api tiers) ############"
 ifeq ($(OS),Windows_NT)
 	@echo "Running on Windows"
 	powershell '& .\integration_tests.ps1'
 else
 	@echo "Running on some kind of Unix"
 	./integration_tests.sh
+endif
+inttest-cloud: build
+	@echo "############ Running integration tests (cloud tier) ############"
+ifeq ($(OS),Windows_NT)
+	@echo "Running on Windows"
+	powershell '& .\integration_tests.ps1 cloud'
+else
+	@echo "Running on some kind of Unix"
+	./integration_tests.sh cloud
 endif
 cover: 
 	$(GOCMD) tool cover -html=$(COVERAGE_FILE)

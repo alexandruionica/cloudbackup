@@ -50,7 +50,13 @@
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#server-components">Server Components</a>
     </li>
+    <li class="toctree-l2"><a class="reference internal" href="#the-test_null-object-store">The test_null object store</a>
+    </li>
     </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../testing/">Testing</a>
                 </li>
               </ul>
       </div>
@@ -144,6 +150,16 @@ Help Options:
 </ul>
 </li>
 </ul>
+<h2 id="the-test_null-object-store">The test_null object store</h2>
+<p><code>objectstore/store_test_null.go</code> is a hidden target type used by unit and integration tests. By default it
+discards uploads after draining them into an in-process map, so a store instance can read back only what it
+uploaded itself. Because the daemon builds a fresh store per job, a restore job cannot see what a backup job
+uploaded in that mode.</p>
+<p>Setting the target parameter <code>persist_dir</code> (absolute path) makes the store write every object, including the
+encryption keystore sidecar, to that directory as one file per object named by the SHA-256 of its remote key.
+Objects then survive across jobs and daemon restarts, which is what the integration tests use to verify
+backup -&gt; restore byte round-trips, encrypted round-trips and incremental runs without cloud credentials.
+<code>integration_tests/common.py</code> turns it on through <code>setup_tmp_config_file_and_tmp_dirs(..., persistent_null_store=True)</code>.</p>
 <h1 id="database">Database</h1>
 <p>There will be one database for each <code>backup</code> section of the config file. The structure of such a database is:</p>
 <p><img alt="database diagram" src="../img/database_structure.png" /></p>
@@ -176,6 +192,7 @@ By selecting all of the items with the same <code>jobid</code> and <code>target<
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../testing/" class="btn btn-neutral float-right" title="Testing">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -200,6 +217,8 @@ By selecting all of the items with the same <code>jobid</code> and <code>target<
     
       <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
     
+    
+      <span><a href="../testing/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>

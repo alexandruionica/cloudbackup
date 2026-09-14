@@ -1,4 +1,14 @@
 #!/bin/sh
+#
+# Run the Python integration tests.
+#
+#   ./integration_tests.sh            # default tiers: acceptance + api (no cloud credentials needed)
+#   ./integration_tests.sh cloud      # cloud tier only (skips per provider when credentials are missing),
+#                                     # followed by the object store cleanup
+#   ./integration_tests.sh all        # every tier
+#   ./integration_tests.sh acceptance # a single tier
+#
+# Tiers are directories under integration_tests/ (see developer docs, "Testing").
 
 export PYTHONIOENCODING='utf-8'
 export TESTSFOLDER='./integration_tests'
@@ -46,16 +56,37 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-echo "Running Python integration tests ..."
-${VENV}/bin/python -m unittest discover -s ${TESTSFOLDER}/ -p '*.py*' -v
+# resolve the requested tiers into directories
+if [ $# -eq 0 ]; then
+  TIERS="acceptance api"
+elif [ "$1" = "all" ]; then
+  TIERS="acceptance api cloud"
+else
+  TIERS="$*"
+fi
+RUN_CLEANUP=0
+PATHS=""
+for tier in ${TIERS}; do
+  if [ ! -d "${TESTSFOLDER}/${tier}" ]; then
+    echo "Unknown tier '${tier}' (expected a directory under ${TESTSFOLDER}/)" >&2
+    exit 1
+  fi
+  PATHS="${PATHS} ${TESTSFOLDER}/${tier}"
+  [ "${tier}" = "cloud" ] && RUN_CLEANUP=1
+done
+
+echo "Running Python integration tests (tiers: ${TIERS}) ..."
+${VENV}/bin/python -m pytest ${PATHS} -v
 if [ $? -ne 0 ]; then
   echo 'Test error'
   exit 1
 fi
 
-echo "Cleaning up object stores as the test is complete ..."
-${VENV}/bin/python ${TESTSFOLDER}/clean_object_stores_after_tests.py
-if [ $? -ne 0 ]; then
-  echo 'Post test cleanup error'
-  exit 1
+if [ ${RUN_CLEANUP} -eq 1 ]; then
+  echo "Cleaning up object stores as the cloud tier is complete ..."
+  ${VENV}/bin/python ${TESTSFOLDER}/cloud/clean_object_stores_after_tests.py
+  if [ $? -ne 0 ]; then
+    echo 'Post test cleanup error'
+    exit 1
+  fi
 fi

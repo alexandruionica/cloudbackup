@@ -105,6 +105,21 @@ Watch https://www.youtube.com/watch?v=wyoO3pm_fmY for a quick demo of the projec
 
 For a view of the web UI see https://youtu.be/EFjg5-VDSu8 .
 
+# Running the tests
+
+```bash
+make test           # go fmt + golangci-lint + Go unit tests (+ race) + web UI unit tests
+make inttest        # Python integration tests: acceptance + api tiers (no cloud credentials needed)
+make inttest-cloud  # cloud tier against real AWS S3 / Azure Blob / GCP Storage (skips providers without credentials)
+make alltest        # all of the above
+```
+
+The Python suite lives in `integration_tests/` and is split into tiers by directory: `acceptance/` drives
+the shipped binary the way the user guide describes, `api/` covers the REST contract, `cloud/` needs the
+credentials below. Run a single module with
+`integration_tests/.venv_linux/bin/python -m pytest integration_tests/acceptance/cli_basics.py -v` from the
+repository root after `make build`. See `developer_documentation/docs/testing.md` for details.
+
 # Required for running tests
 
 Various credentials are needed for the tests which use object stores, like AWS S3.

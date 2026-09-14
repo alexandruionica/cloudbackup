@@ -15,7 +15,8 @@ make gotest       # Run unit tests only
 make gotestrace   # Run unit tests with race detection
 make testcp       # Run go fmt + golangci-lint (with gosec, without ineffassign)
 make alltest      # Run all tests + integration tests + build
-make inttest      # Run Python-based integration tests
+make inttest      # Python integration tests: acceptance + api tiers (no cloud credentials needed)
+make inttest-cloud # Python integration tests: cloud tier (skips providers without CLD_* credentials)
 make cover        # Show HTML coverage report
 make deps         # go mod tidy + go mod vendor
 ```
